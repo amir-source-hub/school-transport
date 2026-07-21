@@ -11,8 +11,8 @@
 | ----- | ---------------------------------- | ----------- | -------: |
 | F0    | UI and contract decisions approved | Blocked     |       0% |
 | F1    | Web foundation and design system   | In progress |      95% |
-| F2    | API, session, and state foundation | In progress |      40% |
-| F3    | Public and authentication areas    | In progress |      40% |
+| F2    | API, session, and state foundation | In progress |      50% |
+| F3    | Public and authentication areas    | In progress |      45% |
 | F4    | Parent shell and family/student UI | In progress |      50% |
 | F5    | Enrollment flow                    | In progress |      35% |
 | F6    | Contracts, pricing, payments       | In progress |      45% |
@@ -119,6 +119,7 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 
 - [ ] Generate the typed client from backend OpenAPI using the approved Orval/OpenAPI Generator configuration.
 - [x] Build the central API layer for base URL, credentials, headers, correlation/error handling, timeout, cancellation, and safe session expiry.
+  - [x] Connect the public schools query to the implemented backend route with runtime response validation and a clearly labeled offline mock fallback.
 - [x] Configure TanStack Query defaults deliberately; do not retry non-idempotent mutations blindly.
 - [ ] Validate protected routes on the server, render role-specific navigation, and treat hidden UI as convenience—not authorization.
 - [ ] Keep refresh tokens out of local storage; follow the secure HTTP-only cookie model.
@@ -129,6 +130,7 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 
 - [ ] Build documented public routes: landing, about, services, schools, pricing explanation, registration guide, FAQ, contact, login, and register.
   - [x] Build landing, about, services, schools, pricing explanation, registration guide, FAQ, and contact routes.
+  - [x] Replace the schools placeholder with backend-provided active schools, an empty state, and an explicit development fallback state.
   - [ ] Build login and registration routes after the canonical authentication contract is approved.
 - [ ] Add semantic metadata, responsive approved imagery, optimized assets, keyboard navigation, and clear registration/login actions.
   - [x] Add semantic metadata, keyboard navigation, responsive layouts, and clear registration actions to implemented public routes.

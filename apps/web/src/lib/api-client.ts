@@ -1,4 +1,4 @@
-import type { ApiEnvelope, ApiFailure } from '@/types/api';
+import type { ApiEnvelope, ApiFailure, ApiSuccess } from '@/types/api';
 
 type ApiRequestOptions = Omit<RequestInit, 'body' | 'credentials'> & {
   body?: unknown;
@@ -25,7 +25,7 @@ export class ApiClientError extends Error {
 export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
-): Promise<ApiEnvelope<T>> {
+): Promise<ApiSuccess<T>> {
   const { body, timeoutMs, signal: requestedSignal, ...requestInit } = options;
   const url = buildApiUrl(path);
   const headers = new Headers(options.headers);
@@ -55,7 +55,7 @@ export async function apiRequest<T>(
     throw toApiClientError(response.status, payload, correlationId);
   }
 
-  return payload;
+  return payload as ApiSuccess<T>;
 }
 
 async function parseEnvelope<T>(response: Response, requestId: string): Promise<ApiEnvelope<T>> {
