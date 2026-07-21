@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Headers } from '@nestjs/common';
+import { Controller, Post, Body, Param, UseGuards, Req, Headers } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';

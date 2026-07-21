@@ -149,7 +149,7 @@ export class PaymentsService {
   async createOfflineSubmission(
     scheduleItemId: string,
     userId: string,
-    data: {
+    _data: {
       paidAt: string;
       referenceNumber: string;
       description?: string;

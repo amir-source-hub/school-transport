@@ -57,7 +57,7 @@ export class SchoolsService {
       isActive: boolean;
     }>,
   ) {
-    const existing = await this.getById(id);
+    await this.getById(id);
     await this.db.db
       .update(schools)
       .set({ ...data, updatedAt: new Date() })

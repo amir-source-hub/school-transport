@@ -62,7 +62,6 @@ export class FamiliesController {
   @Post('change-primary-phone')
   async changePrimaryPhone(@Req() req: any, @Body() dto: { parentType: 'MOTHER' | 'FATHER' }) {
     await this.familiesService.setPrimaryPhone(req.user.id, dto.parentType);
-    const profile = await this.familiesService.getFamilyProfile(req.user.id);
     return successResponse({
       updated: true,
       message: 'Primary phone changed. OTP verification required.',
@@ -70,7 +69,10 @@ export class FamiliesController {
   }
 
   @Post('change-password')
-  async changePassword(@Req() req: any, @Body() dto: { oldPassword: string; newPassword: string }) {
+  async changePassword(
+    @Req() _req: any,
+    @Body() _dto: { oldPassword: string; newPassword: string },
+  ) {
     return { message: 'Use POST /auth/change-password instead.' };
   }
 }
