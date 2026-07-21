@@ -17,11 +17,18 @@ describe('EnrollmentWizard', () => {
     await user.type(screen.getByRole('textbox', { name: /کد ملی/ }), '۰۰۱۳۵۴۷۸۳۶');
     await user.type(screen.getByLabelText(/تاریخ تولد/), '2015-09-12');
     await user.selectOptions(screen.getByLabelText(/جنسیت/), 'پسر');
-    await user.selectOptions(screen.getByLabelText(/پایه تحصیلی/), 'هفتم');
     await user.click(screen.getByRole('button', { name: 'ادامه به اطلاعات مدرسه' }));
 
     expect(screen.getByText('اطلاعات مرحله اول حفظ شده است.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'بازگشت و ویرایش' }));
+    await user.selectOptions(screen.getByLabelText(/مدرسه/), 'school-demo-1');
+    await user.selectOptions(screen.getByLabelText(/مقطع تحصیلی/), 'متوسطه اول');
+    await user.selectOptions(screen.getByLabelText(/پایه تحصیلی/), 'هفتم');
+    await user.click(screen.getByRole('button', { name: 'ادامه به اطلاعات سرویس' }));
+    expect(screen.getByText('اطلاعات دو مرحله نخست حفظ شده است.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'بازگشت و ویرایش مدرسه' }));
+    expect(screen.getByLabelText(/مدرسه/)).toHaveValue('school-demo-1');
+    await user.click(screen.getByRole('button', { name: 'بازگشت و ویرایش دانش‌آموز' }));
     expect(screen.getByRole('textbox', { name: /نام$/ })).toHaveValue('علی');
   });
 });

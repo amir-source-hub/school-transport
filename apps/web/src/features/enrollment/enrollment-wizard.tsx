@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import { Alert } from '@/components/feedback/alert';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { demoAcademicYear, demoEnrollmentSchools } from './mock-schools';
 import { isValidIranianNationalId, normalizeDigits } from './national-id';
 
 const steps = [
@@ -31,19 +32,27 @@ const studentSchema = z.object({
     .refine(isValidIranianNationalId, 'کد ملی معتبر وارد کنید.'),
   birthDate: z.string().min(1, 'تاریخ تولد را وارد کنید.'),
   gender: z.enum(['دختر', 'پسر'], { message: 'جنسیت را انتخاب کنید.' }),
-  grade: z.string().min(1, 'پایه تحصیلی را انتخاب کنید.'),
   notes: z.string().trim().max(500, 'یادداشت باید حداکثر ۵۰۰ نویسه باشد.'),
 });
 
+const schoolSchema = z.object({
+  schoolId: z.string().min(1, 'مدرسه را انتخاب کنید.'),
+  educationalLevel: z.string().min(1, 'مقطع تحصیلی را انتخاب کنید.'),
+  grade: z.string().min(1, 'پایه تحصیلی را انتخاب کنید.'),
+  className: z.string().trim().max(50, 'نام یا شماره کلاس باید حداکثر ۵۰ نویسه باشد.'),
+});
+
 type StudentValues = z.input<typeof studentSchema>;
+type SchoolValues = z.input<typeof schoolSchema>;
 
 export function EnrollmentWizard() {
   const [currentStep, setCurrentStep] = useState(0);
   const [studentComplete, setStudentComplete] = useState(false);
+  const [schoolComplete, setSchoolComplete] = useState(false);
   const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
+    register: registerStudent,
+    handleSubmit: handleStudentSubmit,
+    formState: { errors: studentErrors, isSubmitting: isStudentSubmitting },
   } = useForm<StudentValues>({
     resolver: zodResolver(studentSchema),
     defaultValues: {
@@ -52,14 +61,32 @@ export function EnrollmentWizard() {
       nationalId: '',
       birthDate: '',
       gender: undefined,
-      grade: '',
       notes: '',
     },
   });
+  const {
+    register: registerSchool,
+    handleSubmit: handleSchoolSubmit,
+    control: schoolControl,
+    setValue: setSchoolValue,
+    formState: { errors: schoolErrors, isSubmitting: isSchoolSubmitting },
+  } = useForm<SchoolValues>({
+    resolver: zodResolver(schoolSchema),
+    defaultValues: { schoolId: '', educationalLevel: '', grade: '', className: '' },
+  });
 
-  const continueFromStudent = handleSubmit(async () => {
+  const schoolId = useWatch({ control: schoolControl, name: 'schoolId' });
+  const educationalLevel = useWatch({ control: schoolControl, name: 'educationalLevel' });
+  const selectedSchool = demoEnrollmentSchools.find(({ id }) => id === schoolId);
+  const selectedLevel = selectedSchool?.levels.find(({ name }) => name === educationalLevel);
+
+  const continueFromStudent = handleStudentSubmit(async () => {
     setStudentComplete(true);
     setCurrentStep(1);
+  });
+  const continueFromSchool = handleSchoolSubmit(async () => {
+    setSchoolComplete(true);
+    setCurrentStep(2);
   });
 
   return (
@@ -108,124 +135,224 @@ export function EnrollmentWizard() {
                 label="نام"
                 htmlFor="student-first-name"
                 required
-                error={errors.firstName?.message}
+                error={studentErrors.firstName?.message}
               >
                 <Input
                   id="student-first-name"
-                  {...register('firstName')}
-                  aria-invalid={Boolean(errors.firstName)}
+                  {...registerStudent('firstName')}
+                  aria-invalid={Boolean(studentErrors.firstName)}
                 />
               </Field>
               <Field
                 label="نام خانوادگی"
                 htmlFor="student-last-name"
                 required
-                error={errors.lastName?.message}
+                error={studentErrors.lastName?.message}
               >
                 <Input
                   id="student-last-name"
-                  {...register('lastName')}
-                  aria-invalid={Boolean(errors.lastName)}
+                  {...registerStudent('lastName')}
+                  aria-invalid={Boolean(studentErrors.lastName)}
                 />
               </Field>
               <Field
                 label="کد ملی"
                 htmlFor="student-national-id"
                 required
-                error={errors.nationalId?.message}
+                error={studentErrors.nationalId?.message}
                 hint="ارقام فارسی و انگلیسی پذیرفته می‌شوند."
               >
                 <Input
                   id="student-national-id"
                   inputMode="numeric"
                   dir="ltr"
-                  {...register('nationalId')}
-                  aria-invalid={Boolean(errors.nationalId)}
+                  {...registerStudent('nationalId')}
+                  aria-invalid={Boolean(studentErrors.nationalId)}
                 />
               </Field>
               <Field
                 label="تاریخ تولد"
                 htmlFor="student-birth-date"
                 required
-                error={errors.birthDate?.message}
+                error={studentErrors.birthDate?.message}
               >
                 <Input
                   id="student-birth-date"
                   type="date"
                   dir="ltr"
-                  {...register('birthDate')}
-                  aria-invalid={Boolean(errors.birthDate)}
+                  {...registerStudent('birthDate')}
+                  aria-invalid={Boolean(studentErrors.birthDate)}
                 />
               </Field>
-              <Field label="جنسیت" htmlFor="student-gender" required error={errors.gender?.message}>
+              <Field
+                label="جنسیت"
+                htmlFor="student-gender"
+                required
+                error={studentErrors.gender?.message}
+              >
                 <select
                   id="student-gender"
                   className="min-h-12 rounded-[var(--radius-sm)] border border-border bg-surface px-3 text-sm"
-                  {...register('gender')}
-                  aria-invalid={Boolean(errors.gender)}
+                  {...registerStudent('gender')}
+                  aria-invalid={Boolean(studentErrors.gender)}
                 >
                   <option value="">انتخاب کنید</option>
                   <option value="دختر">دختر</option>
                   <option value="پسر">پسر</option>
                 </select>
               </Field>
-              <Field
-                label="پایه تحصیلی"
-                htmlFor="student-grade"
-                required
-                error={errors.grade?.message}
-                hint="گزینه‌ها تا اتصال مدرسه نمایشی‌اند."
-              >
-                <select
-                  id="student-grade"
-                  className="min-h-12 rounded-[var(--radius-sm)] border border-border bg-surface px-3 text-sm"
-                  {...register('grade')}
-                  aria-invalid={Boolean(errors.grade)}
-                >
-                  <option value="">انتخاب کنید</option>
-                  {['هفتم', 'هشتم', 'نهم', 'دهم', 'یازدهم', 'دوازدهم'].map((grade) => (
-                    <option key={grade}>{grade}</option>
-                  ))}
-                </select>
-              </Field>
               <div className="md:col-span-2">
                 <Field
                   label="یادداشت تکمیلی (اختیاری)"
                   htmlFor="student-notes"
-                  error={errors.notes?.message}
+                  error={studentErrors.notes?.message}
                 >
                   <Textarea
                     id="student-notes"
-                    {...register('notes')}
-                    aria-invalid={Boolean(errors.notes)}
+                    {...registerStudent('notes')}
+                    aria-invalid={Boolean(studentErrors.notes)}
                   />
                 </Field>
               </div>
             </div>
           </Card>
           <div className="flex justify-end">
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isStudentSubmitting}>
               ادامه به اطلاعات مدرسه
+            </Button>
+          </div>
+        </form>
+      ) : currentStep === 1 ? (
+        <form className="space-y-5" onSubmit={continueFromSchool} noValidate>
+          <Card>
+            <h2 className="text-lg font-black">اطلاعات مدرسه</h2>
+            <p className="mt-1 text-sm text-muted">
+              مدرسه‌ها و ارتباط مقطع و پایه از آداپتور mock دریافت می‌شوند.
+            </p>
+            {studentComplete && (
+              <p className="mt-3 text-sm font-bold text-success">اطلاعات مرحله اول حفظ شده است.</p>
+            )}
+            <div className="mt-5 grid gap-5 md:grid-cols-2">
+              <Field
+                label="مدرسه"
+                htmlFor="school-id"
+                required
+                error={schoolErrors.schoolId?.message}
+              >
+                <select
+                  id="school-id"
+                  className="min-h-12 rounded-[var(--radius-sm)] border border-border bg-surface px-3 text-sm"
+                  {...registerSchool('schoolId', {
+                    onChange: () => {
+                      setSchoolValue('educationalLevel', '');
+                      setSchoolValue('grade', '');
+                    },
+                  })}
+                  aria-invalid={Boolean(schoolErrors.schoolId)}
+                >
+                  <option value="">انتخاب کنید</option>
+                  {demoEnrollmentSchools.map((school) => (
+                    <option key={school.id} value={school.id}>
+                      {school.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field
+                label="شعبه"
+                htmlFor="school-branch"
+                hint="شعبه از مدرسه انتخاب‌شده دریافت می‌شود."
+              >
+                <Input id="school-branch" value={selectedSchool?.branch ?? ''} disabled />
+              </Field>
+              <Field
+                label="مقطع تحصیلی"
+                htmlFor="school-level"
+                required
+                error={schoolErrors.educationalLevel?.message}
+              >
+                <select
+                  id="school-level"
+                  className="min-h-12 rounded-[var(--radius-sm)] border border-border bg-surface px-3 text-sm disabled:bg-surface-muted"
+                  disabled={!selectedSchool}
+                  {...registerSchool('educationalLevel', {
+                    onChange: () => setSchoolValue('grade', ''),
+                  })}
+                  aria-invalid={Boolean(schoolErrors.educationalLevel)}
+                >
+                  <option value="">انتخاب کنید</option>
+                  {selectedSchool?.levels.map((level) => (
+                    <option key={level.name}>{level.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field
+                label="پایه تحصیلی"
+                htmlFor="school-grade"
+                required
+                error={schoolErrors.grade?.message}
+              >
+                <select
+                  id="school-grade"
+                  className="min-h-12 rounded-[var(--radius-sm)] border border-border bg-surface px-3 text-sm disabled:bg-surface-muted"
+                  disabled={!selectedLevel}
+                  {...registerSchool('grade')}
+                  aria-invalid={Boolean(schoolErrors.grade)}
+                >
+                  <option value="">انتخاب کنید</option>
+                  {selectedLevel?.grades.map((grade) => (
+                    <option key={grade}>{grade}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field
+                label="سال تحصیلی"
+                htmlFor="academic-year"
+                hint="سال فعال از تنظیمات سرور خواهد آمد."
+              >
+                <Input id="academic-year" value={demoAcademicYear} disabled />
+              </Field>
+              <Field
+                label="نام یا شماره کلاس (اختیاری)"
+                htmlFor="class-name"
+                error={schoolErrors.className?.message}
+              >
+                <Input
+                  id="class-name"
+                  {...registerSchool('className')}
+                  aria-invalid={Boolean(schoolErrors.className)}
+                />
+              </Field>
+            </div>
+          </Card>
+          <div className="flex flex-wrap justify-between gap-2">
+            <Button variant="secondary" type="button" onClick={() => setCurrentStep(0)}>
+              بازگشت و ویرایش دانش‌آموز
+            </Button>
+            <Button type="submit" disabled={isSchoolSubmitting}>
+              ادامه به اطلاعات سرویس
             </Button>
           </div>
         </form>
       ) : (
         <Card>
-          <h2 className="text-lg font-black">اطلاعات مدرسه</h2>
+          <h2 className="text-lg font-black">اطلاعات سرویس</h2>
           <p className="mt-2 text-sm text-muted">
-            مرحله دانش‌آموز در پیش‌نویس حافظه‌ای تکمیل شد. فهرست وابسته مدرسه، مقطع و پایه در برش
-            بعدی افزوده می‌شود.
+            مراحل دانش‌آموز و مدرسه در پیش‌نویس حافظه‌ای تکمیل شدند. مرحله سرویس در برش بعدی افزوده
+            می‌شود.
           </p>
-          {studentComplete && (
-            <p className="mt-3 text-sm font-bold text-success">اطلاعات مرحله اول حفظ شده است.</p>
+          {schoolComplete && (
+            <p className="mt-3 text-sm font-bold text-success">
+              اطلاعات دو مرحله نخست حفظ شده است.
+            </p>
           )}
           <Button
             className="mt-5"
             variant="secondary"
             type="button"
-            onClick={() => setCurrentStep(0)}
+            onClick={() => setCurrentStep(1)}
           >
-            بازگشت و ویرایش
+            بازگشت و ویرایش مدرسه
           </Button>
         </Card>
       )}
