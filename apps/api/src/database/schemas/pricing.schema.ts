@@ -7,7 +7,9 @@ import {
   boolean,
   index,
   uniqueIndex,
+  check,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { serviceRegistrations } from './registrations.schema';
 import { adminUsers } from './auth.schema';
 
@@ -38,5 +40,17 @@ export const registrationPrices = pgTable(
   (table) => ({
     registrationIdx: index('idx_prices_registration').on(table.registrationId),
     versionIdx: uniqueIndex('idx_prices_version').on(table.registrationId, table.versionNumber),
+    positiveTotalAmount: check(
+      'registration_prices_total_amount_positive',
+      sql`${table.totalAmount} > 0`,
+    ),
+    nonNegativePrepayment: check(
+      'registration_prices_prepayment_non_negative',
+      sql`${table.prepaymentAmount} >= 0`,
+    ),
+    installmentCount: check(
+      'registration_prices_installment_count',
+      sql`NOT ${table.installmentPaymentAllowed} OR ${table.installmentCount} = 4`,
+    ),
   }),
 );

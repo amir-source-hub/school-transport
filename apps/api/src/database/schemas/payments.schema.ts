@@ -6,7 +6,9 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  check,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { registrationPrices } from './pricing.schema';
 import { users, adminUsers } from './auth.schema';
 
@@ -30,6 +32,26 @@ export const paymentPlans = pgTable(
   },
   (table) => ({
     priceIdx: index('idx_plans_price').on(table.registrationPriceId),
+    positiveTotalAmount: check(
+      'payment_plans_total_amount_positive',
+      sql`${table.totalAmount} > 0`,
+    ),
+    nonNegativePrepayment: check(
+      'payment_plans_prepayment_non_negative',
+      sql`${table.prepaymentAmount} >= 0`,
+    ),
+    nonNegativeRemainingAmount: check(
+      'payment_plans_remaining_amount_non_negative',
+      sql`${table.remainingInstallmentAmount} >= 0`,
+    ),
+    amountBalance: check(
+      'payment_plans_amount_balance',
+      sql`${table.totalAmount} = ${table.prepaymentAmount} + ${table.remainingInstallmentAmount}`,
+    ),
+    installmentStructure: check(
+      'payment_plans_installment_structure',
+      sql`(${table.planType} = 'FULL' AND ${table.installmentCount} = 1) OR (${table.planType} = 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS' AND ${table.installmentCount} = 4)`,
+    ),
   }),
 );
 
@@ -58,6 +80,15 @@ export const paymentScheduleItems = pgTable(
       table.paymentPlanId,
       table.itemType,
       table.sequenceNumber,
+    ),
+    positiveAmount: check('payment_schedule_amount_positive', sql`${table.amount} > 0`),
+    validSequence: check(
+      'payment_schedule_valid_sequence',
+      sql`(${table.itemType} = 'PREPAYMENT' AND ${table.sequenceNumber} = 0) OR (${table.itemType} = 'INSTALLMENT' AND ${table.sequenceNumber} BETWEEN 1 AND 4)`,
+    ),
+    noPartialPayment: check(
+      'payment_schedule_no_partial_payment',
+      sql`${table.paidAmount} = 0 OR ${table.paidAmount} = ${table.amount}`,
     ),
   }),
 );
@@ -92,5 +123,12 @@ export const paymentTransactions = pgTable(
     scheduleItemIdx: index('idx_transactions_schedule_item').on(table.paymentScheduleItemId),
     statusIdx: index('idx_transactions_status').on(table.transactionStatus),
     idempotencyIdx: uniqueIndex('idx_transactions_idempotency').on(table.idempotencyKey),
+    gatewayTransactionIdx: uniqueIndex('idx_transactions_gateway_transaction').on(
+      table.gatewayTransactionId,
+    ),
+    oneSuccessfulPaymentIdx: uniqueIndex('idx_transactions_one_success_per_schedule_item')
+      .on(table.paymentScheduleItemId)
+      .where(sql`${table.transactionStatus} = 'SUCCEEDED'`),
+    positiveAmount: check('payment_transactions_amount_positive', sql`${table.amount} > 0`),
   }),
 );
