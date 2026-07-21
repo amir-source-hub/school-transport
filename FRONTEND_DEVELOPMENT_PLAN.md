@@ -10,7 +10,7 @@
 | Phase | Result                             | Status      | Progress |
 | ----- | ---------------------------------- | ----------- | -------: |
 | F0    | UI and contract decisions approved | Not started |       0% |
-| F1    | Web foundation and design system   | In progress |      60% |
+| F1    | Web foundation and design system   | In progress |      70% |
 | F2    | API, session, and state foundation | Not started |       0% |
 | F3    | Public and authentication areas    | In progress |      35% |
 | F4    | Parent shell and family/student UI | Not started |       0% |
@@ -108,8 +108,8 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 - [ ] Scaffold Next.js App Router with strict TypeScript, Tailwind CSS, shadcn/ui, Radix UI, Lucide React, Motion, and documented fonts/localization.
 - [ ] Add `(public)`, `(auth)`, `parent`, and `admin` layouts with separate navigation and error/loading boundaries.
 - [ ] Configure RTL and Persian content/date/number/currency behavior exactly as the UI and business docs require; use `date-fns`/`date-fns-jalali` where documented.
-- [ ] Build tokens and accessible primitives for buttons, inputs, selections, dialogs, drawers, cards, badges, tables, pagination, breadcrumbs, feedback, and skeletons.
-- [ ] Add consistent page container, headings/actions, focus styles, reduced motion, touch targets, and responsive breakpoints.
+- [x] Build tokens and accessible primitives for buttons, inputs, selections, dialogs, drawers, cards, badges, tables, pagination, breadcrumbs, feedback, and skeletons.
+- [x] Add consistent page container, headings/actions, focus styles, reduced motion, touch targets, and responsive breakpoints.
 - [ ] Document reusable component APIs and avoid business-specific behavior in the UI package.
 
 ### F2 — API, authentication, and state foundation
