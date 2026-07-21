@@ -15,7 +15,7 @@
 | Phase | Deliverable | Status | Progress |
 |---|---|---|---:|
 | 0 | Documentation decisions | Not started | 0% |
-| 1 | Git and monorepo foundation | In progress | 65% |
+| 1 | Git and monorepo foundation | In progress | 70% |
 | 2 | Local infrastructure and CI | Not started | 0% |
 | 3 | Identity and access | Not started | 0% |
 | 4 | Families, students, schools | Not started | 0% |
@@ -23,7 +23,7 @@
 | 6 | Pricing and contracts | Not started | 0% |
 | 7 | Payments and installments | Not started | 0% |
 | 8 | Notifications, documents, audit | Not started | 0% |
-| 9 | Public, parent, and admin UI | In progress | 15% |
+| 9 | Public, parent, and admin UI | In progress | 20% |
 | 10 | Security, performance, testing | Not started | 0% |
 | 11 | Deployment and release | Not started | 0% |
 
