@@ -10,7 +10,7 @@
 | Phase | Result | Status | Progress |
 |---|---|---|---:|
 | B0 | Backend decisions approved | Pending (doc gaps remain) | 10% |
-| B1 | API foundation | In progress | 70% |
+| B1 | API foundation | In progress | 90% |
 | B2 | Database foundation | In progress | 60% |
 | B3 | Identity and authorization | In progress | 75% |
 | B4 | Family, student, school | In progress | 70% |
@@ -111,7 +111,10 @@ Exit: no unresolved documentation conflict affects B1–B10.
 - [x] Scaffold NestJS with the Fastify adapter and strict TypeScript.
 - [x] Add environment parsing/validation and fail safely when required configuration is missing.
 - [x] Configure `/api/v1`, and health endpoint. OpenAPI output endpoint added but not auto-generated.
-- [ ] Add correlation IDs, structured safe logging, request validation, standardized success/error mapping, pagination/filter/sort conventions, and graceful shutdown. (Partial: validation pipes, standard response format, pagination helpers, and error filter done. Correlation IDs and structured logging not yet implemented.)
+- [x] Add correlation IDs, structured safe logging, request validation, standardized success/error mapping, pagination/filter/sort conventions, and graceful shutdown.
+  - [x] Validate or generate a request ID, return it in response headers and API metadata, and isolate it across concurrent asynchronous requests.
+  - [x] Emit structured logs with request IDs and redact passwords, OTPs, tokens, cookies, secrets, and payment credentials.
+  - [x] Use structured logging for exception handling and graceful shutdown without exposing unhandled exception details to clients.
 - [x] Add health/readiness endpoints.
 - [x] Establish provider ports for clock (JS Date), IDs (uuid), hashing (argon2), OTP, notification, payment, and storage so domain code is vendor-independent.
 - [ ] Add architecture-boundary tests/lint rules.
@@ -214,4 +217,3 @@ Exit: no unresolved documentation conflict affects B1–B10.
 - [ ] Logs are structured, correlated, and free of sensitive content.
 - [ ] Migration and deployment notes are reviewed.
 - [ ] CI passes and progress is updated.
-
