@@ -28,6 +28,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@school-transport/eslint-config": "workspace:*",
     "@school-transport/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.0",

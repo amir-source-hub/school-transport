@@ -1,0 +1,16 @@
+{
+  "name": "@school-transport/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "next.mjs"
+  ],
+  "exports": {
+    "./next": "./next.mjs"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.2.10"
+  }
+}

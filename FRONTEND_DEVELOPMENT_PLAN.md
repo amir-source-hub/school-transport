@@ -10,7 +10,7 @@
 | Phase | Result                             | Status      | Progress |
 | ----- | ---------------------------------- | ----------- | -------: |
 | F0    | UI and contract decisions approved | Not started |       0% |
-| F1    | Web foundation and design system   | In progress |      88% |
+| F1    | Web foundation and design system   | In progress |      90% |
 | F2    | API, session, and state foundation | In progress |      40% |
 | F3    | Public and authentication areas    | In progress |      40% |
 | F4    | Parent shell and family/student UI | Not started |       0% |
