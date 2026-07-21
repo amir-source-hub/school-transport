@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { FastifyRequest } from 'fastify';
 import { ConfigService } from '../../config/config.service';
 import { PUBLIC_KEY } from '../../common/decorators';
-import { JwtPayload } from '../identity/domain/auth.types';
+import { JwtPayload } from '../../common/authentication.types';
 
 @Injectable()
 export class AuthGuard implements CanActivate {

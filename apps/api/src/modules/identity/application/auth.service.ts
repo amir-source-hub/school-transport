@@ -14,7 +14,8 @@ import {
 } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
-import { JwtPayload, AuthTokens, LoginResult, OtpResult } from '../domain/auth.types';
+import { AuthTokens, LoginResult, OtpResult } from '../domain/auth.types';
+import { JwtPayload } from '../../../common/authentication.types';
 
 @Injectable()
 export class AuthService {
