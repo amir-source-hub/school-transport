@@ -17,8 +17,8 @@
 | F5    | Enrollment flow                    | Not started |       0% |
 | F6    | Contracts, pricing, payments       | Not started |       0% |
 | F7    | Admin panel                        | Not started |       0% |
-| F8    | Accessibility, resilience, tests   | In progress |      20% |
-| F9    | Build and release readiness        | In progress |      25% |
+| F8    | Accessibility, resilience, tests   | In progress |      35% |
+| F9    | Build and release readiness        | In progress |      35% |
 
 ## 1. Frontend Rules
 
@@ -178,12 +178,16 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 - [ ] Verify every async screen has skeleton/loading, refetching, empty, error, unauthorized, success, and retry behavior as relevant.
 - [ ] Optimize images/fonts, keep client bundles small, lazy-load heavy noncritical UI, and measure against `performance-specification.md`.
 - [ ] Unit-test schemas/utilities, component-test interactions with React Testing Library, mock APIs with MSW, and E2E critical journeys with Playwright.
+  - [x] Add desktop and mobile Playwright smoke tests with WCAG A/AA scans for every implemented public route.
+  - [ ] Add contract-backed MSW fixtures and parent/admin critical journeys after those APIs and screens are available.
 - [ ] Run documented desktop/mobile browser coverage and payment gateway sandbox scenarios.
 
 ### F9 — build and release readiness
 
 - [x] Validate production environment variables without exposing secrets to the browser.
 - [ ] Run clean install, generated-client check, lint, type check, unit/component tests, accessibility checks, E2E smoke tests, and production build.
+  - [x] Run lint, type check, current unit/component tests, public accessibility/E2E smoke tests, and production build.
+  - [ ] Run generated-client validation and complete protected-journey checks when the approved OpenAPI contract is available.
 - [ ] Verify CSP/security headers, cookie behavior, API origin/CORS expectations, error reporting, and source-map policy with the backend/deployment docs.
   - [x] Configure and test the documented browser security headers and environment-aware CSP.
   - [ ] Verify cookie behavior, deployed API origin/CORS, error reporting, and source-map policy when the backend and deployment contracts are available.

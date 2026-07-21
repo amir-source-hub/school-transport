@@ -51,7 +51,7 @@ body {
   font-family: "Vazirmatn", Tahoma, Arial, sans-serif;
   line-height: 1.75;
 }
-a { color: inherit; text-decoration: none; }
+a { text-decoration: none; }
 button, input, textarea, select { font: inherit; }
 :focus-visible { outline: 3px solid rgb(20 89 217 / 0.35); outline-offset: 3px; }
 ::selection { background: var(--primary-soft); color: var(--primary-hover); }
