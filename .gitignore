@@ -1,0 +1,34 @@
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+.cache/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+.env.local
+.env.production
+*.pem
+*.key
+
+# Logs, traces, and generated reports
+*.log
+playwright-report/
+test-results/
+blob-report/
+
+# Local databases, exports, and private uploads
+*.sql
+*.dump
+uploads/
+storage/
+
+# Editor and operating-system files
+.DS_Store
+.idea/
+.vscode/
+Thumbs.db
