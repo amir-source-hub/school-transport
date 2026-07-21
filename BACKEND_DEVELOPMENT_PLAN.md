@@ -147,6 +147,7 @@ Exit: no unresolved documentation conflict affects B1–B10.
   - [x] Store refresh tokens only in restricted HTTP-only, SameSite cookies with production-only `Secure` transmission.
   - [x] Validate exact configured origins/referrers on login, refresh, and logout cookie operations.
   - [x] Apply documented backend security headers and global request throttling.
+    - [x] Verify CSP, frame, content-type, referrer, permissions, and production-only HSTS behavior.
   - [ ] Add account/phone/endpoint-specific authentication and OTP abuse controls and server-side session revocation.
 - [ ] Test cross-family denial, parent/admin restrictions, token replay/rotation, brute force limits, and session expiry.
 
