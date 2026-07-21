@@ -3,7 +3,7 @@
 > **Status**: In development  
 > **Application**: `apps/api` (plus approved worker/scheduler)  
 > **Architecture**: NestJS + Fastify modular monolith, TypeScript, PostgreSQL, Drizzle  
-> **Progress**: `1 / 11 phases complete` — `~25%` (API foundation complete; domain tests, migrations, and hardening remain)
+> **Progress**: `1 / 11 phases complete` — `~35%` (API foundation complete; provider decisions, migrations, integration tests, and deployment remain)
 
 ## Progress Tracker
 
@@ -15,11 +15,11 @@
 | B3 | Identity and authorization | In progress | 85% |
 | B4 | Family, student, school | In progress | 80% |
 | B5 | Enrollment and review | In progress | 60% |
-| B6 | Pricing and contracts | In progress | 60% |
-| B7 | Installments and payments | In progress | 55% |
-| B8 | Notifications, documents, audit | In progress | 30% |
-| B9 | Hardening and test completion | Not started | 0% |
-| B10 | Deployment readiness | Not started | 0% |
+| B6 | Pricing and contracts | In progress | 65% |
+| B7 | Installments and payments | In progress | 70% |
+| B8 | Notifications, documents, audit | In progress | 40% |
+| B9 | Hardening and test completion | In progress | 25% |
+| B10 | Deployment readiness | In progress | 20% |
 
 ## 1. Backend Rules
 
@@ -195,12 +195,14 @@ Exit: no unresolved documentation conflict affects B1–B10.
 - [x] Implement status transitions (GENERATED → ACCEPTED / REJECTED).
 - [ ] Activate only after full payment or required prepayment. (Partial — installment plan and prepayment logic exists, but no contract activation gating.)
 - [ ] Test totals, versions, acceptance replay, forbidden post-acceptance edits, and price locks.
+  - [x] Enforce family ownership when listing, reading, accepting, or rejecting contracts and when accepting prices.
+  - [ ] Add PostgreSQL concurrency and immutable-version integration tests.
 
 ### B7 — installments and payments (highest risk)
 
 - [x] Generate full payment or prepayment plus four monthly installments. (Prepayment is the admin-defined amount, not hardcoded to one-third.)
 - [x] Ensure installment totals plus prepayment equal the contract fee; reject partial installment payment (via validation in service).
-- [ ] Isolate the gateway behind an adapter. (Direct service implementation, no gateway adapter abstraction yet.)
+- [x] Isolate the gateway behind an adapter. (Provider-neutral verification port added; the adapter fails closed until B0 approves a provider.)
 - [x] Implement online start/verify flow with server-side verification.
 - [x] Add idempotency keys (Idempotency-Key header support in start flow).
 - [x] In one database transaction: verify, persist transaction, update schedule item status, update plan status (done in verify and approve methods).
@@ -208,6 +210,9 @@ Exit: no unresolved documentation conflict affects B1–B10.
 - [ ] Keep successful payment history immutable; generate authorized receipts. (Partial — transactions are append-only, but no receipt generation.)
 - [ ] Add reconciliation and expiry behavior only as documented after the worker/scheduler decision.
 - [ ] Test success, failure, cancellation, timeout, amount mismatch, replay, duplicate clicks/callbacks, simultaneous admin/gateway completion, and rollback.
+  - [x] Unit-test gateway failure, exact-amount verification, and missing transaction identifiers.
+  - [x] Enforce family ownership for installment reads and online/offline payment operations.
+  - [ ] Add provider sandbox and PostgreSQL concurrency/rollback tests after provider and test-database approval.
 
 ### B8 — notifications, documents, audit
 
@@ -215,7 +220,9 @@ Exit: no unresolved documentation conflict affects B1–B10.
 - [ ] Implement SMS/email channels, Persian templates, delivery status, retry, duplicate prevention. (Out of scope until worker/scheduler decision.)
 - [ ] Store private files in S3-compatible storage. (Not implemented.)
 - [x] Implement append-only audit events with actor, action, resource type/ID, previous/new values, timestamp.
-- [ ] Ensure sensitive fields are redacted from logs/audits. (Not implemented — logging uses basic console.log.)
+- [x] Ensure sensitive fields are redacted from logs/audits.
+  - [x] Recursively redact nested audit snapshots and censor opaque values.
+  - [x] Remove usernames, user IDs, and phone numbers from interpolated authentication logs.
 
 ### B9 — quality, security, performance
 
@@ -225,10 +232,11 @@ Exit: no unresolved documentation conflict affects B1–B10.
 - [ ] Run security tests from `security-specification.md` and business-rule tests from `testing.md`.
 - [ ] Measure critical APIs, inspect query plans, add only justified indexes/cache, and run k6 scenarios required by performance docs.
 - [ ] Meet the documented coverage priorities; never chase percentage at the expense of financial/authorization cases.
+  - [x] Backend unit suite, strict typecheck, build, formatting, and zero-warning lint pass locally.
 
 ### B10 — deployment readiness
 
-- [ ] Build a production image as a non-root user with health checks and no development secrets.
+- [x] Build a production image as a non-root user with health checks and no development secrets.
 - [ ] Validate configuration, migrations, backup/restore, graceful shutdown, observability, and incident runbooks.
 - [ ] Publish versioned OpenAPI and regenerate the frontend client.
 - [ ] Deploy to staging, run smoke/API/E2E/payment sandbox checks, then obtain approval.
