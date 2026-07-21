@@ -13,7 +13,7 @@
 | B1 | API foundation | Complete | 100% |
 | B2 | Database foundation | In progress | 70% |
 | B3 | Identity and authorization | In progress | 85% |
-| B4 | Family, student, school | In progress | 75% |
+| B4 | Family, student, school | In progress | 80% |
 | B5 | Enrollment and review | In progress | 50% |
 | B6 | Pricing and contracts | In progress | 60% |
 | B7 | Installments and payments | In progress | 55% |
@@ -168,6 +168,9 @@ Exit: no unresolved documentation conflict affects B1–B10.
 - [x] Implement school read/manage permissions (public read, admin manage).
 - [x] Prefer archival (students and schools support `is_active` flag).
 - [ ] Add unit, integration, API, ownership, and validation tests.
+  - [x] Unit-test Iranian national ID normalization and checksum validation.
+  - [x] Validate required student create fields and optional student update fields at the transport boundary.
+  - [ ] Add PostgreSQL integration, API, and cross-family ownership tests.
 
 ### B5 — registrations/enrollment
 
