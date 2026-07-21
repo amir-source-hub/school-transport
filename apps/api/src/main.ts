@@ -7,7 +7,7 @@ import { ConfigService } from './config/config.service';
 import { GlobalExceptionFilter } from './common/filters';
 import { registerSecurityHeaders } from './common/security-headers';
 import { AppLogger } from './common/logger';
-import fastifyCookie from '@fastify/cookie';
+import fastifyCookie = require('@fastify/cookie');
 import { RequestContext } from './common/request-context';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 

@@ -10,6 +10,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
+import type { CookieSerializeOptions } from '@fastify/cookie';
 import { AuthService } from '../application/auth.service';
 import { Public } from '../../../common/decorators';
 import { AuthGuard } from '../../access-control/auth.guard';
@@ -79,6 +80,15 @@ class ChangePasswordDto {
   newPassword!: string;
 }
 
+type CookieRequest = FastifyRequest & {
+  cookies: Record<string, string | undefined>;
+};
+
+type CookieReply = FastifyReply & {
+  clearCookie(name: string, options?: CookieSerializeOptions): FastifyReply;
+  setCookie(name: string, value: string, options?: CookieSerializeOptions): FastifyReply;
+};
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -100,7 +110,7 @@ export class AuthController {
   async login(
     @Req() req: FastifyRequest,
     @Body() dto: LoginDto,
-    @Res({ passthrough: true }) reply: FastifyReply,
+    @Res({ passthrough: true }) reply: CookieReply,
   ) {
     const result = await this.authService.loginParent(dto.username, dto.password, {
       ipAddress: req.ip,
@@ -121,7 +131,7 @@ export class AuthController {
   async adminLogin(
     @Req() req: FastifyRequest,
     @Body() dto: LoginDto,
-    @Res({ passthrough: true }) reply: FastifyReply,
+    @Res({ passthrough: true }) reply: CookieReply,
   ) {
     const result = await this.authService.loginAdmin(dto.username, dto.password, {
       ipAddress: req.ip,
@@ -139,7 +149,7 @@ export class AuthController {
   @UseGuards(TrustedOriginGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(@Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+  async refresh(@Req() req: CookieRequest, @Res({ passthrough: true }) reply: CookieReply) {
     const refreshToken = req.cookies?.refresh_token;
     if (!refreshToken) {
       throw new ValidationError('A refresh token is required.');
@@ -152,7 +162,7 @@ export class AuthController {
   @UseGuards(AuthGuard, TrustedOriginGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout(@Req() req: any, @Res({ passthrough: true }) reply: FastifyReply) {
+  async logout(@Req() req: any, @Res({ passthrough: true }) reply: CookieReply) {
     const userId = req.user?.id;
     if (userId && req.user?.sessionId) {
       await this.authService.logout(userId, req.user.sessionId);
@@ -216,7 +226,7 @@ export class AuthController {
     return successResponse({ user: req.user });
   }
 
-  private setRefreshCookie(reply: FastifyReply, token: string, isAdmin = false) {
+  private setRefreshCookie(reply: CookieReply, token: string, isAdmin = false) {
     const maxAge = isAdmin ? this.config.adminJwtRefreshTokenTtl : this.config.jwtRefreshTokenTtl;
     reply.setCookie('refresh_token', token, {
       httpOnly: true,
