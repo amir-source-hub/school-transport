@@ -17,32 +17,65 @@ import { successResponse } from '../../../common/response';
 import { ConfigService } from '../../../config/config.service';
 import { ValidationError } from '../../../common/errors';
 import { TrustedOriginGuard } from '../../access-control/trusted-origin.guard';
+import { IsNotEmpty, IsString, Matches } from 'class-validator';
 
 class RegisterDto {
+  @IsString()
+  @IsNotEmpty()
   username!: string;
+
+  @IsString()
+  @IsNotEmpty()
   password!: string;
 }
 class LoginDto {
+  @IsString()
+  @IsNotEmpty()
   username!: string;
+
+  @IsString()
+  @IsNotEmpty()
   password!: string;
 }
 class SendOtpDto {
+  @IsString()
+  @Matches(/^09\d{9}$/)
   phoneNumber!: string;
 }
 class VerifyOtpDto {
+  @IsString()
+  @Matches(/^09\d{9}$/)
   phoneNumber!: string;
+
+  @IsString()
+  @Matches(/^\d{6}$/)
   code!: string;
 }
 class ForgotPasswordDto {
+  @IsString()
+  @Matches(/^09\d{9}$/)
   phoneNumber!: string;
 }
 class ResetPasswordDto {
+  @IsString()
+  @Matches(/^09\d{9}$/)
   phoneNumber!: string;
+
+  @IsString()
+  @Matches(/^\d{6}$/)
   code!: string;
+
+  @IsString()
+  @IsNotEmpty()
   newPassword!: string;
 }
 class ChangePasswordDto {
+  @IsString()
+  @IsNotEmpty()
   oldPassword!: string;
+
+  @IsString()
+  @IsNotEmpty()
   newPassword!: string;
 }
 
@@ -64,8 +97,16 @@ export class AuthController {
   @UseGuards(TrustedOriginGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) reply: FastifyReply) {
-    const result = await this.authService.loginParent(dto.username, dto.password);
+  async login(
+    @Req() req: FastifyRequest,
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const result = await this.authService.loginParent(dto.username, dto.password, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      deviceName: req.headers['user-agent']?.slice(0, 255),
+    });
     this.setRefreshCookie(reply, result.refreshToken);
     return successResponse({
       user: result.user,
@@ -77,8 +118,16 @@ export class AuthController {
   @UseGuards(TrustedOriginGuard)
   @Post('admin-login')
   @HttpCode(HttpStatus.OK)
-  async adminLogin(@Body() dto: LoginDto, @Res({ passthrough: true }) reply: FastifyReply) {
-    const result = await this.authService.loginAdmin(dto.username, dto.password);
+  async adminLogin(
+    @Req() req: FastifyRequest,
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const result = await this.authService.loginAdmin(dto.username, dto.password, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      deviceName: req.headers['user-agent']?.slice(0, 255),
+    });
     this.setRefreshCookie(reply, result.refreshToken, true);
     return successResponse({
       user: result.user,
@@ -105,7 +154,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: any, @Res({ passthrough: true }) reply: FastifyReply) {
     const userId = req.user?.id;
-    if (userId) await this.authService.logout(userId);
+    if (userId && req.user?.sessionId) {
+      await this.authService.logout(userId, req.user.sessionId);
+    }
     reply.clearCookie('refresh_token', { path: '/api/v1/auth' });
     return successResponse({ loggedOut: true });
   }

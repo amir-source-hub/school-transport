@@ -38,7 +38,7 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('Invalid token type.');
       }
 
-      (request as any).user = { id: payload.sub, role: payload.role };
+      (request as any).user = { id: payload.sub, role: payload.role, sessionId: payload.sid };
       return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired token.');

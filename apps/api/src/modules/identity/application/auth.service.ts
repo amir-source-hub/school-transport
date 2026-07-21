@@ -1,11 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { addSeconds, isPast } from 'date-fns';
 import { eq, and, isNull } from 'drizzle-orm';
+import { createHash } from 'node:crypto';
 import { ConfigService } from '../../../config/config.service';
 import { DatabaseService } from '../../../database/database.service';
-import { users, adminUsers, otpRequests, parents } from '../../../database/schemas';
+import { users, adminUsers, otpRequests, parents, authSessions } from '../../../database/schemas';
 import {
   AuthenticationError,
   ConflictError,
@@ -16,6 +17,7 @@ import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
 import { AuthTokens, LoginResult, OtpResult } from '../domain/auth.types';
 import { JwtPayload } from '../../../common/authentication.types';
+import { OTP_DELIVERY, OtpDelivery } from './otp-delivery.port';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +26,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly db: DatabaseService,
     private readonly logger: AppLogger,
+    @Inject(OTP_DELIVERY) private readonly otpDelivery: OtpDelivery,
   ) {}
 
   async registerParent(username: string, password: string): Promise<{ userId: string }> {
@@ -88,7 +91,11 @@ export class AuthService {
     return { adminId };
   }
 
-  async loginParent(username: string, password: string): Promise<LoginResult> {
+  async loginParent(
+    username: string,
+    password: string,
+    context?: SessionContext,
+  ): Promise<LoginResult> {
     const user = await this.db.db.select().from(users).where(eq(users.username, username)).limit(1);
 
     if (user.length === 0) {
@@ -107,7 +114,7 @@ export class AuthService {
 
     await this.db.db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user[0].id));
 
-    const tokens = await this.generateTokens(user[0].id, 'PARENT');
+    const tokens = await this.generateTokens(user[0].id, 'PARENT', context);
     this.logger.log('Parent logged in.');
 
     return {
@@ -116,7 +123,11 @@ export class AuthService {
     };
   }
 
-  async loginAdmin(username: string, password: string): Promise<LoginResult> {
+  async loginAdmin(
+    username: string,
+    password: string,
+    context?: SessionContext,
+  ): Promise<LoginResult> {
     const admin = await this.db.db
       .select()
       .from(adminUsers)
@@ -142,7 +153,7 @@ export class AuthService {
       .set({ lastLoginAt: new Date() })
       .where(eq(adminUsers.id, admin[0].id));
 
-    const tokens = await this.generateTokens(admin[0].id, 'ADMIN');
+    const tokens = await this.generateTokens(admin[0].id, 'ADMIN', context);
     this.logger.log('Admin logged in.');
 
     return {
@@ -161,14 +172,43 @@ export class AuthService {
         throw new AuthenticationError('Invalid refresh token.');
       }
 
-      return this.generateTokens(payload.sub, payload.role);
+      const session = await this.db.db
+        .select()
+        .from(authSessions)
+        .where(eq(authSessions.id, payload.sid))
+        .limit(1);
+      const tokenHash = this.hashToken(refreshToken);
+      const current = session[0];
+
+      if (
+        !current ||
+        current.subjectId !== payload.sub ||
+        current.role !== payload.role ||
+        current.refreshTokenHash !== tokenHash ||
+        current.revokedAt
+      ) {
+        await this.revokeAllSessions(payload.sub, payload.role, 'REFRESH_TOKEN_REUSE');
+        throw new AuthenticationError('Invalid or expired refresh token.');
+      }
+      if (isPast(new Date(current.expiresAt))) {
+        await this.revokeSession(current.id, 'SESSION_EXPIRED');
+        throw new AuthenticationError('Invalid or expired refresh token.');
+      }
+
+      return this.generateTokens(payload.sub, payload.role, undefined, current.id);
     } catch (err: any) {
       if (err instanceof AuthenticationError) throw err;
       throw new AuthenticationError('Invalid or expired refresh token.');
     }
   }
 
-  async logout(_userId: string): Promise<void> {
+  async logout(userId: string, sessionId: string): Promise<void> {
+    const session = await this.db.db
+      .select({ subjectId: authSessions.subjectId })
+      .from(authSessions)
+      .where(eq(authSessions.id, sessionId))
+      .limit(1);
+    if (session[0]?.subjectId === userId) await this.revokeSession(sessionId, 'LOGOUT');
     this.logger.log('User logged out.');
   }
 
@@ -193,6 +233,8 @@ export class AuthService {
       .update(table)
       .set({ passwordHash: newHash, updatedAt: new Date() })
       .where(eq(table.id, userId));
+
+    await this.revokeAllSessions(userId, role, 'PASSWORD_CHANGED');
 
     this.logger.log('User password changed.');
   }
@@ -271,8 +313,6 @@ export class AuthService {
     const codeHash = await argon2.hash(code);
     const expiresAt = addSeconds(new Date(), this.config.otpExpirySeconds);
 
-    this.logger.log(`OTP sent for ${purpose}.`);
-
     await this.db.db.insert(otpRequests).values({
       id: generateId(),
       phoneNumber,
@@ -281,6 +321,9 @@ export class AuthService {
       expiresAt,
       maxAttempts: this.config.otpMaxAttempts,
     });
+
+    await this.otpDelivery.send({ phoneNumber, purpose, code });
+    this.logger.log(`OTP sent for ${purpose}.`);
 
     return { expiresAt, cooldownSeconds: this.config.otpResendCooldownSeconds };
   }
@@ -336,14 +379,20 @@ export class AuthService {
     return {};
   }
 
-  private async generateTokens(userId: string, role: 'PARENT' | 'ADMIN'): Promise<AuthTokens> {
+  private async generateTokens(
+    userId: string,
+    role: 'PARENT' | 'ADMIN',
+    context?: SessionContext,
+    replacedSessionId?: string,
+  ): Promise<AuthTokens> {
     const accessTtl =
       role === 'ADMIN' ? this.config.adminJwtAccessTokenTtl : this.config.jwtAccessTokenTtl;
     const refreshTtl =
       role === 'ADMIN' ? this.config.adminJwtRefreshTokenTtl : this.config.jwtRefreshTokenTtl;
 
-    const accessPayload: JwtPayload = { sub: userId, role, type: 'access' };
-    const refreshPayload: JwtPayload = { sub: userId, role, type: 'refresh' };
+    const sessionId = generateId();
+    const accessPayload: JwtPayload = { sub: userId, role, type: 'access', sid: sessionId };
+    const refreshPayload: JwtPayload = { sub: userId, role, type: 'refresh', sid: sessionId };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(accessPayload, {
@@ -356,7 +405,59 @@ export class AuthService {
       }),
     ]);
 
+    await this.db.db.transaction(async (txn) => {
+      await txn.insert(authSessions).values({
+        id: sessionId,
+        subjectId: userId,
+        role,
+        refreshTokenHash: this.hashToken(refreshToken),
+        deviceName: context?.deviceName || null,
+        ipAddress: context?.ipAddress || null,
+        userAgent: context?.userAgent || null,
+        expiresAt: addSeconds(new Date(), refreshTtl),
+      });
+      if (replacedSessionId) {
+        await txn
+          .update(authSessions)
+          .set({
+            revokedAt: new Date(),
+            revocationReason: 'ROTATED',
+            replacedBySessionId: sessionId,
+            lastUsedAt: new Date(),
+          })
+          .where(and(eq(authSessions.id, replacedSessionId), isNull(authSessions.revokedAt)));
+      }
+    });
+
     return { accessToken, refreshToken };
+  }
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private async revokeSession(sessionId: string, reason: string): Promise<void> {
+    await this.db.db
+      .update(authSessions)
+      .set({ revokedAt: new Date(), revocationReason: reason })
+      .where(and(eq(authSessions.id, sessionId), isNull(authSessions.revokedAt)));
+  }
+
+  private async revokeAllSessions(
+    subjectId: string,
+    role: 'PARENT' | 'ADMIN',
+    reason: string,
+  ): Promise<void> {
+    await this.db.db
+      .update(authSessions)
+      .set({ revokedAt: new Date(), revocationReason: reason })
+      .where(
+        and(
+          eq(authSessions.subjectId, subjectId),
+          eq(authSessions.role, role),
+          isNull(authSessions.revokedAt),
+        ),
+      );
   }
 
   private validatePassword(password: string, isAdmin: boolean): void {
@@ -378,3 +479,9 @@ export class AuthService {
     }
   }
 }
+
+type SessionContext = {
+  deviceName?: string;
+  ipAddress?: string;
+  userAgent?: string;
+};
