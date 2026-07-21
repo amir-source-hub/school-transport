@@ -16,8 +16,8 @@
 | F4    | Parent shell and family/student UI | In progress |      50% |
 | F5    | Enrollment flow                    | Not started |       0% |
 | F6    | Contracts, pricing, payments       | In progress |      30% |
-| F7    | Admin panel                        | In progress |      25% |
-| F8    | Accessibility, resilience, tests   | In progress |      44% |
+| F7    | Admin panel                        | In progress |      40% |
+| F8    | Accessibility, resilience, tests   | In progress |      46% |
 | F9    | Build and release readiness        | In progress |      35% |
 
 ## 1. Frontend Rules
@@ -184,16 +184,22 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
   - [x] Build the responsive admin shell, mock dashboard, and honest empty states for every documented MVP route.
   - [ ] Replace empty states with contract-backed operational screens and enforce server-validated role access.
 - [ ] Use URL parameters for search, pagination, filters, sorting, tabs, and status so views are linkable and restorable.
+  - [x] Implement URL-restorable search, status, sort, and pagination for the mock registration queue.
+  - [ ] Apply URL state to remaining operational lists and tabs after their contracts are available.
 - [ ] Use responsive tables on desktop and priority columns/scrolling/expandable rows/cards on smaller screens.
   - [x] Add a keyboard-accessible responsive dashboard table for mock recent registrations.
-  - [ ] Apply URL state and responsive record patterns to each operational list after its contract is available.
+  - [x] Add desktop table/mobile card representations for the mock registration queue.
+  - [ ] Apply responsive record patterns to each remaining operational list after its contract is available.
 - [ ] Implement registration review/correction/approval/rejection with confirmations and conflict feedback.
+  - [x] Build mock registration details with lifecycle-aware guidance, required-reason messaging, and safely disabled sensitive actions.
+  - [ ] Enable confirmations, reasons, version conflicts, authoritative results, and audit feedback with real mutations.
 - [ ] Implement pricing and contract actions only when current status permits them.
 - [ ] Implement online monitoring and offline approval/rejection with confirmation, reason/notes where documented, idempotent UI behavior, and audit-result display.
 - [x] Do not add route, driver, vehicle, attendance, school-staff, accountant, dispatcher, or super-admin UI in the MVP.
 - [ ] Test role denial, stale/concurrent records, filters in URLs, destructive confirmation, mobile tables, and error recovery.
   - [x] Test mock admin dashboard semantics, excluded navigation, mobile drawer behavior, keyboard-accessible overflow, and accessibility.
-  - [ ] Test role denial, URL filters, stale/concurrent records, confirmations, and error recovery after integration.
+  - [x] Test registration URL filters, responsive results, disabled sensitive actions, status semantics, and detail accessibility.
+  - [ ] Test role denial, remaining list filters, stale/concurrent records, confirmations, and error recovery after integration.
 
 ### F8 — accessibility, resilience, performance, testing
 
