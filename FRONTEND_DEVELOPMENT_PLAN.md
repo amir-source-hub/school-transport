@@ -22,16 +22,16 @@
 
 ## 1. Frontend Rules
 
-- [ ] Read `frontend-architecture.md`, UI/UX specification, product/business rules, roles/permissions, API spec, errors, security, performance, and testing docs before each feature.
-- [ ] Use one web application. Separate public, auth, parent, and admin concerns through route groups/layouts/features—not separate projects.
-- [ ] Use Server Components by default; add `'use client'` only for browser interaction.
+- [x] Read `frontend-architecture.md`, UI/UX specification, product/business rules, roles/permissions, API spec, errors, security, performance, and testing docs before each feature.
+- [x] Use one web application. Separate public, auth, parent, and admin concerns through route groups/layouts/features—not separate projects.
+- [x] Use Server Components by default; add `'use client'` only for browser interaction.
 - [ ] Use the generated OpenAPI client/types. Do not manually duplicate backend DTOs or infer undocumented fields.
-- [ ] Use TanStack Query for server state, React Hook Form for forms, Zod for client UX validation, URL parameters for shareable filters, local React state for local UI, and Zustand only for small shared UI state.
-- [ ] Never place authoritative pricing, contract, payment, status-transition, permission, or ownership rules in the frontend.
-- [ ] Build mobile-first, RTL/Persian-ready, keyboard accessible, and responsive from the first component.
+- [x] Use TanStack Query for server state, React Hook Form for forms, Zod for client UX validation, URL parameters for shareable filters, local React state for local UI, and Zustand only for small shared UI state.
+- [x] Never place authoritative pricing, contract, payment, status-transition, permission, or ownership rules in the frontend.
+- [x] Build mobile-first, RTL/Persian-ready, keyboard accessible, and responsive from the first component.
 - [ ] Every data view must define loading, refetching, empty, error, success, unauthorized, and expired-session behavior as applicable.
-- [ ] Reuse accessible shadcn/ui and Radix primitives; do not create duplicate components or introduce undocumented UI libraries.
-- [ ] Keep feature code cohesive, components small, names explicit, and side effects inside focused hooks/services.
+- [x] Reuse accessible shadcn/ui and Radix primitives; do not create duplicate components or introduce undocumented UI libraries.
+- [x] Keep feature code cohesive, components small, names explicit, and side effects inside focused hooks/services.
 
 ## 2. Required Folder Structure
 
@@ -75,7 +75,7 @@ Each feature contains only what it needs: `api/` or `services/`, `components/`, 
 
 Git is initialized once at the monorepo root as described in `APP_DEVELOPMENT_PLAN.md`.
 
-- [ ] Create a short-lived branch: `git switch -c feat/frontend-<feature>`.
+- [x] Create a short-lived branch: `git switch -c feat/frontend-<feature>`.
 - [ ] Confirm the backend OpenAPI contract is approved before integrating a feature.
 - [ ] Commit generated API client changes clearly and review their contract diff.
 - [ ] Run web lint, formatting, type checks, unit/component tests, accessibility checks, E2E for affected journeys, and production build before push.
@@ -100,13 +100,15 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 - [ ] Wait for the empty `enrollment-form-specification.md` to be completed and approved before final enrollment fields/steps are built.
 - [ ] Confirm canonical OpenAPI routes, DTOs, status labels, pagination, errors, and authentication-cookie behavior.
 - [ ] Extract approved color, typography, spacing, RTL, responsive, component, and content rules from the UI/UX specification.
+  - [x] Apply the approved color, spacing, RTL, responsive, semantic-status, and component rules to the current design system.
+  - [ ] Complete documented font loading and the unresolved Persian date-format decision.
 - [ ] Map every parent/admin route to its documented permission and ownership rule.
 - [ ] Identify which supplied images are approved for which public/auth pages; do not assign them by guesswork.
 
 ### F1 — application and design-system foundation
 
 - [ ] Scaffold Next.js App Router with strict TypeScript, Tailwind CSS, shadcn/ui, Radix UI, Lucide React, Motion, and documented fonts/localization.
-- [ ] Add `(public)`, `(auth)`, `parent`, and `admin` layouts with separate navigation and error/loading boundaries.
+- [x] Add `(public)`, `(auth)`, `parent`, and `admin` layouts with separate navigation and error/loading boundaries.
 - [ ] Configure RTL and Persian content/date/number/currency behavior exactly as the UI and business docs require; use `date-fns`/`date-fns-jalali` where documented.
 - [x] Build tokens and accessible primitives for buttons, inputs, selections, dialogs, drawers, cards, badges, tables, pagination, breadcrumbs, feedback, and skeletons.
 - [x] Add consistent page container, headings/actions, focus styles, reduced motion, touch targets, and responsive breakpoints.
@@ -125,7 +127,11 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 ### F3 — public website and authentication
 
 - [ ] Build documented public routes: landing, about, services, schools, pricing explanation, registration guide, FAQ, contact, login, and register.
+  - [x] Build landing, about, services, schools, pricing explanation, registration guide, FAQ, and contact routes.
+  - [ ] Build login and registration routes after the canonical authentication contract is approved.
 - [ ] Add semantic metadata, responsive approved imagery, optimized assets, keyboard navigation, and clear registration/login actions.
+  - [x] Add semantic metadata, keyboard navigation, responsive layouts, and clear registration actions to implemented public routes.
+  - [ ] Add approved optimized imagery when page-to-image assignments are documented.
 - [ ] Build register, login, verify-phone, forgot-password, and reset-password flows from backend contracts.
 - [ ] Show generic authentication errors, OTP cooldown/attempt feedback, password requirements, submission locks, and safe redirects.
 - [ ] Test anonymous/authenticated redirects, keyboard/screen-reader use, mobile layouts, validation, expired OTP/session, and throttling feedback.
@@ -204,19 +210,22 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 ### F8 — accessibility, resilience, performance, testing
 
 - [ ] Verify semantic HTML, labels/descriptions, focus order/visibility, keyboard access, screen-reader announcements, dialog focus traps, contrast, touch targets, and reduced motion.
+  - [x] Run automated WCAG A/AA, semantic, keyboard-target, contrast, RTL, desktop, and mobile checks across implemented routes.
+  - [ ] Complete manual screen-reader, focus-order, dialog-focus, and contrast review across final workflows.
 - [ ] Add page and feature error boundaries for enrollment, contracts, and payments.
 - [ ] Verify every async screen has skeleton/loading, refetching, empty, error, unauthorized, success, and retry behavior as relevant.
 - [ ] Optimize images/fonts, keep client bundles small, lazy-load heavy noncritical UI, and measure against `performance-specification.md`.
 - [ ] Unit-test schemas/utilities, component-test interactions with React Testing Library, mock APIs with MSW, and E2E critical journeys with Playwright.
   - [x] Add desktop and mobile Playwright smoke tests with WCAG A/AA scans for every implemented public route.
-  - [ ] Add contract-backed MSW fixtures and parent/admin critical journeys after those APIs and screens are available.
+  - [x] Add desktop/mobile Playwright coverage for implemented mock parent and admin journeys.
+  - [ ] Add contract-backed MSW fixtures and complete critical journeys after those APIs and screens are available.
 - [ ] Run documented desktop/mobile browser coverage and payment gateway sandbox scenarios.
 
 ### F9 — build and release readiness
 
 - [x] Validate production environment variables without exposing secrets to the browser.
 - [ ] Run clean install, generated-client check, lint, type check, unit/component tests, accessibility checks, E2E smoke tests, and production build.
-  - [x] Run lint, type check, current unit/component tests, public accessibility/E2E smoke tests, and production build.
+  - [x] Run lint, type check, current unit/component tests, implemented public/parent/admin accessibility and E2E smoke tests, and production build.
   - [ ] Run generated-client validation and complete protected-journey checks when the approved OpenAPI contract is available.
 - [ ] Verify CSP/security headers, cookie behavior, API origin/CORS expectations, error reporting, and source-map policy with the backend/deployment docs.
   - [x] Configure and test the documented browser security headers and environment-aware CSP.

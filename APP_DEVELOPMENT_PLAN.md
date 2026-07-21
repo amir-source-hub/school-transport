@@ -31,17 +31,17 @@ Update a phase to `In progress`, then `Complete`; update the fraction and percen
 
 ## 1. Non-Negotiable Development Rules
 
-- [ ] Implement only behavior explicitly supported by project documentation and the approved MVP scope.
-- [ ] When documents conflict or omit a decision, stop that feature, record the issue, update/approve the relevant specification, and only then code it.
-- [ ] Never invent business rules, payment behavior, permissions, API fields, database constraints, UI flows, or infrastructure choices.
-- [ ] Keep route, driver, vehicle, attendance, live tracking, camera, school-manager, and other deferred modules outside the MVP.
-- [ ] Use clean code, SOLID principles, dependency inversion at integration boundaries, small cohesive modules, explicit names, and no duplicated business rules.
-- [ ] Keep business rules in the backend domain/application layers. The frontend may validate for usability but is never authoritative.
-- [ ] Follow the documented folder structures. Any structural change requires an Architecture Decision Record (ADR) and documentation approval first.
-- [ ] Prefer simple, documented solutions; do not introduce libraries, services, abstractions, or microservices without a documented requirement.
-- [ ] Treat payments, contracts, authorization, student data, audit history, and accepted records as high-risk areas requiring review and negative tests.
-- [ ] Never log passwords, OTPs, tokens, payment credentials, secrets, or complete sensitive records.
-- [ ] Do not mark work complete with failing lint, type checks, tests, migrations, security checks, or documentation drift.
+- [x] Implement only behavior explicitly supported by project documentation and the approved MVP scope.
+- [x] When documents conflict or omit a decision, stop that feature, record the issue, update/approve the relevant specification, and only then code it.
+- [x] Never invent business rules, payment behavior, permissions, API fields, database constraints, UI flows, or infrastructure choices.
+- [x] Keep route, driver, vehicle, attendance, live tracking, camera, school-manager, and other deferred modules outside the MVP.
+- [x] Use clean code, SOLID principles, dependency inversion at integration boundaries, small cohesive modules, explicit names, and no duplicated business rules.
+- [x] Keep business rules in the backend domain/application layers. The frontend may validate for usability but is never authoritative.
+- [x] Follow the documented folder structures. Any structural change requires an Architecture Decision Record (ADR) and documentation approval first.
+- [x] Prefer simple, documented solutions; do not introduce libraries, services, abstractions, or microservices without a documented requirement.
+- [x] Treat payments, contracts, authorization, student data, audit history, and accepted records as high-risk areas requiring review and negative tests.
+- [x] Never log passwords, OTPs, tokens, payment credentials, secrets, or complete sensitive records.
+- [x] Do not mark work complete with failing lint, type checks, tests, migrations, security checks, or documentation drift.
 
 ## 2. Documentation-First Workflow
 
@@ -110,11 +110,11 @@ Use one Git repository for the monorepo; do not initialize separate repositories
 
 ### Initialize once
 
-- [ ] Confirm secrets and generated files are excluded in `.gitignore`.
-- [ ] Run `git init` if `.git/` does not exist.
-- [ ] Set the primary branch: `git branch -M main`.
-- [ ] Add the approved project files: `git add .`.
-- [ ] Create the baseline commit: `git commit -m "chore(repo): initialize school transport monorepo"`.
+- [x] Confirm secrets and generated files are excluded in `.gitignore`.
+- [x] Run `git init` if `.git/` does not exist.
+- [x] Set the primary branch: `git branch -M main`.
+- [x] Add the approved project files: `git add .`.
+- [x] Create the baseline commit: `git commit -m "chore(repo): initialize school transport monorepo"`.
 - [ ] Add the remote when provided: `git remote add origin <repository-url>`.
 - [ ] Push after remote review: `git push -u origin main`.
 
@@ -157,6 +157,8 @@ Breaking changes use `!` and a `BREAKING CHANGE:` footer. Each commit should be 
 - [x] Create the documented `apps/`, `packages/`, `infrastructure/`, and `docs/` structure.
 - [x] Configure pnpm workspaces and Turborepo pipelines.
 - [ ] Add shared strict TypeScript, ESLint, formatter, test, and import-boundary rules.
+  - [x] Add shared strict TypeScript, ESLint, frontend test, and import-boundary rules.
+  - [ ] Add and verify the shared formatter configuration.
 - [x] Add `.env.example`, contribution guide, ADR template, and root commands.
 - [ ] Verify a clean clone can install, lint, type-check, test, and build.
 
