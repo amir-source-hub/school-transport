@@ -3,6 +3,7 @@ import { DatabaseService } from '../../database/database.service';
 import { auditLogs } from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
 import { generateId } from '../../common/utils';
+import { serializeSafeAuditValues } from '../../common/sensitive-data';
 
 @Injectable()
 export class AuditService {
@@ -14,8 +15,8 @@ export class AuditService {
     action: string;
     entityType: string;
     entityId?: string;
-    previousValues?: string;
-    newValues?: string;
+    previousValues?: unknown;
+    newValues?: unknown;
     ipAddress?: string;
   }) {
     await this.db.db.insert(auditLogs).values({
@@ -25,8 +26,8 @@ export class AuditService {
       action: data.action,
       entityType: data.entityType,
       entityId: data.entityId || null,
-      previousValues: data.previousValues || null,
-      newValues: data.newValues || null,
+      previousValues: serializeSafeAuditValues(data.previousValues),
+      newValues: serializeSafeAuditValues(data.newValues),
       ipAddress: data.ipAddress || null,
     });
   }
