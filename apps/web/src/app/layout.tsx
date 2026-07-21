@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: "سامانه سرویس مدرسه",
-    template: "%s | سامانه سرویس مدرسه",
+    default: 'سامانه سرویس مدرسه',
+    template: '%s | سامانه سرویس مدرسه',
   },
-  description: "ثبت‌نام و مدیریت خدمات سرویس مدرسه برای خانواده‌ها",
+  description: 'ثبت‌نام و مدیریت خدمات سرویس مدرسه برای خانواده‌ها',
 };
 
 export default function RootLayout({
