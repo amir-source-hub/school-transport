@@ -3,14 +3,14 @@
 > **Status**: In development  
 > **Application**: `apps/api` (plus approved worker/scheduler)  
 > **Architecture**: NestJS + Fastify modular monolith, TypeScript, PostgreSQL, Drizzle  
-> **Progress**: `0 / 11 phases complete` — `~20%` (scaffolding + most modules coded, no tests/migrations/hardening)
+> **Progress**: `1 / 11 phases complete` — `~25%` (API foundation complete; domain tests, migrations, and hardening remain)
 
 ## Progress Tracker
 
 | Phase | Result | Status | Progress |
 |---|---|---|---:|
 | B0 | Backend decisions approved | Pending (doc gaps remain) | 10% |
-| B1 | API foundation | In progress | 90% |
+| B1 | API foundation | Complete | 100% |
 | B2 | Database foundation | In progress | 60% |
 | B3 | Identity and authorization | In progress | 75% |
 | B4 | Family, student, school | In progress | 70% |
@@ -117,7 +117,10 @@ Exit: no unresolved documentation conflict affects B1–B10.
   - [x] Use structured logging for exception handling and graceful shutdown without exposing unhandled exception details to clients.
 - [x] Add health/readiness endpoints.
 - [x] Establish provider ports for clock (JS Date), IDs (uuid), hashing (argon2), OTP, notification, payment, and storage so domain code is vendor-independent.
-- [ ] Add architecture-boundary tests/lint rules.
+- [x] Add architecture-boundary tests/lint rules.
+  - [x] Prevent product modules from importing another module's internals except the documented cross-cutting access-control module.
+  - [x] Keep `common`, `config`, and `database` independent of product modules.
+  - [x] Enforce inward dependency direction across `domain`, `application`, `infrastructure`, and `presentation` layers.
 
 ### B2 — database foundation
 
