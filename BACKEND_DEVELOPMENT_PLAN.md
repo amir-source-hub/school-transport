@@ -11,7 +11,7 @@
 |---|---|---|---:|
 | B0 | Backend decisions approved | Pending (doc gaps remain) | 10% |
 | B1 | API foundation | Complete | 100% |
-| B2 | Database foundation | In progress | 60% |
+| B2 | Database foundation | In progress | 70% |
 | B3 | Identity and authorization | In progress | 75% |
 | B4 | Family, student, school | In progress | 70% |
 | B5 | Enrollment and review | In progress | 50% |
@@ -126,7 +126,11 @@ Exit: no unresolved documentation conflict affects B1–B10.
 
 - [x] Implement Drizzle PostgreSQL schemas from `school-transport-database-data-model-schemas.md`—all 17 tables defined.
 - [x] Add foreign keys, unique constraints, indexes, timestamps, and status fields.
-- [ ] Add check constraints (`total_amount > 0`, etc.) and immutable-history protections (partial — some status fields exist, need more Drizzle-level check constraints).
+- [ ] Add check constraints (`total_amount > 0`, etc.) and immutable-history protections.
+  - [x] Enforce documented positive/non-negative price and payment-plan amounts and the four-installment structure.
+  - [x] Enforce schedule-item amount, sequence, and no-partial-payment invariants.
+  - [x] Enforce unique gateway transactions and one successful transaction per schedule item.
+  - [ ] Add migration-level immutable accepted-price/contract and append-only history protections after the migration strategy is approved.
 - [x] Drizzle config written for versioned migrations; no migrations generated yet.
 - [x] Create repository ports and Drizzle adapters per module (services use DatabaseService directly).
 - [ ] Configure transaction handling and a separate PostgreSQL integration-test database. (Partial: transactions used in payments, no separate test DB configured.)
