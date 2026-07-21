@@ -1,8 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { paymentPlans, paymentScheduleItems, registrationPrices } from '../../database/schemas';
+import {
+  paymentPlans,
+  paymentScheduleItems,
+  registrationPrices,
+  serviceRegistrations,
+  students,
+} from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
-import { NotFoundError, ValidationError } from '../../common/errors';
+import { NotFoundError } from '../../common/errors';
 import { generateId, calculateInstallmentAmounts } from '../../common/utils';
 import { addMonths } from 'date-fns';
 
@@ -110,11 +116,17 @@ export class InstallmentsService {
     return plans[0];
   }
 
-  async getPlanWithItems(planId: string) {
+  async getPlanWithItems(planId: string, userId: string) {
     const plan = await this.db.db
-      .select()
+      .select({ plan: paymentPlans })
       .from(paymentPlans)
-      .where(eq(paymentPlans.id, planId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(and(eq(paymentPlans.id, planId), eq(students.userId, userId)))
       .limit(1);
     if (plan.length === 0) throw new NotFoundError('Payment plan');
 
@@ -124,6 +136,6 @@ export class InstallmentsService {
       .where(eq(paymentScheduleItems.paymentPlanId, planId))
       .orderBy(paymentScheduleItems.sequenceNumber);
 
-    return { plan: plan[0], items };
+    return { plan: plan[0].plan, items };
   }
 }

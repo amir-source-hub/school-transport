@@ -4,24 +4,39 @@ import {
   paymentTransactions,
   paymentScheduleItems,
   paymentPlans,
-  users,
+  registrationPrices,
+  serviceRegistrations,
+  students,
 } from '../../database/schemas';
-import { eq, and, isNull } from 'drizzle-orm';
-import { NotFoundError, ValidationError, ConflictError } from '../../common/errors';
+import { eq, and } from 'drizzle-orm';
+import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 
 @Injectable()
 export class PaymentsService {
   constructor(private readonly db: DatabaseService) {}
 
-  async startOnlinePayment(scheduleItemId: string, userId: string, idempotencyKey: string) {
-    const item = await this.db.db
-      .select()
+  private async getOwnedScheduleItem(scheduleItemId: string, userId: string) {
+    const result = await this.db.db
+      .select({ item: paymentScheduleItems })
       .from(paymentScheduleItems)
-      .where(eq(paymentScheduleItems.id, scheduleItemId))
+      .innerJoin(paymentPlans, eq(paymentPlans.id, paymentScheduleItems.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(and(eq(paymentScheduleItems.id, scheduleItemId), eq(students.userId, userId)))
       .limit(1);
-    if (item.length === 0) throw new NotFoundError('Schedule item');
-    if (item[0].itemStatus === 'PAID') {
+
+    if (result.length === 0) throw new NotFoundError('Schedule item');
+    return result[0].item;
+  }
+
+  async startOnlinePayment(scheduleItemId: string, userId: string, idempotencyKey: string) {
+    const item = await this.getOwnedScheduleItem(scheduleItemId, userId);
+    if (item.itemStatus === 'PAID') {
       throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'This item has already been paid.');
     }
 
@@ -35,10 +50,10 @@ export class PaymentsService {
     const txId = generateId();
     await this.db.db.insert(paymentTransactions).values({
       id: txId,
-      paymentPlanId: item[0].paymentPlanId,
+      paymentPlanId: item.paymentPlanId,
       paymentScheduleItemId: scheduleItemId,
       userId,
-      amount: item[0].amount,
+      amount: item.amount,
       paymentMethod: 'ONLINE_GATEWAY',
       idempotencyKey,
       transactionStatus: 'CREATED',
@@ -52,11 +67,11 @@ export class PaymentsService {
       .then((r) => r[0]);
   }
 
-  async verifyOnlinePayment(txId: string, gatewayTransactionId: string) {
+  async verifyOnlinePayment(txId: string, userId: string, gatewayTransactionId: string) {
     const tx = await this.db.db
       .select()
       .from(paymentTransactions)
-      .where(eq(paymentTransactions.id, txId))
+      .where(and(eq(paymentTransactions.id, txId), eq(paymentTransactions.userId, userId)))
       .limit(1);
     if (tx.length === 0) throw new NotFoundError('Transaction');
 
@@ -130,23 +145,18 @@ export class PaymentsService {
       description?: string;
     },
   ) {
-    const item = await this.db.db
-      .select()
-      .from(paymentScheduleItems)
-      .where(eq(paymentScheduleItems.id, scheduleItemId))
-      .limit(1);
-    if (item.length === 0) throw new NotFoundError('Schedule item');
-    if (item[0].itemStatus === 'PAID') {
+    const item = await this.getOwnedScheduleItem(scheduleItemId, userId);
+    if (item.itemStatus === 'PAID') {
       throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Already paid.');
     }
 
     const txId = generateId();
     await this.db.db.insert(paymentTransactions).values({
       id: txId,
-      paymentPlanId: item[0].paymentPlanId,
+      paymentPlanId: item.paymentPlanId,
       paymentScheduleItemId: scheduleItemId,
       userId,
-      amount: item[0].amount,
+      amount: item.amount,
       paymentMethod: 'MANUAL_ADMIN_ENTRY',
       transactionStatus: 'CREATED',
     });

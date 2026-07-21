@@ -9,8 +9,8 @@ export class InstallmentsController {
   constructor(private readonly installmentsService: InstallmentsService) {}
 
   @Get('plan/:planId')
-  async getPlan(@Param('planId') planId: string) {
-    const plan = await this.installmentsService.getPlanWithItems(planId);
+  async getPlan(@Req() req: any, @Param('planId') planId: string) {
+    const plan = await this.installmentsService.getPlanWithItems(planId, req.user.id);
     return successResponse(plan);
   }
 }

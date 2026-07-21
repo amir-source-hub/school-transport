@@ -25,8 +25,16 @@ export class PaymentsController {
   }
 
   @Post(':txId/online/verify')
-  async verifyOnline(@Param('txId') txId: string, @Body() dto: { gatewayTransactionId: string }) {
-    const tx = await this.paymentsService.verifyOnlinePayment(txId, dto.gatewayTransactionId);
+  async verifyOnline(
+    @Req() req: any,
+    @Param('txId') txId: string,
+    @Body() dto: { gatewayTransactionId: string },
+  ) {
+    const tx = await this.paymentsService.verifyOnlinePayment(
+      txId,
+      req.user.id,
+      dto.gatewayTransactionId,
+    );
     return successResponse(tx);
   }
 
