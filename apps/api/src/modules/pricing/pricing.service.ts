@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { registrationPrices, serviceRegistrations } from '../../database/schemas';
+import { registrationPrices, serviceRegistrations, students } from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError, ValidationError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -83,13 +83,14 @@ export class PricingService {
     }
 
     const reg = await this.db.db
-      .select()
+      .select({ registration: serviceRegistrations })
       .from(serviceRegistrations)
-      .where(eq(serviceRegistrations.id, price[0].registrationId))
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(and(eq(serviceRegistrations.id, price[0].registrationId), eq(students.userId, userId)))
       .limit(1);
 
     if (reg.length === 0) throw new NotFoundError('Registration');
-    if (reg[0].registrationStatus !== 'APPROVED') {
+    if (reg[0].registration.registrationStatus !== 'APPROVED') {
       throw new ValidationError('Registration must be approved before accepting a price.');
     }
 
@@ -101,7 +102,7 @@ export class PricingService {
     await this.db.db
       .update(serviceRegistrations)
       .set({ registrationStatus: 'CONTRACT_PENDING', updatedAt: new Date() })
-      .where(eq(serviceRegistrations.id, reg[0].id));
+      .where(eq(serviceRegistrations.id, reg[0].registration.id));
 
     return priceId;
   }

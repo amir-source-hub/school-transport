@@ -5,9 +5,10 @@ import {
   serviceRegistrations,
   registrationPrices,
   paymentPlans,
+  students,
 } from '../../database/schemas';
-import { eq, and, isNull } from 'drizzle-orm';
-import { NotFoundError, ValidationError, ConflictError } from '../../common/errors';
+import { eq, and } from 'drizzle-orm';
+import { NotFoundError, ValidationError } from '../../common/errors';
 import { generateId, generateContractNumber } from '../../common/utils';
 
 @Injectable()
@@ -15,16 +16,39 @@ export class ContractsService {
   constructor(private readonly db: DatabaseService) {}
 
   async getByFamily(userId: string) {
+    const result = await this.db.db
+      .select({ contract: contracts })
+      .from(contracts)
+      .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, contracts.registrationId))
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(eq(students.userId, userId));
+    return result.map(({ contract }) => contract);
+  }
+
+  async getAll() {
     return this.db.db.select().from(contracts);
   }
 
-  async getById(contractId: string) {
+  async getById(contractId: string, userId?: string) {
     const result = await this.db.db
       .select()
       .from(contracts)
       .where(eq(contracts.id, contractId))
       .limit(1);
     if (result.length === 0) throw new NotFoundError('Contract', contractId);
+
+    if (userId) {
+      const owner = await this.db.db
+        .select({ userId: students.userId })
+        .from(serviceRegistrations)
+        .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+        .where(
+          and(eq(serviceRegistrations.id, result[0].registrationId), eq(students.userId, userId)),
+        )
+        .limit(1);
+      if (owner.length === 0) throw new NotFoundError('Contract', contractId);
+    }
+
     return result[0];
   }
 
@@ -83,7 +107,7 @@ export class ContractsService {
   }
 
   async accept(contractId: string, userId: string) {
-    const contract = await this.getById(contractId);
+    const contract = await this.getById(contractId, userId);
 
     if (contract.contractStatus !== 'GENERATED') {
       throw new ValidationError('Contract cannot be accepted in its current state.');
@@ -111,8 +135,8 @@ export class ContractsService {
     return this.getById(contractId);
   }
 
-  async reject(contractId: string) {
-    const contract = await this.getById(contractId);
+  async reject(contractId: string, userId: string) {
+    const contract = await this.getById(contractId, userId);
     if (contract.contractStatus !== 'GENERATED') {
       throw new ValidationError('Contract cannot be rejected in its current state.');
     }
