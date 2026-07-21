@@ -13,11 +13,11 @@
 | F1    | Web foundation and design system   | In progress |      90% |
 | F2    | API, session, and state foundation | In progress |      40% |
 | F3    | Public and authentication areas    | In progress |      40% |
-| F4    | Parent shell and family/student UI | Not started |       0% |
+| F4    | Parent shell and family/student UI | In progress |      35% |
 | F5    | Enrollment flow                    | Not started |       0% |
 | F6    | Contracts, pricing, payments       | Not started |       0% |
 | F7    | Admin panel                        | Not started |       0% |
-| F8    | Accessibility, resilience, tests   | In progress |      35% |
+| F8    | Accessibility, resilience, tests   | In progress |      38% |
 | F9    | Build and release readiness        | In progress |      35% |
 
 ## 1. Frontend Rules
@@ -132,12 +132,16 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 
 ### F4 — parent shell and family/student experiences
 
-- [ ] Build responsive parent sidebar/drawer, breadcrumbs, account menu, notifications, and touch-friendly student selector.
+- [x] Build responsive parent sidebar/drawer, breadcrumbs, account menu, notifications, and touch-friendly student selector.
 - [ ] Build dashboard summaries for each selected student using documented status, registration, contract, next-payment, and notification data.
+  - [x] Build and label the complete dashboard presentation with isolated documentation-backed mock data.
+  - [ ] Replace the mock adapter with approved generated API types and server data when available.
 - [ ] Build family/profile and student create/view/edit flows with protected-field explanations and server error preservation.
 - [ ] Prevent accidental data loss and duplicate submissions; never imply success before the API confirms it.
-- [ ] Provide documented empty states for no students, registration, contract, payment, or notifications.
+- [x] Provide documented empty states for no students, registration, contract, payment, or notifications.
 - [ ] Test multi-student switching, cache keys/invalidation, cross-student data isolation, mobile layout, and session expiry.
+  - [x] Test mock multi-student switching, cross-student isolation, responsive navigation, and dashboard accessibility.
+  - [ ] Test server cache keys/invalidation and session expiry after the session/data contracts are available.
 
 ### F5 — enrollment flow
 
