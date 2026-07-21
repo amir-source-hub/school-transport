@@ -1,0 +1,105 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: school_transport
+      POSTGRES_USER: school_transport
+      POSTGRES_PASSWORD: school_transport_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U school_transport -d school_transport"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "redis_dev_password"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_dev_password", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://school_transport:school_transport_dev@postgres:5432/school_transport
+      REDIS_URL: redis://:redis_dev_password@redis:6379
+      JWT_SECRET: local-development-secret-change-before-production
+      CORS_ORIGINS: http://localhost:3000
+      OTP_PROVIDER: console
+      PAYMENT_GATEWAY_PROVIDER: mock
+      SERVICE_ROLE: api
+    ports:
+      - "3001:3001"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["node", "dist/worker.js"]
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://school_transport:school_transport_dev@postgres:5432/school_transport
+      REDIS_URL: redis://:redis_dev_password@redis:6379
+      JWT_SECRET: local-development-secret-change-before-production
+      OTP_PROVIDER: console
+      PAYMENT_GATEWAY_PROVIDER: mock
+      SERVICE_ROLE: worker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["node", "dist/database/bootstrap-db.js"]
+    environment:
+      DATABASE_URL: postgresql://school_transport:school_transport_dev@postgres:5432/school_transport
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  postgres_data:
+  redis_data:

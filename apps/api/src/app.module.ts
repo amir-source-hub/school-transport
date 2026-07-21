@@ -15,14 +15,15 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
-import { AppLogger } from './common/logger';
 import { CorrelationIdMiddleware } from './common/middleware';
 import { GracefulShutdownService } from './common/graceful-shutdown';
-import { RequestContext } from './common/request-context';
 import { ResponseMetadataInterceptor } from './common/response-metadata.interceptor';
+import { QueueModule } from './infrastructure/queue/queue.module';
+import { LoggingModule } from './common/logging.module';
 
 @Module({
   imports: [
+    LoggingModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     ConfigModule,
     DatabaseModule,
@@ -38,15 +39,13 @@ import { ResponseMetadataInterceptor } from './common/response-metadata.intercep
     NotificationsModule,
     AuditModule,
     HealthModule,
+    QueueModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseMetadataInterceptor },
-    RequestContext,
-    AppLogger,
     GracefulShutdownService,
   ],
-  exports: [AppLogger, RequestContext],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

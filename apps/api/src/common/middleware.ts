@@ -1,5 +1,5 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { IncomingMessage, ServerResponse } from 'node:http';
 import { v4 as uuid } from 'uuid';
 import { RequestContext } from './request-context';
 
@@ -14,10 +14,10 @@ export function resolveRequestId(header: string | string[] | undefined): string 
 export class CorrelationIdMiddleware implements NestMiddleware {
   constructor(private readonly requestContext: RequestContext) {}
 
-  use(req: FastifyRequest, reply: FastifyReply, next: () => void) {
+  use(req: IncomingMessage, reply: ServerResponse, next: () => void) {
     const requestId = resolveRequestId(req.headers['x-correlation-id']);
     req.headers['x-correlation-id'] = requestId;
-    reply.header('X-Request-ID', requestId);
+    reply.setHeader('X-Request-ID', requestId);
     this.requestContext.run(requestId, next);
   }
 }

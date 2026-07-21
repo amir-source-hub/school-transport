@@ -6,6 +6,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
   HOST: z.string().default('0.0.0.0'),
   DATABASE_URL: z.string(),
+  REDIS_URL: z.string().default('redis://localhost:6379'),
   JWT_SECRET: z.string().min(16),
   JWT_ACCESS_TOKEN_TTL: z.coerce.number().default(900),
   JWT_REFRESH_TOKEN_TTL: z.coerce.number().default(2592000),
@@ -16,6 +17,9 @@ const envSchema = z.object({
   OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().default(60),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
   LOG_LEVEL: z.string().default('debug'),
+  OTP_PROVIDER: z.enum(['console', 'none']).default('none'),
+  PAYMENT_GATEWAY_PROVIDER: z.enum(['mock', 'none']).default('none'),
+  SERVICE_ROLE: z.enum(['api', 'worker']).default('api'),
 });
 
 @Injectable()
@@ -42,6 +46,9 @@ export class ConfigService implements OnApplicationShutdown {
   }
   get databaseUrl(): string {
     return this.env.DATABASE_URL;
+  }
+  get redisUrl(): string {
+    return this.env.REDIS_URL;
   }
   get jwtSecret(): string {
     return this.env.JWT_SECRET;
@@ -72,6 +79,15 @@ export class ConfigService implements OnApplicationShutdown {
   }
   get logLevel(): string {
     return this.env.LOG_LEVEL;
+  }
+  get otpProvider(): 'console' | 'none' {
+    return this.env.OTP_PROVIDER;
+  }
+  get paymentGatewayProvider(): 'mock' | 'none' {
+    return this.env.PAYMENT_GATEWAY_PROVIDER;
+  }
+  get serviceRole(): 'api' | 'worker' {
+    return this.env.SERVICE_ROLE;
   }
 
   onApplicationShutdown() {}

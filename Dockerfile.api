@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile --filter @school-transport/api...
 
 COPY apps/api apps/api
 RUN pnpm --filter @school-transport/api build
-RUN pnpm prune --prod
+RUN pnpm --filter @school-transport/api deploy --prod --legacy /deploy
 
 FROM node:20-bookworm-slim AS runtime
 
@@ -20,15 +20,15 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3001
 
-WORKDIR /workspace
-COPY --from=build --chown=node:node /workspace/node_modules ./node_modules
-COPY --from=build --chown=node:node /workspace/apps/api/node_modules ./apps/api/node_modules
-COPY --from=build --chown=node:node /workspace/apps/api/dist ./apps/api/dist
-COPY --from=build --chown=node:node /workspace/apps/api/package.json ./apps/api/package.json
+WORKDIR /app
+COPY --from=build --chown=node:node /deploy/node_modules ./node_modules
+COPY --from=build --chown=node:node /workspace/apps/api/dist ./dist
+COPY --from=build --chown=node:node /workspace/apps/api/drizzle ./drizzle
+COPY --from=build --chown=node:node /workspace/apps/api/package.json ./package.json
 
 USER node
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3001/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 
-CMD ["node", "apps/api/dist/main.js"]
+CMD ["node", "dist/main.js"]
