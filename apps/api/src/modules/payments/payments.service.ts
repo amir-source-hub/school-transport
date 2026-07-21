@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import {
   paymentTransactions,
@@ -11,10 +11,14 @@ import {
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
+import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
 
 @Injectable()
 export class PaymentsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
+  ) {}
 
   private async getOwnedScheduleItem(scheduleItemId: string, userId: string) {
     const result = await this.db.db
@@ -67,7 +71,7 @@ export class PaymentsService {
       .then((r) => r[0]);
   }
 
-  async verifyOnlinePayment(txId: string, userId: string, gatewayTransactionId: string) {
+  async verifyOnlinePayment(txId: string, userId: string, gatewayAuthority: string) {
     const tx = await this.db.db
       .select()
       .from(paymentTransactions)
@@ -78,6 +82,12 @@ export class PaymentsService {
     if (tx[0].transactionStatus === 'SUCCEEDED') {
       return tx[0];
     }
+
+    const gatewayResult = await this.gateway.verify({
+      authority: gatewayAuthority,
+      amount: tx[0].amount,
+    });
+    const gatewayTransactionId = assertGatewayVerification(tx[0].amount, gatewayResult);
 
     return await this.db.db.transaction(async (txn) => {
       const item = await txn
