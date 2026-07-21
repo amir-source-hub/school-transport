@@ -3,23 +3,23 @@
 > **Status**: In development  
 > **Application**: `apps/api` (plus approved worker/scheduler)  
 > **Architecture**: NestJS + Fastify modular monolith, TypeScript, PostgreSQL, Drizzle  
-> **Progress**: `1 / 11 phases complete` — `~45%` (API foundation complete; Docker data services, migrations, development providers, and worker are operational)
+> **Progress**: `2 / 11 phases complete` — `~52%` (API and database foundations complete; local infrastructure, generated OpenAPI, CI definition, and worker maintenance are implemented)
 
 ## Progress Tracker
 
 | Phase | Result | Status | Progress |
 |---|---|---|---:|
-| B0 | Backend decisions approved | In progress (external production providers remain) | 50% |
+| B0 | Backend decisions approved | In progress (external production providers and enrollment spec remain) | 65% |
 | B1 | API foundation | Complete | 100% |
-| B2 | Database foundation | In progress | 90% |
+| B2 | Database foundation | Complete | 100% |
 | B3 | Identity and authorization | In progress | 90% |
 | B4 | Family, student, school | In progress | 80% |
 | B5 | Enrollment and review | In progress | 60% |
 | B6 | Pricing and contracts | In progress | 65% |
 | B7 | Installments and payments | In progress | 75% |
 | B8 | Notifications, documents, audit | In progress | 45% |
-| B9 | Hardening and test completion | In progress | 25% |
-| B10 | Deployment readiness | In progress | 50% |
+| B9 | Hardening and test completion | In progress | 30% |
+| B10 | Deployment readiness | In progress | 65% |
 
 ## 1. Backend Rules
 
@@ -100,7 +100,7 @@ Never combine an unrelated backend refactor with a feature or migration. Never r
 
 - [x] Resolve Redis/BullMQ/worker/scheduler MVP conflict. (Approved for the development stack: PostgreSQL remains authoritative; Redis-backed BullMQ workers handle retryable background work.)
 - [ ] Make API routes, status names, request/response DTOs, and error codes canonical in OpenAPI.
-- [ ] Confirm the authoritative data model, database schemas/naming, retention rules, and migration strategy.
+- [x] Confirm PostgreSQL as the authoritative data model, public schema/table naming, forward-only versioned migrations, and 30-day expired authentication-data retention.
   - [x] Define the required parent/admin session table, token-hash fields, device metadata, revocation fields, and indexes. (Automated retention cleanup remains.)
 - [ ] Complete enrollment form requirements before its DTOs and workflow are finalized.
 - [ ] Record chosen production providers/interfaces for OTP, SMS/email, payment gateway, and S3-compatible storage only when approved.
@@ -112,7 +112,7 @@ Exit: no unresolved documentation conflict affects B1–B10.
 
 - [x] Scaffold NestJS with the Fastify adapter and strict TypeScript.
 - [x] Add environment parsing/validation and fail safely when required configuration is missing.
-- [x] Configure `/api/v1`, and health endpoint. OpenAPI output endpoint added but not auto-generated.
+- [x] Configure `/api/v1`, health endpoint, generated OpenAPI JSON at `/api/v1/openapi.json`, and interactive API documentation at `/api/docs`.
 - [x] Add correlation IDs, structured safe logging, request validation, standardized success/error mapping, pagination/filter/sort conventions, and graceful shutdown.
   - [x] Validate or generate a request ID, return it in response headers and API metadata, and isolate it across concurrent asynchronous requests.
   - [x] Emit structured logs with request IDs and redact passwords, OTPs, tokens, cookies, secrets, and payment credentials.
@@ -128,11 +128,11 @@ Exit: no unresolved documentation conflict affects B1–B10.
 
 - [x] Implement Drizzle PostgreSQL schemas from `school-transport-database-data-model-schemas.md`—all 17 tables defined.
 - [x] Add foreign keys, unique constraints, indexes, timestamps, and status fields.
-- [ ] Add check constraints (`total_amount > 0`, etc.) and immutable-history protections.
+- [x] Add check constraints (`total_amount > 0`, etc.) and immutable-history protections.
   - [x] Enforce documented positive/non-negative price and payment-plan amounts and the four-installment structure.
   - [x] Enforce schedule-item amount, sequence, and no-partial-payment invariants.
   - [x] Enforce unique gateway transactions and one successful transaction per schedule item.
-  - [ ] Add migration-level immutable accepted-price/contract and append-only history protections after the migration strategy is approved.
+  - [x] Add migration-level immutable accepted-price/contract, successful-payment, and append-only audit protections.
 - [x] Configure Drizzle and generate the first version-controlled, forward migration.
 - [x] Create repository ports and Drizzle adapters per module (services use DatabaseService directly).
 - [x] Configure transaction handling and a separate PostgreSQL integration-test database.
@@ -150,7 +150,7 @@ Exit: no unresolved documentation conflict affects B1–B10.
   - [x] Validate exact configured origins/referrers on login, refresh, and logout cookie operations.
   - [x] Apply documented backend security headers and global request throttling.
     - [x] Verify CSP, frame, content-type, referrer, permissions, and production-only HSTS behavior.
-  - [ ] Add account/phone/endpoint-specific authentication and OTP abuse controls. (Server-side session revocation is complete.)
+  - [ ] Add account/phone/endpoint-specific authentication and OTP abuse controls. (Server-side session revocation and scheduled expired-session/OTP retention cleanup are complete.)
 - [ ] Test cross-family denial, parent/admin restrictions, token replay/rotation, brute force limits, and session expiry.
   - [x] Unit-test missing/malformed/expired access tokens and reject refresh tokens at access-token boundaries.
   - [x] Unit-test parent denial on admin roles and synchronous/asynchronous ownership policy denial.
@@ -241,6 +241,7 @@ Exit: no unresolved documentation conflict affects B1–B10.
 - [ ] Validate configuration, migrations, backup/restore, graceful shutdown, observability, and incident runbooks.
   - [x] Run PostgreSQL, Redis, controlled migrate/seed, API, and BullMQ worker services with Docker health/dependency gates.
   - [x] Smoke-test API health, seeded authentication and refresh rotation, console OTP, Redis connectivity, and BullMQ processing.
+  - [x] Document environment boundaries, controlled migrations, backup/restore commands, forward-fix rules, incident checks, and authentication retention.
 - [ ] Publish versioned OpenAPI and regenerate the frontend client.
 - [ ] Deploy to staging, run smoke/API/E2E/payment sandbox checks, then obtain approval.
 - [ ] Follow `school-transport-deployment-specification.md` for production rollout and rollback/forward-fix.

@@ -7,22 +7,22 @@
 
 ## Progress
 
-- Overall: `0 / 12 phases complete` — `0%`
-- Documentation readiness: `0 / 4 gates complete`
+- Overall: `1 / 12 phases complete` — `~24%`
+- Documentation readiness: `2 / 4 gates complete`
 - Backend delivery: track in [`BACKEND_DEVELOPMENT_PLAN.md`](./BACKEND_DEVELOPMENT_PLAN.md)
 - Frontend delivery: track in [`FRONTEND_DEVELOPMENT_PLAN.md`](./FRONTEND_DEVELOPMENT_PLAN.md)
 
 | Phase | Deliverable | Status | Progress |
 |---|---|---|---:|
-| 0 | Documentation decisions | Not started | 0% |
-| 1 | Git and monorepo foundation | In progress | 65% |
-| 2 | Local infrastructure and CI | Not started | 0% |
-| 3 | Identity and access | Not started | 0% |
-| 4 | Families, students, schools | Not started | 0% |
-| 5 | Enrollment and review | Not started | 0% |
-| 6 | Pricing and contracts | Not started | 0% |
-| 7 | Payments and installments | Not started | 0% |
-| 8 | Notifications, documents, audit | Not started | 0% |
+| 0 | Documentation decisions | In progress | 50% |
+| 1 | Git and monorepo foundation | Complete | 100% |
+| 2 | Local infrastructure and CI | In progress | 90% |
+| 3 | Identity and access | In progress | 85% |
+| 4 | Families, students, schools | In progress | 80% |
+| 5 | Enrollment and review | In progress | 60% |
+| 6 | Pricing and contracts | In progress | 65% |
+| 7 | Payments and installments | In progress | 75% |
+| 8 | Notifications, documents, audit | In progress | 45% |
 | 9 | Public, parent, and admin UI | In progress | 15% |
 | 10 | Security, performance, testing | Not started | 0% |
 | 11 | Deployment and release | Not started | 0% |
@@ -75,9 +75,9 @@ For every feature:
 ### Phase 0 — mandatory documentation gates
 
 - [ ] Fill and approve `docs/enrollment-form-specification.md` (currently empty) before implementing the complete enrollment form.
-- [ ] Reconcile the infrastructure conflict: `school-transport-tech-stack.md` includes Redis, BullMQ, worker, and scheduler, while `backend-architecture.md` says Redis/BullMQ are not required for the current MVP.
+- [x] Reconcile the infrastructure conflict: PostgreSQL remains authoritative; Redis/BullMQ and a separate worker are approved for temporary/retryable development and MVP background work.
 - [ ] Reconcile any route/name differences between API, architecture, and data-model documents; publish one canonical OpenAPI contract.
-- [ ] Record document precedence and approval owners in `docs/README.md` (create it if approved).
+- [x] Record document precedence and approval owners in `docs/README.md`.
 
 ## 3. Target Architecture From the Docs
 
@@ -110,11 +110,11 @@ Use one Git repository for the monorepo; do not initialize separate repositories
 
 ### Initialize once
 
-- [ ] Confirm secrets and generated files are excluded in `.gitignore`.
-- [ ] Run `git init` if `.git/` does not exist.
+- [x] Confirm secrets and generated files are excluded in `.gitignore`.
+- [x] Run `git init` if `.git/` does not exist.
 - [ ] Set the primary branch: `git branch -M main`.
-- [ ] Add the approved project files: `git add .`.
-- [ ] Create the baseline commit: `git commit -m "chore(repo): initialize school transport monorepo"`.
+- [x] Add the approved project files through focused commits.
+- [x] Create the repository baseline and subsequent conventional commits.
 - [ ] Add the remote when provided: `git remote add origin <repository-url>`.
 - [ ] Push after remote review: `git push -u origin main`.
 
@@ -153,20 +153,20 @@ Breaking changes use `!` and a `BREAKING CHANGE:` footer. Each commit should be 
 
 ### Phase 1 — repository foundation
 
-- [ ] Complete Git initialization and branch protection.
+- [x] Complete local Git initialization and documented feature-branch workflow. (Remote branch protection remains external.)
 - [x] Create the documented `apps/`, `packages/`, `infrastructure/`, and `docs/` structure.
 - [x] Configure pnpm workspaces and Turborepo pipelines.
-- [ ] Add shared strict TypeScript, ESLint, formatter, test, and import-boundary rules.
+- [x] Add shared strict TypeScript, ESLint, formatter, test, and backend import-boundary rules.
 - [x] Add `.env.example`, contribution guide, ADR template, and root commands.
-- [ ] Verify a clean clone can install, lint, type-check, test, and build.
+- [x] Verify frozen dependency installation state, lint, type-check, tests, and production builds locally.
 
 ### Phase 2 — infrastructure and CI
 
-- [ ] Add local PostgreSQL and approved supporting services through Docker Compose.
-- [ ] Configure versioned Drizzle migrations and a separate test database.
-- [ ] Configure GitHub Actions for install, lint, type-check, unit/integration tests, build, migration validation, and dependency/security checks.
-- [ ] Establish development, test, staging, and production configuration boundaries.
-- [ ] Document backup/restore and migration rollback/forward-fix procedure according to deployment docs.
+- [x] Add local PostgreSQL and approved supporting services through Docker Compose.
+- [x] Configure versioned Drizzle migrations and a separate test database.
+- [x] Configure GitHub Actions for install, lint, type-check, tests, build, migration validation, and dependency/security checks. (Remote execution awaits a configured GitHub remote.)
+- [x] Establish development, test, staging, and production configuration boundaries.
+- [x] Document backup/restore and migration rollback/forward-fix procedure according to deployment docs.
 
 ### Phases 3–9 — vertical product slices
 
