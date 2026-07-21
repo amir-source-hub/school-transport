@@ -1,4 +1,12 @@
-import { pgTable, uuid, varchar, timestamp, integer, index } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  timestamp,
+  integer,
+  index,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 
 export const users = pgTable(
   'users',
@@ -45,5 +53,30 @@ export const otpRequests = pgTable(
   },
   (table) => ({
     phonePurposeIdx: index('idx_otp_phone_purpose').on(table.phoneNumber, table.purpose),
+  }),
+);
+
+export const authSessions = pgTable(
+  'auth_sessions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    subjectId: uuid('subject_id').notNull(),
+    role: varchar('role', { length: 20 }).notNull(),
+    refreshTokenHash: varchar('refresh_token_hash', { length: 64 }).notNull(),
+    deviceName: varchar('device_name', { length: 255 }),
+    ipAddress: varchar('ip_address', { length: 64 }),
+    userAgent: varchar('user_agent', { length: 500 }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revocationReason: varchar('revocation_reason', { length: 100 }),
+    replacedBySessionId: uuid('replaced_by_session_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    tokenHashIdx: uniqueIndex('idx_auth_sessions_token_hash').on(table.refreshTokenHash),
+    subjectRoleIdx: index('idx_auth_sessions_subject_role').on(table.subjectId, table.role),
+    expiresAtIdx: index('idx_auth_sessions_expires_at').on(table.expiresAt),
+    revokedAtIdx: index('idx_auth_sessions_revoked_at').on(table.revokedAt),
   }),
 );
