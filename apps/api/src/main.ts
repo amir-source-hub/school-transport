@@ -29,7 +29,10 @@ async function bootstrap() {
     secret: configService.jwtSecret,
   });
 
-  registerSecurityHeaders(app.getHttpAdapter().getInstance());
+  registerSecurityHeaders(
+    app.getHttpAdapter().getInstance(),
+    configService.nodeEnv === 'production',
+  );
 
   app.setGlobalPrefix('api/v1');
 
