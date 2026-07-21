@@ -14,7 +14,7 @@
 | B2 | Database foundation | In progress | 70% |
 | B3 | Identity and authorization | In progress | 85% |
 | B4 | Family, student, school | In progress | 80% |
-| B5 | Enrollment and review | In progress | 50% |
+| B5 | Enrollment and review | In progress | 60% |
 | B6 | Pricing and contracts | In progress | 60% |
 | B7 | Installments and payments | In progress | 55% |
 | B8 | Notifications, documents, audit | In progress | 30% |
@@ -176,11 +176,15 @@ Exit: no unresolved documentation conflict affects B1–B10.
 
 - [ ] Wait for the empty enrollment-form specification to be completed and approved. (Spec is still empty — enrollment uses a simple create/submit flow for now.)
 - [x] Model documented draft/submission/review/approval/rejection states and allowed transitions. (State machine enforced in service.)
+  - [x] Model `NEEDS_CORRECTION` and allow parent resubmission only from draft or correction states.
+  - [x] Require rejected registrations to remain terminal so parents create a new request as specified.
 - [ ] Implement step persistence only as approved by the completed spec. (Spec is empty — step persistence deferred.)
 - [x] Add admin review (start-review, approve, reject) and correction requests.
 - [ ] Prevent duplicate submissions and invalid edits after protected states. (Partial — state machine prevents invalid transitions, but no full duplicate-submission prevention.)
 - [x] Keep route/driver/vehicle assignment outside MVP.
 - [ ] Test every state transition, forbidden transition, ownership case, resubmission, and concurrent review.
+  - [x] Unit-test every allowed transition and reject all unspecified or unknown-status transitions.
+  - [ ] Add PostgreSQL ownership, correction-resubmission, and concurrent-review integration tests.
 
 ### B6 — pricing and contracts
 
