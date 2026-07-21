@@ -2,15 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../../database/database.service';
 import { users, parents, familyAddresses, emergencyContacts } from '../../../database/schemas';
 import { eq, and } from 'drizzle-orm';
-import { NotFoundError, ValidationError, ConflictError } from '../../../common/errors';
+import { NotFoundError, ConflictError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import {
   CreateFamilyDto,
   FamilyProfile,
   ParentProfile,
   AddressProfile,
-  EmergencyContactProfile,
 } from '../domain/family.types';
+import { parseEditableAddressFields } from '../domain/address-update';
 
 @Injectable()
 export class FamiliesService {
@@ -204,14 +204,7 @@ export class FamiliesService {
   async updateAddress(
     addressId: string,
     userId: string,
-    data: Partial<{
-      title: string;
-      streetAddress: string;
-      province: string;
-      city: string;
-      district: string;
-      postalCode: string;
-    }>,
+    data: Record<string, unknown>,
   ): Promise<void> {
     const existing = await this.db.db
       .select()
@@ -221,9 +214,11 @@ export class FamiliesService {
 
     if (existing.length === 0) throw new NotFoundError('Address');
 
+    const editableFields = parseEditableAddressFields(data);
+
     await this.db.db
       .update(familyAddresses)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...editableFields, updatedAt: new Date() })
       .where(eq(familyAddresses.id, addressId));
   }
 

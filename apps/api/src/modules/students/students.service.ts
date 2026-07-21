@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { students } from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
-import { NotFoundError, ValidationError, ConflictError } from '../../common/errors';
+import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
+import { parseEditableStudentFields } from './student-update';
 
 @Injectable()
 export class StudentsService {
@@ -71,20 +72,12 @@ export class StudentsService {
     return this.getById(id);
   }
 
-  async update(
-    studentId: string,
-    userId: string,
-    data: Partial<{
-      firstName: string;
-      lastName: string;
-      grade: string;
-      className: string;
-    }>,
-  ) {
+  async update(studentId: string, userId: string, data: Record<string, unknown>) {
     await this.getById(studentId, userId);
+    const editableFields = parseEditableStudentFields(data);
     await this.db.db
       .update(students)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...editableFields, updatedAt: new Date() })
       .where(eq(students.id, studentId));
     return this.getById(studentId);
   }
