@@ -16,7 +16,7 @@
 | F4    | Parent shell and family/student UI | In progress |      50% |
 | F5    | Enrollment flow                    | Not started |       0% |
 | F6    | Contracts, pricing, payments       | In progress |      45% |
-| F7    | Admin panel                        | In progress |      48% |
+| F7    | Admin panel                        | In progress |      56% |
 | F8    | Accessibility, resilience, tests   | In progress |      46% |
 | F9    | Build and release readiness        | In progress |      35% |
 
@@ -208,6 +208,10 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
   - [x] Build mock registration details with lifecycle-aware guidance, required-reason messaging, and safely disabled sensitive actions.
   - [ ] Enable confirmations, reasons, version conflicts, authoritative results, and audit feedback with real mutations.
 - [ ] Implement pricing and contract actions only when current status permits them.
+  - [x] Replace pricing and contract placeholders with responsive mock lifecycle views for unpriced, issued, accepted, and payment-started records.
+  - [x] Present price editing only before acceptance/payment and require controlled replacement instead of editing accepted contract versions.
+  - [x] Keep every sensitive mock pricing/contract control disabled pending server role, status, re-authentication, versioning, and audit validation.
+  - [ ] Enable authoritative pricing, generation, issuance, and replacement actions after the approved contracts are integrated.
 - [ ] Implement online monitoring and offline approval/rejection with confirmation, reason/notes where documented, idempotent UI behavior, and audit-result display.
   - [x] Replace the admin payment placeholder with a responsive mock review queue showing invoice linkage, expected/submitted amounts, references, and documented statuses.
   - [x] Keep sensitive mock approval/rejection controls disabled and explain required role, idempotency, atomic-update, note, and audit safeguards.
@@ -217,6 +221,7 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
   - [x] Test mock admin dashboard semantics, excluded navigation, mobile drawer behavior, keyboard-accessible overflow, and accessibility.
   - [x] Test registration URL filters, responsive results, disabled sensitive actions, status semantics, and detail accessibility.
   - [x] Unit-test documented mock offline-review status semantics.
+  - [x] Unit-test mock price-lock and accepted-contract replacement semantics.
   - [ ] Test role denial, remaining list filters, stale/concurrent records, confirmations, and error recovery after integration.
 
 ### F8 — accessibility, resilience, performance, testing
