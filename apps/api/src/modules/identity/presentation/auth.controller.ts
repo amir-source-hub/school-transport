@@ -16,6 +16,7 @@ import { AuthGuard } from '../../access-control/auth.guard';
 import { successResponse } from '../../../common/response';
 import { ConfigService } from '../../../config/config.service';
 import { ValidationError } from '../../../common/errors';
+import { TrustedOriginGuard } from '../../access-control/trusted-origin.guard';
 
 class RegisterDto {
   username!: string;
@@ -24,9 +25,6 @@ class RegisterDto {
 class LoginDto {
   username!: string;
   password!: string;
-}
-class RefreshDto {
-  refreshToken?: string;
 }
 class SendOtpDto {
   phoneNumber!: string;
@@ -63,6 +61,7 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(TrustedOriginGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) reply: FastifyReply) {
@@ -75,6 +74,7 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(TrustedOriginGuard)
   @Post('admin-login')
   @HttpCode(HttpStatus.OK)
   async adminLogin(@Body() dto: LoginDto, @Res({ passthrough: true }) reply: FastifyReply) {
@@ -87,11 +87,11 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(TrustedOriginGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
-    const body = req.body as { refreshToken?: string } | undefined;
-    const refreshToken = req.cookies?.refresh_token || body?.refreshToken;
+    const refreshToken = req.cookies?.refresh_token;
     if (!refreshToken) {
       throw new ValidationError('A refresh token is required.');
     }
@@ -100,7 +100,7 @@ export class AuthController {
     return successResponse({ accessToken: tokens.accessToken });
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, TrustedOriginGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: any, @Res({ passthrough: true }) reply: FastifyReply) {

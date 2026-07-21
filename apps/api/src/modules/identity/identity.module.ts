@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '../../config/config.service';
 import { AuthService } from './application/auth.service';
 import { AuthController } from './presentation/auth.controller';
+import { TrustedOriginGuard } from '../access-control/trusted-origin.guard';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { AuthController } from './presentation/auth.controller';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, TrustedOriginGuard],
   exports: [AuthService, JwtModule],
 })
 export class IdentityModule {}
