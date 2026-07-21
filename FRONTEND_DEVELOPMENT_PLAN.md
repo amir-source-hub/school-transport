@@ -16,7 +16,7 @@
 | F4    | Parent shell and family/student UI | In progress |      50% |
 | F5    | Enrollment flow                    | Not started |       0% |
 | F6    | Contracts, pricing, payments       | In progress |      45% |
-| F7    | Admin panel                        | In progress |      40% |
+| F7    | Admin panel                        | In progress |      48% |
 | F8    | Accessibility, resilience, tests   | In progress |      46% |
 | F9    | Build and release readiness        | In progress |      35% |
 
@@ -209,10 +209,14 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
   - [ ] Enable confirmations, reasons, version conflicts, authoritative results, and audit feedback with real mutations.
 - [ ] Implement pricing and contract actions only when current status permits them.
 - [ ] Implement online monitoring and offline approval/rejection with confirmation, reason/notes where documented, idempotent UI behavior, and audit-result display.
+  - [x] Replace the admin payment placeholder with a responsive mock review queue showing invoice linkage, expected/submitted amounts, references, and documented statuses.
+  - [x] Keep sensitive mock approval/rejection controls disabled and explain required role, idempotency, atomic-update, note, and audit safeguards.
+  - [ ] Connect online monitoring, confirmation dialogs, authoritative mutations, concurrency feedback, and audit results after contract approval.
 - [x] Do not add route, driver, vehicle, attendance, school-staff, accountant, dispatcher, or super-admin UI in the MVP.
 - [ ] Test role denial, stale/concurrent records, filters in URLs, destructive confirmation, mobile tables, and error recovery.
   - [x] Test mock admin dashboard semantics, excluded navigation, mobile drawer behavior, keyboard-accessible overflow, and accessibility.
   - [x] Test registration URL filters, responsive results, disabled sensitive actions, status semantics, and detail accessibility.
+  - [x] Unit-test documented mock offline-review status semantics.
   - [ ] Test role denial, remaining list filters, stale/concurrent records, confirmations, and error recovery after integration.
 
 ### F8 — accessibility, resilience, performance, testing
