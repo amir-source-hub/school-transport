@@ -1,5 +1,5 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
-import { EnrollmentReadiness } from '@/features/enrollment/enrollment-readiness';
+import { EnrollmentWizard } from '@/features/enrollment/enrollment-wizard';
 
 export const metadata = { title: 'ثبت‌نام' };
 
@@ -13,10 +13,10 @@ export default function EnrollmentsPage() {
         <p className="text-sm font-bold text-primary">فرایند ثبت‌نام دانش‌آموز</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">ثبت‌نام</h1>
         <p className="mt-2 text-sm text-muted">
-          وضعیت آماده‌سازی رابط ثبت‌نام بر اساس اسناد فعلی پروژه نمایش داده می‌شود.
+          پیش‌نویس چندمرحله‌ای با داده نمایشی و بدون ارسال به سرور تکمیل می‌شود.
         </p>
       </div>
-      <EnrollmentReadiness />
+      <EnrollmentWizard />
     </div>
   );
 }

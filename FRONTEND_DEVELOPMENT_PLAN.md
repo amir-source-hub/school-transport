@@ -14,7 +14,7 @@
 | F2    | API, session, and state foundation | In progress |      40% |
 | F3    | Public and authentication areas    | In progress |      40% |
 | F4    | Parent shell and family/student UI | In progress |      50% |
-| F5    | Enrollment flow                    | In progress |      10% |
+| F5    | Enrollment flow                    | In progress |      25% |
 | F6    | Contracts, pricing, payments       | In progress |      45% |
 | F7    | Admin panel                        | In progress |      56% |
 | F8    | Accessibility, resilience, tests   | In progress |      46% |
@@ -160,8 +160,14 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
   - [x] Receive the completed specification and update the readiness screen without enabling unfinished submission behavior.
   - [x] Record the remaining correction-status conflict: the form specification uses `MORE_INFORMATION_REQUIRED`, while the API specification uses `NEEDS_CORRECTION`.
 - [ ] Build the approved six-step order and fields: student, school, transport, emergency/safety, payment preference, and review/confirmation.
+  - [x] Build the accessible six-step navigator and complete the student-information step with documented fields and mock grade options.
+  - [ ] Complete school, transport, emergency/safety, payment-preference, and review/confirmation steps.
 - [ ] Use React Hook Form and Zod for usability while displaying authoritative server validation.
+  - [x] Use React Hook Form and Zod for the student step, including Persian/Arabic digit normalization and Iranian national-ID checksum validation.
+  - [ ] Map authoritative server validation after generated API integration.
 - [ ] Implement per-step validation, back/next, progress, approved draft saving, final review, submission lock, and recoverable-error preservation.
+  - [x] Implement student-step validation, progress, forward/back navigation, and in-memory value preservation without storing sensitive data.
+  - [ ] Add remaining step validation, approved draft persistence, final review, submission locking, and API-error preservation.
 - [ ] Reuse family information for another student only as documented.
 - [ ] Show lifecycle status, correction requests, allowed edits, and approval/rejection feedback without exposing internal notes.
 - [ ] Test refresh/resume rules, browser back behavior, duplicate submission, network failure, correction/resubmission, RTL, keyboard, and narrow screens.
