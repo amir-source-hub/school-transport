@@ -1,12 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { serviceRegistrations, registrationSnapshots, registrationReviews, registrationNotes } from '../../database/schemas';
+import {
+  serviceRegistrations,
+  registrationSnapshots,
+  registrationReviews,
+  registrationNotes,
+} from '../../database/schemas';
 import { students } from '../../database/schemas';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { NotFoundError, ValidationError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 
-type RegistrationStatus = 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+type RegistrationStatus =
+  'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 const VALID_TRANSITIONS: Record<RegistrationStatus, RegistrationStatus[]> = {
   DRAFT: ['SUBMITTED', 'CANCELLED'],
   SUBMITTED: ['UNDER_REVIEW', 'CANCELLED'],
@@ -28,20 +34,23 @@ export class RegistrationsService {
   }
 
   async getByFamily(userId: string) {
-    const userStudents = await this.db.db.select({ id: students.id })
+    const userStudents = await this.db.db
+      .select({ id: students.id })
       .from(students)
       .where(eq(students.userId, userId));
 
-    const studentIds = userStudents.map(s => s.id);
+    const studentIds = userStudents.map((s) => s.id);
     if (studentIds.length === 0) return [];
 
-    return this.db.db.select()
+    return this.db.db
+      .select()
       .from(serviceRegistrations)
-      .where(serviceRegistrations.studentId.in(studentIds));
+      .where(inArray(serviceRegistrations.studentId, studentIds));
   }
 
   async getById(registrationId: string, userId?: string) {
-    const result = await this.db.db.select()
+    const result = await this.db.db
+      .select()
       .from(serviceRegistrations)
       .where(eq(serviceRegistrations.id, registrationId))
       .limit(1);
@@ -49,7 +58,8 @@ export class RegistrationsService {
     if (result.length === 0) throw new NotFoundError('Registration', registrationId);
 
     if (userId) {
-      const student = await this.db.db.select({ userId: students.userId })
+      const student = await this.db.db
+        .select({ userId: students.userId })
         .from(students)
         .where(eq(students.id, result[0].studentId))
         .limit(1);
@@ -61,14 +71,18 @@ export class RegistrationsService {
     return result[0];
   }
 
-  async create(userId: string, data: {
-    studentId: string;
-    academicYear: string;
-    serviceType: string;
-    requestedStartDate?: string;
-    parentNotes?: string;
-  }) {
-    const student = await this.db.db.select()
+  async create(
+    userId: string,
+    data: {
+      studentId: string;
+      academicYear: string;
+      serviceType: string;
+      requestedStartDate?: string;
+      parentNotes?: string;
+    },
+  ) {
+    const student = await this.db.db
+      .select()
       .from(students)
       .where(and(eq(students.id, data.studentId), eq(students.userId, userId)))
       .limit(1);
@@ -92,7 +106,8 @@ export class RegistrationsService {
     const reg = await this.getById(registrationId, userId);
     await this.checkTransition(reg.registrationStatus, 'SUBMITTED');
 
-    await this.db.db.update(serviceRegistrations)
+    await this.db.db
+      .update(serviceRegistrations)
       .set({ registrationStatus: 'SUBMITTED', submittedAt: new Date(), updatedAt: new Date() })
       .where(eq(serviceRegistrations.id, registrationId));
 
@@ -104,7 +119,8 @@ export class RegistrationsService {
     const reg = await this.getById(registrationId, userId);
     await this.checkTransition(reg.registrationStatus, 'CANCELLED');
 
-    await this.db.db.update(serviceRegistrations)
+    await this.db.db
+      .update(serviceRegistrations)
       .set({ registrationStatus: 'CANCELLED', updatedAt: new Date() })
       .where(eq(serviceRegistrations.id, registrationId));
 
@@ -115,8 +131,14 @@ export class RegistrationsService {
     const reg = await this.getById(registrationId);
     await this.checkTransition(reg.registrationStatus, 'UNDER_REVIEW');
 
-    await this.db.db.update(serviceRegistrations)
-      .set({ registrationStatus: 'UNDER_REVIEW', reviewedByAdminId: adminId, reviewedAt: new Date(), updatedAt: new Date() })
+    await this.db.db
+      .update(serviceRegistrations)
+      .set({
+        registrationStatus: 'UNDER_REVIEW',
+        reviewedByAdminId: adminId,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(serviceRegistrations.id, registrationId));
 
     await this.addReview(registrationId, adminId, 'START_REVIEW');
@@ -127,8 +149,14 @@ export class RegistrationsService {
     const reg = await this.getById(registrationId);
     await this.checkTransition(reg.registrationStatus, 'APPROVED');
 
-    await this.db.db.update(serviceRegistrations)
-      .set({ registrationStatus: 'APPROVED', reviewedByAdminId: adminId, reviewedAt: new Date(), updatedAt: new Date() })
+    await this.db.db
+      .update(serviceRegistrations)
+      .set({
+        registrationStatus: 'APPROVED',
+        reviewedByAdminId: adminId,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(serviceRegistrations.id, registrationId));
 
     await this.addReview(registrationId, adminId, 'APPROVE');
@@ -139,7 +167,8 @@ export class RegistrationsService {
     const reg = await this.getById(registrationId);
     await this.checkTransition(reg.registrationStatus, 'REJECTED');
 
-    await this.db.db.update(serviceRegistrations)
+    await this.db.db
+      .update(serviceRegistrations)
       .set({
         registrationStatus: 'REJECTED',
         reviewedByAdminId: adminId,
@@ -158,7 +187,12 @@ export class RegistrationsService {
     return { message: 'Correction requested.' };
   }
 
-  private async addReview(registrationId: string, adminId: string, action: string, comment?: string) {
+  private async addReview(
+    registrationId: string,
+    adminId: string,
+    action: string,
+    comment?: string,
+  ) {
     await this.db.db.insert(registrationReviews).values({
       id: generateId(),
       registrationId,
@@ -170,7 +204,11 @@ export class RegistrationsService {
 
   private async createSnapshot(registrationId: string, type: string) {
     const reg = await this.getById(registrationId);
-    const student = await this.db.db.select().from(students).where(eq(students.id, reg.studentId)).limit(1);
+    const student = await this.db.db
+      .select()
+      .from(students)
+      .where(eq(students.id, reg.studentId))
+      .limit(1);
 
     await this.db.db.insert(registrationSnapshots).values({
       id: generateId(),

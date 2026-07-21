@@ -17,10 +17,20 @@ export class StudentsController {
   }
 
   @Post()
-  async create(@Req() req: any, @Body() dto: {
-    schoolId: string; firstName: string; lastName: string;
-    nationalId: string; birthDate?: string; gender?: string; grade?: string; className?: string;
-  }) {
+  async create(
+    @Req() req: any,
+    @Body()
+    dto: {
+      schoolId: string;
+      firstName: string;
+      lastName: string;
+      nationalId: string;
+      birthDate?: string;
+      gender?: string;
+      grade?: string;
+      className?: string;
+    },
+  ) {
     const student = await this.studentsService.create(req.user.id, dto);
     return successResponse(student);
   }

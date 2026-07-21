@@ -18,11 +18,19 @@ export class AdminPricingController {
   }
 
   @Post()
-  async createPrice(@Param('enrollmentId') enrollmentId: string, @Req() req: any, @Body() dto: {
-    totalAmount: number; currency?: string; fullPaymentAllowed?: boolean;
-    installmentPaymentAllowed?: boolean; prepaymentAmount?: number;
-    installmentCount?: number;
-  }) {
+  async createPrice(
+    @Param('enrollmentId') enrollmentId: string,
+    @Req() req: any,
+    @Body()
+    dto: {
+      totalAmount: number;
+      currency?: string;
+      fullPaymentAllowed?: boolean;
+      installmentPaymentAllowed?: boolean;
+      prepaymentAmount?: number;
+      installmentCount?: number;
+    },
+  ) {
     const prices = await this.pricingService.create(enrollmentId, req.user.id, dto);
     return successResponse(prices);
   }

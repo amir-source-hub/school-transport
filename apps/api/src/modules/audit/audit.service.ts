@@ -32,7 +32,8 @@ export class AuditService {
   }
 
   async getByEntity(entityType: string, entityId: string) {
-    return this.db.db.select()
+    return this.db.db
+      .select()
       .from(auditLogs)
       .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)));
   }

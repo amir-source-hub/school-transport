@@ -8,6 +8,7 @@ import { GlobalExceptionFilter } from './common/filters';
 import { registerSecurityHeaders } from './common/security-headers';
 import { AppLogger } from './common/logger';
 import fastifyCookie from '@fastify/cookie';
+import { RequestContext } from './common/request-context';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -40,7 +41,7 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalFilters(new GlobalExceptionFilter(logger, app.get(RequestContext)));
 
   app.enableCors({
     origin: configService.corsOrigins,
@@ -48,6 +49,8 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Correlation-Id'],
   });
+
+  app.enableShutdownHooks();
 
   await app.listen(configService.port, configService.host);
   logger.log(`API running on ${configService.host}:${configService.port}`);

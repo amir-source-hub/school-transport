@@ -24,22 +24,44 @@ export class SchoolsService {
   }
 
   async create(data: {
-    name: string; schoolType: string; genderType: string;
-    province: string; city: string; district?: string;
-    address: string; phoneNumber?: string;
+    name: string;
+    schoolType: string;
+    genderType: string;
+    province: string;
+    city: string;
+    district?: string;
+    address: string;
+    phoneNumber?: string;
   }) {
     const id = generateId();
-    await this.db.db.insert(schools).values({ id, ...data, district: data.district || null, phoneNumber: data.phoneNumber || null });
+    await this.db.db.insert(schools).values({
+      id,
+      ...data,
+      district: data.district || null,
+      phoneNumber: data.phoneNumber || null,
+    });
     return this.getById(id);
   }
 
-  async update(id: string, data: Partial<{
-    name: string; schoolType: string; genderType: string;
-    province: string; city: string; district: string;
-    address: string; phoneNumber: string; isActive: boolean;
-  }>) {
+  async update(
+    id: string,
+    data: Partial<{
+      name: string;
+      schoolType: string;
+      genderType: string;
+      province: string;
+      city: string;
+      district: string;
+      address: string;
+      phoneNumber: string;
+      isActive: boolean;
+    }>,
+  ) {
     const existing = await this.getById(id);
-    await this.db.db.update(schools).set({ ...data, updatedAt: new Date() }).where(eq(schools.id, id));
+    await this.db.db
+      .update(schools)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(schools.id, id));
     return this.getById(id);
   }
 

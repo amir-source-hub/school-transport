@@ -22,25 +22,33 @@ export class FamiliesController {
   }
 
   @Patch('me')
-  async updateProfile(@Req() req: any, @Body() dto: { firstName?: string; lastName?: string; parentType?: string }) {
+  async updateProfile(
+    @Req() req: any,
+    @Body() dto: { firstName?: string; lastName?: string; parentType?: string },
+  ) {
     await this.familiesService.updateProfile(req.user.id, dto);
     return successResponse({ updated: true });
   }
 
   @Post('addresses')
-  async addAddress(@Req() req: any, @Body() dto: {
-    title: string; province: string; city: string;
-    district?: string; streetAddress: string; postalCode?: string;
-  }) {
+  async addAddress(
+    @Req() req: any,
+    @Body()
+    dto: {
+      title: string;
+      province: string;
+      city: string;
+      district?: string;
+      streetAddress: string;
+      postalCode?: string;
+    },
+  ) {
     const address = await this.familiesService.addAddress(req.user.id, dto);
     return successResponse(address);
   }
 
   @Patch('addresses/:addressId')
-  async updateAddress(
-    @Req() req: any, @Param('addressId') addressId: string,
-    @Body() dto: any,
-  ) {
+  async updateAddress(@Req() req: any, @Param('addressId') addressId: string, @Body() dto: any) {
     await this.familiesService.updateAddress(addressId, req.user.id, dto);
     return successResponse({ updated: true });
   }
@@ -55,7 +63,10 @@ export class FamiliesController {
   async changePrimaryPhone(@Req() req: any, @Body() dto: { parentType: 'MOTHER' | 'FATHER' }) {
     await this.familiesService.setPrimaryPhone(req.user.id, dto.parentType);
     const profile = await this.familiesService.getFamilyProfile(req.user.id);
-    return successResponse({ updated: true, message: 'Primary phone changed. OTP verification required.' });
+    return successResponse({
+      updated: true,
+      message: 'Primary phone changed. OTP verification required.',
+    });
   }
 
   @Post('change-password')

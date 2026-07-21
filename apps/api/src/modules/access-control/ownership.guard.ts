@@ -1,8 +1,17 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, SetMetadata } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  SetMetadata,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 export const OWNERSHIP_KEY = 'ownership';
-export type OwnershipCheck = (user: { id: string; role: string }, params: Record<string, string>) => boolean | Promise<boolean>;
+export type OwnershipCheck = (
+  user: { id: string; role: string },
+  params: Record<string, string>,
+) => boolean | Promise<boolean>;
 
 export const Ownership = (check: OwnershipCheck) => SetMetadata(OWNERSHIP_KEY, check);
 

@@ -31,20 +31,48 @@ export class ConfigService implements OnApplicationShutdown {
     this.env = result.data;
   }
 
-  get port(): number { return this.env.PORT; }
-  get host(): string { return this.env.HOST; }
-  get nodeEnv(): string { return this.env.NODE_ENV; }
-  get databaseUrl(): string { return this.env.DATABASE_URL; }
-  get jwtSecret(): string { return this.env.JWT_SECRET; }
-  get jwtAccessTokenTtl(): number { return this.env.JWT_ACCESS_TOKEN_TTL; }
-  get jwtRefreshTokenTtl(): number { return this.env.JWT_REFRESH_TOKEN_TTL; }
-  get adminJwtAccessTokenTtl(): number { return this.env.ADMIN_JWT_ACCESS_TOKEN_TTL; }
-  get adminJwtRefreshTokenTtl(): number { return this.env.ADMIN_JWT_REFRESH_TOKEN_TTL; }
-  get otpExpirySeconds(): number { return this.env.OTP_EXPIRY_SECONDS; }
-  get otpMaxAttempts(): number { return this.env.OTP_MAX_ATTEMPTS; }
-  get otpResendCooldownSeconds(): number { return this.env.OTP_RESEND_COOLDOWN_SECONDS; }
-  get corsOrigins(): string[] { return this.env.CORS_ORIGINS.split(',').map(s => s.trim()); }
-  get logLevel(): string { return this.env.LOG_LEVEL; }
+  get port(): number {
+    return this.env.PORT;
+  }
+  get host(): string {
+    return this.env.HOST;
+  }
+  get nodeEnv(): string {
+    return this.env.NODE_ENV;
+  }
+  get databaseUrl(): string {
+    return this.env.DATABASE_URL;
+  }
+  get jwtSecret(): string {
+    return this.env.JWT_SECRET;
+  }
+  get jwtAccessTokenTtl(): number {
+    return this.env.JWT_ACCESS_TOKEN_TTL;
+  }
+  get jwtRefreshTokenTtl(): number {
+    return this.env.JWT_REFRESH_TOKEN_TTL;
+  }
+  get adminJwtAccessTokenTtl(): number {
+    return this.env.ADMIN_JWT_ACCESS_TOKEN_TTL;
+  }
+  get adminJwtRefreshTokenTtl(): number {
+    return this.env.ADMIN_JWT_REFRESH_TOKEN_TTL;
+  }
+  get otpExpirySeconds(): number {
+    return this.env.OTP_EXPIRY_SECONDS;
+  }
+  get otpMaxAttempts(): number {
+    return this.env.OTP_MAX_ATTEMPTS;
+  }
+  get otpResendCooldownSeconds(): number {
+    return this.env.OTP_RESEND_COOLDOWN_SECONDS;
+  }
+  get corsOrigins(): string[] {
+    return this.env.CORS_ORIGINS.split(',').map((s) => s.trim());
+  }
+  get logLevel(): string {
+    return this.env.LOG_LEVEL;
+  }
 
   onApplicationShutdown() {}
 }

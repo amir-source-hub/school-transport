@@ -1,5 +1,13 @@
 import {
-  Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Get, Req, Res,
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  Get,
+  Req,
+  Res,
 } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthService } from '../application/auth.service';
@@ -7,15 +15,38 @@ import { Public } from '../../../common/decorators';
 import { AuthGuard } from '../../access-control/auth.guard';
 import { successResponse } from '../../../common/response';
 import { ConfigService } from '../../../config/config.service';
+import { ValidationError } from '../../../common/errors';
 
-class RegisterDto { username!: string; password!: string; }
-class LoginDto { username!: string; password!: string; }
-class RefreshDto { refreshToken?: string; }
-class SendOtpDto { phoneNumber!: string; }
-class VerifyOtpDto { phoneNumber!: string; code!: string; }
-class ForgotPasswordDto { phoneNumber!: string; }
-class ResetPasswordDto { phoneNumber!: string; code!: string; newPassword!: string; }
-class ChangePasswordDto { oldPassword!: string; newPassword!: string; }
+class RegisterDto {
+  username!: string;
+  password!: string;
+}
+class LoginDto {
+  username!: string;
+  password!: string;
+}
+class RefreshDto {
+  refreshToken?: string;
+}
+class SendOtpDto {
+  phoneNumber!: string;
+}
+class VerifyOtpDto {
+  phoneNumber!: string;
+  code!: string;
+}
+class ForgotPasswordDto {
+  phoneNumber!: string;
+}
+class ResetPasswordDto {
+  phoneNumber!: string;
+  code!: string;
+  newPassword!: string;
+}
+class ChangePasswordDto {
+  oldPassword!: string;
+  newPassword!: string;
+}
 
 @Controller('auth')
 export class AuthController {
@@ -59,7 +90,11 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
-    const refreshToken = req.cookies?.refresh_token || req.body?.refreshToken;
+    const body = req.body as { refreshToken?: string } | undefined;
+    const refreshToken = req.cookies?.refresh_token || body?.refreshToken;
+    if (!refreshToken) {
+      throw new ValidationError('A refresh token is required.');
+    }
     const tokens = await this.authService.refreshTokens(refreshToken, 'PARENT');
     this.setRefreshCookie(reply, tokens.refreshToken);
     return successResponse({ accessToken: tokens.accessToken });
@@ -87,7 +122,11 @@ export class AuthController {
   @Post('verify-phone')
   @HttpCode(HttpStatus.OK)
   async verifyPhone(@Body() dto: VerifyOtpDto) {
-    const result = await this.authService.verifyOtp(dto.phoneNumber, 'PRIMARY_PHONE_VERIFICATION', dto.code);
+    const result = await this.authService.verifyOtp(
+      dto.phoneNumber,
+      'PRIMARY_PHONE_VERIFICATION',
+      dto.code,
+    );
     return successResponse(result);
   }
 
@@ -111,7 +150,12 @@ export class AuthController {
   @Post('change-password')
   @HttpCode(HttpStatus.OK)
   async changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
-    await this.authService.changePassword(req.user.id, req.user.role, dto.oldPassword, dto.newPassword);
+    await this.authService.changePassword(
+      req.user.id,
+      req.user.role,
+      dto.oldPassword,
+      dto.newPassword,
+    );
     return successResponse({ passwordChanged: true });
   }
 

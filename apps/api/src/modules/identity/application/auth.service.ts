@@ -6,7 +6,12 @@ import { eq, and, isNull } from 'drizzle-orm';
 import { ConfigService } from '../../../config/config.service';
 import { DatabaseService } from '../../../database/database.service';
 import { users, adminUsers, otpRequests, parents } from '../../../database/schemas';
-import { AuthenticationError, ConflictError, NotFoundError, ValidationError } from '../../../common/errors';
+import {
+  AuthenticationError,
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
 import { JwtPayload, AuthTokens, LoginResult, OtpResult } from '../domain/auth.types';
@@ -23,7 +28,8 @@ export class AuthService {
   async registerParent(username: string, password: string): Promise<{ userId: string }> {
     this.validatePassword(password, false);
 
-    const existing = await this.db.db.select({ id: users.id })
+    const existing = await this.db.db
+      .select({ id: users.id })
       .from(users)
       .where(eq(users.username, username))
       .limit(1);
@@ -55,7 +61,8 @@ export class AuthService {
   }): Promise<{ adminId: string }> {
     this.validatePassword(data.password, true);
 
-    const existing = await this.db.db.select({ id: adminUsers.id })
+    const existing = await this.db.db
+      .select({ id: adminUsers.id })
       .from(adminUsers)
       .where(eq(adminUsers.username, data.username))
       .limit(1);
@@ -81,10 +88,7 @@ export class AuthService {
   }
 
   async loginParent(username: string, password: string): Promise<LoginResult> {
-    const user = await this.db.db.select()
-      .from(users)
-      .where(eq(users.username, username))
-      .limit(1);
+    const user = await this.db.db.select().from(users).where(eq(users.username, username)).limit(1);
 
     if (user.length === 0) {
       throw new AuthenticationError();
@@ -100,9 +104,7 @@ export class AuthService {
       throw new AuthenticationError('Account is disabled or suspended.');
     }
 
-    await this.db.db.update(users)
-      .set({ lastLoginAt: new Date() })
-      .where(eq(users.id, user[0].id));
+    await this.db.db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user[0].id));
 
     const tokens = await this.generateTokens(user[0].id, 'PARENT');
     this.logger.log(`Parent logged in: ${username}`);
@@ -114,7 +116,8 @@ export class AuthService {
   }
 
   async loginAdmin(username: string, password: string): Promise<LoginResult> {
-    const admin = await this.db.db.select()
+    const admin = await this.db.db
+      .select()
       .from(adminUsers)
       .where(eq(adminUsers.username, username))
       .limit(1);
@@ -133,7 +136,8 @@ export class AuthService {
       throw new AuthenticationError('Account is disabled or suspended.');
     }
 
-    await this.db.db.update(adminUsers)
+    await this.db.db
+      .update(adminUsers)
       .set({ lastLoginAt: new Date() })
       .where(eq(adminUsers.id, admin[0].id));
 
@@ -176,10 +180,7 @@ export class AuthService {
     this.validatePassword(newPassword, role === 'ADMIN');
 
     const table = role === 'PARENT' ? users : adminUsers;
-    const records = await this.db.db.select()
-      .from(table)
-      .where(eq(table.id, userId))
-      .limit(1);
+    const records = await this.db.db.select().from(table).where(eq(table.id, userId)).limit(1);
 
     if (records.length === 0) throw new NotFoundError('User');
 
@@ -187,7 +188,8 @@ export class AuthService {
     if (!valid) throw new AuthenticationError('Current password is incorrect.');
 
     const newHash = await argon2.hash(newPassword);
-    await this.db.db.update(table)
+    await this.db.db
+      .update(table)
       .set({ passwordHash: newHash, updatedAt: new Date() })
       .where(eq(table.id, userId));
 
@@ -195,7 +197,8 @@ export class AuthService {
   }
 
   async forgotPassword(phoneNumber: string): Promise<OtpResult> {
-    const parent = await this.db.db.select()
+    const parent = await this.db.db
+      .select()
       .from(parents)
       .where(eq(parents.phoneNumber, phoneNumber))
       .limit(1);
@@ -212,7 +215,8 @@ export class AuthService {
 
     await this.verifyOtp(phoneNumber, 'PASSWORD_RECOVERY', code);
 
-    const parentRecords = await this.db.db.select()
+    const parentRecords = await this.db.db
+      .select()
       .from(parents)
       .where(eq(parents.phoneNumber, phoneNumber))
       .limit(1);
@@ -220,7 +224,8 @@ export class AuthService {
     if (parentRecords.length === 0) throw new NotFoundError('Parent');
 
     const parent = parentRecords[0];
-    const userRecords = await this.db.db.select()
+    const userRecords = await this.db.db
+      .select()
       .from(users)
       .where(eq(users.id, parent.userId))
       .limit(1);
@@ -228,7 +233,8 @@ export class AuthService {
     if (userRecords.length === 0) throw new NotFoundError('User');
 
     const newHash = await argon2.hash(newPassword);
-    await this.db.db.update(users)
+    await this.db.db
+      .update(users)
       .set({ passwordHash: newHash, updatedAt: new Date() })
       .where(eq(users.id, parent.userId));
 
@@ -236,13 +242,16 @@ export class AuthService {
   }
 
   async sendOtp(phoneNumber: string, purpose: string): Promise<OtpResult> {
-    const recent = await this.db.db.select()
+    const recent = await this.db.db
+      .select()
       .from(otpRequests)
-      .where(and(
-        eq(otpRequests.phoneNumber, phoneNumber),
-        eq(otpRequests.purpose, purpose),
-        isNull(otpRequests.verifiedAt),
-      ))
+      .where(
+        and(
+          eq(otpRequests.phoneNumber, phoneNumber),
+          eq(otpRequests.purpose, purpose),
+          isNull(otpRequests.verifiedAt),
+        ),
+      )
       .orderBy(otpRequests.createdAt)
       .limit(1);
 
@@ -251,7 +260,9 @@ export class AuthService {
       const elapsed = (Date.now() - new Date(lastRequest.createdAt).getTime()) / 1000;
       if (elapsed < this.config.otpResendCooldownSeconds) {
         const waitSeconds = Math.ceil(this.config.otpResendCooldownSeconds - elapsed);
-        throw new ValidationError(`Please wait ${waitSeconds} seconds before requesting a new code.`);
+        throw new ValidationError(
+          `Please wait ${waitSeconds} seconds before requesting a new code.`,
+        );
       }
     }
 
@@ -273,14 +284,21 @@ export class AuthService {
     return { expiresAt, cooldownSeconds: this.config.otpResendCooldownSeconds };
   }
 
-  async verifyOtp(phoneNumber: string, purpose: string, code: string): Promise<{ userId?: string }> {
-    const requests = await this.db.db.select()
+  async verifyOtp(
+    phoneNumber: string,
+    purpose: string,
+    code: string,
+  ): Promise<{ userId?: string }> {
+    const requests = await this.db.db
+      .select()
       .from(otpRequests)
-      .where(and(
-        eq(otpRequests.phoneNumber, phoneNumber),
-        eq(otpRequests.purpose, purpose),
-        isNull(otpRequests.verifiedAt),
-      ))
+      .where(
+        and(
+          eq(otpRequests.phoneNumber, phoneNumber),
+          eq(otpRequests.purpose, purpose),
+          isNull(otpRequests.verifiedAt),
+        ),
+      )
       .orderBy(otpRequests.createdAt)
       .limit(1);
 
@@ -300,14 +318,16 @@ export class AuthService {
 
     const valid = await argon2.verify(request.codeHash, code);
     if (!valid) {
-      await this.db.db.update(otpRequests)
+      await this.db.db
+        .update(otpRequests)
         .set({ attemptCount: request.attemptCount + 1 })
         .where(eq(otpRequests.id, request.id));
       this.logger.warn(`Failed OTP attempt for ${phoneNumber} (${purpose})`);
       throw new ValidationError('Invalid verification code.');
     }
 
-    await this.db.db.update(otpRequests)
+    await this.db.db
+      .update(otpRequests)
       .set({ verifiedAt: new Date(), attemptCount: request.attemptCount + 1 })
       .where(eq(otpRequests.id, request.id));
 
@@ -316,15 +336,23 @@ export class AuthService {
   }
 
   private async generateTokens(userId: string, role: 'PARENT' | 'ADMIN'): Promise<AuthTokens> {
-    const accessTtl = role === 'ADMIN' ? this.config.adminJwtAccessTokenTtl : this.config.jwtAccessTokenTtl;
-    const refreshTtl = role === 'ADMIN' ? this.config.adminJwtRefreshTokenTtl : this.config.jwtRefreshTokenTtl;
+    const accessTtl =
+      role === 'ADMIN' ? this.config.adminJwtAccessTokenTtl : this.config.jwtAccessTokenTtl;
+    const refreshTtl =
+      role === 'ADMIN' ? this.config.adminJwtRefreshTokenTtl : this.config.jwtRefreshTokenTtl;
 
     const accessPayload: JwtPayload = { sub: userId, role, type: 'access' };
     const refreshPayload: JwtPayload = { sub: userId, role, type: 'refresh' };
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(accessPayload, { expiresIn: accessTtl, secret: this.config.jwtSecret }),
-      this.jwtService.signAsync(refreshPayload, { expiresIn: refreshTtl, secret: this.config.jwtSecret }),
+      this.jwtService.signAsync(accessPayload, {
+        expiresIn: accessTtl,
+        secret: this.config.jwtSecret,
+      }),
+      this.jwtService.signAsync(refreshPayload, {
+        expiresIn: refreshTtl,
+        secret: this.config.jwtSecret,
+      }),
     ]);
 
     return { accessToken, refreshToken };

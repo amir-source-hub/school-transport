@@ -16,7 +16,11 @@ export class PaymentsController {
     @Param('scheduleItemId') scheduleItemId: string,
     @Headers('Idempotency-Key') idempotencyKey: string,
   ) {
-    const tx = await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey || '');
+    const tx = await this.paymentsService.startOnlinePayment(
+      scheduleItemId,
+      req.user.id,
+      idempotencyKey || '',
+    );
     return successResponse(tx);
   }
 
@@ -32,7 +36,11 @@ export class PaymentsController {
     @Param('scheduleItemId') scheduleItemId: string,
     @Body() dto: { paidAt: string; referenceNumber: string; description?: string },
   ) {
-    const txId = await this.paymentsService.createOfflineSubmission(scheduleItemId, req.user.id, dto);
+    const txId = await this.paymentsService.createOfflineSubmission(
+      scheduleItemId,
+      req.user.id,
+      dto,
+    );
     return successResponse({ transactionId: txId });
   }
 }

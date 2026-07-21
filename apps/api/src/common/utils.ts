@@ -10,7 +10,11 @@ export function generateContractNumber(): string {
   return `CTR-${timestamp}-${random}`;
 }
 
-export function calculateInstallmentAmounts(total: number, prepayment: number, count: number): number[] {
+export function calculateInstallmentAmounts(
+  total: number,
+  prepayment: number,
+  count: number,
+): number[] {
   const remaining = total - prepayment;
   const base = Math.floor(remaining / count);
   const remainder = remaining - base * count;
@@ -22,5 +26,5 @@ export function calculateInstallmentAmounts(total: number, prepayment: number, c
 }
 
 export function formatPhoneNumber(phone: string): string {
-  return phone.replace(/[\s\-\(\)]/g, '');
+  return phone.replace(/[\s()-]/g, '');
 }

@@ -9,30 +9,38 @@ export class NotificationsService {
   constructor(private readonly db: DatabaseService) {}
 
   async getByUser(userId: string) {
-    return this.db.db.select()
+    return this.db.db
+      .select()
       .from(notifications)
       .where(eq(notifications.userId, userId))
       .orderBy(notifications.createdAt);
   }
 
   async getUnreadCount(userId: string) {
-    const result = await this.db.db.select()
+    const result = await this.db.db
+      .select()
       .from(notifications)
-      .where(and(eq(notifications.userId, userId), eq(notifications.notificationStatus, 'PENDING')));
+      .where(
+        and(eq(notifications.userId, userId), eq(notifications.notificationStatus, 'PENDING')),
+      );
 
     return { unreadCount: result.length };
   }
 
   async markRead(notificationId: string, userId: string) {
-    await this.db.db.update(notifications)
+    await this.db.db
+      .update(notifications)
       .set({ notificationStatus: 'SENT', sentAt: new Date() })
       .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
   }
 
   async markAllRead(userId: string) {
-    await this.db.db.update(notifications)
+    await this.db.db
+      .update(notifications)
       .set({ notificationStatus: 'SENT', sentAt: new Date() })
-      .where(and(eq(notifications.userId, userId), eq(notifications.notificationStatus, 'PENDING')));
+      .where(
+        and(eq(notifications.userId, userId), eq(notifications.notificationStatus, 'PENDING')),
+      );
   }
 
   async create(data: {

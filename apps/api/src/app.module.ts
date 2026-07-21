@@ -1,6 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { IdentityModule } from './modules/identity/identity.module';
@@ -18,6 +18,8 @@ import { HealthModule } from './modules/health/health.module';
 import { AppLogger } from './common/logger';
 import { CorrelationIdMiddleware } from './common/middleware';
 import { GracefulShutdownService } from './common/graceful-shutdown';
+import { RequestContext } from './common/request-context';
+import { ResponseMetadataInterceptor } from './common/response-metadata.interceptor';
 
 @Module({
   imports: [
@@ -39,10 +41,12 @@ import { GracefulShutdownService } from './common/graceful-shutdown';
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_INTERCEPTOR, useClass: ResponseMetadataInterceptor },
+    RequestContext,
     AppLogger,
     GracefulShutdownService,
   ],
-  exports: [AppLogger],
+  exports: [AppLogger, RequestContext],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

@@ -1,14 +1,22 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { FastifyReply } from 'fastify';
 import { AppError } from './errors';
+import { AppLogger } from './logger';
+import { RequestContext } from './request-context';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
+  constructor(
+    private readonly logger: AppLogger,
+    private readonly requestContext: RequestContext,
+  ) {}
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const reply = ctx.getResponse<FastifyReply>();
 
     if (exception instanceof AppError) {
+      this.logger.warn(exception.message, exception.code);
       return reply.status(exception.status).send({
         success: false,
         error: {
@@ -17,6 +25,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           field: exception.field || undefined,
           details: exception.details || undefined,
         },
+        meta: { requestId: this.requestContext.requestId },
       });
     }
 
@@ -36,6 +45,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
       }
 
+      this.logger.warn(message, 'HttpException');
       return reply.status(status).send({
         success: false,
         error: {
@@ -43,16 +53,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           message,
           details,
         },
+        meta: { requestId: this.requestContext.requestId },
       });
     }
 
-    console.error('Unhandled exception:', exception);
+    this.logger.error(
+      'Unhandled exception',
+      exception instanceof Error ? exception.stack : undefined,
+      'GlobalExceptionFilter',
+    );
     return reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
       success: false,
       error: {
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Something went wrong. Please try again.',
       },
+      meta: { requestId: this.requestContext.requestId },
     });
   }
 }

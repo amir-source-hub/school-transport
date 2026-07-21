@@ -11,7 +11,8 @@ export class InstallmentsService {
   constructor(private readonly db: DatabaseService) {}
 
   async createPlan(priceId: string, planType: string): Promise<string> {
-    const price = await this.db.db.select()
+    const price = await this.db.db
+      .select()
       .from(registrationPrices)
       .where(eq(registrationPrices.id, priceId))
       .limit(1);
@@ -25,7 +26,9 @@ export class InstallmentsService {
     return this.createInstallmentPlan(price[0]);
   }
 
-  private async createFullPaymentPlan(price: typeof registrationPrices.$inferSelect): Promise<string> {
+  private async createFullPaymentPlan(
+    price: typeof registrationPrices.$inferSelect,
+  ): Promise<string> {
     const planId = generateId();
     await this.db.db.insert(paymentPlans).values({
       id: planId,
@@ -49,10 +52,16 @@ export class InstallmentsService {
     return planId;
   }
 
-  private async createInstallmentPlan(price: typeof registrationPrices.$inferSelect): Promise<string> {
+  private async createInstallmentPlan(
+    price: typeof registrationPrices.$inferSelect,
+  ): Promise<string> {
     const planId = generateId();
     const prepayment = price.prepaymentAmount;
-    const installments = calculateInstallmentAmounts(price.totalAmount, prepayment, price.installmentCount);
+    const installments = calculateInstallmentAmounts(
+      price.totalAmount,
+      prepayment,
+      price.installmentCount,
+    );
     const remainingTotal = price.totalAmount - prepayment;
 
     await this.db.db.insert(paymentPlans).values({
@@ -92,7 +101,8 @@ export class InstallmentsService {
   }
 
   async getPlanByPriceId(priceId: string) {
-    const plans = await this.db.db.select()
+    const plans = await this.db.db
+      .select()
       .from(paymentPlans)
       .where(eq(paymentPlans.registrationPriceId, priceId))
       .limit(1);
@@ -101,13 +111,15 @@ export class InstallmentsService {
   }
 
   async getPlanWithItems(planId: string) {
-    const plan = await this.db.db.select()
+    const plan = await this.db.db
+      .select()
       .from(paymentPlans)
       .where(eq(paymentPlans.id, planId))
       .limit(1);
     if (plan.length === 0) throw new NotFoundError('Payment plan');
 
-    const items = await this.db.db.select()
+    const items = await this.db.db
+      .select()
       .from(paymentScheduleItems)
       .where(eq(paymentScheduleItems.paymentPlanId, planId))
       .orderBy(paymentScheduleItems.sequenceNumber);
