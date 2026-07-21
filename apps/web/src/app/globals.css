@@ -39,7 +39,7 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
-  --font-sans: 'Vazirmatn', Tahoma, Arial, sans-serif;
+  --font-sans: 'Vazirmatn Variable', Tahoma, Arial, sans-serif;
 }
 
 * {
@@ -52,7 +52,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
+  font-family: 'Vazirmatn Variable', Tahoma, Arial, sans-serif;
   line-height: 1.75;
 }
 a {

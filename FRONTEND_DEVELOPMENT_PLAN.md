@@ -10,7 +10,7 @@
 | Phase | Result                             | Status      | Progress |
 | ----- | ---------------------------------- | ----------- | -------: |
 | F0    | UI and contract decisions approved | Not started |       0% |
-| F1    | Web foundation and design system   | In progress |      90% |
+| F1    | Web foundation and design system   | In progress |      95% |
 | F2    | API, session, and state foundation | In progress |      40% |
 | F3    | Public and authentication areas    | In progress |      40% |
 | F4    | Parent shell and family/student UI | In progress |      50% |
@@ -101,13 +101,14 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 - [ ] Confirm canonical OpenAPI routes, DTOs, status labels, pagination, errors, and authentication-cookie behavior.
 - [ ] Extract approved color, typography, spacing, RTL, responsive, component, and content rules from the UI/UX specification.
   - [x] Apply the approved color, spacing, RTL, responsive, semantic-status, and component rules to the current design system.
-  - [ ] Complete documented font loading and the unresolved Persian date-format decision.
+  - [x] Load the documented Vazirmatn family as a self-hosted variable font.
+  - [ ] Resolve the selected Persian date format and implement the documented date behavior.
 - [ ] Map every parent/admin route to its documented permission and ownership rule.
 - [ ] Identify which supplied images are approved for which public/auth pages; do not assign them by guesswork.
 
 ### F1 — application and design-system foundation
 
-- [ ] Scaffold Next.js App Router with strict TypeScript, Tailwind CSS, shadcn/ui, Radix UI, Lucide React, Motion, and documented fonts/localization.
+- [x] Scaffold Next.js App Router with strict TypeScript, Tailwind CSS, shadcn/ui, Radix UI, Lucide React, Motion, and documented fonts/localization.
 - [x] Add `(public)`, `(auth)`, `parent`, and `admin` layouts with separate navigation and error/loading boundaries.
 - [ ] Configure RTL and Persian content/date/number/currency behavior exactly as the UI and business docs require; use `date-fns`/`date-fns-jalali` where documented.
 - [x] Build tokens and accessible primitives for buttons, inputs, selections, dialogs, drawers, cards, badges, tables, pagination, breadcrumbs, feedback, and skeletons.
