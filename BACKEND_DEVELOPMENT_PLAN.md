@@ -3,23 +3,23 @@
 > **Status**: In development  
 > **Application**: `apps/api` (plus approved worker/scheduler)  
 > **Architecture**: NestJS + Fastify modular monolith, TypeScript, PostgreSQL, Drizzle  
-> **Progress**: `1 / 11 phases complete` — `~35%` (API foundation complete; provider decisions, migrations, integration tests, and deployment remain)
+> **Progress**: `1 / 11 phases complete` — `~45%` (API foundation complete; Docker data services, migrations, development providers, and worker are operational)
 
 ## Progress Tracker
 
 | Phase | Result | Status | Progress |
 |---|---|---|---:|
-| B0 | Backend decisions approved | Pending (doc gaps remain) | 10% |
+| B0 | Backend decisions approved | In progress (external production providers remain) | 50% |
 | B1 | API foundation | Complete | 100% |
-| B2 | Database foundation | In progress | 70% |
-| B3 | Identity and authorization | In progress | 85% |
+| B2 | Database foundation | In progress | 90% |
+| B3 | Identity and authorization | In progress | 90% |
 | B4 | Family, student, school | In progress | 80% |
 | B5 | Enrollment and review | In progress | 60% |
 | B6 | Pricing and contracts | In progress | 65% |
-| B7 | Installments and payments | In progress | 70% |
-| B8 | Notifications, documents, audit | In progress | 40% |
+| B7 | Installments and payments | In progress | 75% |
+| B8 | Notifications, documents, audit | In progress | 45% |
 | B9 | Hardening and test completion | In progress | 25% |
-| B10 | Deployment readiness | In progress | 20% |
+| B10 | Deployment readiness | In progress | 50% |
 
 ## 1. Backend Rules
 
@@ -98,12 +98,13 @@ Never combine an unrelated backend refactor with a feature or migration. Never r
 
 ### B0 — resolve backend documentation decisions
 
-- [ ] Resolve Redis/BullMQ/worker/scheduler MVP conflict.
+- [x] Resolve Redis/BullMQ/worker/scheduler MVP conflict. (Approved for the development stack: PostgreSQL remains authoritative; Redis-backed BullMQ workers handle retryable background work.)
 - [ ] Make API routes, status names, request/response DTOs, and error codes canonical in OpenAPI.
 - [ ] Confirm the authoritative data model, database schemas/naming, retention rules, and migration strategy.
-  - [ ] Define the required parent/admin session table, token-hash fields, device metadata, revocation fields, indexes, and temporary revoked-session retention.
+  - [x] Define the required parent/admin session table, token-hash fields, device metadata, revocation fields, and indexes. (Automated retention cleanup remains.)
 - [ ] Complete enrollment form requirements before its DTOs and workflow are finalized.
-- [ ] Record chosen external providers/interfaces for OTP, SMS/email, payment gateway, and S3-compatible storage only when approved.
+- [ ] Record chosen production providers/interfaces for OTP, SMS/email, payment gateway, and S3-compatible storage only when approved.
+  - [x] Use a console OTP adapter and deterministic mock payment adapter in development only; both fail closed in production.
 
 Exit: no unresolved documentation conflict affects B1–B10.
 
@@ -132,16 +133,16 @@ Exit: no unresolved documentation conflict affects B1–B10.
   - [x] Enforce schedule-item amount, sequence, and no-partial-payment invariants.
   - [x] Enforce unique gateway transactions and one successful transaction per schedule item.
   - [ ] Add migration-level immutable accepted-price/contract and append-only history protections after the migration strategy is approved.
-- [x] Drizzle config written for versioned migrations; no migrations generated yet.
+- [x] Configure Drizzle and generate the first version-controlled, forward migration.
 - [x] Create repository ports and Drizzle adapters per module (services use DatabaseService directly).
-- [ ] Configure transaction handling and a separate PostgreSQL integration-test database. (Partial: transactions used in payments, no separate test DB configured.)
-- [ ] Test migrations on an empty database.
+- [x] Configure transaction handling and a separate PostgreSQL integration-test database.
+- [x] Test migrations on an empty database. (The Docker test database migrated to all 20 tables.)
 
 ### B3 — identity and access control
 
 - [x] Implement one family account, secure username/password registration, Argon2id hashing, and generic authentication errors.
-- [x] Implement primary-phone OTP verification with expiry, limits, resend cooldown, single use, and no OTP logging.
-- [x] Implement short access tokens and rotating refresh tokens in restricted HTTP-only cookies. (Server-side per-device session records and revoked-token reuse detection are not yet implemented.)
+- [x] Implement primary-phone OTP verification with expiry, limits, resend cooldown, and single use. (Development console delivery is explicitly enabled until an SMS provider is available; production fails closed.)
+- [x] Implement short access tokens and rotating refresh tokens in restricted HTTP-only cookies with hashed server-side session records, per-device metadata, revocation, and reuse detection.
 - [x] Implement documented `PARENT` and `ADMIN` roles, permission guards (AuthGuard, RolesGuard), and resource-ownership authorization (OwnershipGuard).
 - [ ] Add CSRF/CORS/cookie/security-header/rate-limit controls from the security specification.
   - [x] Restrict credentialed CORS to configured frontend origins and required methods/headers.
@@ -149,7 +150,7 @@ Exit: no unresolved documentation conflict affects B1–B10.
   - [x] Validate exact configured origins/referrers on login, refresh, and logout cookie operations.
   - [x] Apply documented backend security headers and global request throttling.
     - [x] Verify CSP, frame, content-type, referrer, permissions, and production-only HSTS behavior.
-  - [ ] Add account/phone/endpoint-specific authentication and OTP abuse controls and server-side session revocation.
+  - [ ] Add account/phone/endpoint-specific authentication and OTP abuse controls. (Server-side session revocation is complete.)
 - [ ] Test cross-family denial, parent/admin restrictions, token replay/rotation, brute force limits, and session expiry.
   - [x] Unit-test missing/malformed/expired access tokens and reject refresh tokens at access-token boundaries.
   - [x] Unit-test parent denial on admin roles and synchronous/asynchronous ownership policy denial.
@@ -202,7 +203,7 @@ Exit: no unresolved documentation conflict affects B1–B10.
 
 - [x] Generate full payment or prepayment plus four monthly installments. (Prepayment is the admin-defined amount, not hardcoded to one-third.)
 - [x] Ensure installment totals plus prepayment equal the contract fee; reject partial installment payment (via validation in service).
-- [x] Isolate the gateway behind an adapter. (Provider-neutral verification port added; the adapter fails closed until B0 approves a provider.)
+- [x] Isolate the gateway behind an adapter. (A deterministic development-only mock is configured; production fails closed until a real provider is approved.)
 - [x] Implement online start/verify flow with server-side verification.
 - [x] Add idempotency keys (Idempotency-Key header support in start flow).
 - [x] In one database transaction: verify, persist transaction, update schedule item status, update plan status (done in verify and approve methods).
@@ -217,7 +218,7 @@ Exit: no unresolved documentation conflict affects B1–B10.
 ### B8 — notifications, documents, audit
 
 - [x] Implement in-app notification CRUD (create, list, read/unread).
-- [ ] Implement SMS/email channels, Persian templates, delivery status, retry, duplicate prevention. (Out of scope until worker/scheduler decision.)
+- [ ] Implement SMS/email channels, Persian templates, delivery status, retry, duplicate prevention. (BullMQ retry infrastructure is operational; real delivery providers remain unapproved.)
 - [ ] Store private files in S3-compatible storage. (Not implemented.)
 - [x] Implement append-only audit events with actor, action, resource type/ID, previous/new values, timestamp.
 - [x] Ensure sensitive fields are redacted from logs/audits.
@@ -238,6 +239,8 @@ Exit: no unresolved documentation conflict affects B1–B10.
 
 - [x] Build a production image as a non-root user with health checks and no development secrets.
 - [ ] Validate configuration, migrations, backup/restore, graceful shutdown, observability, and incident runbooks.
+  - [x] Run PostgreSQL, Redis, controlled migrate/seed, API, and BullMQ worker services with Docker health/dependency gates.
+  - [x] Smoke-test API health, seeded authentication and refresh rotation, console OTP, Redis connectivity, and BullMQ processing.
 - [ ] Publish versioned OpenAPI and regenerate the frontend client.
 - [ ] Deploy to staging, run smoke/API/E2E/payment sandbox checks, then obtain approval.
 - [ ] Follow `school-transport-deployment-specification.md` for production rollout and rollback/forward-fix.
