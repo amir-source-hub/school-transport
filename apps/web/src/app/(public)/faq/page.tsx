@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { PublicPageIntro } from '@/components/common/public-page-intro';
 import { PageContainer } from '@/components/common/page-container';
+import { Accordion } from '@/components/ui/accordion';
 
 export const metadata: Metadata = { title: 'پرسش‌های متداول' };
 
@@ -36,24 +37,14 @@ export default function FaqPage() {
         description="درباره حساب خانوادگی، بررسی درخواست، قیمت، پرداخت و ویرایش اطلاعات بیشتر بدانید."
       />
       <PageContainer className="py-14">
-        <div className="mx-auto flex max-w-3xl flex-col gap-3">
-          {questions.map(([question, answer]) => (
-            <details
-              key={question}
-              className="group rounded-[var(--radius-md)] border border-border bg-surface p-5"
-            >
-              <summary className="flex min-h-8 cursor-pointer list-none items-center justify-between gap-4 font-bold">
-                <span>{question}</span>
-                <span
-                  aria-hidden="true"
-                  className="text-xl text-primary transition-transform group-open:rotate-45"
-                >
-                  +
-                </span>
-              </summary>
-              <p className="mt-3 border-t border-border pt-3 text-sm text-muted">{answer}</p>
-            </details>
-          ))}
+        <div className="mx-auto max-w-3xl">
+          <Accordion
+            items={questions.map(([title, content], index) => ({
+              value: `question-${index + 1}`,
+              title,
+              content,
+            }))}
+          />
         </div>
       </PageContainer>
     </>
