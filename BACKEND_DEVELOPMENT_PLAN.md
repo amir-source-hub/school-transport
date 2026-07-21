@@ -13,7 +13,7 @@
 | B1 | API foundation | Complete | 100% |
 | B2 | Database foundation | In progress | 70% |
 | B3 | Identity and authorization | In progress | 85% |
-| B4 | Family, student, school | In progress | 70% |
+| B4 | Family, student, school | In progress | 75% |
 | B5 | Enrollment and review | In progress | 50% |
 | B6 | Pricing and contracts | In progress | 60% |
 | B7 | Installments and payments | In progress | 55% |
@@ -160,7 +160,11 @@ Exit: no unresolved documentation conflict affects B1–B10.
 
 - [x] Implement documented fields and validation rules.
 - [x] Enforce one family-to-many students and ownership at query and mutation boundaries.
-- [ ] Enforce protected-field and post-submission editing restrictions. (Partial — basic editing exists, but no strict post-approval lock on protected fields.)
+- [ ] Enforce protected-field and post-submission editing restrictions.
+  - [x] Reject mass assignment of student school, national ID, ownership, status, registration, and archival fields.
+  - [x] Reject mass assignment of address ownership, identity, status, and persistence fields.
+  - [x] Require at least one correctly typed field from the explicit student/address edit allowlist.
+  - [ ] Enforce submitted/review/correction/approved lifecycle field locks after correction-field authorization is modeled.
 - [x] Implement school read/manage permissions (public read, admin manage).
 - [x] Prefer archival (students and schools support `is_active` flag).
 - [ ] Add unit, integration, API, ownership, and validation tests.
