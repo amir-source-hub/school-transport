@@ -168,7 +168,7 @@ export class AuthService {
     }
   }
 
-  async logout(userId: string): Promise<void> {
+  async logout(_userId: string): Promise<void> {
     this.logger.log('User logged out.');
   }
 
