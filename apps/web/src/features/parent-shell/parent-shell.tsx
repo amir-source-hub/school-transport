@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Bell,
@@ -11,35 +11,30 @@ import {
   Menu,
   UserRound,
   WalletCards,
-} from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import type { ReactNode } from 'react';
 
-import { Button } from "@/components/ui/button";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+import { Button } from '@/components/ui/button';
+import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/cn";
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/cn';
 
 const navigation = [
-  { href: "/parent/dashboard", label: "نمای کلی", icon: LayoutDashboard },
-  { href: "/parent/students", label: "دانش‌آموزان", icon: GraduationCap },
-  { href: "/parent/enrollments", label: "ثبت‌نام", icon: ClipboardList },
-  { href: "/parent/service-requests", label: "درخواست خدمت", icon: BusFront },
-  { href: "/parent/contracts", label: "قراردادها", icon: FileText },
-  { href: "/parent/payments", label: "پرداخت‌ها", icon: WalletCards },
-  { href: "/parent/notifications", label: "اعلان‌ها", icon: Bell },
-  { href: "/parent/profile", label: "اطلاعات خانواده", icon: UserRound },
+  { href: '/parent/dashboard', label: 'نمای کلی', icon: LayoutDashboard },
+  { href: '/parent/students', label: 'دانش‌آموزان', icon: GraduationCap },
+  { href: '/parent/enrollments', label: 'ثبت‌نام', icon: ClipboardList },
+  { href: '/parent/service-requests', label: 'درخواست خدمت', icon: BusFront },
+  { href: '/parent/contracts', label: 'قراردادها', icon: FileText },
+  { href: '/parent/payments', label: 'پرداخت‌ها', icon: WalletCards },
+  { href: '/parent/notifications', label: 'اعلان‌ها', icon: Bell },
+  { href: '/parent/profile', label: 'اطلاعات خانواده', icon: UserRound },
 ] as const;
 
 function ParentNavigation({ mobile = false }: { mobile?: boolean }) {
@@ -52,12 +47,12 @@ function ParentNavigation({ mobile = false }: { mobile?: boolean }) {
         const link = (
           <Link
             href={href}
-            aria-current={active ? "page" : undefined}
+            aria-current={active ? 'page' : undefined}
             className={cn(
-              "flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] px-3 text-sm font-bold transition-colors",
+              'flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] px-3 text-sm font-bold transition-colors',
               active
-                ? "bg-primary-soft text-primary-hover"
-                : "text-muted hover:bg-surface-muted hover:text-foreground",
+                ? 'bg-primary-soft text-primary-hover'
+                : 'text-muted hover:bg-surface-muted hover:text-foreground',
             )}
           >
             <Icon aria-hidden="true" className="size-5" />
@@ -121,7 +116,9 @@ export function ParentShell({ children }: { children: ReactNode }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem disabled>خروج پس از اتصال احراز هویت فعال می‌شود</DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  خروج پس از اتصال احراز هویت فعال می‌شود
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

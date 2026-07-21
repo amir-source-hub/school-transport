@@ -15,7 +15,7 @@
 | Phase | Deliverable | Status | Progress |
 |---|---|---|---:|
 | 0 | Documentation decisions | Not started | 0% |
-| 1 | Git and monorepo foundation | In progress | 80% |
+| 1 | Git and monorepo foundation | In progress | 90% |
 | 2 | Local infrastructure and CI | Not started | 0% |
 | 3 | Identity and access | Not started | 0% |
 | 4 | Families, students, schools | Not started | 0% |
@@ -156,9 +156,9 @@ Breaking changes use `!` and a `BREAKING CHANGE:` footer. Each commit should be 
 - [ ] Complete Git initialization and branch protection.
 - [x] Create the documented `apps/`, `packages/`, `infrastructure/`, and `docs/` structure.
 - [x] Configure pnpm workspaces and Turborepo pipelines.
-- [ ] Add shared strict TypeScript, ESLint, formatter, test, and import-boundary rules.
+- [x] Add shared strict TypeScript, ESLint, formatter, test, and import-boundary rules.
   - [x] Add shared strict TypeScript, ESLint, frontend test, and import-boundary rules.
-  - [ ] Add and verify the shared formatter configuration.
+  - [x] Add and verify the shared formatter configuration.
 - [x] Add `.env.example`, contribution guide, ADR template, and root commands.
 - [ ] Verify a clean clone can install, lint, type-check, test, and build.
 

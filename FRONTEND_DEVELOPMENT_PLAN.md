@@ -78,7 +78,7 @@ Git is initialized once at the monorepo root as described in `APP_DEVELOPMENT_PL
 - [x] Create a short-lived branch: `git switch -c feat/frontend-<feature>`.
 - [ ] Confirm the backend OpenAPI contract is approved before integrating a feature.
 - [ ] Commit generated API client changes clearly and review their contract diff.
-- [ ] Run web lint, formatting, type checks, unit/component tests, accessibility checks, E2E for affected journeys, and production build before push.
+- [x] Run web lint, formatting, type checks, unit/component tests, accessibility checks, E2E for affected journeys, and production build before push.
 - [ ] Include screenshots for desktop/mobile/RTL states and a checklist of loading/error/empty states in the PR.
 
 Frontend commit examples:
@@ -225,7 +225,7 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 
 - [x] Validate production environment variables without exposing secrets to the browser.
 - [ ] Run clean install, generated-client check, lint, type check, unit/component tests, accessibility checks, E2E smoke tests, and production build.
-  - [x] Run lint, type check, current unit/component tests, implemented public/parent/admin accessibility and E2E smoke tests, and production build.
+  - [x] Run formatting check, lint, type check, current unit/component tests, implemented public/parent/admin accessibility and E2E smoke tests, and production build.
   - [ ] Run generated-client validation and complete protected-journey checks when the approved OpenAPI contract is available.
 - [ ] Verify CSP/security headers, cookie behavior, API origin/CORS expectations, error reporting, and source-map policy with the backend/deployment docs.
   - [x] Configure and test the documented browser security headers and environment-aware CSP.

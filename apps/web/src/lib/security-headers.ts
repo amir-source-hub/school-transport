@@ -10,21 +10,18 @@ type SecurityHeader = {
 
 const getApiOrigin = (apiBaseUrl?: string) => {
   try {
-    return new URL(apiBaseUrl ?? "http://localhost:3001/api/v1").origin;
+    return new URL(apiBaseUrl ?? 'http://localhost:3001/api/v1').origin;
   } catch {
     return undefined;
   }
 };
 
-const createContentSecurityPolicy = ({
-  apiBaseUrl,
-  production,
-}: SecurityHeaderOptions) => {
+const createContentSecurityPolicy = ({ apiBaseUrl, production }: SecurityHeaderOptions) => {
   const apiOrigin = getApiOrigin(apiBaseUrl);
   const connectSources = ["'self'", apiOrigin];
 
   if (!production) {
-    connectSources.push("ws:", "wss:");
+    connectSources.push('ws:', 'wss:');
   }
 
   const scriptSources = ["'self'", "'unsafe-inline'"];
@@ -42,34 +39,32 @@ const createContentSecurityPolicy = ({
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
-    `script-src ${scriptSources.join(" ")}`,
-    `connect-src ${connectSources.filter(Boolean).join(" ")}`,
-  ].join("; ");
+    `script-src ${scriptSources.join(' ')}`,
+    `connect-src ${connectSources.filter(Boolean).join(' ')}`,
+  ].join('; ');
 };
 
-export const createSecurityHeaders = (
-  options: SecurityHeaderOptions,
-): SecurityHeader[] => {
+export const createSecurityHeaders = (options: SecurityHeaderOptions): SecurityHeader[] => {
   const headers: SecurityHeader[] = [
     {
-      key: "Content-Security-Policy",
+      key: 'Content-Security-Policy',
       value: createContentSecurityPolicy(options),
     },
-    { key: "X-Content-Type-Options", value: "nosniff" },
-    { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+    { key: 'X-Content-Type-Options', value: 'nosniff' },
+    { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     {
-      key: "Permissions-Policy",
-      value: "camera=(), microphone=(), geolocation=()",
+      key: 'Permissions-Policy',
+      value: 'camera=(), microphone=(), geolocation=()',
     },
-    { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-    { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
-    { key: "X-Frame-Options", value: "DENY" },
+    { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+    { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+    { key: 'X-Frame-Options', value: 'DENY' },
   ];
 
   if (options.production) {
     headers.push({
-      key: "Strict-Transport-Security",
-      value: "max-age=31536000; includeSubDomains",
+      key: 'Strict-Transport-Security',
+      value: 'max-age=31536000; includeSubDomains',
     });
   }
 

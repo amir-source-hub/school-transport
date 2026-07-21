@@ -1,0 +1,11 @@
+node_modules
+.next
+dist
+coverage
+playwright-report
+test-results
+blob-report
+pnpm-lock.yaml
+next-env.d.ts
+uploads
+storage

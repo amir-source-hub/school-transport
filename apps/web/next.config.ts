@@ -1,11 +1,11 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
-import { validateWebEnvironment } from "./src/lib/environment";
-import { createSecurityHeaders } from "./src/lib/security-headers";
+import { validateWebEnvironment } from './src/lib/environment';
+import { createSecurityHeaders } from './src/lib/security-headers';
 
 const environment = validateWebEnvironment({
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
-  production: process.env.NODE_ENV === "production",
+  production: process.env.NODE_ENV === 'production',
 });
 
 const nextConfig: NextConfig = {
@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        source: '/(.*)',
         headers: createSecurityHeaders({
           apiBaseUrl: environment.apiBaseUrl,
           production: environment.production,
