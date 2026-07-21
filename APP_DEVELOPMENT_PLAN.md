@@ -23,7 +23,7 @@
 | 6 | Pricing and contracts | Not started | 0% |
 | 7 | Payments and installments | Not started | 0% |
 | 8 | Notifications, documents, audit | Not started | 0% |
-| 9 | Public, parent, and admin UI | In progress | 32% |
+| 9 | Public, parent, and admin UI | In progress | 35% |
 | 10 | Security, performance, testing | Not started | 0% |
 | 11 | Deployment and release | Not started | 0% |
 

@@ -11,7 +11,7 @@
 | ----- | ---------------------------------- | ----------- | -------: |
 | F0    | UI and contract decisions approved | Not started |       0% |
 | F1    | Web foundation and design system   | In progress |      80% |
-| F2    | API, session, and state foundation | In progress |      10% |
+| F2    | API, session, and state foundation | In progress |      25% |
 | F3    | Public and authentication areas    | In progress |      35% |
 | F4    | Parent shell and family/student UI | Not started |       0% |
 | F5    | Enrollment flow                    | Not started |       0% |
@@ -115,7 +115,7 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 ### F2 — API, authentication, and state foundation
 
 - [ ] Generate the typed client from backend OpenAPI using the approved Orval/OpenAPI Generator configuration.
-- [ ] Build the central API layer for base URL, credentials, headers, correlation/error handling, timeout, cancellation, and safe session expiry.
+- [x] Build the central API layer for base URL, credentials, headers, correlation/error handling, timeout, cancellation, and safe session expiry.
 - [x] Configure TanStack Query defaults deliberately; do not retry non-idempotent mutations blindly.
 - [ ] Validate protected routes on the server, render role-specific navigation, and treat hidden UI as convenience—not authorization.
 - [ ] Keep refresh tokens out of local storage; follow the secure HTTP-only cookie model.
