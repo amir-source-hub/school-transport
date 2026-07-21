@@ -25,6 +25,7 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-fastify": "^10.3.0",
+    "@nestjs/swagger": "^7.4.2",
     "@nestjs/throttler": "^6.0.0",
     "argon2": "^0.41.0",
     "bullmq": "^5.80.10",
