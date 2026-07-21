@@ -4,7 +4,7 @@ import { students } from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
-import { parseEditableStudentFields } from './student-update';
+import { EditableStudentFields, parseEditableStudentFields } from './student-update';
 
 @Injectable()
 export class StudentsService {
@@ -38,7 +38,7 @@ export class StudentsService {
       nationalId: string;
       birthDate?: string;
       gender?: string;
-      grade?: string;
+      grade: string;
       className?: string;
     },
   ) {
@@ -72,7 +72,7 @@ export class StudentsService {
     return this.getById(id);
   }
 
-  async update(studentId: string, userId: string, data: Record<string, unknown>) {
+  async update(studentId: string, userId: string, data: EditableStudentFields) {
     await this.getById(studentId, userId);
     const editableFields = parseEditableStudentFields(data);
     await this.db.db

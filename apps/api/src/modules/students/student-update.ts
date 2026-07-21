@@ -9,7 +9,7 @@ export type EditableStudentFields = Partial<{
   className: string;
 }>;
 
-export function parseEditableStudentFields(data: Record<string, unknown>): EditableStudentFields {
+export function parseEditableStudentFields(data: object): EditableStudentFields {
   const fields: EditableStudentFields = {};
 
   for (const [key, value] of Object.entries(data)) {
