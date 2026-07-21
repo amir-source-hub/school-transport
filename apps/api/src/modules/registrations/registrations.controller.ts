@@ -59,7 +59,7 @@ export class AdminRegistrationsController {
 
   @Get()
   async getAll() {
-    return successResponse([]);
+    return successResponse(await this.registrationsService.getAll());
   }
 
   @Get(':id')

@@ -6,8 +6,8 @@ import {
   registrationReviews,
 } from '../../database/schemas';
 import { students } from '../../database/schemas';
-import { eq, and, inArray } from 'drizzle-orm';
-import { NotFoundError } from '../../common/errors';
+import { eq, and, inArray, notInArray } from 'drizzle-orm';
+import { ConflictError, NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { assertRegistrationTransition } from './registration-lifecycle';
 
@@ -28,6 +28,10 @@ export class RegistrationsService {
       .select()
       .from(serviceRegistrations)
       .where(inArray(serviceRegistrations.studentId, studentIds));
+  }
+
+  async getAll() {
+    return this.db.db.select().from(serviceRegistrations);
   }
 
   async getById(registrationId: string, userId?: string) {
@@ -69,6 +73,24 @@ export class RegistrationsService {
       .where(and(eq(students.id, data.studentId), eq(students.userId, userId)))
       .limit(1);
     if (student.length === 0) throw new NotFoundError('Student', data.studentId);
+
+    const duplicate = await this.db.db
+      .select({ id: serviceRegistrations.id })
+      .from(serviceRegistrations)
+      .where(
+        and(
+          eq(serviceRegistrations.studentId, data.studentId),
+          eq(serviceRegistrations.academicYear, data.academicYear),
+          notInArray(serviceRegistrations.registrationStatus, ['REJECTED', 'CANCELLED']),
+        ),
+      )
+      .limit(1);
+    if (duplicate.length > 0) {
+      throw new ConflictError(
+        'DUPLICATE_ACTIVE_ENROLLMENT',
+        'An active enrollment already exists for this student and academic year.',
+      );
+    }
 
     const id = generateId();
     await this.db.db.insert(serviceRegistrations).values({
