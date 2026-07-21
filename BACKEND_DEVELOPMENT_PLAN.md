@@ -12,7 +12,7 @@
 | B0 | Backend decisions approved | Pending (doc gaps remain) | 10% |
 | B1 | API foundation | Complete | 100% |
 | B2 | Database foundation | In progress | 70% |
-| B3 | Identity and authorization | In progress | 80% |
+| B3 | Identity and authorization | In progress | 85% |
 | B4 | Family, student, school | In progress | 70% |
 | B5 | Enrollment and review | In progress | 50% |
 | B6 | Pricing and contracts | In progress | 60% |
@@ -101,6 +101,7 @@ Never combine an unrelated backend refactor with a feature or migration. Never r
 - [ ] Resolve Redis/BullMQ/worker/scheduler MVP conflict.
 - [ ] Make API routes, status names, request/response DTOs, and error codes canonical in OpenAPI.
 - [ ] Confirm the authoritative data model, database schemas/naming, retention rules, and migration strategy.
+  - [ ] Define the required parent/admin session table, token-hash fields, device metadata, revocation fields, indexes, and temporary revoked-session retention.
 - [ ] Complete enrollment form requirements before its DTOs and workflow are finalized.
 - [ ] Record chosen external providers/interfaces for OTP, SMS/email, payment gateway, and S3-compatible storage only when approved.
 
@@ -150,6 +151,10 @@ Exit: no unresolved documentation conflict affects B1–B10.
     - [x] Verify CSP, frame, content-type, referrer, permissions, and production-only HSTS behavior.
   - [ ] Add account/phone/endpoint-specific authentication and OTP abuse controls and server-side session revocation.
 - [ ] Test cross-family denial, parent/admin restrictions, token replay/rotation, brute force limits, and session expiry.
+  - [x] Unit-test missing/malformed/expired access tokens and reject refresh tokens at access-token boundaries.
+  - [x] Unit-test parent denial on admin roles and synchronous/asynchronous ownership policy denial.
+  - [ ] API-test private-resource concealment across families and students.
+  - [ ] Test refresh replay/rotation, brute-force limits, and session expiry after the session persistence contract is approved.
 
 ### B4 — families, parents, students, emergency contacts, schools
 
