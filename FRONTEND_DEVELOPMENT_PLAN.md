@@ -12,7 +12,7 @@
 | F0    | UI and contract decisions approved | Blocked     |       0% |
 | F1    | Web foundation and design system   | In progress |      95% |
 | F2    | API, session, and state foundation | In progress |      50% |
-| F3    | Public and authentication areas    | In progress |      45% |
+| F3    | Public and authentication areas    | In progress |      60% |
 | F4    | Parent shell and family/student UI | In progress |      50% |
 | F5    | Enrollment flow                    | In progress |      35% |
 | F6    | Contracts, pricing, payments       | In progress |      45% |
@@ -131,11 +131,12 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 - [ ] Build documented public routes: landing, about, services, schools, pricing explanation, registration guide, FAQ, contact, login, and register.
   - [x] Build landing, about, services, schools, pricing explanation, registration guide, FAQ, and contact routes.
   - [x] Replace the schools placeholder with backend-provided active schools, an empty state, and an explicit development fallback state.
-  - [ ] Build login and registration routes after the canonical authentication contract is approved.
+  - [x] Build backend-connected login and registration routes from the implemented authentication contract.
 - [ ] Add semantic metadata, responsive approved imagery, optimized assets, keyboard navigation, and clear registration/login actions.
   - [x] Add semantic metadata, keyboard navigation, responsive layouts, and clear registration actions to implemented public routes.
   - [ ] Add approved optimized imagery when page-to-image assignments are documented.
 - [ ] Build register, login, verify-phone, forgot-password, and reset-password flows from backend contracts.
+  - [x] Connect register, parent/admin login, and privacy-preserving forgot-password request flows.
 - [ ] Show generic authentication errors, OTP cooldown/attempt feedback, password requirements, submission locks, and safe redirects.
 - [ ] Test anonymous/authenticated redirects, keyboard/screen-reader use, mobile layouts, validation, expired OTP/session, and throttling feedback.
 

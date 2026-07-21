@@ -1,3 +1,4 @@
+import { getAuthSession } from '@/features/auth/auth-session';
 import type { ApiEnvelope, ApiFailure, ApiSuccess } from '@/types/api';
 
 type ApiRequestOptions = Omit<RequestInit, 'body' | 'credentials'> & {
@@ -32,6 +33,8 @@ export async function apiRequest<T>(
   const correlationId = crypto.randomUUID();
   headers.set('Accept', 'application/json');
   headers.set('X-Correlation-Id', correlationId);
+  const { accessToken } = getAuthSession();
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
 
   if (body !== undefined && !(body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
