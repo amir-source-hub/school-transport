@@ -12,7 +12,7 @@
 | B0 | Backend decisions approved | Pending (doc gaps remain) | 10% |
 | B1 | API foundation | Complete | 100% |
 | B2 | Database foundation | In progress | 70% |
-| B3 | Identity and authorization | In progress | 75% |
+| B3 | Identity and authorization | In progress | 80% |
 | B4 | Family, student, school | In progress | 70% |
 | B5 | Enrollment and review | In progress | 50% |
 | B6 | Pricing and contracts | In progress | 60% |
@@ -140,9 +140,14 @@ Exit: no unresolved documentation conflict affects B1–B10.
 
 - [x] Implement one family account, secure username/password registration, Argon2id hashing, and generic authentication errors.
 - [x] Implement primary-phone OTP verification with expiry, limits, resend cooldown, single use, and no OTP logging.
-- [x] Implement short access tokens and rotating refresh tokens. (No HTTP-only cookie storage for refresh tokens yet — tokens returned in body; session records not yet stored.)
+- [x] Implement short access tokens and rotating refresh tokens in restricted HTTP-only cookies. (Server-side per-device session records and revoked-token reuse detection are not yet implemented.)
 - [x] Implement documented `PARENT` and `ADMIN` roles, permission guards (AuthGuard, RolesGuard), and resource-ownership authorization (OwnershipGuard).
-- [ ] Add CSRF/CORS/cookie/security-header/rate-limit controls from the security specification. (CORS and rate limiting via ThrottlerGuard done; CSRF tokens and security headers not implemented.)
+- [ ] Add CSRF/CORS/cookie/security-header/rate-limit controls from the security specification.
+  - [x] Restrict credentialed CORS to configured frontend origins and required methods/headers.
+  - [x] Store refresh tokens only in restricted HTTP-only, SameSite cookies with production-only `Secure` transmission.
+  - [x] Validate exact configured origins/referrers on login, refresh, and logout cookie operations.
+  - [x] Apply documented backend security headers and global request throttling.
+  - [ ] Add account/phone/endpoint-specific authentication and OTP abuse controls and server-side session revocation.
 - [ ] Test cross-family denial, parent/admin restrictions, token replay/rotation, brute force limits, and session expiry.
 
 ### B4 — families, parents, students, emergency contacts, schools
