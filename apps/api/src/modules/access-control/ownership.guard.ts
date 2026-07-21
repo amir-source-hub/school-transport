@@ -31,6 +31,10 @@ export class OwnershipGuard implements CanActivate {
     const user = (request as any).user;
     const params = request.params as Record<string, string>;
 
+    if (!user) {
+      throw new ForbiddenException('Access denied.');
+    }
+
     const result = await check(user, params);
     if (!result) {
       throw new ForbiddenException('Access denied.');
