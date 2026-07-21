@@ -3,17 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 const readinessChecks = [
-  ['ترتیب مراحل و فیلدها', 'در انتظار تکمیل سند فرم ثبت‌نام'],
-  ['اعتبارسنجی و ذخیره پیش‌نویس', 'در انتظار قرارداد تأییدشده'],
-  ['ارسال و اصلاح درخواست', 'در انتظار وضعیت‌ها و خطاهای قطعی API'],
+  ['ترتیب مراحل و فیلدها', 'در سند فرم ثبت‌نام مشخص و آماده پیاده‌سازی است'],
+  ['اعتبارسنجی و ذخیره پیش‌نویس', 'قواعد رابط مشخص است؛ اتصال سرور در انتظار OpenAPI قطعی است'],
+  ['ارسال و اصلاح درخواست', 'رابط قابل توسعه است؛ نام وضعیت اصلاح باید با API یکسان شود'],
 ] as const;
 
 export function EnrollmentReadiness() {
   return (
     <div className="space-y-5">
-      <Alert tone="warning" title="پیاده‌سازی نهایی ثبت‌نام مسدود است">
-        سند enrollment-form-specification.md هنوز خالی است. برای جلوگیری از جمع‌آوری اطلاعات نادرست،
-        هیچ فرم یا پیش‌نویسی در این صفحه فعال نشده است.
+      <Alert title="مشخصات فرم ثبت‌نام دریافت شد">
+        ساخت رابط شش‌مرحله‌ای بر اساس سند جدید آغاز می‌شود. ذخیره و ارسال واقعی تا زمان تثبیت
+        قرارداد OpenAPI غیرفعال می‌ماند.
       </Alert>
 
       <Card>
@@ -31,12 +31,12 @@ export function EnrollmentReadiness() {
       <Card>
         <h2 className="font-black">اقدام‌های ثبت‌نام</h2>
         <p className="mt-2 text-sm text-muted">
-          ایجاد پیش‌نویس و ارسال درخواست فقط پس از تصویب سند فرم و قرارداد OpenAPI فعال می‌شود.
+          پیاده‌سازی فرم در مرحله بعد انجام می‌شود؛ این صفحه هنوز داده‌ای جمع‌آوری یا ارسال نمی‌کند.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button disabled>ایجاد پیش‌نویس پس از تصویب سند</Button>
+          <Button disabled>فرم چندمرحله‌ای در حال توسعه</Button>
           <Button variant="secondary" disabled>
-            ادامه ثبت‌نام پس از اتصال API
+            ارسال واقعی پس از تثبیت API
           </Button>
         </div>
       </Card>

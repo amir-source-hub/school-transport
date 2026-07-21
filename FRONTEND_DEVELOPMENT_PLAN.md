@@ -14,7 +14,7 @@
 | F2    | API, session, and state foundation | In progress |      40% |
 | F3    | Public and authentication areas    | In progress |      40% |
 | F4    | Parent shell and family/student UI | In progress |      50% |
-| F5    | Enrollment flow                    | Blocked     |       5% |
+| F5    | Enrollment flow                    | In progress |      10% |
 | F6    | Contracts, pricing, payments       | In progress |      45% |
 | F7    | Admin panel                        | In progress |      56% |
 | F8    | Accessibility, resilience, tests   | In progress |      46% |
@@ -97,7 +97,7 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 
 ### F0 — resolve UI and contract decisions
 
-- [ ] Wait for the empty `enrollment-form-specification.md` to be completed and approved before final enrollment fields/steps are built.
+- [x] Receive and approve the completed `enrollment-form-specification.md` before final enrollment fields/steps are built.
 - [ ] Confirm canonical OpenAPI routes, DTOs, status labels, pagination, errors, and authentication-cookie behavior.
 - [ ] Extract approved color, typography, spacing, RTL, responsive, component, and content rules from the UI/UX specification.
   - [x] Apply the approved color, spacing, RTL, responsive, semantic-status, and component rules to the current design system.
@@ -156,11 +156,10 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 
 ### F5 — enrollment flow
 
-- [ ] Begin final implementation only after the enrollment-form document is approved.
-  - [x] Verify that `docs/enrollment-form-specification.md` is empty and prevent premature form implementation.
-  - [x] Replace the generic enrollment placeholder with an accessible readiness screen that exposes no fields or submission behavior.
-  - [ ] Resume final implementation when the enrollment-form document is completed and approved.
-- [ ] Build the approved multi-step order and fields; the architecture currently proposes family, parent, primary phone, student, school/grade, service request, emergency contact, and review.
+- [x] Begin final implementation only after the enrollment-form document is approved.
+  - [x] Receive the completed specification and update the readiness screen without enabling unfinished submission behavior.
+  - [x] Record the remaining correction-status conflict: the form specification uses `MORE_INFORMATION_REQUIRED`, while the API specification uses `NEEDS_CORRECTION`.
+- [ ] Build the approved six-step order and fields: student, school, transport, emergency/safety, payment preference, and review/confirmation.
 - [ ] Use React Hook Form and Zod for usability while displaying authoritative server validation.
 - [ ] Implement per-step validation, back/next, progress, approved draft saving, final review, submission lock, and recoverable-error preservation.
 - [ ] Reuse family information for another student only as documented.

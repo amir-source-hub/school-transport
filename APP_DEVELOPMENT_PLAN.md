@@ -8,18 +8,18 @@
 ## Progress
 
 - Overall: `0 / 12 phases complete` — `0%`
-- Documentation readiness: `0 / 4 gates complete`
+- Documentation readiness: `1 / 4 gates complete`
 - Backend delivery: track in [`BACKEND_DEVELOPMENT_PLAN.md`](./BACKEND_DEVELOPMENT_PLAN.md)
 - Frontend delivery: track in [`FRONTEND_DEVELOPMENT_PLAN.md`](./FRONTEND_DEVELOPMENT_PLAN.md)
 
 | Phase | Deliverable | Status | Progress |
 |---|---|---|---:|
-| 0 | Documentation decisions | Blocked | 0% |
+| 0 | Documentation decisions | In progress | 25% |
 | 1 | Git and monorepo foundation | In progress | 90% |
 | 2 | Local infrastructure and CI | Not started | 0% |
 | 3 | Identity and access | Not started | 0% |
 | 4 | Families, students, schools | Not started | 0% |
-| 5 | Enrollment and review | Blocked | 0% |
+| 5 | Enrollment and review | In progress | 5% |
 | 6 | Pricing and contracts | Not started | 0% |
 | 7 | Payments and installments | Not started | 0% |
 | 8 | Notifications, documents, audit | Not started | 0% |
@@ -74,7 +74,7 @@ For every feature:
 
 ### Phase 0 — mandatory documentation gates
 
-- [ ] Fill and approve `docs/enrollment-form-specification.md` (currently empty) before implementing the complete enrollment form.
+- [x] Fill and approve `docs/enrollment-form-specification.md` before implementing the complete enrollment form.
 - [ ] Reconcile the infrastructure conflict: `school-transport-tech-stack.md` includes Redis, BullMQ, worker, and scheduler, while `backend-architecture.md` says Redis/BullMQ are not required for the current MVP.
 - [ ] Reconcile any route/name differences between API, architecture, and data-model documents; publish one canonical OpenAPI contract.
 - [ ] Record document precedence and approval owners in `docs/README.md` (create it if approved).
