@@ -3,6 +3,9 @@ import { Job, Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import { ConfigService } from '../../config/config.service';
 import { AppLogger } from '../../common/logger';
+import { DatabaseService } from '../../database/database.service';
+import { authSessions, otpRequests } from '../../database/schemas';
+import { lt } from 'drizzle-orm';
 
 export const QUEUE_NAMES = {
   notifications: 'notification-delivery',
@@ -18,6 +21,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly config: ConfigService,
     private readonly logger: AppLogger,
+    private readonly database: DatabaseService,
   ) {
     this.connection = new IORedis(config.redisUrl, {
       maxRetriesPerRequest: null,
@@ -42,6 +46,16 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
         }),
       );
       this.logger.log('BullMQ workers started.');
+      await this.queue(QUEUE_NAMES.maintenance).add(
+        'purge-expired-auth-data',
+        {},
+        {
+          jobId: 'scheduled-auth-retention',
+          repeat: { pattern: '15 3 * * *' },
+          removeOnComplete: 30,
+          removeOnFail: 100,
+        },
+      );
     }
   }
 
@@ -81,6 +95,17 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async processMaintenance(job: Job): Promise<void> {
+    if (job.name === 'purge-expired-auth-data') {
+      const cutoff = retentionCutoff(new Date(), this.config.authSessionRetentionDays);
+      await this.database.db.delete(authSessions).where(lt(authSessions.expiresAt, cutoff));
+      await this.database.db.delete(otpRequests).where(lt(otpRequests.expiresAt, cutoff));
+      this.logger.log('Purged expired authentication data according to retention policy.');
+      return;
+    }
     this.logger.log(`Processed maintenance job ${job.name}.`);
   }
+}
+
+export function retentionCutoff(now: Date, retentionDays: number): Date {
+  return new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1_000);
 }

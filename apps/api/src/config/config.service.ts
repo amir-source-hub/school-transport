@@ -20,6 +20,7 @@ const envSchema = z.object({
   OTP_PROVIDER: z.enum(['console', 'none']).default('none'),
   PAYMENT_GATEWAY_PROVIDER: z.enum(['mock', 'none']).default('none'),
   SERVICE_ROLE: z.enum(['api', 'worker']).default('api'),
+  AUTH_SESSION_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
 });
 
 @Injectable()
@@ -88,6 +89,9 @@ export class ConfigService implements OnApplicationShutdown {
   }
   get serviceRole(): 'api' | 'worker' {
     return this.env.SERVICE_ROLE;
+  }
+  get authSessionRetentionDays(): number {
+    return this.env.AUTH_SESSION_RETENTION_DAYS;
   }
 
   onApplicationShutdown() {}
