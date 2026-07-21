@@ -9,12 +9,12 @@
 
 | Phase | Result                             | Status      | Progress |
 | ----- | ---------------------------------- | ----------- | -------: |
-| F0    | UI and contract decisions approved | Not started |       0% |
+| F0    | UI and contract decisions approved | Blocked     |       0% |
 | F1    | Web foundation and design system   | In progress |      95% |
 | F2    | API, session, and state foundation | In progress |      40% |
 | F3    | Public and authentication areas    | In progress |      40% |
 | F4    | Parent shell and family/student UI | In progress |      50% |
-| F5    | Enrollment flow                    | Not started |       0% |
+| F5    | Enrollment flow                    | Blocked     |       5% |
 | F6    | Contracts, pricing, payments       | In progress |      45% |
 | F7    | Admin panel                        | In progress |      56% |
 | F8    | Accessibility, resilience, tests   | In progress |      46% |
@@ -157,6 +157,9 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 ### F5 — enrollment flow
 
 - [ ] Begin final implementation only after the enrollment-form document is approved.
+  - [x] Verify that `docs/enrollment-form-specification.md` is empty and prevent premature form implementation.
+  - [x] Replace the generic enrollment placeholder with an accessible readiness screen that exposes no fields or submission behavior.
+  - [ ] Resume final implementation when the enrollment-form document is completed and approved.
 - [ ] Build the approved multi-step order and fields; the architecture currently proposes family, parent, primary phone, student, school/grade, service request, emergency contact, and review.
 - [ ] Use React Hook Form and Zod for usability while displaying authoritative server validation.
 - [ ] Implement per-step validation, back/next, progress, approved draft saving, final review, submission lock, and recoverable-error preservation.

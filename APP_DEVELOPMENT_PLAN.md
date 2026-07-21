@@ -3,7 +3,7 @@
 > Status: Planning  
 > Scope: Current MVP only  
 > Source of truth: Files in [`docs/`](./docs/)  
-> Last updated: 2026-07-21
+> Last updated: 2026-07-22
 
 ## Progress
 
@@ -14,12 +14,12 @@
 
 | Phase | Deliverable | Status | Progress |
 |---|---|---|---:|
-| 0 | Documentation decisions | Not started | 0% |
+| 0 | Documentation decisions | Blocked | 0% |
 | 1 | Git and monorepo foundation | In progress | 90% |
 | 2 | Local infrastructure and CI | Not started | 0% |
 | 3 | Identity and access | Not started | 0% |
 | 4 | Families, students, schools | Not started | 0% |
-| 5 | Enrollment and review | Not started | 0% |
+| 5 | Enrollment and review | Blocked | 0% |
 | 6 | Pricing and contracts | Not started | 0% |
 | 7 | Payments and installments | Not started | 0% |
 | 8 | Notifications, documents, audit | Not started | 0% |
