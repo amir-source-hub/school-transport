@@ -10,14 +10,14 @@
 | Phase | Result                             | Status      | Progress |
 | ----- | ---------------------------------- | ----------- | -------: |
 | F0    | UI and contract decisions approved | Not started |       0% |
-| F1    | Web foundation and design system   | In progress |      80% |
+| F1    | Web foundation and design system   | In progress |      85% |
 | F2    | API, session, and state foundation | In progress |      40% |
 | F3    | Public and authentication areas    | In progress |      35% |
 | F4    | Parent shell and family/student UI | Not started |       0% |
 | F5    | Enrollment flow                    | Not started |       0% |
 | F6    | Contracts, pricing, payments       | Not started |       0% |
 | F7    | Admin panel                        | Not started |       0% |
-| F8    | Accessibility, resilience, tests   | Not started |       0% |
+| F8    | Accessibility, resilience, tests   | In progress |      15% |
 | F9    | Build and release readiness        | Not started |       0% |
 
 ## 1. Frontend Rules
