@@ -49,7 +49,7 @@ export class AuthService {
       accountStatus: 'ACTIVE',
     });
 
-    this.logger.log(`Parent registered: ${username}`);
+    this.logger.log('Parent registered.');
     return { userId };
   }
 
@@ -84,7 +84,7 @@ export class AuthService {
       phoneNumber: data.phoneNumber,
     });
 
-    this.logger.log(`Admin registered: ${data.username}`);
+    this.logger.log('Admin registered.');
     return { adminId };
   }
 
@@ -97,7 +97,7 @@ export class AuthService {
 
     const valid = await argon2.verify(user[0].passwordHash, password);
     if (!valid) {
-      this.logger.warn(`Failed login attempt for parent: ${username}`);
+      this.logger.warn('Failed parent login attempt.');
       throw new AuthenticationError();
     }
 
@@ -108,7 +108,7 @@ export class AuthService {
     await this.db.db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user[0].id));
 
     const tokens = await this.generateTokens(user[0].id, 'PARENT');
-    this.logger.log(`Parent logged in: ${username}`);
+    this.logger.log('Parent logged in.');
 
     return {
       user: { id: user[0].id, username: user[0].username, role: 'PARENT' },
@@ -129,7 +129,7 @@ export class AuthService {
 
     const valid = await argon2.verify(admin[0].passwordHash, password);
     if (!valid) {
-      this.logger.warn(`Failed login attempt for admin: ${username}`);
+      this.logger.warn('Failed admin login attempt.');
       throw new AuthenticationError();
     }
 
@@ -143,7 +143,7 @@ export class AuthService {
       .where(eq(adminUsers.id, admin[0].id));
 
     const tokens = await this.generateTokens(admin[0].id, 'ADMIN');
-    this.logger.log(`Admin logged in: ${username}`);
+    this.logger.log('Admin logged in.');
 
     return {
       user: { id: admin[0].id, username: admin[0].username, role: 'ADMIN' },
@@ -169,7 +169,7 @@ export class AuthService {
   }
 
   async logout(userId: string): Promise<void> {
-    this.logger.log(`User logged out: ${userId}`);
+    this.logger.log('User logged out.');
   }
 
   async changePassword(
@@ -194,7 +194,7 @@ export class AuthService {
       .set({ passwordHash: newHash, updatedAt: new Date() })
       .where(eq(table.id, userId));
 
-    this.logger.log(`Password changed for user: ${userId}`);
+    this.logger.log('User password changed.');
   }
 
   async forgotPassword(phoneNumber: string): Promise<OtpResult> {
@@ -239,7 +239,7 @@ export class AuthService {
       .set({ passwordHash: newHash, updatedAt: new Date() })
       .where(eq(users.id, parent.userId));
 
-    this.logger.log(`Password reset completed for user: ${parent.userId}`);
+    this.logger.log('User password reset completed.');
   }
 
   async sendOtp(phoneNumber: string, purpose: string): Promise<OtpResult> {
@@ -271,7 +271,7 @@ export class AuthService {
     const codeHash = await argon2.hash(code);
     const expiresAt = addSeconds(new Date(), this.config.otpExpirySeconds);
 
-    this.logger.log(`OTP sent to ${phoneNumber} for ${purpose}`);
+    this.logger.log(`OTP sent for ${purpose}.`);
 
     await this.db.db.insert(otpRequests).values({
       id: generateId(),
@@ -323,7 +323,7 @@ export class AuthService {
         .update(otpRequests)
         .set({ attemptCount: request.attemptCount + 1 })
         .where(eq(otpRequests.id, request.id));
-      this.logger.warn(`Failed OTP attempt for ${phoneNumber} (${purpose})`);
+      this.logger.warn(`Failed OTP attempt for ${purpose}.`);
       throw new ValidationError('Invalid verification code.');
     }
 
@@ -332,7 +332,7 @@ export class AuthService {
       .set({ verifiedAt: new Date(), attemptCount: request.attemptCount + 1 })
       .where(eq(otpRequests.id, request.id));
 
-    this.logger.log(`OTP verified for ${phoneNumber} (${purpose})`);
+    this.logger.log(`OTP verified for ${purpose}.`);
     return {};
   }
 
