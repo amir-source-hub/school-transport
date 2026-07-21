@@ -24,7 +24,7 @@
 | 7 | Payments and installments | Not started | 0% |
 | 8 | Notifications, documents, audit | Not started | 0% |
 | 9 | Public, parent, and admin UI | In progress | 42% |
-| 10 | Security, performance, testing | In progress | 8% |
+| 10 | Security, performance, testing | In progress | 12% |
 | 11 | Deployment and release | Not started | 0% |
 
 Update a phase to `In progress`, then `Complete`; update the fraction and percentage in the same commit. A phase is complete only when its acceptance checks, tests, documentation, and review are complete.

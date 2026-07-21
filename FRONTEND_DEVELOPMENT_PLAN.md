@@ -18,7 +18,7 @@
 | F6    | Contracts, pricing, payments       | Not started |       0% |
 | F7    | Admin panel                        | Not started |       0% |
 | F8    | Accessibility, resilience, tests   | In progress |      20% |
-| F9    | Build and release readiness        | Not started |       0% |
+| F9    | Build and release readiness        | In progress |      15% |
 
 ## 1. Frontend Rules
 
@@ -185,6 +185,8 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 - [ ] Validate production environment variables without exposing secrets to the browser.
 - [ ] Run clean install, generated-client check, lint, type check, unit/component tests, accessibility checks, E2E smoke tests, and production build.
 - [ ] Verify CSP/security headers, cookie behavior, API origin/CORS expectations, error reporting, and source-map policy with the backend/deployment docs.
+  - [x] Configure and test the documented browser security headers and environment-aware CSP.
+  - [ ] Verify cookie behavior, deployed API origin/CORS, error reporting, and source-map policy when the backend and deployment contracts are available.
 - [ ] Deploy staging, complete public/parent/admin acceptance on desktop and mobile RTL layouts, and verify payment return flows.
 - [ ] Follow `school-transport-deployment-specification.md` for release, monitoring, and rollback.
 
