@@ -15,7 +15,7 @@
 | F3    | Public and authentication areas    | In progress |      40% |
 | F4    | Parent shell and family/student UI | In progress |      50% |
 | F5    | Enrollment flow                    | Not started |       0% |
-| F6    | Contracts, pricing, payments       | In progress |      30% |
+| F6    | Contracts, pricing, payments       | In progress |      38% |
 | F7    | Admin panel                        | In progress |      40% |
 | F8    | Accessibility, resilience, tests   | In progress |      46% |
 | F9    | Build and release readiness        | In progress |      35% |
@@ -176,13 +176,18 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
   - [x] Display one mock prepayment and four mock installments exactly as supplied by the adapter.
   - [ ] Replace mock values with the generated API response without frontend calculation.
 - [ ] Build online payment initiation with disabled duplicate action, gateway transition, and return states: success, failure, cancelled, already completed, and pending verification.
+  - [x] Build an accessible mock viewer for every documented return state while keeping gateway initiation disabled.
+  - [ ] Connect idempotent initiation, gateway transition, and authoritative server-returned results after API approval.
 - [ ] Never show payment success solely from query parameters or gateway return; wait for verified backend status.
+  - [x] Keep the mock viewer independent of query parameters and label success as server-confirmed only.
+  - [ ] Verify the real return flow against backend status after the payment contract is approved.
 - [ ] Build offline submission and status/history UI; build authorized receipt view/download.
   - [x] Build read-only mock offline review status/history presentation.
   - [ ] Add receipt submission/download and API-confirmed approval/rejection/resubmission behavior.
 - [x] Add clear warnings against paying again during unknown/pending verification.
 - [ ] Test duplicate clicks, refresh on return, stale status, timeout, amount mismatch response, offline pending/rejected/approved, and accessibility.
   - [x] Test disabled mock financial actions, warning visibility, documented status mapping, desktop/mobile layout, and accessibility.
+  - [x] Component-test all mock gateway-return states and ensure the preview cannot initiate payment.
   - [ ] Test gateway return, verification, timeout, stale status, amount mismatch, and complete offline lifecycles after integration.
 
 ### F7 — admin panel

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { demoContract, demoInvoices, demoPaymentOverview } from '@/features/finance/mock-finance';
+import { PaymentReturnPreview } from '@/features/finance/payment-return-preview';
 import { getFinanceStatusTone } from '@/features/finance/status';
 import { formatIrr } from '@/lib/formatters';
 
@@ -75,6 +76,9 @@ export default function PaymentsPage() {
             </div>
           ))}
         </div>
+      </Card>
+      <Card>
+        <PaymentReturnPreview />
       </Card>
       <Card>
         <h2 className="text-lg font-black">پرداخت آفلاین و سابقه بررسی</h2>
