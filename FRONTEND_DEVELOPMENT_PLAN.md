@@ -15,9 +15,9 @@
 | F3    | Public and authentication areas    | In progress |      40% |
 | F4    | Parent shell and family/student UI | In progress |      50% |
 | F5    | Enrollment flow                    | Not started |       0% |
-| F6    | Contracts, pricing, payments       | Not started |       0% |
+| F6    | Contracts, pricing, payments       | In progress |      30% |
 | F7    | Admin panel                        | Not started |       0% |
-| F8    | Accessibility, resilience, tests   | In progress |      40% |
+| F8    | Accessibility, resilience, tests   | In progress |      42% |
 | F9    | Build and release readiness        | In progress |      35% |
 
 ## 1. Frontend Rules
@@ -160,13 +160,23 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
 ### F6 — pricing, contracts, installments, and payments
 
 - [ ] Display server-calculated price and available full/installment choices; never calculate or authorize final amounts on the client.
+  - [x] Display mock-adapter totals and the selected installment plan without client-side financial calculation.
+  - [ ] Connect server-returned pricing and available payment choices when the approved API is available.
 - [ ] Build contract viewer with version/terms/payment schedule, required acknowledgment, acceptance confirmation, and immutable accepted-state presentation.
+  - [x] Build the read-only mock contract viewer with version, status, totals, schedule, and immutable-source explanation.
+  - [ ] Render server contract terms/PDF and enable version-safe acknowledgment plus OTP acceptance.
 - [ ] Display one-third prepayment plus four monthly installments or full payment exactly as returned by the API.
+  - [x] Display one mock prepayment and four mock installments exactly as supplied by the adapter.
+  - [ ] Replace mock values with the generated API response without frontend calculation.
 - [ ] Build online payment initiation with disabled duplicate action, gateway transition, and return states: success, failure, cancelled, already completed, and pending verification.
 - [ ] Never show payment success solely from query parameters or gateway return; wait for verified backend status.
 - [ ] Build offline submission and status/history UI; build authorized receipt view/download.
-- [ ] Add clear warnings against paying again during unknown/pending verification.
+  - [x] Build read-only mock offline review status/history presentation.
+  - [ ] Add receipt submission/download and API-confirmed approval/rejection/resubmission behavior.
+- [x] Add clear warnings against paying again during unknown/pending verification.
 - [ ] Test duplicate clicks, refresh on return, stale status, timeout, amount mismatch response, offline pending/rejected/approved, and accessibility.
+  - [x] Test disabled mock financial actions, warning visibility, documented status mapping, desktop/mobile layout, and accessibility.
+  - [ ] Test gateway return, verification, timeout, stale status, amount mismatch, and complete offline lifecycles after integration.
 
 ### F7 — admin panel
 
