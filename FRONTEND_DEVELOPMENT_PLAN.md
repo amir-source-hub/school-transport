@@ -15,7 +15,7 @@
 | F3    | Public and authentication areas    | In progress |      40% |
 | F4    | Parent shell and family/student UI | In progress |      50% |
 | F5    | Enrollment flow                    | Not started |       0% |
-| F6    | Contracts, pricing, payments       | In progress |      38% |
+| F6    | Contracts, pricing, payments       | In progress |      45% |
 | F7    | Admin panel                        | In progress |      40% |
 | F8    | Accessibility, resilience, tests   | In progress |      46% |
 | F9    | Build and release readiness        | In progress |      35% |
@@ -183,11 +183,13 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
   - [ ] Verify the real return flow against backend status after the payment contract is approved.
 - [ ] Build offline submission and status/history UI; build authorized receipt view/download.
   - [x] Build read-only mock offline review status/history presentation.
-  - [ ] Add receipt submission/download and API-confirmed approval/rejection/resubmission behavior.
+  - [x] Build a mock offline-detail submission form with validation, preserved values, duplicate-submit locking, and pending-review confirmation.
+  - [ ] Add approved receipt-media upload/download and API-confirmed approval/rejection/resubmission behavior.
 - [x] Add clear warnings against paying again during unknown/pending verification.
 - [ ] Test duplicate clicks, refresh on return, stale status, timeout, amount mismatch response, offline pending/rejected/approved, and accessibility.
   - [x] Test disabled mock financial actions, warning visibility, documented status mapping, desktop/mobile layout, and accessibility.
   - [x] Component-test all mock gateway-return states and ensure the preview cannot initiate payment.
+  - [x] Component-test offline-detail validation, value preservation, and pending-only mock confirmation.
   - [ ] Test gateway return, verification, timeout, stale status, amount mismatch, and complete offline lifecycles after integration.
 
 ### F7 — admin panel
