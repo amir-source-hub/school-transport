@@ -160,6 +160,9 @@ importers:
         specifier: ^3.6.0
         version: 3.6.0
     devDependencies:
+      '@school-transport/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.3
@@ -202,6 +205,8 @@ importers:
       vitest:
         specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.43)(jsdom@29.1.1)(lightningcss@1.32.0)(terser@5.49.0)
+
+  packages/typescript-config: {}
 
 packages:
 

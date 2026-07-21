@@ -15,7 +15,7 @@
 | Phase | Deliverable | Status | Progress |
 |---|---|---|---:|
 | 0 | Documentation decisions | Not started | 0% |
-| 1 | Git and monorepo foundation | In progress | 70% |
+| 1 | Git and monorepo foundation | In progress | 75% |
 | 2 | Local infrastructure and CI | Not started | 0% |
 | 3 | Identity and access | Not started | 0% |
 | 4 | Families, students, schools | Not started | 0% |
