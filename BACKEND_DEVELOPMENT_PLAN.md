@@ -181,7 +181,7 @@ Exit: no unresolved documentation conflict affects B1–B10.
   - [x] Require rejected registrations to remain terminal so parents create a new request as specified.
 - [ ] Implement step persistence only as approved by the completed spec. (Spec is empty — step persistence deferred.)
 - [x] Add admin review (start-review, approve, reject) and correction requests.
-- [ ] Prevent duplicate submissions and invalid edits after protected states. (Partial — state machine prevents invalid transitions, but no full duplicate-submission prevention.)
+- [x] Prevent duplicate active enrollment creation for the same student/academic year and reject invalid lifecycle transitions.
 - [x] Keep route/driver/vehicle assignment outside MVP.
 - [ ] Test every state transition, forbidden transition, ownership case, resubmission, and concurrent review.
   - [x] Unit-test every allowed transition and reject all unspecified or unknown-status transitions.
@@ -208,7 +208,9 @@ Exit: no unresolved documentation conflict affects B1–B10.
 - [x] Add idempotency keys (Idempotency-Key header support in start flow).
 - [x] In one database transaction: verify, persist transaction, update schedule item status, update plan status (done in verify and approve methods).
 - [x] Implement offline submission and admin approval/rejection atomically with row locking (`forUpdate`).
-- [ ] Keep successful payment history immutable; generate authorized receipts. (Partial — transactions are append-only, but no receipt generation.)
+- [ ] Keep successful payment history immutable; generate authorized receipts.
+  - [x] Enforce successful-payment immutability at the database layer.
+  - [ ] Persist and expose authorized receipts after successful online or approved offline payment.
 - [ ] Add reconciliation and expiry behavior only as documented after the worker/scheduler decision.
 - [ ] Test success, failure, cancellation, timeout, amount mismatch, replay, duplicate clicks/callbacks, simultaneous admin/gateway completion, and rollback.
   - [x] Unit-test gateway failure, exact-amount verification, and missing transaction identifiers.
