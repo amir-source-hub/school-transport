@@ -1,47 +1,42 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { serviceRegistrations, registrationSnapshots, registrationReviews, registrationNotes } from '../../database/schemas';
+import {
+  serviceRegistrations,
+  registrationSnapshots,
+  registrationReviews,
+} from '../../database/schemas';
 import { students } from '../../database/schemas';
-import { eq, and } from 'drizzle-orm';
-import { NotFoundError, ValidationError, ConflictError } from '../../common/errors';
+import { eq, and, inArray, notInArray } from 'drizzle-orm';
+import { ConflictError, NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
-
-type RegistrationStatus = 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
-const VALID_TRANSITIONS: Record<RegistrationStatus, RegistrationStatus[]> = {
-  DRAFT: ['SUBMITTED', 'CANCELLED'],
-  SUBMITTED: ['UNDER_REVIEW', 'CANCELLED'],
-  UNDER_REVIEW: ['APPROVED', 'REJECTED', 'SUBMITTED'],
-  APPROVED: ['CANCELLED'],
-  REJECTED: ['SUBMITTED'],
-  CANCELLED: [],
-};
+import { assertRegistrationTransition } from './registration-lifecycle';
 
 @Injectable()
 export class RegistrationsService {
   constructor(private readonly db: DatabaseService) {}
 
-  private async checkTransition(current: string, next: string) {
-    const allowed = VALID_TRANSITIONS[current as RegistrationStatus];
-    if (!allowed || !allowed.includes(next as RegistrationStatus)) {
-      throw new ValidationError(`Cannot transition from ${current} to ${next}.`);
-    }
-  }
-
   async getByFamily(userId: string) {
-    const userStudents = await this.db.db.select({ id: students.id })
+    const userStudents = await this.db.db
+      .select({ id: students.id })
       .from(students)
       .where(eq(students.userId, userId));
 
-    const studentIds = userStudents.map(s => s.id);
+    const studentIds = userStudents.map((s) => s.id);
     if (studentIds.length === 0) return [];
 
-    return this.db.db.select()
+    return this.db.db
+      .select()
       .from(serviceRegistrations)
-      .where(serviceRegistrations.studentId.in(studentIds));
+      .where(inArray(serviceRegistrations.studentId, studentIds));
+  }
+
+  async getAll() {
+    return this.db.db.select().from(serviceRegistrations);
   }
 
   async getById(registrationId: string, userId?: string) {
-    const result = await this.db.db.select()
+    const result = await this.db.db
+      .select()
       .from(serviceRegistrations)
       .where(eq(serviceRegistrations.id, registrationId))
       .limit(1);
@@ -49,7 +44,8 @@ export class RegistrationsService {
     if (result.length === 0) throw new NotFoundError('Registration', registrationId);
 
     if (userId) {
-      const student = await this.db.db.select({ userId: students.userId })
+      const student = await this.db.db
+        .select({ userId: students.userId })
         .from(students)
         .where(eq(students.id, result[0].studentId))
         .limit(1);
@@ -61,18 +57,40 @@ export class RegistrationsService {
     return result[0];
   }
 
-  async create(userId: string, data: {
-    studentId: string;
-    academicYear: string;
-    serviceType: string;
-    requestedStartDate?: string;
-    parentNotes?: string;
-  }) {
-    const student = await this.db.db.select()
+  async create(
+    userId: string,
+    data: {
+      studentId: string;
+      academicYear: string;
+      serviceType: string;
+      requestedStartDate?: string;
+      parentNotes?: string;
+    },
+  ) {
+    const student = await this.db.db
+      .select()
       .from(students)
       .where(and(eq(students.id, data.studentId), eq(students.userId, userId)))
       .limit(1);
     if (student.length === 0) throw new NotFoundError('Student', data.studentId);
+
+    const duplicate = await this.db.db
+      .select({ id: serviceRegistrations.id })
+      .from(serviceRegistrations)
+      .where(
+        and(
+          eq(serviceRegistrations.studentId, data.studentId),
+          eq(serviceRegistrations.academicYear, data.academicYear),
+          notInArray(serviceRegistrations.registrationStatus, ['REJECTED', 'CANCELLED']),
+        ),
+      )
+      .limit(1);
+    if (duplicate.length > 0) {
+      throw new ConflictError(
+        'DUPLICATE_ACTIVE_ENROLLMENT',
+        'An active enrollment already exists for this student and academic year.',
+      );
+    }
 
     const id = generateId();
     await this.db.db.insert(serviceRegistrations).values({
@@ -90,9 +108,10 @@ export class RegistrationsService {
 
   async submit(registrationId: string, userId: string) {
     const reg = await this.getById(registrationId, userId);
-    await this.checkTransition(reg.registrationStatus, 'SUBMITTED');
+    assertRegistrationTransition(reg.registrationStatus, 'SUBMITTED');
 
-    await this.db.db.update(serviceRegistrations)
+    await this.db.db
+      .update(serviceRegistrations)
       .set({ registrationStatus: 'SUBMITTED', submittedAt: new Date(), updatedAt: new Date() })
       .where(eq(serviceRegistrations.id, registrationId));
 
@@ -102,9 +121,10 @@ export class RegistrationsService {
 
   async cancel(registrationId: string, userId: string) {
     const reg = await this.getById(registrationId, userId);
-    await this.checkTransition(reg.registrationStatus, 'CANCELLED');
+    assertRegistrationTransition(reg.registrationStatus, 'CANCELLED');
 
-    await this.db.db.update(serviceRegistrations)
+    await this.db.db
+      .update(serviceRegistrations)
       .set({ registrationStatus: 'CANCELLED', updatedAt: new Date() })
       .where(eq(serviceRegistrations.id, registrationId));
 
@@ -113,10 +133,16 @@ export class RegistrationsService {
 
   async startReview(registrationId: string, adminId: string) {
     const reg = await this.getById(registrationId);
-    await this.checkTransition(reg.registrationStatus, 'UNDER_REVIEW');
+    assertRegistrationTransition(reg.registrationStatus, 'UNDER_REVIEW');
 
-    await this.db.db.update(serviceRegistrations)
-      .set({ registrationStatus: 'UNDER_REVIEW', reviewedByAdminId: adminId, reviewedAt: new Date(), updatedAt: new Date() })
+    await this.db.db
+      .update(serviceRegistrations)
+      .set({
+        registrationStatus: 'UNDER_REVIEW',
+        reviewedByAdminId: adminId,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(serviceRegistrations.id, registrationId));
 
     await this.addReview(registrationId, adminId, 'START_REVIEW');
@@ -125,10 +151,16 @@ export class RegistrationsService {
 
   async approve(registrationId: string, adminId: string) {
     const reg = await this.getById(registrationId);
-    await this.checkTransition(reg.registrationStatus, 'APPROVED');
+    assertRegistrationTransition(reg.registrationStatus, 'APPROVED');
 
-    await this.db.db.update(serviceRegistrations)
-      .set({ registrationStatus: 'APPROVED', reviewedByAdminId: adminId, reviewedAt: new Date(), updatedAt: new Date() })
+    await this.db.db
+      .update(serviceRegistrations)
+      .set({
+        registrationStatus: 'APPROVED',
+        reviewedByAdminId: adminId,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(serviceRegistrations.id, registrationId));
 
     await this.addReview(registrationId, adminId, 'APPROVE');
@@ -137,9 +169,10 @@ export class RegistrationsService {
 
   async reject(registrationId: string, adminId: string, reason?: string) {
     const reg = await this.getById(registrationId);
-    await this.checkTransition(reg.registrationStatus, 'REJECTED');
+    assertRegistrationTransition(reg.registrationStatus, 'REJECTED');
 
-    await this.db.db.update(serviceRegistrations)
+    await this.db.db
+      .update(serviceRegistrations)
       .set({
         registrationStatus: 'REJECTED',
         reviewedByAdminId: adminId,
@@ -154,11 +187,29 @@ export class RegistrationsService {
   }
 
   async requestCorrection(registrationId: string, adminId: string, message: string) {
+    const reg = await this.getById(registrationId);
+    assertRegistrationTransition(reg.registrationStatus, 'NEEDS_CORRECTION');
+
+    await this.db.db
+      .update(serviceRegistrations)
+      .set({
+        registrationStatus: 'NEEDS_CORRECTION',
+        reviewedByAdminId: adminId,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(serviceRegistrations.id, registrationId));
+
     await this.addReview(registrationId, adminId, 'REQUEST_CORRECTION', message);
-    return { message: 'Correction requested.' };
+    return this.getById(registrationId);
   }
 
-  private async addReview(registrationId: string, adminId: string, action: string, comment?: string) {
+  private async addReview(
+    registrationId: string,
+    adminId: string,
+    action: string,
+    comment?: string,
+  ) {
     await this.db.db.insert(registrationReviews).values({
       id: generateId(),
       registrationId,
@@ -170,7 +221,11 @@ export class RegistrationsService {
 
   private async createSnapshot(registrationId: string, type: string) {
     const reg = await this.getById(registrationId);
-    const student = await this.db.db.select().from(students).where(eq(students.id, reg.studentId)).limit(1);
+    const student = await this.db.db
+      .select()
+      .from(students)
+      .where(eq(students.id, reg.studentId))
+      .limit(1);
 
     await this.db.db.insert(registrationSnapshots).values({
       id: generateId(),

@@ -1,15 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { addSeconds, isPast } from 'date-fns';
 import { eq, and, isNull } from 'drizzle-orm';
+import { createHash } from 'node:crypto';
 import { ConfigService } from '../../../config/config.service';
 import { DatabaseService } from '../../../database/database.service';
-import { users, adminUsers, otpRequests, parents } from '../../../database/schemas';
-import { AuthenticationError, ConflictError, NotFoundError, ValidationError } from '../../../common/errors';
+import { users, adminUsers, otpRequests, parents, authSessions } from '../../../database/schemas';
+import {
+  AuthenticationError,
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
-import { JwtPayload, AuthTokens, LoginResult, OtpResult } from '../domain/auth.types';
+import { AuthTokens, LoginResult, OtpResult } from '../domain/auth.types';
+import { JwtPayload } from '../../../common/authentication.types';
+import { OTP_DELIVERY, OtpDelivery } from './otp-delivery.port';
 
 @Injectable()
 export class AuthService {
@@ -18,12 +26,14 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly db: DatabaseService,
     private readonly logger: AppLogger,
+    @Inject(OTP_DELIVERY) private readonly otpDelivery: OtpDelivery,
   ) {}
 
   async registerParent(username: string, password: string): Promise<{ userId: string }> {
     this.validatePassword(password, false);
 
-    const existing = await this.db.db.select({ id: users.id })
+    const existing = await this.db.db
+      .select({ id: users.id })
       .from(users)
       .where(eq(users.username, username))
       .limit(1);
@@ -42,7 +52,7 @@ export class AuthService {
       accountStatus: 'ACTIVE',
     });
 
-    this.logger.log(`Parent registered: ${username}`);
+    this.logger.log('Parent registered.');
     return { userId };
   }
 
@@ -55,7 +65,8 @@ export class AuthService {
   }): Promise<{ adminId: string }> {
     this.validatePassword(data.password, true);
 
-    const existing = await this.db.db.select({ id: adminUsers.id })
+    const existing = await this.db.db
+      .select({ id: adminUsers.id })
       .from(adminUsers)
       .where(eq(adminUsers.username, data.username))
       .limit(1);
@@ -76,15 +87,16 @@ export class AuthService {
       phoneNumber: data.phoneNumber,
     });
 
-    this.logger.log(`Admin registered: ${data.username}`);
+    this.logger.log('Admin registered.');
     return { adminId };
   }
 
-  async loginParent(username: string, password: string): Promise<LoginResult> {
-    const user = await this.db.db.select()
-      .from(users)
-      .where(eq(users.username, username))
-      .limit(1);
+  async loginParent(
+    username: string,
+    password: string,
+    context?: SessionContext,
+  ): Promise<LoginResult> {
+    const user = await this.db.db.select().from(users).where(eq(users.username, username)).limit(1);
 
     if (user.length === 0) {
       throw new AuthenticationError();
@@ -92,7 +104,7 @@ export class AuthService {
 
     const valid = await argon2.verify(user[0].passwordHash, password);
     if (!valid) {
-      this.logger.warn(`Failed login attempt for parent: ${username}`);
+      this.logger.warn('Failed parent login attempt.');
       throw new AuthenticationError();
     }
 
@@ -100,12 +112,10 @@ export class AuthService {
       throw new AuthenticationError('Account is disabled or suspended.');
     }
 
-    await this.db.db.update(users)
-      .set({ lastLoginAt: new Date() })
-      .where(eq(users.id, user[0].id));
+    await this.db.db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user[0].id));
 
-    const tokens = await this.generateTokens(user[0].id, 'PARENT');
-    this.logger.log(`Parent logged in: ${username}`);
+    const tokens = await this.generateTokens(user[0].id, 'PARENT', context);
+    this.logger.log('Parent logged in.');
 
     return {
       user: { id: user[0].id, username: user[0].username, role: 'PARENT' },
@@ -113,8 +123,13 @@ export class AuthService {
     };
   }
 
-  async loginAdmin(username: string, password: string): Promise<LoginResult> {
-    const admin = await this.db.db.select()
+  async loginAdmin(
+    username: string,
+    password: string,
+    context?: SessionContext,
+  ): Promise<LoginResult> {
+    const admin = await this.db.db
+      .select()
       .from(adminUsers)
       .where(eq(adminUsers.username, username))
       .limit(1);
@@ -125,7 +140,7 @@ export class AuthService {
 
     const valid = await argon2.verify(admin[0].passwordHash, password);
     if (!valid) {
-      this.logger.warn(`Failed login attempt for admin: ${username}`);
+      this.logger.warn('Failed admin login attempt.');
       throw new AuthenticationError();
     }
 
@@ -133,12 +148,13 @@ export class AuthService {
       throw new AuthenticationError('Account is disabled or suspended.');
     }
 
-    await this.db.db.update(adminUsers)
+    await this.db.db
+      .update(adminUsers)
       .set({ lastLoginAt: new Date() })
       .where(eq(adminUsers.id, admin[0].id));
 
-    const tokens = await this.generateTokens(admin[0].id, 'ADMIN');
-    this.logger.log(`Admin logged in: ${username}`);
+    const tokens = await this.generateTokens(admin[0].id, 'ADMIN', context);
+    this.logger.log('Admin logged in.');
 
     return {
       user: { id: admin[0].id, username: admin[0].username, role: 'ADMIN' },
@@ -156,15 +172,44 @@ export class AuthService {
         throw new AuthenticationError('Invalid refresh token.');
       }
 
-      return this.generateTokens(payload.sub, payload.role);
+      const session = await this.db.db
+        .select()
+        .from(authSessions)
+        .where(eq(authSessions.id, payload.sid))
+        .limit(1);
+      const tokenHash = this.hashToken(refreshToken);
+      const current = session[0];
+
+      if (
+        !current ||
+        current.subjectId !== payload.sub ||
+        current.role !== payload.role ||
+        current.refreshTokenHash !== tokenHash ||
+        current.revokedAt
+      ) {
+        await this.revokeAllSessions(payload.sub, payload.role, 'REFRESH_TOKEN_REUSE');
+        throw new AuthenticationError('Invalid or expired refresh token.');
+      }
+      if (isPast(new Date(current.expiresAt))) {
+        await this.revokeSession(current.id, 'SESSION_EXPIRED');
+        throw new AuthenticationError('Invalid or expired refresh token.');
+      }
+
+      return this.generateTokens(payload.sub, payload.role, undefined, current.id);
     } catch (err: any) {
       if (err instanceof AuthenticationError) throw err;
       throw new AuthenticationError('Invalid or expired refresh token.');
     }
   }
 
-  async logout(userId: string): Promise<void> {
-    this.logger.log(`User logged out: ${userId}`);
+  async logout(userId: string, sessionId: string): Promise<void> {
+    const session = await this.db.db
+      .select({ subjectId: authSessions.subjectId })
+      .from(authSessions)
+      .where(eq(authSessions.id, sessionId))
+      .limit(1);
+    if (session[0]?.subjectId === userId) await this.revokeSession(sessionId, 'LOGOUT');
+    this.logger.log('User logged out.');
   }
 
   async changePassword(
@@ -176,10 +221,7 @@ export class AuthService {
     this.validatePassword(newPassword, role === 'ADMIN');
 
     const table = role === 'PARENT' ? users : adminUsers;
-    const records = await this.db.db.select()
-      .from(table)
-      .where(eq(table.id, userId))
-      .limit(1);
+    const records = await this.db.db.select().from(table).where(eq(table.id, userId)).limit(1);
 
     if (records.length === 0) throw new NotFoundError('User');
 
@@ -187,15 +229,19 @@ export class AuthService {
     if (!valid) throw new AuthenticationError('Current password is incorrect.');
 
     const newHash = await argon2.hash(newPassword);
-    await this.db.db.update(table)
+    await this.db.db
+      .update(table)
       .set({ passwordHash: newHash, updatedAt: new Date() })
       .where(eq(table.id, userId));
 
-    this.logger.log(`Password changed for user: ${userId}`);
+    await this.revokeAllSessions(userId, role, 'PASSWORD_CHANGED');
+
+    this.logger.log('User password changed.');
   }
 
   async forgotPassword(phoneNumber: string): Promise<OtpResult> {
-    const parent = await this.db.db.select()
+    const parent = await this.db.db
+      .select()
       .from(parents)
       .where(eq(parents.phoneNumber, phoneNumber))
       .limit(1);
@@ -212,7 +258,8 @@ export class AuthService {
 
     await this.verifyOtp(phoneNumber, 'PASSWORD_RECOVERY', code);
 
-    const parentRecords = await this.db.db.select()
+    const parentRecords = await this.db.db
+      .select()
       .from(parents)
       .where(eq(parents.phoneNumber, phoneNumber))
       .limit(1);
@@ -220,7 +267,8 @@ export class AuthService {
     if (parentRecords.length === 0) throw new NotFoundError('Parent');
 
     const parent = parentRecords[0];
-    const userRecords = await this.db.db.select()
+    const userRecords = await this.db.db
+      .select()
       .from(users)
       .where(eq(users.id, parent.userId))
       .limit(1);
@@ -228,21 +276,25 @@ export class AuthService {
     if (userRecords.length === 0) throw new NotFoundError('User');
 
     const newHash = await argon2.hash(newPassword);
-    await this.db.db.update(users)
+    await this.db.db
+      .update(users)
       .set({ passwordHash: newHash, updatedAt: new Date() })
       .where(eq(users.id, parent.userId));
 
-    this.logger.log(`Password reset completed for user: ${parent.userId}`);
+    this.logger.log('User password reset completed.');
   }
 
   async sendOtp(phoneNumber: string, purpose: string): Promise<OtpResult> {
-    const recent = await this.db.db.select()
+    const recent = await this.db.db
+      .select()
       .from(otpRequests)
-      .where(and(
-        eq(otpRequests.phoneNumber, phoneNumber),
-        eq(otpRequests.purpose, purpose),
-        isNull(otpRequests.verifiedAt),
-      ))
+      .where(
+        and(
+          eq(otpRequests.phoneNumber, phoneNumber),
+          eq(otpRequests.purpose, purpose),
+          isNull(otpRequests.verifiedAt),
+        ),
+      )
       .orderBy(otpRequests.createdAt)
       .limit(1);
 
@@ -251,15 +303,15 @@ export class AuthService {
       const elapsed = (Date.now() - new Date(lastRequest.createdAt).getTime()) / 1000;
       if (elapsed < this.config.otpResendCooldownSeconds) {
         const waitSeconds = Math.ceil(this.config.otpResendCooldownSeconds - elapsed);
-        throw new ValidationError(`Please wait ${waitSeconds} seconds before requesting a new code.`);
+        throw new ValidationError(
+          `Please wait ${waitSeconds} seconds before requesting a new code.`,
+        );
       }
     }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const codeHash = await argon2.hash(code);
     const expiresAt = addSeconds(new Date(), this.config.otpExpirySeconds);
-
-    this.logger.log(`OTP sent to ${phoneNumber} for ${purpose}`);
 
     await this.db.db.insert(otpRequests).values({
       id: generateId(),
@@ -270,17 +322,27 @@ export class AuthService {
       maxAttempts: this.config.otpMaxAttempts,
     });
 
+    await this.otpDelivery.send({ phoneNumber, purpose, code });
+    this.logger.log(`OTP sent for ${purpose}.`);
+
     return { expiresAt, cooldownSeconds: this.config.otpResendCooldownSeconds };
   }
 
-  async verifyOtp(phoneNumber: string, purpose: string, code: string): Promise<{ userId?: string }> {
-    const requests = await this.db.db.select()
+  async verifyOtp(
+    phoneNumber: string,
+    purpose: string,
+    code: string,
+  ): Promise<{ userId?: string }> {
+    const requests = await this.db.db
+      .select()
       .from(otpRequests)
-      .where(and(
-        eq(otpRequests.phoneNumber, phoneNumber),
-        eq(otpRequests.purpose, purpose),
-        isNull(otpRequests.verifiedAt),
-      ))
+      .where(
+        and(
+          eq(otpRequests.phoneNumber, phoneNumber),
+          eq(otpRequests.purpose, purpose),
+          isNull(otpRequests.verifiedAt),
+        ),
+      )
       .orderBy(otpRequests.createdAt)
       .limit(1);
 
@@ -300,34 +362,102 @@ export class AuthService {
 
     const valid = await argon2.verify(request.codeHash, code);
     if (!valid) {
-      await this.db.db.update(otpRequests)
+      await this.db.db
+        .update(otpRequests)
         .set({ attemptCount: request.attemptCount + 1 })
         .where(eq(otpRequests.id, request.id));
-      this.logger.warn(`Failed OTP attempt for ${phoneNumber} (${purpose})`);
+      this.logger.warn(`Failed OTP attempt for ${purpose}.`);
       throw new ValidationError('Invalid verification code.');
     }
 
-    await this.db.db.update(otpRequests)
+    await this.db.db
+      .update(otpRequests)
       .set({ verifiedAt: new Date(), attemptCount: request.attemptCount + 1 })
       .where(eq(otpRequests.id, request.id));
 
-    this.logger.log(`OTP verified for ${phoneNumber} (${purpose})`);
+    this.logger.log(`OTP verified for ${purpose}.`);
     return {};
   }
 
-  private async generateTokens(userId: string, role: 'PARENT' | 'ADMIN'): Promise<AuthTokens> {
-    const accessTtl = role === 'ADMIN' ? this.config.adminJwtAccessTokenTtl : this.config.jwtAccessTokenTtl;
-    const refreshTtl = role === 'ADMIN' ? this.config.adminJwtRefreshTokenTtl : this.config.jwtRefreshTokenTtl;
+  private async generateTokens(
+    userId: string,
+    role: 'PARENT' | 'ADMIN',
+    context?: SessionContext,
+    replacedSessionId?: string,
+  ): Promise<AuthTokens> {
+    const accessTtl =
+      role === 'ADMIN' ? this.config.adminJwtAccessTokenTtl : this.config.jwtAccessTokenTtl;
+    const refreshTtl =
+      role === 'ADMIN' ? this.config.adminJwtRefreshTokenTtl : this.config.jwtRefreshTokenTtl;
 
-    const accessPayload: JwtPayload = { sub: userId, role, type: 'access' };
-    const refreshPayload: JwtPayload = { sub: userId, role, type: 'refresh' };
+    const sessionId = generateId();
+    const accessPayload: JwtPayload = { sub: userId, role, type: 'access', sid: sessionId };
+    const refreshPayload: JwtPayload = { sub: userId, role, type: 'refresh', sid: sessionId };
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(accessPayload, { expiresIn: accessTtl, secret: this.config.jwtSecret }),
-      this.jwtService.signAsync(refreshPayload, { expiresIn: refreshTtl, secret: this.config.jwtSecret }),
+      this.jwtService.signAsync(accessPayload, {
+        expiresIn: accessTtl,
+        secret: this.config.jwtSecret,
+      }),
+      this.jwtService.signAsync(refreshPayload, {
+        expiresIn: refreshTtl,
+        secret: this.config.jwtSecret,
+      }),
     ]);
 
+    await this.db.db.transaction(async (txn) => {
+      await txn.insert(authSessions).values({
+        id: sessionId,
+        subjectId: userId,
+        role,
+        refreshTokenHash: this.hashToken(refreshToken),
+        deviceName: context?.deviceName || null,
+        ipAddress: context?.ipAddress || null,
+        userAgent: context?.userAgent || null,
+        expiresAt: addSeconds(new Date(), refreshTtl),
+      });
+      if (replacedSessionId) {
+        await txn
+          .update(authSessions)
+          .set({
+            revokedAt: new Date(),
+            revocationReason: 'ROTATED',
+            replacedBySessionId: sessionId,
+            lastUsedAt: new Date(),
+          })
+          .where(and(eq(authSessions.id, replacedSessionId), isNull(authSessions.revokedAt)));
+      }
+    });
+
     return { accessToken, refreshToken };
+  }
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private async revokeSession(sessionId: string, reason: string): Promise<void> {
+    await this.db.db
+      .update(authSessions)
+      .set({ revokedAt: new Date(), revocationReason: reason })
+      .where(and(eq(authSessions.id, sessionId), isNull(authSessions.revokedAt)));
+  }
+
+  private async revokeAllSessions(
+    subjectId: string,
+    role: 'PARENT' | 'ADMIN',
+    reason: string,
+  ): Promise<void> {
+    await this.db.db
+      .update(authSessions)
+      .set({ revokedAt: new Date(), revocationReason: reason })
+      .where(
+        and(
+          eq(authSessions.subjectId, subjectId),
+          eq(authSessions.role, role),
+          isNull(authSessions.revokedAt),
+        ),
+      );
   }
 
   private validatePassword(password: string, isAdmin: boolean): void {
@@ -349,3 +479,9 @@ export class AuthService {
     }
   }
 }
+
+type SessionContext = {
+  deviceName?: string;
+  ipAddress?: string;
+  userAgent?: string;
+};

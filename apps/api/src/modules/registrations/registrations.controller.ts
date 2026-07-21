@@ -17,10 +17,17 @@ export class RegistrationsController {
   }
 
   @Post()
-  async create(@Req() req: any, @Body() dto: {
-    studentId: string; academicYear: string; serviceType: string;
-    requestedStartDate?: string; parentNotes?: string;
-  }) {
+  async create(
+    @Req() req: any,
+    @Body()
+    dto: {
+      studentId: string;
+      academicYear: string;
+      serviceType: string;
+      requestedStartDate?: string;
+      parentNotes?: string;
+    },
+  ) {
     const reg = await this.registrationsService.create(req.user.id, dto);
     return successResponse(reg);
   }
@@ -52,7 +59,7 @@ export class AdminRegistrationsController {
 
   @Get()
   async getAll() {
-    return successResponse([]);
+    return successResponse(await this.registrationsService.getAll());
   }
 
   @Get(':id')
@@ -80,7 +87,11 @@ export class AdminRegistrationsController {
   }
 
   @Post(':id/request-correction')
-  async requestCorrection(@Param('id') id: string, @Req() req: any, @Body() dto: { message: string }) {
+  async requestCorrection(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() dto: { message: string },
+  ) {
     const result = await this.registrationsService.requestCorrection(id, req.user.id, dto.message);
     return successResponse(result);
   }

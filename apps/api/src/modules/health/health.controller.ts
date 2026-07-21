@@ -9,10 +9,4 @@ export class HealthController {
   health() {
     return successResponse({ status: 'ok', timestamp: new Date().toISOString() });
   }
-
-  @Public()
-  @Get('api/openapi.json')
-  openapi() {
-    return successResponse({ message: 'OpenAPI spec not yet generated.' });
-  }
 }

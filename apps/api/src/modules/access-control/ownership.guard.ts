@@ -1,8 +1,17 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, SetMetadata } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  SetMetadata,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 export const OWNERSHIP_KEY = 'ownership';
-export type OwnershipCheck = (user: { id: string; role: string }, params: Record<string, string>) => boolean | Promise<boolean>;
+export type OwnershipCheck = (
+  user: { id: string; role: string },
+  params: Record<string, string>,
+) => boolean | Promise<boolean>;
 
 export const Ownership = (check: OwnershipCheck) => SetMetadata(OWNERSHIP_KEY, check);
 
@@ -21,6 +30,10 @@ export class OwnershipGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = (request as any).user;
     const params = request.params as Record<string, string>;
+
+    if (!user) {
+      throw new ForbiddenException('Access denied.');
+    }
 
     const result = await check(user, params);
     if (!result) {

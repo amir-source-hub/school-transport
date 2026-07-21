@@ -8,6 +8,8 @@ import { GlobalExceptionFilter } from './common/filters';
 import { registerSecurityHeaders } from './common/security-headers';
 import { AppLogger } from './common/logger';
 import fastifyCookie from '@fastify/cookie';
+import { RequestContext } from './common/request-context';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -28,9 +30,24 @@ async function bootstrap() {
     secret: configService.jwtSecret,
   });
 
-  registerSecurityHeaders(app.getHttpAdapter().getInstance());
+  registerSecurityHeaders(
+    app.getHttpAdapter().getInstance(),
+    configService.nodeEnv === 'production',
+  );
 
   app.setGlobalPrefix('api/v1');
+
+  const openApiConfig = new DocumentBuilder()
+    .setTitle('School Transport API')
+    .setDescription('Canonical REST contract for the school transport MVP.')
+    .setVersion('1.0.0')
+    .addBearerAuth()
+    .addCookieAuth('refresh_token')
+    .build();
+  const openApiDocument = SwaggerModule.createDocument(app, openApiConfig);
+  SwaggerModule.setup('api/docs', app, openApiDocument, {
+    jsonDocumentUrl: 'api/v1/openapi.json',
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -40,7 +57,7 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalFilters(new GlobalExceptionFilter(logger, app.get(RequestContext)));
 
   app.enableCors({
     origin: configService.corsOrigins,
@@ -48,6 +65,8 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Correlation-Id'],
   });
+
+  app.enableShutdownHooks();
 
   await app.listen(configService.port, configService.host);
   logger.log(`API running on ${configService.host}:${configService.port}`);

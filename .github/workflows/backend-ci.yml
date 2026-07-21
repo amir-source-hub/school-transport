@@ -1,0 +1,59 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'infrastructure/**'
+      - 'docker-compose.yml'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/backend-ci.yml'
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: school_transport_test
+          POSTGRES_USER: school_transport
+          POSTGRES_PASSWORD: school_transport_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U school_transport -d school_transport_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://school_transport:school_transport_test@localhost:5432/school_transport_test
+      TEST_DATABASE_URL: postgresql://school_transport:school_transport_test@localhost:5432/school_transport_test
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
+      JWT_SECRET: ci-only-secret-with-at-least-32-characters
+      CORS_ORIGINS: http://localhost:3000
+      OTP_PROVIDER: none
+      PAYMENT_GATEWAY_PROVIDER: none
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.29.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @school-transport/api lint
+      - run: pnpm --filter @school-transport/api typecheck
+      - run: pnpm --filter @school-transport/api test
+      - run: pnpm --filter @school-transport/api build
+      - run: pnpm --filter @school-transport/api db:migrate:runtime
+      - run: pnpm audit --audit-level high

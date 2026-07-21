@@ -1,6 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { IdentityModule } from './modules/identity/identity.module';
@@ -15,12 +15,15 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
-import { AppLogger } from './common/logger';
 import { CorrelationIdMiddleware } from './common/middleware';
 import { GracefulShutdownService } from './common/graceful-shutdown';
+import { ResponseMetadataInterceptor } from './common/response-metadata.interceptor';
+import { QueueModule } from './infrastructure/queue/queue.module';
+import { LoggingModule } from './common/logging.module';
 
 @Module({
   imports: [
+    LoggingModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     ConfigModule,
     DatabaseModule,
@@ -36,13 +39,13 @@ import { GracefulShutdownService } from './common/graceful-shutdown';
     NotificationsModule,
     AuditModule,
     HealthModule,
+    QueueModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
-    AppLogger,
+    { provide: APP_INTERCEPTOR, useClass: ResponseMetadataInterceptor },
     GracefulShutdownService,
   ],
-  exports: [AppLogger],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

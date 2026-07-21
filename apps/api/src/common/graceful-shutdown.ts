@@ -1,13 +1,20 @@
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { AppLogger } from './logger';
 
 @Injectable()
 export class GracefulShutdownService implements OnApplicationShutdown {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly logger: AppLogger,
+  ) {}
 
   async onApplicationShutdown(signal?: string) {
-    console.log(`Shutting down gracefully (signal: ${signal})...`);
+    this.logger.log(
+      { event: 'application_shutdown_started', signal },
+      GracefulShutdownService.name,
+    );
     await this.database.onModuleDestroy();
-    console.log('Database connections closed.');
+    this.logger.log({ event: 'database_connections_closed' }, GracefulShutdownService.name);
   }
 }

@@ -4,6 +4,7 @@ import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { successResponse } from '../../common/response';
+import { CreateStudentDto, UpdateStudentDto } from './student.dto';
 
 @UseGuards(AuthGuard)
 @Controller('students')
@@ -17,10 +18,11 @@ export class StudentsController {
   }
 
   @Post()
-  async create(@Req() req: any, @Body() dto: {
-    schoolId: string; firstName: string; lastName: string;
-    nationalId: string; birthDate?: string; gender?: string; grade?: string; className?: string;
-  }) {
+  async create(
+    @Req() req: any,
+    @Body()
+    dto: CreateStudentDto,
+  ) {
     const student = await this.studentsService.create(req.user.id, dto);
     return successResponse(student);
   }
@@ -32,7 +34,11 @@ export class StudentsController {
   }
 
   @Patch(':studentId')
-  async update(@Req() req: any, @Param('studentId') studentId: string, @Body() dto: any) {
+  async update(
+    @Req() req: any,
+    @Param('studentId') studentId: string,
+    @Body() dto: UpdateStudentDto,
+  ) {
     const student = await this.studentsService.update(studentId, req.user.id, dto);
     return successResponse(student);
   }

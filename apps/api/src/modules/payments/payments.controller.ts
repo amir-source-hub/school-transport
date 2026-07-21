@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Headers } from '@nestjs/common';
+import { Controller, Post, Body, Param, UseGuards, Req, Headers } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
@@ -16,13 +16,25 @@ export class PaymentsController {
     @Param('scheduleItemId') scheduleItemId: string,
     @Headers('Idempotency-Key') idempotencyKey: string,
   ) {
-    const tx = await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey || '');
+    const tx = await this.paymentsService.startOnlinePayment(
+      scheduleItemId,
+      req.user.id,
+      idempotencyKey || '',
+    );
     return successResponse(tx);
   }
 
   @Post(':txId/online/verify')
-  async verifyOnline(@Param('txId') txId: string, @Body() dto: { gatewayTransactionId: string }) {
-    const tx = await this.paymentsService.verifyOnlinePayment(txId, dto.gatewayTransactionId);
+  async verifyOnline(
+    @Req() req: any,
+    @Param('txId') txId: string,
+    @Body() dto: { gatewayTransactionId: string },
+  ) {
+    const tx = await this.paymentsService.verifyOnlinePayment(
+      txId,
+      req.user.id,
+      dto.gatewayTransactionId,
+    );
     return successResponse(tx);
   }
 
@@ -32,7 +44,11 @@ export class PaymentsController {
     @Param('scheduleItemId') scheduleItemId: string,
     @Body() dto: { paidAt: string; referenceNumber: string; description?: string },
   ) {
-    const txId = await this.paymentsService.createOfflineSubmission(scheduleItemId, req.user.id, dto);
+    const txId = await this.paymentsService.createOfflineSubmission(
+      scheduleItemId,
+      req.user.id,
+      dto,
+    );
     return successResponse({ transactionId: txId });
   }
 }

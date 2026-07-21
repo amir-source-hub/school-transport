@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { FastifyRequest } from 'fastify';
 import { ConfigService } from '../../config/config.service';
 import { PUBLIC_KEY } from '../../common/decorators';
-import { JwtPayload } from '../identity/domain/auth.types';
+import { JwtPayload } from '../../common/authentication.types';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -38,7 +38,7 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('Invalid token type.');
       }
 
-      (request as any).user = { id: payload.sub, role: payload.role };
+      (request as any).user = { id: payload.sub, role: payload.role, sessionId: payload.sid };
       return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired token.');

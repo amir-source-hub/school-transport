@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Param, UseGuards, Req } from '@nestjs/common';
 import { ContractsService } from './contracts.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
@@ -17,8 +17,8 @@ export class ContractsController {
   }
 
   @Get(':id')
-  async getById(@Param('id') id: string) {
-    const contract = await this.contractsService.getById(id);
+  async getById(@Req() req: any, @Param('id') id: string) {
+    const contract = await this.contractsService.getById(id, req.user.id);
     return successResponse(contract);
   }
 
@@ -29,8 +29,8 @@ export class ContractsController {
   }
 
   @Post(':id/reject')
-  async reject(@Param('id') id: string) {
-    const contract = await this.contractsService.reject(id);
+  async reject(@Req() req: any, @Param('id') id: string) {
+    const contract = await this.contractsService.reject(id, req.user.id);
     return successResponse(contract);
   }
 }
@@ -49,7 +49,7 @@ export class AdminContractsController {
 
   @Get('contracts')
   async getAll() {
-    const list = await this.contractsService.getByFamily('');
+    const list = await this.contractsService.getAll();
     return successResponse(list);
   }
 }

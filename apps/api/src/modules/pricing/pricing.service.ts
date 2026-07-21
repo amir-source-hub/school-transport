@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { registrationPrices, serviceRegistrations } from '../../database/schemas';
+import { registrationPrices, serviceRegistrations, students } from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError, ValidationError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -10,7 +10,8 @@ export class PricingService {
   constructor(private readonly db: DatabaseService) {}
 
   async getByRegistration(registrationId: string) {
-    return this.db.db.select()
+    return this.db.db
+      .select()
       .from(registrationPrices)
       .where(eq(registrationPrices.registrationId, registrationId))
       .orderBy(registrationPrices.versionNumber);
@@ -21,20 +22,27 @@ export class PricingService {
     return prices.length > 0 ? prices[prices.length - 1] : null;
   }
 
-  async create(registrationId: string, adminId: string, data: {
-    totalAmount: number;
-    currency?: string;
-    fullPaymentAllowed?: boolean;
-    installmentPaymentAllowed?: boolean;
-    prepaymentAmount?: number;
-    installmentCount?: number;
-    description?: string;
-  }) {
+  async create(
+    registrationId: string,
+    adminId: string,
+    data: {
+      totalAmount: number;
+      currency?: string;
+      fullPaymentAllowed?: boolean;
+      installmentPaymentAllowed?: boolean;
+      prepaymentAmount?: number;
+      installmentCount?: number;
+      description?: string;
+    },
+  ) {
     const existing = await this.getLatest(registrationId);
     const versionNumber = existing ? existing.versionNumber + 1 : 1;
 
     if (existing && existing.priceStatus === 'ACCEPTED') {
-      throw new ConflictError('PRICE_ALREADY_ACCEPTED', 'Price has already been accepted. Create a new contract version.');
+      throw new ConflictError(
+        'PRICE_ALREADY_ACCEPTED',
+        'Price has already been accepted. Create a new contract version.',
+      );
     }
 
     const id = generateId();
@@ -53,7 +61,8 @@ export class PricingService {
     });
 
     if (existing && existing.priceStatus !== 'ACCEPTED') {
-      await this.db.db.update(registrationPrices)
+      await this.db.db
+        .update(registrationPrices)
         .set({ priceStatus: 'REPLACED', replacedByPriceId: id, updatedAt: new Date() })
         .where(eq(registrationPrices.id, existing.id));
     }
@@ -62,7 +71,8 @@ export class PricingService {
   }
 
   async acceptPrice(priceId: string, userId: string) {
-    const price = await this.db.db.select()
+    const price = await this.db.db
+      .select()
       .from(registrationPrices)
       .where(eq(registrationPrices.id, priceId))
       .limit(1);
@@ -72,23 +82,27 @@ export class PricingService {
       throw new ValidationError('This price is not available for acceptance.');
     }
 
-    const reg = await this.db.db.select()
+    const reg = await this.db.db
+      .select({ registration: serviceRegistrations })
       .from(serviceRegistrations)
-      .where(eq(serviceRegistrations.id, price[0].registrationId))
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(and(eq(serviceRegistrations.id, price[0].registrationId), eq(students.userId, userId)))
       .limit(1);
 
     if (reg.length === 0) throw new NotFoundError('Registration');
-    if (reg[0].registrationStatus !== 'APPROVED') {
+    if (reg[0].registration.registrationStatus !== 'APPROVED') {
       throw new ValidationError('Registration must be approved before accepting a price.');
     }
 
-    await this.db.db.update(registrationPrices)
+    await this.db.db
+      .update(registrationPrices)
       .set({ priceStatus: 'ACCEPTED', parentConfirmedAt: new Date(), updatedAt: new Date() })
       .where(eq(registrationPrices.id, priceId));
 
-    await this.db.db.update(serviceRegistrations)
+    await this.db.db
+      .update(serviceRegistrations)
       .set({ registrationStatus: 'CONTRACT_PENDING', updatedAt: new Date() })
-      .where(eq(serviceRegistrations.id, reg[0].id));
+      .where(eq(serviceRegistrations.id, reg[0].registration.id));
 
     return priceId;
   }
