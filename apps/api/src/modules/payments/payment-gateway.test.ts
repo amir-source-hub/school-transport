@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ValidationError } from '../../common/errors';
-import { assertGatewayVerification, UnconfiguredPaymentGateway } from './payment-gateway';
+import {
+  assertGatewayVerification,
+  MockPaymentGateway,
+  UnconfiguredPaymentGateway,
+} from './payment-gateway';
 
 describe('payment gateway boundary', () => {
   it('accepts a verified exact-amount result', () => {
@@ -26,5 +30,11 @@ describe('payment gateway boundary', () => {
       code: 'PAYMENT_GATEWAY_UNAVAILABLE',
       status: 503,
     });
+  });
+
+  it('parses deterministic mock authorities', async () => {
+    await expect(
+      new MockPaymentGateway().verify({ authority: 'mock:25000:tx_123', amount: 25000 }),
+    ).resolves.toEqual({ verified: true, amount: 25000, transactionId: 'tx_123' });
   });
 });

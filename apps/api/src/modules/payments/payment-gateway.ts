@@ -33,3 +33,16 @@ export class UnconfiguredPaymentGateway implements PaymentGateway {
     );
   }
 }
+
+@Injectable()
+export class MockPaymentGateway implements PaymentGateway {
+  async verify(input: { authority: string; amount: number }): Promise<GatewayVerification> {
+    const match = /^mock:(\d+):([A-Za-z0-9_-]+)$/.exec(input.authority);
+    if (!match) return { verified: false, amount: input.amount };
+    return {
+      verified: true,
+      amount: Number(match[1]),
+      transactionId: match[2],
+    };
+  }
+}
