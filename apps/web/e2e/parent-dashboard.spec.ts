@@ -38,3 +38,21 @@ test("parent mobile navigation opens and reaches an empty section", async ({ pag
   await expect(page.getByRole("heading", { level: 1, name: "قراردادها" })).toBeVisible();
   await expect(page.getByRole("status")).toContainText("هنوز قرارداد آماده‌ای");
 });
+
+test("family profile and student details expose protected fields clearly", async ({ page }) => {
+  await page.goto("/parent/profile");
+
+  await expect(page.getByRole("heading", { level: 1, name: "اطلاعات مجاز را ویرایش کنید" })).toBeVisible();
+  await expect(page.getByText("تغییر شماره اصلی نیازمند فرایند جداگانه")).toBeVisible();
+
+  await page.goto("/parent/students/demo-student-one");
+
+  await expect(page.getByRole("heading", { level: 1, name: "دانش‌آموز نمونه یک" })).toBeVisible();
+  await expect(page.getByText("کد ملی، مدرسه، پایه، سال تحصیلی")).toBeVisible();
+
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+
+  expect(results.violations).toEqual([]);
+});

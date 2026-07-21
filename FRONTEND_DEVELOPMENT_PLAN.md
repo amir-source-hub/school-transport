@@ -13,11 +13,11 @@
 | F1    | Web foundation and design system   | In progress |      90% |
 | F2    | API, session, and state foundation | In progress |      40% |
 | F3    | Public and authentication areas    | In progress |      40% |
-| F4    | Parent shell and family/student UI | In progress |      35% |
+| F4    | Parent shell and family/student UI | In progress |      50% |
 | F5    | Enrollment flow                    | Not started |       0% |
 | F6    | Contracts, pricing, payments       | Not started |       0% |
 | F7    | Admin panel                        | Not started |       0% |
-| F8    | Accessibility, resilience, tests   | In progress |      38% |
+| F8    | Accessibility, resilience, tests   | In progress |      40% |
 | F9    | Build and release readiness        | In progress |      35% |
 
 ## 1. Frontend Rules
@@ -137,7 +137,11 @@ Keep visual-only refactors separate from behavioral changes when practical. Do n
   - [x] Build and label the complete dashboard presentation with isolated documentation-backed mock data.
   - [ ] Replace the mock adapter with approved generated API types and server data when available.
 - [ ] Build family/profile and student create/view/edit flows with protected-field explanations and server error preservation.
+  - [x] Build the mock family edit flow and independent student list/detail views with protected-field explanations.
+  - [ ] Build student create/edit flows and authoritative server-error preservation after the approved contracts are available.
 - [ ] Prevent accidental data loss and duplicate submissions; never imply success before the API confirms it.
+  - [x] Preserve mock family form values after validation errors, lock duplicate submission, and label mock confirmation explicitly.
+  - [ ] Add navigation-loss protection and API-confirmed success behavior when real mutations are connected.
 - [x] Provide documented empty states for no students, registration, contract, payment, or notifications.
 - [ ] Test multi-student switching, cache keys/invalidation, cross-student data isolation, mobile layout, and session expiry.
   - [x] Test mock multi-student switching, cross-student isolation, responsive navigation, and dashboard accessibility.
