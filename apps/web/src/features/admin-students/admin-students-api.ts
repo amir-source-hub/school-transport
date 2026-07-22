@@ -35,3 +35,10 @@ export async function getAdminStudents(): Promise<{ students: AdminStudent[] }> 
     return { students: fallbackStudents };
   }
 }
+
+export async function archiveStudent(id: string): Promise<void> {
+  await apiRequest(`/students/${id}`, {
+    method: 'DELETE',
+    timeoutMs: 5_000,
+  });
+}

@@ -11,7 +11,7 @@ export default function PublicLayout({ children }: Readonly<{ children: React.Re
         رفتن به محتوای اصلی
       </a>
       <PublicHeader />
-      <main id="main-content" className="flex-1 surface-paper">
+      <main id="main-content" className="flex-1">
         {children}
       </main>
       <PublicFooter />

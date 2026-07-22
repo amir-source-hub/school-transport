@@ -1,18 +1,12 @@
 import { notFound } from 'next/navigation';
 
-import { Alert } from '@/components/feedback/alert';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import {
-  demoRegistrations,
-  getDemoRegistration,
-  getRegistrationTone,
-} from '@/features/admin-registrations/mock-registrations';
+import { getAdminRegistration, getRegistrationTone } from '@/features/admin-registrations/admin-registrations-api';
+import { ApproveButton, RejectButton, RequestCorrectionButton, StartReviewButton } from '@/features/admin-registrations/enrollment-actions';
 
-export const generateStaticParams = () =>
-  demoRegistrations.map(({ id: registrationId }) => ({ registrationId }));
+export const dynamic = 'force-dynamic';
 
 export default async function RegistrationPage({
   params,
@@ -20,9 +14,16 @@ export default async function RegistrationPage({
   params: Promise<{ registrationId: string }>;
 }) {
   const { registrationId } = await params;
-  const registration = getDemoRegistration(registrationId);
+  const { registration } = await getAdminRegistration(registrationId);
   if (!registration) notFound();
-  const canReview = registration.status === 'در حال بررسی';
+
+  const status = registration.status;
+  const canStartReview = status === 'ارسال‌شده';
+  const canDecide = status === 'در حال بررسی';
+  const needsCorrection = status === 'نیازمند اصلاح';
+  const isApproved = status === 'تأییدشده';
+  const isRejected = status === 'ردشده';
+  const awaitingPricing = status === 'در انتظار قیمت';
 
   return (
     <div className="space-y-6">
@@ -37,23 +38,19 @@ export default async function RegistrationPage({
         <div>
           <p className="text-sm font-bold text-primary">{registration.trackingCode}</p>
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">
-            بررسی درخواست {registration.student}
+            بررسی درخواست {registration.studentName}
           </h1>
         </div>
-        <Badge tone={getRegistrationTone(registration.status)}>{registration.status}</Badge>
+        <Badge tone={getRegistrationTone(status)}>{status}</Badge>
       </div>
-      <Alert tone="warning" title="بررسی نمایشی و بدون تغییر رکورد">
-        پیش از هر اقدام واقعی، مجوز مدیر، نسخه رکورد و وضعیت جاری باید دوباره در سرور بررسی شود.
-        اقدام‌های حساس در حالت mock غیرفعال‌اند.
-      </Alert>
       <Card>
         <h2 className="text-lg font-black">خلاصه درخواست</h2>
         <dl className="mt-4 divide-y divide-border text-sm">
           {[
-            ['دانش‌آموز', registration.student],
-            ['خانواده', registration.family],
-            ['مدرسه', registration.school],
-            ['وضعیت', registration.status],
+            ['دانش‌آموز', registration.studentName],
+            ['خانواده', registration.familyName],
+            ['مدرسه', registration.schoolName],
+            ['وضعیت', status],
             ['اقدام بعدی', registration.nextAction],
           ].map(([label, value]) => (
             <div key={label} className="grid gap-1 py-3 sm:grid-cols-[10rem_1fr]">
@@ -66,19 +63,27 @@ export default async function RegistrationPage({
       <Card>
         <h2 className="text-lg font-black">تصمیم مدیریت</h2>
         <p className="mt-2 text-sm text-muted">
-          {canReview
-            ? 'این وضعیت اجازه تصمیم مدیریت را می‌دهد؛ اما mock نمی‌تواند رکورد را تغییر دهد.'
-            : 'این وضعیت اجازه تصمیم مستقیم بررسی را نمی‌دهد.'}{' '}
-          رد یا درخواست اصلاح باید همراه دلیل ثبت و همه تصمیم‌ها باید در سابقه ممیزی ذخیره شوند.
+          {canStartReview && 'درخواست هنوز بررسی نشده است. برای شروع فرایند بررسی کلیک کنید.'}
+          {canDecide && 'درخواست در حال بررسی است. می‌توانید تأیید، رد یا درخواست اصلاح کنید.'}
+          {needsCorrection && 'از خانواده درخواست اصلاح اطلاعات شده است. پس از اعمال اصلاحات، درخواست دوباره بررسی می‌شود.'}
+          {isApproved && 'این درخواست تأیید شده است. برای ثبت قیمت به بخش قیمت‌گذاری مراجعه کنید.'}
+          {isRejected && 'این درخواست رد شده است.'}
+          {awaitingPricing && 'درخواست تأیید شده و در انتظار ثبت قیمت است.'}
         </p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-          <Button disabled>تأیید درخواست</Button>
-          <Button variant="secondary" disabled>
-            درخواست اصلاح با دلیل
-          </Button>
-          <Button variant="secondary" disabled>
-            رد درخواست با دلیل
-          </Button>
+          {canStartReview && <StartReviewButton enrollmentId={registrationId} />}
+          {canDecide && (
+            <>
+              <ApproveButton enrollmentId={registrationId} />
+              <RequestCorrectionButton enrollmentId={registrationId} />
+              <RejectButton enrollmentId={registrationId} />
+            </>
+          )}
+          {(isApproved || awaitingPricing) && (
+            <a href="/admin/pricing" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-[var(--shadow-raised)] transition-all duration-[var(--duration-fast)] hover:bg-primary-hover active:scale-[0.97]">
+              رفتن به قیمت‌گذاری
+            </a>
+          )}
         </div>
       </Card>
     </div>

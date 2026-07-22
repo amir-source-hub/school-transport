@@ -9,9 +9,11 @@ import {
   FileText,
   GraduationCap,
   LayoutDashboard,
+  LogOut,
   Menu,
   Search,
   Settings,
+  Shield,
   Tags,
   UserRound,
   UsersRound,
@@ -30,19 +32,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { BrandMark } from '@/components/brand/brand-mark';
 import { cn } from '@/lib/cn';
 
 const navigation = [
   { href: '/admin/dashboard', label: 'داشبورد', icon: LayoutDashboard },
-  { href: '/admin/registrations', label: 'درخواست‌های ثبت‌نام', icon: ClipboardCheck },
+  { href: '/admin/registrations', label: 'ثبت‌نام‌ها', icon: ClipboardCheck },
   { href: '/admin/families', label: 'خانواده‌ها', icon: UsersRound },
   { href: '/admin/students', label: 'دانش‌آموزان', icon: GraduationCap },
   { href: '/admin/schools', label: 'مدارس', icon: Building2 },
-  { href: '/admin/service-requests', label: 'درخواست‌های خدمت', icon: BusFront },
+  { href: '/admin/service-requests', label: 'درخواست خدمت', icon: BusFront },
   { href: '/admin/contracts', label: 'قراردادها', icon: FileText },
   { href: '/admin/pricing', label: 'قیمت‌گذاری', icon: Tags },
   { href: '/admin/payments', label: 'پرداخت‌ها', icon: WalletCards },
   { href: '/admin/notifications', label: 'اعلان‌ها', icon: Bell },
+  { href: '/admin/admins', label: 'مدیران', icon: Shield },
   { href: '/admin/settings', label: 'تنظیمات', icon: Settings },
 ] as const;
 
@@ -57,14 +61,17 @@ function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
             href={href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] px-3 text-sm font-bold transition-colors',
+              'flex min-h-10 items-center gap-3 rounded-[var(--radius-control)] px-3 text-sm font-bold transition-all duration-[var(--duration-fast)]',
               active
-                ? 'bg-primary-soft text-primary-hover'
+                ? 'bg-primary/10 text-primary'
                 : 'text-muted hover:bg-surface-muted hover:text-foreground',
             )}
           >
-            <Icon aria-hidden="true" className="size-5" />
+            <Icon aria-hidden="true" className={cn('size-4', active && 'text-primary')} />
             {label}
+            {active && (
+              <span className="mr-auto h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+            )}
           </Link>
         );
         return mobile ? (
@@ -81,62 +88,76 @@ function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
 
 export function AdminShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex min-h-16 max-w-[96rem] items-center gap-3 px-4 sm:px-6">
+    <div className="min-h-screen bg-[var(--mist)]">
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-white/95 backdrop-blur-lg">
+        <div className="mx-auto flex min-h-14 max-w-[96rem] items-center gap-3 px-4 sm:px-6">
           <Drawer>
             <DrawerTrigger asChild>
               <Button
                 variant="ghost"
-                className="size-11 px-0 lg:hidden"
+                size="icon"
+                className="lg:hidden"
                 aria-label="باز کردن منوی مدیریت"
               >
                 <Menu aria-hidden="true" className="size-5" />
               </Button>
             </DrawerTrigger>
-            <DrawerContent title="پنل مدیریت" description="بخش‌های عملیاتی نسخه MVP">
+            <DrawerContent title="پنل مدیریت" description="بخش‌های عملیاتی">
               <AdminNavigation mobile />
             </DrawerContent>
           </Drawer>
-          <Link href="/admin/dashboard" className="font-black text-foreground">
-            پنل مدیریت
+
+          <Link href="/admin/dashboard" className="flex items-center gap-2 font-black text-foreground">
+            <BrandMark size={24} />
+            <span className="hidden sm:inline">پنل مدیریت</span>
           </Link>
-          <label className="ms-auto hidden w-full max-w-sm lg:block">
+
+          <label className="ms-auto hidden w-full max-w-xs lg:block">
             <span className="sr-only">جست‌وجوی مدیریتی</span>
             <span className="relative block">
               <Search
                 aria-hidden="true"
                 className="absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted"
               />
-              <Input placeholder="جست‌وجوی سریع..." className="pe-10" />
+              <Input placeholder="جست‌وجوی سریع..." className="pe-10 h-9 text-sm rounded-[var(--radius-pill)] bg-surface-muted border-0" />
             </span>
           </label>
+
           <Link
             href="/admin/notifications"
-            className="grid size-11 place-items-center rounded-[var(--radius-sm)] text-muted hover:bg-surface-muted hover:text-foreground"
+            className="relative grid size-9 place-items-center rounded-[var(--radius-control)] text-muted hover:bg-surface-muted hover:text-foreground transition-colors"
             aria-label="اعلان‌های مدیریت"
           >
-            <Bell aria-hidden="true" className="size-5" />
+            <Bell aria-hidden="true" className="size-4" />
+            <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-danger" />
+            </span>
           </Link>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="px-3" aria-label="منوی حساب مدیر">
-                <UserRound aria-hidden="true" className="size-5" />
+              <Button variant="ghost" className="px-2 h-9 text-sm" aria-label="منوی حساب مدیر">
+                <UserRound aria-hidden="true" className="size-4" />
                 <span className="hidden sm:inline">مدیر نمونه</span>
-                <ChevronDown aria-hidden="true" className="size-4" />
+                <ChevronDown aria-hidden="true" className="size-3.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem disabled>خروج پس از اتصال احراز هویت فعال می‌شود</DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                <LogOut aria-hidden="true" className="size-4" />
+                خروج از حساب
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
-      <div className="mx-auto grid max-w-[96rem] lg:grid-cols-[18rem_1fr]">
-        <aside className="hidden min-h-[calc(100vh-4rem)] border-l border-border bg-surface p-5 lg:block">
+
+      <div className="mx-auto flex max-w-[96rem]">
+        <aside className="hidden min-h-[calc(100vh-3.5rem)] w-[15rem] shrink-0 border-l border-border/60 bg-white p-4 lg:block">
           <AdminNavigation />
         </aside>
-        <main className="min-w-0 p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

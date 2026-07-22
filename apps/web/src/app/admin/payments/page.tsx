@@ -1,12 +1,12 @@
-import { Alert } from '@/components/feedback/alert';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { getAdminPayments, getPaymentTone } from '@/features/admin-payments/admin-payments-api';
+import { ApprovePaymentDialog, RejectPaymentDialog } from '@/features/admin-payments/payment-actions';
 import { formatIrr } from '@/lib/formatters';
 
 export const metadata = { title: 'پرداخت‌ها' };
+export const dynamic = 'force-dynamic';
 
 export default async function AdminPaymentsPage() {
   const { payments } = await getAdminPayments();
@@ -20,9 +20,6 @@ export default async function AdminPaymentsPage() {
         <p className="text-sm font-bold text-primary">پایش مالی مدیریت</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">پرداخت‌ها</h1>
       </div>
-      <Alert tone="warning" title="اقدام مالی حساس غیرفعال است">
-        تأیید یا رد باید با نقش مدیریت، کنترل مبلغ و فاکتور، جلوگیری از تکرار، ثبت یادداشت و نتیجه تراکنش اتمیک سرور انجام شود.
-      </Alert>
       <section className="grid gap-4 sm:grid-cols-3" aria-label="خلاصه پرداخت‌ها">
         <Card>
           <p className="text-sm text-muted">کل تراکنش‌ها</p>
@@ -55,9 +52,8 @@ export default async function AdminPaymentsPage() {
             </dl>
             {payment.status === 'در انتظار بررسی' && (
               <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
-                <Button disabled>تأیید</Button>
-                <Button variant="secondary" disabled>رد</Button>
-                <p className="basis-full text-xs text-muted">یادداشت مدیریت و ثبت حسابرسی فقط از پاسخ معتبر سرور انجام می‌شود.</p>
+                <ApprovePaymentDialog paymentId={payment.id} />
+                <RejectPaymentDialog paymentId={payment.id} />
               </div>
             )}
           </Card>

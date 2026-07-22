@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getRegistrationTone } from './mock-registrations';
+import { getRegistrationTone } from './admin-registrations-api';
 
 describe('getRegistrationTone', () => {
   it('uses the documented semantic status colors consistently', () => {

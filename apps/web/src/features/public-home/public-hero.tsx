@@ -1,51 +1,178 @@
+'use client';
+
+import { ArrowLeft, Route, ScrollText, ShieldCheck, WalletCards } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
+import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { PageContainer } from '@/components/common/page-container';
-import { BrandMark } from '@/components/brand/brand-mark';
+
+function HeroRouteLine() {
+  const prefersReduced = useReducedMotion();
+
+  return (
+    <svg
+      className="absolute bottom-0 left-0 right-0 h-24 w-full md:h-32"
+      viewBox="0 0 1440 128"
+      fill="none"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <motion.path
+        d="M0 64 Q180 20 360 50 T720 40 T1080 55 T1440 45"
+        stroke="url(#hero-route-gradient)"
+        strokeWidth="2"
+        fill="none"
+        opacity="0.4"
+        initial={prefersReduced ? { pathLength: 1 } : { pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={prefersReduced ? { duration: 0 } : { duration: 1.5, ease: [0.16, 1, 0.3, 1], delay: 0.5 }}
+      />
+      <motion.circle
+        cx="0" cy="64" r="4"
+        fill="var(--sun)"
+        initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.8 }}
+      />
+      <motion.circle
+        cx="360" cy="50" r="3"
+        fill="var(--transit-blue)"
+        initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2 }}
+      />
+      <motion.circle
+        cx="720" cy="40" r="4"
+        fill="var(--sun)"
+        initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.2 }}
+      />
+      <motion.circle
+        cx="1080" cy="55" r="3"
+        fill="var(--transit-blue)"
+        initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.4 }}
+      />
+      <motion.circle
+        cx="1440" cy="45" r="4"
+        fill="var(--sun)"
+        initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.6 }}
+      />
+      <defs>
+        <linearGradient id="hero-route-gradient" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="var(--sun)" />
+          <stop offset="50%" stopColor="var(--transit-blue)" />
+          <stop offset="100%" stopColor="var(--sun)" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
 
 export function PublicHero() {
+  const prefersReduced = useReducedMotion();
+
   return (
-    <section className="relative overflow-hidden surface-dark pb-16 pt-8 sm:pb-24 sm:pt-12">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.04]" aria-hidden="true">
-        <svg width="100%" height="100%" className="h-full w-full">
-          <defs>
-            <pattern id="hero-grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-              <circle cx="30" cy="30" r="1" fill="white" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#hero-grid)" />
-        </svg>
-      </div>
-      <PageContainer className="relative z-10">
-        <div className="mx-auto max-w-4xl text-center">
-          <Badge tone="info" className="mb-5">
-            ثبت‌نام و مدیریت آنلاین سرویس مدرسه
+    <section className="relative min-h-[680px] overflow-hidden md:min-h-[760px] lg:min-h-[860px]">
+      <Image
+        src="/images/hero-main.png"
+        alt=""
+        fill
+        className="object-cover object-[center_30%]"
+        priority
+        sizes="100vw"
+      />
+      <div
+        className="absolute inset-0 bg-gradient-to-l from-navy/60 via-navy/50 to-navy/80"
+        aria-hidden="true"
+      />
+      <HeroRouteLine />
+      <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.04]" aria-hidden="true">
+        <defs>
+          <pattern id="hero-dots" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+            <circle cx="30" cy="30" r="1" fill="white" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#hero-dots)" />
+      </svg>
+      <PageContainer className="relative z-10 flex min-h-[680px] flex-col justify-center md:min-h-[760px] lg:min-h-[860px]">
+        <motion.div
+          initial={prefersReduced ? { opacity: 1 } : { opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={prefersReduced ? { duration: 0 } : { duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="max-w-2xl"
+        >
+          <Badge tone="info" className="mb-5 border-sun/30 bg-sun/15 text-sun backdrop-blur-sm">
+            <Route aria-hidden="true" className="size-3.5" />
+            ثبت‌نام سال تحصیلی جدید آغاز شد
           </Badge>
-          <h1 className="text-balance text-4xl font-black leading-[1.3] tracking-tight text-white sm:text-5xl lg:text-6xl">
-            <span className="text-primary-soft">از خانه تا مدرسه،</span>{' '}
-            <span className="text-white">روشن و قابل پیگیری</span>
+          <h1 className="text-balance text-4xl font-black leading-[1.25] tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <span className="text-sun">مسیر امن</span>{' '}
+            <span className="text-white">فرزند شما،</span>
+            <br />
+            <span className="text-white">از خانه تا مدرسه</span>
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-lg text-white/70">
-            از ثبت درخواست تا قرارداد و پرداخت، وضعیت سرویس مدرسه فرزندتان را در هر مرحله ببینید.
+          <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/70">
+            ثبت‌نام آنلاین، قرارداد شفاف، پرداخت امن و پیگیری وضعیت سرویس مدرسه در هر مرحله.
+            همه چیز در یک سامانه یکپارچه و قابل اعتماد.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/register" size="lg" variant="primary" className="min-w-44 bg-white text-ink hover:bg-white/90">
-              شروع ثبت‌نام
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <ButtonLink
+              href="/register"
+              size="lg"
+              className="min-w-44 bg-sun text-navy hover:bg-sun/90 shadow-lg shadow-sun/20"
+            >
+              ثبت‌نام دانش‌آموز
+              <ArrowLeft aria-hidden="true" className="size-4" />
             </ButtonLink>
-            <ButtonLink href="/registration-guide" size="lg" variant="inverse">
-              دیدن مسیر کار
+            <ButtonLink
+              href="/registration-guide"
+              size="lg"
+              variant="inverse"
+              className="border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20"
+            >
+              <Route aria-hidden="true" className="size-4" />
+              مراحل دریافت سرویس
             </ButtonLink>
           </div>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-white/50">
+          <motion.div
+            initial={prefersReduced ? { opacity: 1 } : { opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={prefersReduced ? { duration: 0 } : { duration: 0.5, delay: 0.4 }}
+            className="mt-10 flex flex-wrap items-center gap-5 text-sm text-white/60"
+          >
             <span className="flex items-center gap-1.5">
-              <BrandMark size={24} className="text-white/30" />
-              ثبت‌نام آنلاین
+              <ShieldCheck aria-hidden="true" className="size-4 text-sun" />
+              پرداخت امن
             </span>
-            <span className="flex items-center gap-1.5">پرداخت امن</span>
-            <span className="flex items-center gap-1.5">پشتیبانی پاسخگو</span>
-          </div>
-        </div>
+            <span className="flex items-center gap-1.5">
+              <ScrollText aria-hidden="true" className="size-4 text-sun" />
+              قرارداد شفاف
+            </span>
+            <span className="flex items-center gap-1.5">
+              <WalletCards aria-hidden="true" className="size-4 text-sun" />
+              پشتیبانی پاسخگو
+            </span>
+          </motion.div>
+        </motion.div>
       </PageContainer>
+      {!prefersReduced && (
+        <motion.div
+          className="absolute bottom-6 left-1/2 -translate-x-1/2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, y: [0, 8, 0] }}
+          transition={{ delay: 2.8, repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-white/40">
+            <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </motion.div>
+      )}
     </section>
   );
 }

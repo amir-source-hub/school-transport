@@ -85,6 +85,12 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-navy: #101828;
+  --color-sun: #ffc857;
+  --color-transit-blue: #2257e6;
+  --color-paper: #fafaf7;
+  --color-sky: #dcebff;
+  --color-ink: #101828;
   --font-sans: 'Vazirmatn Variable', Tahoma, Arial, sans-serif;
 }
 
@@ -92,7 +98,7 @@
   box-sizing: border-box;
 }
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 body {
   margin: 0;

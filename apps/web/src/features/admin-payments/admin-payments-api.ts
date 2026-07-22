@@ -35,6 +35,20 @@ export async function getAdminPayments(): Promise<{ payments: AdminPayment[] }> 
   }
 }
 
+export async function approvePayment(txId: string): Promise<void> {
+  await apiRequest(`/admin/payments/${txId}/approve`, {
+    method: 'POST',
+    timeoutMs: 5_000,
+  });
+}
+
+export async function rejectPayment(txId: string): Promise<void> {
+  await apiRequest(`/admin/payments/${txId}/reject`, {
+    method: 'POST',
+    timeoutMs: 5_000,
+  });
+}
+
 export function getPaymentTone(status: string) {
   if (status === 'تأییدشده') return 'success' as const;
   if (status === 'ردشده') return 'danger' as const;

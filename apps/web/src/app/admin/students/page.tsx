@@ -2,8 +2,10 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { getAdminStudents } from '@/features/admin-students/admin-students-api';
+import { ArchiveStudentDialog } from '@/features/admin-students/student-actions';
 
 export const metadata = { title: 'دانش‌آموزان' };
+export const dynamic = 'force-dynamic';
 
 export default async function StudentsPage() {
   const { students } = await getAdminStudents();
@@ -18,14 +20,20 @@ export default async function StudentsPage() {
       <div className="grid gap-3 md:hidden">
         {students.map((student) => (
           <Card key={student.id}>
-            <p className="font-black">{student.firstName} {student.lastName}</p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-black">{student.firstName} {student.lastName}</p>
+              <Badge tone="success">{student.status}</Badge>
+            </div>
             <p className="mt-1 text-sm text-muted">{student.schoolName ?? 'مدرسه ثبت نشده'} — {student.grade ?? '—'}</p>
-            <Badge tone="success">{student.status}</Badge>
+            <p className="text-sm text-muted">خانواده: {student.familyName}</p>
+            <div className="mt-3 flex gap-2 border-t border-border pt-3">
+              <ArchiveStudentDialog studentId={student.id} studentName={`${student.firstName} ${student.lastName}`} />
+            </div>
           </Card>
         ))}
       </div>
       <div className="hidden overflow-x-auto md:block" role="region" aria-label="فهرست دانش‌آموزان" tabIndex={0}>
-        <table className="w-full min-w-[48rem] text-right text-sm">
+        <table className="w-full min-w-[56rem] text-right text-sm">
           <thead>
             <tr className="border-b border-border text-muted">
               <th className="px-3 py-3">نام</th>
@@ -34,6 +42,7 @@ export default async function StudentsPage() {
               <th className="px-3 py-3">پایه</th>
               <th className="px-3 py-3">خانواده</th>
               <th className="px-3 py-3">وضعیت</th>
+              <th className="px-3 py-3">اقدام</th>
             </tr>
           </thead>
           <tbody>
@@ -45,6 +54,9 @@ export default async function StudentsPage() {
                 <td className="px-3 py-3">{student.grade ?? '—'}</td>
                 <td className="px-3 py-3">{student.familyName}</td>
                 <td className="px-3 py-3"><Badge tone="success">{student.status}</Badge></td>
+                <td className="px-3 py-3">
+                  <ArchiveStudentDialog studentId={student.id} studentName={`${student.firstName} ${student.lastName}`} />
+                </td>
               </tr>
             ))}
           </tbody>

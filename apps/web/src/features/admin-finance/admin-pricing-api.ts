@@ -32,9 +32,17 @@ export async function getAdminPricingEnrollments(): Promise<{ enrollments: Prici
   }
 }
 
+export async function setPrice(enrollmentId: string, amount: number): Promise<void> {
+  await apiRequest(`/admin/enrollments/${enrollmentId}/pricing`, {
+    method: 'POST',
+    body: { amount },
+    timeoutMs: 5_000,
+  });
+}
+
 export function getPriceAction(record: PricingEnrollment) {
   if (record.contractStatus === 'پذیرفته‌شده' || record.paymentStarted) {
-    return { allowed: false, label: 'قیمت قفل است', reason: 'قرارداد پذیرفته شده یا پرداخت آغاز شده است.' };
+    return { allowed: false, label: 'قیمت قفل است' };
   }
-  return { allowed: true, label: record.price === null ? 'ثبت قیمت' : 'ویرایش قیمت', reason: 'فعال‌سازی فقط پس از اعتبارسنجی وضعیت جاری سرور انجام می‌شود.' };
+  return { allowed: true, label: record.price === null ? 'ثبت قیمت' : 'ویرایش قیمت' };
 }

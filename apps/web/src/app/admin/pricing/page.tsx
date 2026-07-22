@@ -1,12 +1,12 @@
-import { Alert } from '@/components/feedback/alert';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { getAdminPricingEnrollments, getPriceAction } from '@/features/admin-finance/admin-pricing-api';
+import { SetPriceDialog } from '@/features/admin-finance/set-price-dialog';
 import { formatIrr } from '@/lib/formatters';
 
 export const metadata = { title: 'قیمت‌گذاری' };
+export const dynamic = 'force-dynamic';
 
 export default async function PricingPage() {
   const { enrollments } = await getAdminPricingEnrollments();
@@ -18,9 +18,6 @@ export default async function PricingPage() {
         <p className="text-sm font-bold text-primary">کنترل چرخه مالی</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">قیمت‌گذاری</h1>
       </div>
-      <Alert tone="warning" title="قیمت نهایی فقط در سرور تعیین می‌شود">
-        رابط کاربری هیچ مبلغ نهایی یا برنامه اقساطی را محاسبه نمی‌کند. قیمت قرارداد پذیرفته‌شده و سابقه مالی بازنویسی نمی‌شوند.
-      </Alert>
       <div className="grid gap-4">
         {enrollments.map((record) => {
           const action = getPriceAction(record);
@@ -39,8 +36,11 @@ export default async function PricingPage() {
                 <div><dt className="text-muted">فعالیت پرداخت</dt><dd className="mt-1 font-bold">{record.paymentStarted ? 'آغاز شده' : 'آغاز نشده'}</dd></div>
               </dl>
               <div className="mt-5 border-t border-border pt-4">
-                <Button disabled>فعال پس از اتصال مجوز</Button>
-                <p className="mt-2 text-xs text-muted">{action.reason}</p>
+                {action.allowed ? (
+                  <SetPriceDialog enrollmentId={record.id} currentPrice={record.price} />
+                ) : (
+                  <p className="text-sm text-muted">قیمت پس از پذیرش قرارداد یا شروع پرداخت قابل تغییر نیست.</p>
+                )}
               </div>
             </Card>
           );

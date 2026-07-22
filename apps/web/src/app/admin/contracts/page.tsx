@@ -1,12 +1,12 @@
-import { Alert } from '@/components/feedback/alert';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { getAdminContracts, getContractTone, getContractActionLabel } from '@/features/admin-finance/admin-contracts-api';
+import { GenerateContractDialog } from '@/features/admin-finance/generate-contract-dialog';
 import { formatIrr } from '@/lib/formatters';
 
 export const metadata = { title: 'قراردادها' };
+export const dynamic = 'force-dynamic';
 
 export default async function ContractsPage() {
   const { contracts } = await getAdminContracts();
@@ -18,12 +18,10 @@ export default async function ContractsPage() {
         <p className="text-sm font-bold text-primary">نسخه‌ها و وضعیت قرارداد</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">قراردادها</h1>
       </div>
-      <Alert tone="warning" title="نسخه پذیرفته‌شده تغییرناپذیر است">
-        تغییر بعد از پذیرش باید با نسخه جایگزین، حفظ تاریخچه، کنترل وضعیت سرور و ثبت حسابرسی انجام شود.
-      </Alert>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {contracts.map((record) => {
           const action = getContractActionLabel(record.status, record.price);
+          const needsContract = record.price !== null && record.status !== 'پذیرفته‌شده';
           return (
             <Card key={record.id}>
               <div className="flex items-start justify-between gap-3">
@@ -32,8 +30,17 @@ export default async function ContractsPage() {
               </div>
               {record.price !== null && <p className="mt-3 text-sm text-muted">{formatIrr(record.price)}</p>}
               <p className="mt-3 text-sm font-bold">{action.label}</p>
-              <p className="mt-2 min-h-12 text-sm text-muted">{action.reason}</p>
-              <Button className="mt-4 w-full" variant="secondary" disabled>فعال پس از اتصال مجوز</Button>
+              {record.issuedAt && <p className="mt-1 text-xs text-muted">صدور: {record.issuedAt}</p>}
+              {record.acceptedAt && <p className="text-xs text-muted">پذیرش: {record.acceptedAt}</p>}
+              <div className="mt-4">
+                {needsContract ? (
+                  <GenerateContractDialog enrollmentId={record.enrollmentId} label={action.label} />
+                ) : record.status === 'پذیرفته‌شده' ? (
+                  <p className="text-sm text-muted">قرارداد توسط خانواده پذیرفته شده است.</p>
+                ) : (
+                  <p className="text-sm text-muted">در انتظار ثبت قیمت</p>
+                )}
+              </div>
             </Card>
           );
         })}
