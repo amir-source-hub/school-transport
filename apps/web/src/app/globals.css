@@ -1,26 +1,72 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #f8fafc;
-  --surface: #ffffff;
-  --surface-muted: #f1f5f9;
-  --foreground: #172033;
-  --muted: #5f6c80;
-  --border: #dce3ec;
-  --primary: #1459d9;
-  --primary-hover: #0e47b4;
-  --primary-soft: #eaf1ff;
+  --ink: #101828;
+  --transit-blue: #2257e6;
+  --sky: #dcebff;
+  --signal-lime: #bceb62;
+  --sun: #ffc857;
+  --coral: #ff6b5e;
+  --paper: #fafaf7;
+  --mist: #f1f4f8;
+
+  --surface-paper: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-inset: #f1f4f8;
+  --surface-dark: #101828;
+  --surface-glass: rgba(255 255 255 / 0.72);
+
+  --text-strong: #101828;
+  --text-body: #364150;
+  --text-muted: #6f7887;
+  --text-on-dark: #fcfcfd;
+
+  --border-default: #dfe3e9;
+  --border-strong: #b7bfc9;
+  --border-on-dark: rgba(255 255 255 / 0.16);
+
+  --radius-control: 0.5rem;
+  --radius-card: 0.875rem;
+  --radius-canvas: 1.25rem;
+  --radius-pill: 9999px;
+  --radius-ticket: 0.625rem;
+
+  --shadow-raised: 0 1px 2px rgba(16 24 40 / 0.05);
+  --shadow-floating: 0 12px 34px rgba(40 57 82 / 0.08);
+  --shadow-overlay: 0 20px 60px rgba(16 24 40 / 0.14);
+  --shadow-focus: 0 0 0 3px rgba(34 87 230 / 0.25);
+
+  --duration-fast: 150ms;
+  --duration-ui: 260ms;
+  --duration-section: 500ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --width-public: 80rem;
+  --width-portal: 88rem;
+  --width-reading: 42rem;
+  --width-rail: 16rem;
+
+  --background: var(--paper);
+  --surface: var(--surface-paper);
+  --surface-muted: var(--surface-inset);
+  --foreground: var(--text-strong);
+  --muted: var(--text-muted);
+  --border: var(--border-default);
+  --primary: var(--transit-blue);
+  --primary-hover: #1a46b8;
+  --primary-soft: var(--sky);
   --success: #17784b;
   --success-soft: #e8f7ef;
   --warning: #9a5b00;
   --warning-soft: #fff6df;
   --danger: #b4232f;
   --danger-soft: #fff0f1;
-  --radius-sm: 0.625rem;
-  --radius-md: 0.875rem;
-  --radius-lg: 1.25rem;
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.05);
-  --shadow-md: 0 12px 34px rgb(40 57 82 / 0.08);
+  --radius-sm: var(--radius-control);
+  --radius-md: var(--radius-card);
+  --radius-lg: var(--radius-canvas);
+  --shadow-sm: var(--shadow-raised);
+  --shadow-md: var(--shadow-floating);
 }
 
 @theme inline {
@@ -57,6 +103,7 @@ body {
 }
 a {
   text-decoration: none;
+  color: inherit;
 }
 button,
 input,
@@ -65,12 +112,26 @@ select {
   font: inherit;
 }
 :focus-visible {
-  outline: 3px solid rgb(20 89 217 / 0.35);
+  outline: 3px solid rgba(34 87 230 / 0.35);
   outline-offset: 3px;
 }
 ::selection {
-  background: var(--primary-soft);
-  color: var(--primary-hover);
+  background: var(--sky);
+  color: var(--transit-blue);
+}
+
+.surface-paper {
+  background: var(--surface-paper);
+}
+.surface-inset {
+  background: var(--surface-inset);
+}
+.surface-dark {
+  background: var(--surface-dark);
+  color: var(--text-on-dark);
+}
+.text-balance {
+  text-wrap: balance;
 }
 
 @media (prefers-reduced-motion: reduce) {

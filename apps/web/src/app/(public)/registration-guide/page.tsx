@@ -27,9 +27,8 @@ export default function RegistrationGuidePage() {
         eyebrow="راهنمای شروع"
         title="مراحل ثبت‌نام را پیش از شروع بشناسید"
         description="این راهنما نمای کلی فرایند مستندشده را نشان می‌دهد؛ فرم نهایی پس از تأیید مشخصات کامل خواهد شد."
-      >
-        <ButtonLink href="/register">شروع ثبت‌نام</ButtonLink>
-      </PublicPageIntro>
+        actions={<ButtonLink href="/register">شروع ثبت‌نام</ButtonLink>}
+      />
       <PageContainer className="py-14">
         <Alert title="توجه درباره اطلاعات موردنیاز">
           جزئیات نهایی فیلدها و ترتیب فرم ثبت‌نام هنوز در سند اختصاصی فرم تأیید نشده است؛ هنگام
