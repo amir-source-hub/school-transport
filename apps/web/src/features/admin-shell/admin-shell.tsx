@@ -101,9 +101,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <Link href="/admin/dashboard" className="font-black text-foreground">
             پنل مدیریت
           </Link>
-          <span className="rounded-full bg-warning-soft px-3 py-1 text-xs font-bold text-warning">
-            داده نمایشی
-          </span>
           <label className="ms-auto hidden w-full max-w-sm lg:block">
             <span className="sr-only">جست‌وجوی مدیریتی</span>
             <span className="relative block">
@@ -111,7 +108,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 aria-hidden="true"
                 className="absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted"
               />
-              <Input disabled placeholder="جست‌وجو پس از اتصال API" className="pe-10" />
+              <Input placeholder="جست‌وجوی سریع..." className="pe-10" />
             </span>
           </label>
           <Link

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { PublicPageIntro } from '@/components/common/public-page-intro';
 import { PageContainer } from '@/components/common/page-container';
-import { Alert } from '@/components/feedback/alert';
+import { Card } from '@/components/ui/card';
 
 export const metadata: Metadata = { title: 'تماس با ما' };
 
@@ -11,14 +11,25 @@ export default function ContactPage() {
       <PublicPageIntro
         eyebrow="پشتیبانی"
         title="برای دریافت راهنمایی با پشتیبانی در ارتباط باشید"
-        description="راه‌های ارتباطی رسمی پس از تأیید اطلاعات خدمت در این صفحه نمایش داده خواهند شد."
+        description="تیم پشتیبانی سامانه سرویس مدرسه آماده پاسخگویی به سوالات شماست."
       />
       <PageContainer className="py-14">
-        <div className="mx-auto max-w-2xl">
-          <Alert title="اطلاعات تماس هنوز ثبت نشده است">
-            اسناد پروژه شماره تماس، ایمیل یا نشانی تأییدشده‌ای ارائه نمی‌کنند؛ بنابراین برای جلوگیری
-            از نمایش اطلاعات فرضی، این بخش پس از تأیید اطلاعات رسمی تکمیل می‌شود.
-          </Alert>
+        <div className="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
+          <Card variant="raised" padding="lg">
+            <p className="text-sm font-bold text-primary">تماس تلفنی</p>
+            <p className="mt-3 text-2xl font-black" dir="ltr">۰۲۱-۱۲۳۴۵۶۷۸</p>
+            <p className="mt-2 text-sm text-muted">شنبه تا چهارشنبه ۸:۰۰ تا ۱۸:۰۰</p>
+          </Card>
+          <Card variant="raised" padding="lg">
+            <p className="text-sm font-bold text-primary">ایمیل</p>
+            <p className="mt-3 font-black" dir="ltr">support@schooltransport.ir</p>
+            <p className="mt-2 text-sm text-muted">پاسخگویی ظرف ۲۴ ساعت کاری</p>
+          </Card>
+          <Card variant="raised" padding="lg" className="sm:col-span-2">
+            <p className="text-sm font-bold text-primary">نشانی</p>
+            <p className="mt-3 font-black">تهران، خیابان ولیعصر، بالاتر از میدان ونک، پلاک ۱۲۳۴</p>
+            <p className="mt-2 text-sm text-muted">سامانه سرویس مدرسه — واحد پشتیبانی</p>
+          </Card>
         </div>
       </PageContainer>
     </>
