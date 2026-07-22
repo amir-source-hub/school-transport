@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Alert } from '@/components/feedback/alert';
 import { Badge } from '@/components/ui/badge';
-import { ButtonLink, Button } from '@/components/ui/button';
+import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { BrandMark } from '@/components/brand/brand-mark';
 import { cn } from '@/lib/cn';
