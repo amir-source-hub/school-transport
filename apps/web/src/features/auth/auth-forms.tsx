@@ -1,7 +1,6 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -12,32 +11,18 @@ import { Field } from '@/components/forms/field';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
-import { login, register, requestPasswordReset } from './auth-api';
+import { requestAuthOtp, verifyAuthOtp, type AuthRole } from './auth-api';
 import { setAuthSession } from './auth-session';
-
-const credentialsSchema = z.object({
-  username: z.string().trim().min(3, 'نام کاربری باید حداقل ۳ نویسه باشد.'),
-  password: z
-    .string()
-    .min(8, 'رمز عبور باید حداقل ۸ نویسه باشد.')
-    .regex(/[A-Za-z]/, 'رمز عبور باید حداقل یک حرف داشته باشد.')
-    .regex(/\d/, 'رمز عبور باید حداقل یک عدد داشته باشد.'),
-});
-
-const registrationSchema = credentialsSchema
-  .extend({ confirmPassword: z.string() })
-  .refine(({ password, confirmPassword }) => password === confirmPassword, {
-    path: ['confirmPassword'],
-    message: 'تکرار رمز عبور یکسان نیست.',
-  });
 
 const phoneSchema = z.object({
   phoneNumber: z.string().regex(/^09\d{9}$/, 'شماره همراه را با قالب 09xxxxxxxxx وارد کنید.'),
 });
+const codeSchema = z.object({
+  code: z.string().regex(/^\d{6}$/, 'کد تأیید باید ۶ رقم باشد.'),
+});
 
-type Credentials = z.infer<typeof credentialsSchema>;
-type Registration = z.infer<typeof registrationSchema>;
 type Phone = z.infer<typeof phoneSchema>;
+type Code = z.infer<typeof codeSchema>;
 
 function FormError({ error }: { error: unknown }) {
   if (!error) return null;
@@ -52,20 +37,39 @@ function FormError({ error }: { error: unknown }) {
   );
 }
 
-export function LoginForm() {
+function OtpAuthForm() {
   const router = useRouter();
   const [error, setError] = useState<unknown>();
-  const [role, setRole] = useState<'PARENT' | 'ADMIN'>('PARENT');
-  const {
-    register: registerField,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<Credentials>({ resolver: zodResolver(credentialsSchema) });
+  const [role, setRole] = useState<AuthRole>('PARENT');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [developmentCode, setDevelopmentCode] = useState<string>();
+  const [unregistered, setUnregistered] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const phoneForm = useForm<Phone>({ resolver: zodResolver(phoneSchema) });
+  const codeForm = useForm<Code>({ resolver: zodResolver(codeSchema) });
 
-  const submit = handleSubmit(async (values) => {
+  const sendCode = phoneForm.handleSubmit(async ({ phoneNumber: value }) => {
+    setError(undefined);
+    setUnregistered(false);
+    try {
+      const response = await requestAuthOtp(value, role);
+      if (response.data.accountExists === false) {
+        setUnregistered(true);
+        return;
+      }
+      setPhoneNumber(value);
+      setDevelopmentCode(response.data.developmentCode);
+      codeForm.reset({ code: '' });
+      setOtpSent(true);
+    } catch (caught) {
+      setError(caught);
+    }
+  });
+
+  const verifyCode = codeForm.handleSubmit(async ({ code }) => {
     setError(undefined);
     try {
-      const response = await login(values.username, values.password, role);
+      const response = await verifyAuthOtp(phoneNumber, code, role);
       setAuthSession(response.data.accessToken, response.data.user.role);
       router.replace(role === 'ADMIN' ? '/admin/dashboard' : '/parent/dashboard');
     } catch (caught) {
@@ -73,169 +77,114 @@ export function LoginForm() {
     }
   });
 
+  if (otpSent) {
+    return (
+      <form className="space-y-5" onSubmit={verifyCode} noValidate>
+        <FormError error={error} />
+        <Alert title="کد تأیید ارسال شد">کد ۶ رقمی ارسال‌شده به {phoneNumber} را وارد کنید.</Alert>
+        {developmentCode && (
+          <Alert title="کد آزمایشی">
+            تا پیش از اتصال سرویس پیامک، کد ورود شما:
+            <strong className="mt-2 block text-center text-2xl tracking-[0.35em]" dir="ltr">
+              {developmentCode}
+            </strong>
+          </Alert>
+        )}
+        <Field
+          label="کد تأیید"
+          htmlFor="auth-code"
+          required
+          error={codeForm.formState.errors.code?.message}
+        >
+          <Input
+            key="otp-code"
+            id="auth-code"
+            dir="ltr"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            autoFocus
+            {...codeForm.register('code')}
+          />
+        </Field>
+        <Button className="w-full" type="submit" disabled={codeForm.formState.isSubmitting}>
+          {codeForm.formState.isSubmitting ? 'در حال بررسی…' : 'تأیید و ادامه'}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full"
+          onClick={() => {
+            setOtpSent(false);
+            setDevelopmentCode(undefined);
+            codeForm.reset();
+            setError(undefined);
+          }}
+        >
+          تغییر شماره همراه
+        </Button>
+      </form>
+    );
+  }
+
   return (
-    <form className="space-y-5" onSubmit={submit} noValidate>
+    <form className="space-y-5" onSubmit={sendCode} noValidate>
       <FormError error={error} />
+      {unregistered && role === 'ADMIN' && (
+        <Alert tone="danger" title="شماره همراه مدیر ثبت نشده است">
+          این شماره برای حساب مدیر ثبت نشده است. از شماره همراهی استفاده کنید که قبلاً در رکورد مدیر
+          سامانه ذخیره شده است.
+        </Alert>
+      )}
       <Field label="نوع حساب" htmlFor="login-role" required>
         <select
           id="login-role"
           className="min-h-12 rounded-[var(--radius-sm)] border border-border bg-surface px-3 text-sm"
           value={role}
-          onChange={(event) => setRole(event.target.value as 'PARENT' | 'ADMIN')}
+          onChange={(event) => {
+            setRole(event.target.value as AuthRole);
+            setUnregistered(false);
+          }}
         >
-          <option value="PARENT">خانواده</option>
+          <option value="PARENT">خانواده (ورود یا ساخت حساب)</option>
           <option value="ADMIN">مدیر سامانه</option>
         </select>
       </Field>
-      <Field label="نام کاربری" htmlFor="login-username" required error={errors.username?.message}>
-        <Input id="login-username" autoComplete="username" {...registerField('username')} />
-      </Field>
-      <Field label="رمز عبور" htmlFor="login-password" required error={errors.password?.message}>
-        <Input
-          id="login-password"
-          type="password"
-          autoComplete="current-password"
-          {...registerField('password')}
-        />
-      </Field>
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <Link className="font-bold text-primary hover:underline" href="/forgot-password">
-          رمز عبور را فراموش کرده‌ام
-        </Link>
-        <Link className="font-bold text-primary hover:underline" href="/register">
-          ساخت حساب خانواده
-        </Link>
-      </div>
-      <Button className="w-full" type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'در حال ورود…' : 'ورود'}
-      </Button>
-    </form>
-  );
-}
-
-export function RegisterForm() {
-  const router = useRouter();
-  const [error, setError] = useState<unknown>();
-  const {
-    register: registerField,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<Registration>({ resolver: zodResolver(registrationSchema) });
-
-  const submit = handleSubmit(async ({ username, password }) => {
-    setError(undefined);
-    try {
-      await register(username, password);
-      router.replace('/login?registered=1');
-    } catch (caught) {
-      setError(caught);
-    }
-  });
-
-  return (
-    <form className="space-y-5" onSubmit={submit} noValidate>
-      <FormError error={error} />
       <Field
-        label="نام کاربری خانوادگی"
-        htmlFor="register-username"
+        label="شماره همراه"
+        htmlFor="auth-phone"
         required
-        error={errors.username?.message}
-      >
-        <Input id="register-username" autoComplete="username" {...registerField('username')} />
-      </Field>
-      <Field
-        label="رمز عبور"
-        htmlFor="register-password"
-        required
-        hint="حداقل ۸ نویسه، شامل حرف و عدد"
-        error={errors.password?.message}
+        error={phoneForm.formState.errors.phoneNumber?.message}
       >
         <Input
-          id="register-password"
-          type="password"
-          autoComplete="new-password"
-          {...registerField('password')}
-        />
-      </Field>
-      <Field
-        label="تکرار رمز عبور"
-        htmlFor="register-confirm"
-        required
-        error={errors.confirmPassword?.message}
-      >
-        <Input
-          id="register-confirm"
-          type="password"
-          autoComplete="new-password"
-          {...registerField('confirmPassword')}
-        />
-      </Field>
-      <Button className="w-full" type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'در حال ساخت حساب…' : 'ساخت حساب'}
-      </Button>
-      <p className="text-center text-sm text-muted">
-        حساب دارید؟{' '}
-        <Link className="font-bold text-primary hover:underline" href="/login">
-          وارد شوید
-        </Link>
-      </p>
-    </form>
-  );
-}
-
-export function ForgotPasswordForm() {
-  const [error, setError] = useState<unknown>();
-  const [sent, setSent] = useState(false);
-  const {
-    register: registerField,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<Phone>({ resolver: zodResolver(phoneSchema) });
-
-  const submit = handleSubmit(async ({ phoneNumber }) => {
-    setError(undefined);
-    try {
-      await requestPasswordReset(phoneNumber);
-      setSent(true);
-    } catch (caught) {
-      setError(caught);
-    }
-  });
-
-  if (sent) {
-    return (
-      <Alert title="درخواست ثبت شد">
-        اگر شماره همراه با حسابی مرتبط باشد، کد بازیابی ارسال می‌شود.
-      </Alert>
-    );
-  }
-
-  return (
-    <form className="space-y-5" onSubmit={submit} noValidate>
-      <FormError error={error} />
-      <Field
-        label="شماره همراه اصلی"
-        htmlFor="recovery-phone"
-        required
-        error={errors.phoneNumber?.message}
-      >
-        <Input
-          id="recovery-phone"
+          key="auth-phone"
+          id="auth-phone"
           dir="ltr"
           inputMode="tel"
           autoComplete="tel"
           placeholder="09123456789"
-          {...registerField('phoneNumber')}
+          {...phoneForm.register('phoneNumber')}
         />
       </Field>
-      <Button className="w-full" type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'در حال ارسال…' : 'ارسال کد بازیابی'}
+      <Button className="w-full" type="submit" disabled={phoneForm.formState.isSubmitting}>
+        {phoneForm.formState.isSubmitting ? 'در حال ارسال…' : 'دریافت کد تأیید'}
       </Button>
-      <p className="text-center text-sm">
-        <Link className="font-bold text-primary hover:underline" href="/login">
-          بازگشت به ورود
-        </Link>
-      </p>
     </form>
+  );
+}
+
+export function LoginForm() {
+  return <OtpAuthForm />;
+}
+
+export function RegisterForm() {
+  return <OtpAuthForm />;
+}
+
+export function ForgotPasswordForm() {
+  return (
+    <Alert title="ورود بدون رمز عبور">
+      برای ورود فقط شماره همراه و کد یک‌بارمصرف لازم است. از صفحه ورود ادامه دهید.
+    </Alert>
   );
 }

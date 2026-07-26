@@ -13,7 +13,7 @@ export const users = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     username: varchar('username', { length: 100 }).notNull().unique(),
-    passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+    phoneNumber: varchar('phone_number', { length: 20 }).unique(),
     accountStatus: varchar('account_status', { length: 20 }).notNull().default('ACTIVE'),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -21,17 +21,17 @@ export const users = pgTable(
   },
   (table) => ({
     usernameIdx: index('idx_users_username').on(table.username),
+    phoneIdx: uniqueIndex('idx_users_phone').on(table.phoneNumber),
   }),
 );
 
 export const adminUsers = pgTable('admin_users', {
   id: uuid('id').defaultRandom().primaryKey(),
   username: varchar('username', { length: 100 }).notNull().unique(),
-  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
   email: varchar('email', { length: 255 }),
-  phoneNumber: varchar('phone_number', { length: 20 }).notNull(),
+  phoneNumber: varchar('phone_number', { length: 20 }).notNull().unique(),
   status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

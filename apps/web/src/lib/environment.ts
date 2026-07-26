@@ -1,4 +1,4 @@
-const LOCAL_API_BASE_URL = 'http://localhost:3001/api/v1';
+const LOCAL_API_BASE_URL = 'http://localhost:5000/api/v1';
 
 type WebEnvironmentInput = {
   apiBaseUrl?: string;

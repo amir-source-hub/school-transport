@@ -15,6 +15,20 @@
       "when": 1784672400000,
       "tag": "0001_immutable_history",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785074292433,
+      "tag": "0002_giant_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785074366182,
+      "tag": "0003_adorable_molly_hayes",
+      "breakpoints": true
     }
   ]
 }

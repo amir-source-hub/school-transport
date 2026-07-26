@@ -18,7 +18,7 @@ export class ValidationError extends AppError {
 }
 
 export class AuthenticationError extends AppError {
-  constructor(message = 'The username or password is incorrect.') {
+  constructor(message = 'The phone number or verification code is incorrect.') {
     super('INVALID_CREDENTIALS', message, 401);
   }
 }

@@ -18,66 +18,22 @@ import { successResponse } from '../../../common/response';
 import { ConfigService } from '../../../config/config.service';
 import { ValidationError } from '../../../common/errors';
 import { TrustedOriginGuard } from '../../access-control/trusted-origin.guard';
-import { IsNotEmpty, IsString, Matches } from 'class-validator';
+import { IsIn, IsString, Matches } from 'class-validator';
 
-class RegisterDto {
-  @IsString()
-  @IsNotEmpty()
-  username!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  password!: string;
-}
-class LoginDto {
-  @IsString()
-  @IsNotEmpty()
-  username!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  password!: string;
-}
-class SendOtpDto {
-  @IsString()
-  @Matches(/^09\d{9}$/)
-  phoneNumber!: string;
-}
-class VerifyOtpDto {
+class RequestOtpDto {
   @IsString()
   @Matches(/^09\d{9}$/)
   phoneNumber!: string;
 
+  @IsString()
+  @IsIn(['PARENT', 'ADMIN'])
+  role!: 'PARENT' | 'ADMIN';
+}
+
+class VerifyAuthOtpDto extends RequestOtpDto {
   @IsString()
   @Matches(/^\d{6}$/)
   code!: string;
-}
-class ForgotPasswordDto {
-  @IsString()
-  @Matches(/^09\d{9}$/)
-  phoneNumber!: string;
-}
-class ResetPasswordDto {
-  @IsString()
-  @Matches(/^09\d{9}$/)
-  phoneNumber!: string;
-
-  @IsString()
-  @Matches(/^\d{6}$/)
-  code!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  newPassword!: string;
-}
-class ChangePasswordDto {
-  @IsString()
-  @IsNotEmpty()
-  oldPassword!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  newPassword!: string;
 }
 
 type CookieRequest = FastifyRequest & {
@@ -97,48 +53,34 @@ export class AuthController {
   ) {}
 
   @Public()
-  @Post('register')
-  async register(@Body() dto: RegisterDto) {
-    const result = await this.authService.registerParent(dto.username, dto.password);
-    return successResponse(result);
+  @Post('request-otp')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(TrustedOriginGuard)
+  async requestOtp(@Body() dto: RequestOtpDto) {
+    return successResponse(await this.authService.requestAuthOtp(dto.phoneNumber, dto.role));
   }
 
   @Public()
   @UseGuards(TrustedOriginGuard)
-  @Post('login')
+  @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
-  async login(
+  async verifyAuthOtp(
     @Req() req: FastifyRequest,
-    @Body() dto: LoginDto,
+    @Body() dto: VerifyAuthOtpDto,
     @Res({ passthrough: true }) reply: CookieReply,
   ) {
-    const result = await this.authService.loginParent(dto.username, dto.password, {
+    const context = {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
       deviceName: req.headers['user-agent']?.slice(0, 255),
-    });
-    this.setRefreshCookie(reply, result.refreshToken);
-    return successResponse({
-      user: result.user,
-      accessToken: result.accessToken,
-    });
-  }
-
-  @Public()
-  @UseGuards(TrustedOriginGuard)
-  @Post('admin-login')
-  @HttpCode(HttpStatus.OK)
-  async adminLogin(
-    @Req() req: FastifyRequest,
-    @Body() dto: LoginDto,
-    @Res({ passthrough: true }) reply: CookieReply,
-  ) {
-    const result = await this.authService.loginAdmin(dto.username, dto.password, {
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-      deviceName: req.headers['user-agent']?.slice(0, 255),
-    });
-    this.setRefreshCookie(reply, result.refreshToken, true);
+    };
+    const result = await this.authService.verifyAuthOtp(
+      dto.phoneNumber,
+      dto.code,
+      dto.role,
+      context,
+    );
+    this.setRefreshCookie(reply, result.refreshToken, result.user.role === 'ADMIN');
     return successResponse({
       user: result.user,
       accessToken: result.accessToken,
@@ -154,8 +96,8 @@ export class AuthController {
     if (!refreshToken) {
       throw new ValidationError('A refresh token is required.');
     }
-    const tokens = await this.authService.refreshTokens(refreshToken, 'PARENT');
-    this.setRefreshCookie(reply, tokens.refreshToken);
+    const tokens = await this.authService.refreshTokens(refreshToken);
+    this.setRefreshCookie(reply, tokens.refreshToken, tokens.role === 'ADMIN');
     return successResponse({ accessToken: tokens.accessToken });
   }
 
@@ -169,55 +111,6 @@ export class AuthController {
     }
     reply.clearCookie('refresh_token', { path: '/api/v1/auth' });
     return successResponse({ loggedOut: true });
-  }
-
-  @Public()
-  @Post('send-phone-verification')
-  @HttpCode(HttpStatus.OK)
-  async sendPhoneVerification(@Body() dto: SendOtpDto) {
-    const result = await this.authService.sendOtp(dto.phoneNumber, 'PRIMARY_PHONE_VERIFICATION');
-    return successResponse(result);
-  }
-
-  @Public()
-  @Post('verify-phone')
-  @HttpCode(HttpStatus.OK)
-  async verifyPhone(@Body() dto: VerifyOtpDto) {
-    const result = await this.authService.verifyOtp(
-      dto.phoneNumber,
-      'PRIMARY_PHONE_VERIFICATION',
-      dto.code,
-    );
-    return successResponse(result);
-  }
-
-  @Public()
-  @Post('forgot-password')
-  @HttpCode(HttpStatus.OK)
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    const result = await this.authService.forgotPassword(dto.phoneNumber);
-    return successResponse(result);
-  }
-
-  @Public()
-  @Post('reset-password')
-  @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() dto: ResetPasswordDto) {
-    await this.authService.resetPassword(dto.phoneNumber, dto.code, dto.newPassword);
-    return successResponse({ passwordReset: true });
-  }
-
-  @UseGuards(AuthGuard)
-  @Post('change-password')
-  @HttpCode(HttpStatus.OK)
-  async changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
-    await this.authService.changePassword(
-      req.user.id,
-      req.user.role,
-      dto.oldPassword,
-      dto.newPassword,
-    );
-    return successResponse({ passwordChanged: true });
   }
 
   @UseGuards(AuthGuard)

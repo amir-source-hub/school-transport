@@ -67,12 +67,4 @@ export class FamiliesController {
       message: 'Primary phone changed. OTP verification required.',
     });
   }
-
-  @Post('change-password')
-  async changePassword(
-    @Req() _req: any,
-    @Body() _dto: { oldPassword: string; newPassword: string },
-  ) {
-    return { message: 'Use POST /auth/change-password instead.' };
-  }
 }

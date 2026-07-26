@@ -9,7 +9,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-The API is available at `http://localhost:3001/api/v1`; health is at `/health`. Named volumes preserve PostgreSQL and Redis data between restarts. The migration and idempotent seed job runs before the API and worker start.
+The API is available at `http://localhost:5000/api/v1`; health is at `/health`. Named volumes preserve PostgreSQL and Redis data between restarts. The migration and idempotent seed job runs before the API and worker start.
 
 Development seed accounts:
 

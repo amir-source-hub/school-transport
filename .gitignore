@@ -23,6 +23,7 @@ blob-report/
 
 # Local databases, exports, and private uploads
 *.sql
+!apps/api/drizzle/*.sql
 *.dump
 uploads/
 storage/

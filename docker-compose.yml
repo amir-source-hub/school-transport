@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: school_transport
       POSTGRES_PASSWORD: school_transport_dev
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -37,7 +37,7 @@ services:
       dockerfile: Dockerfile.api
     environment:
       NODE_ENV: development
-      PORT: 3001
+      PORT: 5000
       HOST: 0.0.0.0
       DATABASE_URL: postgresql://school_transport:school_transport_dev@postgres:5432/school_transport
       REDIS_URL: redis://:redis_dev_password@redis:6379
@@ -47,7 +47,7 @@ services:
       PAYMENT_GATEWAY_PROVIDER: mock
       SERVICE_ROLE: api
     ports:
-      - "3001:3001"
+      - "5000:5000"
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -59,7 +59,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3001/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:5000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s

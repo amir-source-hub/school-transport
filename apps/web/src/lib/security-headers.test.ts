@@ -23,7 +23,7 @@ describe('createSecurityHeaders', () => {
     const headers = createSecurityHeaders({ production: false });
     const headerMap = new Map(headers.map(({ key, value }) => [key, value]));
 
-    expect(headerMap.get('Content-Security-Policy')).toContain('http://localhost:3001');
+    expect(headerMap.get('Content-Security-Policy')).toContain('http://localhost:5000');
     expect(headerMap.get('Content-Security-Policy')).toContain('ws:');
     expect(headerMap.has('Strict-Transport-Security')).toBe(false);
   });

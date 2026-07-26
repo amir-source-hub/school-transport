@@ -2,17 +2,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { addSeconds, isPast } from 'date-fns';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, desc, isNull } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { ConfigService } from '../../../config/config.service';
 import { DatabaseService } from '../../../database/database.service';
 import { users, adminUsers, otpRequests, parents, authSessions } from '../../../database/schemas';
-import {
-  AuthenticationError,
-  ConflictError,
-  NotFoundError,
-  ValidationError,
-} from '../../../common/errors';
+import { AuthenticationError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
 import { AuthTokens, LoginResult, OtpResult } from '../domain/auth.types';
@@ -29,146 +24,66 @@ export class AuthService {
     @Inject(OTP_DELIVERY) private readonly otpDelivery: OtpDelivery,
   ) {}
 
-  async registerParent(username: string, password: string): Promise<{ userId: string }> {
-    this.validatePassword(password, false);
-
-    const existing = await this.db.db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.username, username))
-      .limit(1);
-
-    if (existing.length > 0) {
-      throw new ConflictError('DUPLICATE_USERNAME', 'This username is already taken.');
+  async requestAuthOtp(phoneNumber: string, role: 'PARENT' | 'ADMIN'): Promise<OtpResult> {
+    const account = await this.findAccountByPhone(phoneNumber, role);
+    // Admin accounts must be provisioned in advance. Keep production responses generic.
+    if (role === 'ADMIN' && !account) {
+      const result: OtpResult = {
+        expiresAt: addSeconds(new Date(), this.config.otpExpirySeconds),
+        cooldownSeconds: this.config.otpResendCooldownSeconds,
+      };
+      if (this.config.nodeEnv !== 'production' && this.config.otpProvider === 'console') {
+        result.accountExists = false;
+      }
+      return result;
     }
-
-    const passwordHash = await argon2.hash(password);
-    const userId = generateId();
-
-    await this.db.db.insert(users).values({
-      id: userId,
-      username,
-      passwordHash,
-      accountStatus: 'ACTIVE',
-    });
-
-    this.logger.log('Parent registered.');
-    return { userId };
+    return this.sendOtp(phoneNumber, role === 'ADMIN' ? 'AUTH_ADMIN' : 'AUTH_PARENT');
   }
 
-  async registerAdmin(data: {
-    username: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    phoneNumber: string;
-  }): Promise<{ adminId: string }> {
-    this.validatePassword(data.password, true);
-
-    const existing = await this.db.db
-      .select({ id: adminUsers.id })
-      .from(adminUsers)
-      .where(eq(adminUsers.username, data.username))
-      .limit(1);
-
-    if (existing.length > 0) {
-      throw new ConflictError('DUPLICATE_USERNAME', 'This username is already taken.');
-    }
-
-    const passwordHash = await argon2.hash(data.password);
-    const adminId = generateId();
-
-    await this.db.db.insert(adminUsers).values({
-      id: adminId,
-      username: data.username,
-      passwordHash,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phoneNumber: data.phoneNumber,
-    });
-
-    this.logger.log('Admin registered.');
-    return { adminId };
-  }
-
-  async loginParent(
-    username: string,
-    password: string,
+  async verifyAuthOtp(
+    phoneNumber: string,
+    code: string,
+    role: 'PARENT' | 'ADMIN',
     context?: SessionContext,
   ): Promise<LoginResult> {
-    const user = await this.db.db.select().from(users).where(eq(users.username, username)).limit(1);
+    let account = await this.findAccountByPhone(phoneNumber, role);
+    if (role === 'ADMIN' && !account) {
+      throw new AuthenticationError('Invalid phone number or verification code.');
+    }
+    await this.verifyOtp(phoneNumber, role === 'ADMIN' ? 'AUTH_ADMIN' : 'AUTH_PARENT', code);
 
-    if (user.length === 0) {
-      throw new AuthenticationError();
+    if (!account) {
+      const userId = generateId();
+      await this.db.db.insert(users).values({
+        id: userId,
+        username: phoneNumber,
+        phoneNumber,
+        accountStatus: 'ACTIVE',
+      });
+      account = { id: userId, username: phoneNumber, status: 'ACTIVE' };
+      this.logger.log('Parent account created after OTP verification.');
     }
 
-    const valid = await argon2.verify(user[0].passwordHash, password);
-    if (!valid) {
-      this.logger.warn('Failed parent login attempt.');
-      throw new AuthenticationError();
-    }
-
-    if (user[0].accountStatus !== 'ACTIVE') {
+    if (account.status !== 'ACTIVE') {
       throw new AuthenticationError('Account is disabled or suspended.');
     }
-
-    await this.db.db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user[0].id));
-
-    const tokens = await this.generateTokens(user[0].id, 'PARENT', context);
-    this.logger.log('Parent logged in.');
-
+    const table = role === 'ADMIN' ? adminUsers : users;
+    await this.db.db.update(table).set({ lastLoginAt: new Date() }).where(eq(table.id, account.id));
+    const tokens = await this.generateTokens(account.id, role, context);
+    this.logger.log(`${role} logged in with OTP.`);
     return {
-      user: { id: user[0].id, username: user[0].username, role: 'PARENT' },
+      user: { id: account.id, username: account.username, phoneNumber, role },
       ...tokens,
     };
   }
 
-  async loginAdmin(
-    username: string,
-    password: string,
-    context?: SessionContext,
-  ): Promise<LoginResult> {
-    const admin = await this.db.db
-      .select()
-      .from(adminUsers)
-      .where(eq(adminUsers.username, username))
-      .limit(1);
-
-    if (admin.length === 0) {
-      throw new AuthenticationError();
-    }
-
-    const valid = await argon2.verify(admin[0].passwordHash, password);
-    if (!valid) {
-      this.logger.warn('Failed admin login attempt.');
-      throw new AuthenticationError();
-    }
-
-    if (admin[0].status !== 'ACTIVE') {
-      throw new AuthenticationError('Account is disabled or suspended.');
-    }
-
-    await this.db.db
-      .update(adminUsers)
-      .set({ lastLoginAt: new Date() })
-      .where(eq(adminUsers.id, admin[0].id));
-
-    const tokens = await this.generateTokens(admin[0].id, 'ADMIN', context);
-    this.logger.log('Admin logged in.');
-
-    return {
-      user: { id: admin[0].id, username: admin[0].username, role: 'ADMIN' },
-      ...tokens,
-    };
-  }
-
-  async refreshTokens(refreshToken: string, expectedRole: 'PARENT' | 'ADMIN'): Promise<AuthTokens> {
+  async refreshTokens(refreshToken: string): Promise<AuthTokens & { role: 'PARENT' | 'ADMIN' }> {
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
         secret: this.config.jwtSecret,
       });
 
-      if (payload.type !== 'refresh' || payload.role !== expectedRole) {
+      if (payload.type !== 'refresh' || !['PARENT', 'ADMIN'].includes(payload.role)) {
         throw new AuthenticationError('Invalid refresh token.');
       }
 
@@ -195,7 +110,8 @@ export class AuthService {
         throw new AuthenticationError('Invalid or expired refresh token.');
       }
 
-      return this.generateTokens(payload.sub, payload.role, undefined, current.id);
+      const tokens = await this.generateTokens(payload.sub, payload.role, undefined, current.id);
+      return { ...tokens, role: payload.role };
     } catch (err: any) {
       if (err instanceof AuthenticationError) throw err;
       throw new AuthenticationError('Invalid or expired refresh token.');
@@ -212,78 +128,6 @@ export class AuthService {
     this.logger.log('User logged out.');
   }
 
-  async changePassword(
-    userId: string,
-    role: 'PARENT' | 'ADMIN',
-    oldPassword: string,
-    newPassword: string,
-  ): Promise<void> {
-    this.validatePassword(newPassword, role === 'ADMIN');
-
-    const table = role === 'PARENT' ? users : adminUsers;
-    const records = await this.db.db.select().from(table).where(eq(table.id, userId)).limit(1);
-
-    if (records.length === 0) throw new NotFoundError('User');
-
-    const valid = await argon2.verify(records[0].passwordHash, oldPassword);
-    if (!valid) throw new AuthenticationError('Current password is incorrect.');
-
-    const newHash = await argon2.hash(newPassword);
-    await this.db.db
-      .update(table)
-      .set({ passwordHash: newHash, updatedAt: new Date() })
-      .where(eq(table.id, userId));
-
-    await this.revokeAllSessions(userId, role, 'PASSWORD_CHANGED');
-
-    this.logger.log('User password changed.');
-  }
-
-  async forgotPassword(phoneNumber: string): Promise<OtpResult> {
-    const parent = await this.db.db
-      .select()
-      .from(parents)
-      .where(eq(parents.phoneNumber, phoneNumber))
-      .limit(1);
-
-    if (parent.length === 0) {
-      return { expiresAt: new Date(), cooldownSeconds: this.config.otpResendCooldownSeconds };
-    }
-
-    return this.sendOtp(phoneNumber, 'PASSWORD_RECOVERY');
-  }
-
-  async resetPassword(phoneNumber: string, code: string, newPassword: string): Promise<void> {
-    this.validatePassword(newPassword, false);
-
-    await this.verifyOtp(phoneNumber, 'PASSWORD_RECOVERY', code);
-
-    const parentRecords = await this.db.db
-      .select()
-      .from(parents)
-      .where(eq(parents.phoneNumber, phoneNumber))
-      .limit(1);
-
-    if (parentRecords.length === 0) throw new NotFoundError('Parent');
-
-    const parent = parentRecords[0];
-    const userRecords = await this.db.db
-      .select()
-      .from(users)
-      .where(eq(users.id, parent.userId))
-      .limit(1);
-
-    if (userRecords.length === 0) throw new NotFoundError('User');
-
-    const newHash = await argon2.hash(newPassword);
-    await this.db.db
-      .update(users)
-      .set({ passwordHash: newHash, updatedAt: new Date() })
-      .where(eq(users.id, parent.userId));
-
-    this.logger.log('User password reset completed.');
-  }
-
   async sendOtp(phoneNumber: string, purpose: string): Promise<OtpResult> {
     const recent = await this.db.db
       .select()
@@ -295,7 +139,7 @@ export class AuthService {
           isNull(otpRequests.verifiedAt),
         ),
       )
-      .orderBy(otpRequests.createdAt)
+      .orderBy(desc(otpRequests.createdAt))
       .limit(1);
 
     if (recent.length > 0) {
@@ -325,7 +169,14 @@ export class AuthService {
     await this.otpDelivery.send({ phoneNumber, purpose, code });
     this.logger.log(`OTP sent for ${purpose}.`);
 
-    return { expiresAt, cooldownSeconds: this.config.otpResendCooldownSeconds };
+    return {
+      expiresAt,
+      cooldownSeconds: this.config.otpResendCooldownSeconds,
+      developmentCode:
+        this.config.nodeEnv !== 'production' && this.config.otpProvider === 'console'
+          ? code
+          : undefined,
+    };
   }
 
   async verifyOtp(
@@ -343,7 +194,7 @@ export class AuthService {
           isNull(otpRequests.verifiedAt),
         ),
       )
-      .orderBy(otpRequests.createdAt)
+      .orderBy(desc(otpRequests.createdAt))
       .limit(1);
 
     if (requests.length === 0) {
@@ -377,6 +228,40 @@ export class AuthService {
 
     this.logger.log(`OTP verified for ${purpose}.`);
     return {};
+  }
+
+  private async findAccountByPhone(
+    phoneNumber: string,
+    role: 'PARENT' | 'ADMIN',
+  ): Promise<{ id: string; username: string; status: string } | undefined> {
+    if (role === 'ADMIN') {
+      const records = await this.db.db
+        .select({
+          id: adminUsers.id,
+          username: adminUsers.username,
+          status: adminUsers.status,
+        })
+        .from(adminUsers)
+        .where(eq(adminUsers.phoneNumber, phoneNumber))
+        .limit(1);
+      return records[0];
+    }
+
+    const direct = await this.db.db
+      .select({ id: users.id, username: users.username, status: users.accountStatus })
+      .from(users)
+      .where(eq(users.phoneNumber, phoneNumber))
+      .limit(1);
+    if (direct[0]) return direct[0];
+
+    // Compatibility for accounts created before users.phone_number existed.
+    const legacy = await this.db.db
+      .select({ id: users.id, username: users.username, status: users.accountStatus })
+      .from(parents)
+      .innerJoin(users, eq(parents.userId, users.id))
+      .where(eq(parents.phoneNumber, phoneNumber))
+      .limit(1);
+    return legacy[0];
   }
 
   private async generateTokens(
@@ -458,25 +343,6 @@ export class AuthService {
           isNull(authSessions.revokedAt),
         ),
       );
-  }
-
-  private validatePassword(password: string, isAdmin: boolean): void {
-    const minLen = isAdmin ? 12 : 8;
-    if (password.length < minLen) {
-      throw new ValidationError(`Password must be at least ${minLen} characters.`);
-    }
-    if (password.length > 128) {
-      throw new ValidationError('Password must not exceed 128 characters.');
-    }
-    if (!/[a-zA-Z]/.test(password)) {
-      throw new ValidationError('Password must contain at least one letter.');
-    }
-    if (!/[0-9]/.test(password)) {
-      throw new ValidationError('Password must contain at least one number.');
-    }
-    if (isAdmin && !/[^a-zA-Z0-9]/.test(password)) {
-      throw new ValidationError('Admin password must contain at least one symbol.');
-    }
   }
 }
 

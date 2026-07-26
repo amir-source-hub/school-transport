@@ -1,4 +1,3 @@
-import * as argon2 from 'argon2';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import {
@@ -12,8 +11,8 @@ import {
 } from './schemas';
 
 export const SEED_CREDENTIALS = {
-  parent: { username: 'demo-parent', password: 'DemoParent123' },
-  admin: { username: 'demo-admin', password: 'DemoAdmin123!' },
+  parent: { username: 'demo-parent', phoneNumber: '09121111111' },
+  admin: { username: 'demo-admin', phoneNumber: '09120000000' },
 } as const;
 
 const ids = {
@@ -33,17 +32,12 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
   const db = drizzle(pool);
 
   try {
-    const [parentPasswordHash, adminPasswordHash] = await Promise.all([
-      argon2.hash(SEED_CREDENTIALS.parent.password),
-      argon2.hash(SEED_CREDENTIALS.admin.password),
-    ]);
-
     await db
       .insert(users)
       .values({
         id: ids.user,
         username: SEED_CREDENTIALS.parent.username,
-        passwordHash: parentPasswordHash,
+        phoneNumber: SEED_CREDENTIALS.parent.phoneNumber,
       })
       .onConflictDoNothing();
     await db
@@ -51,10 +45,9 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
       .values({
         id: ids.admin,
         username: SEED_CREDENTIALS.admin.username,
-        passwordHash: adminPasswordHash,
         firstName: 'Demo',
         lastName: 'Admin',
-        phoneNumber: '09120000000',
+        phoneNumber: SEED_CREDENTIALS.admin.phoneNumber,
       })
       .onConflictDoNothing();
     await db

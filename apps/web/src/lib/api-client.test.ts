@@ -22,7 +22,7 @@ describe('API client', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, request] = fetchMock.mock.calls[0];
     const headers = new Headers(request?.headers);
-    expect(url).toBe('http://localhost:3001/api/v1/example');
+    expect(url).toBe('http://localhost:5000/api/v1/example');
     expect(request?.credentials).toBe('include');
     expect(request?.body).toBe(JSON.stringify({ value: 'safe' }));
     expect(headers.get('Content-Type')).toBe('application/json');

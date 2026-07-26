@@ -5,6 +5,7 @@ export type AuthRole = 'PARENT' | 'ADMIN';
 type AuthUser = {
   id: string;
   username: string;
+  phoneNumber: string;
   role: AuthRole;
 };
 
@@ -13,26 +14,23 @@ type LoginResponse = {
   accessToken: string;
 };
 
-export function login(username: string, password: string, role: AuthRole) {
-  return apiRequest<LoginResponse>(role === 'ADMIN' ? '/auth/admin-login' : '/auth/login', {
+export function requestAuthOtp(phoneNumber: string, role: AuthRole) {
+  return apiRequest<{
+    expiresAt: string;
+    cooldownSeconds: number;
+    developmentCode?: string;
+    accountExists?: boolean;
+  }>('/auth/request-otp', {
     method: 'POST',
-    body: { username, password },
+    body: { phoneNumber, role },
     timeoutMs: 10_000,
   });
 }
 
-export function register(username: string, password: string) {
-  return apiRequest<{ userId: string }>('/auth/register', {
+export function verifyAuthOtp(phoneNumber: string, code: string, role: AuthRole) {
+  return apiRequest<LoginResponse>('/auth/verify-otp', {
     method: 'POST',
-    body: { username, password },
-    timeoutMs: 10_000,
-  });
-}
-
-export function requestPasswordReset(phoneNumber: string) {
-  return apiRequest<{ expiresAt: string; cooldownSeconds: number }>('/auth/forgot-password', {
-    method: 'POST',
-    body: { phoneNumber },
+    body: { phoneNumber, code, role },
     timeoutMs: 10_000,
   });
 }

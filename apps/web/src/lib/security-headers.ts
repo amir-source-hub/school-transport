@@ -10,7 +10,7 @@ type SecurityHeader = {
 
 const getApiOrigin = (apiBaseUrl?: string) => {
   try {
-    return new URL(apiBaseUrl ?? 'http://localhost:3001/api/v1').origin;
+    return new URL(apiBaseUrl ?? 'http://localhost:5000/api/v1').origin;
   } catch {
     return undefined;
   }

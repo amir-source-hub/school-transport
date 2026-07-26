@@ -4,7 +4,7 @@ export interface AuthTokens {
 }
 
 export interface LoginResult {
-  user: { id: string; username: string; role: string };
+  user: { id: string; username: string; phoneNumber: string; role: string };
   accessToken: string;
   refreshToken: string;
 }
@@ -12,4 +12,6 @@ export interface LoginResult {
 export interface OtpResult {
   expiresAt: Date;
   cooldownSeconds: number;
+  developmentCode?: string;
+  accountExists?: boolean;
 }

@@ -5,7 +5,7 @@ import { validateWebEnvironment } from './environment';
 describe('validateWebEnvironment', () => {
   it('uses the documented local API URL during development', () => {
     expect(validateWebEnvironment({ production: false })).toEqual({
-      apiBaseUrl: 'http://localhost:3001/api/v1',
+      apiBaseUrl: 'http://localhost:5000/api/v1',
       production: false,
     });
   });
