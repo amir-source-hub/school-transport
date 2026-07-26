@@ -19,7 +19,7 @@ export const paymentPlans = pgTable(
     registrationPriceId: uuid('registration_price_id')
       .notNull()
       .references(() => registrationPrices.id),
-    planType: varchar('plan_type', { length: 30 }).notNull(),
+    planType: varchar('plan_type', { length: 50 }).notNull(),
     totalAmount: integer('total_amount').notNull(),
     prepaymentAmount: integer('prepayment_amount').notNull().default(0),
     remainingInstallmentAmount: integer('remaining_installment_amount').notNull().default(0),

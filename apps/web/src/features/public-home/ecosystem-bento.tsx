@@ -20,7 +20,7 @@ const tiles: {
     icon: GraduationCap,
     span: 'lg:col-span-2 lg:row-span-2',
     variant: 'primary',
-    action: { label: 'شروع ثبت‌نام', href: '/register' },
+    action: { label: 'شروع ثبت‌نام', href: '/login' },
   },
   {
     title: 'مدیریت قراردادها',
@@ -95,57 +95,59 @@ export function EcosystemBento() {
                 tile.action && 'cursor-pointer hover:scale-[1.02]',
               )}
             >
-              <div className="flex items-center gap-3">
-                <span className={cn(
-                  'flex size-10 items-center justify-center rounded-xl',
-                  tile.variant === 'primary' && 'bg-white/10 text-sun',
-                  tile.variant === 'light' && 'bg-primary-soft text-primary',
-                  tile.variant === 'dark' && 'bg-white/10 text-sun',
-                  tile.variant === 'outlined' && 'bg-surface-inset text-primary',
-                  tile.variant === 'premium' && 'bg-navy/10 text-navy',
-                  tile.variant === 'glass' && 'bg-primary-soft text-primary',
-                )}>
-                  <tile.icon aria-hidden="true" className="size-5" />
-                </span>
-                <h3 className={cn(
-                  'font-black',
-                  tile.variant === 'premium' && 'text-navy',
-                  (tile.variant === 'primary' || tile.variant === 'dark') && 'text-white',
-                )}>
-                  {tile.title}
-                </h3>
-              </div>
-              <p className={cn(
-                'mt-3 text-sm leading-relaxed flex-1',
-                tile.variant === 'primary' && 'text-white/70',
-                tile.variant === 'light' && 'text-muted',
-                tile.variant === 'dark' && 'text-white/60',
-                tile.variant === 'outlined' && 'text-muted',
-                tile.variant === 'premium' && 'text-navy/70',
-                tile.variant === 'glass' && 'text-muted',
-              )}>
-                {tile.description}
-              </p>
-              {tile.action && (
-                <div className="mt-4">
-                  <ButtonLink
-                    href={tile.action.href}
-                    size="sm"
-                    variant={
-                      tile.variant === 'primary' ? 'inverse' :
-                      tile.variant === 'premium' ? 'primary' :
-                      tile.variant === 'dark' ? 'inverse' : 'ghost'
-                    }
-                    className={cn(
-                      'w-fit',
-                      tile.variant === 'primary' && 'bg-white/15 text-white hover:bg-white/25',
-                      tile.variant === 'premium' && 'bg-navy text-white hover:bg-navy/90',
-                    )}
-                  >
-                    {tile.action.label}
-                  </ButtonLink>
+              <div className="flex flex-1 flex-col">
+                <div className="flex items-center gap-3">
+                  <span className={cn(
+                    'flex size-10 items-center justify-center rounded-xl',
+                    tile.variant === 'primary' && 'bg-white/10 text-sun',
+                    tile.variant === 'light' && 'bg-primary-soft text-primary',
+                    tile.variant === 'dark' && 'bg-white/10 text-sun',
+                    tile.variant === 'outlined' && 'bg-surface-inset text-primary',
+                    tile.variant === 'premium' && 'bg-navy/10 text-navy',
+                    tile.variant === 'glass' && 'bg-primary-soft text-primary',
+                  )}>
+                    <tile.icon aria-hidden="true" className="size-5" />
+                  </span>
+                  <h3 className={cn(
+                    'font-black',
+                    tile.variant === 'premium' && 'text-navy',
+                    (tile.variant === 'primary' || tile.variant === 'dark') && 'text-white',
+                  )}>
+                    {tile.title}
+                  </h3>
                 </div>
-              )}
+                <p className={cn(
+                  'mt-3 text-sm leading-relaxed flex-1',
+                  tile.variant === 'primary' && 'text-white/70',
+                  tile.variant === 'light' && 'text-muted',
+                  tile.variant === 'dark' && 'text-white/60',
+                  tile.variant === 'outlined' && 'text-muted',
+                  tile.variant === 'premium' && 'text-navy/70',
+                  tile.variant === 'glass' && 'text-muted',
+                )}>
+                  {tile.description}
+                </p>
+                {tile.action && (
+                  <div className="mt-4">
+                    <ButtonLink
+                      href={tile.action.href}
+                      size="sm"
+                      variant={
+                        tile.variant === 'primary' ? 'inverse' :
+                        tile.variant === 'premium' ? 'primary' :
+                        tile.variant === 'dark' ? 'inverse' : 'ghost'
+                      }
+                      className={cn(
+                        'w-fit',
+                        tile.variant === 'primary' && 'bg-white/15 text-white hover:bg-white/25',
+                        tile.variant === 'premium' && 'bg-navy text-white hover:bg-navy/90',
+                      )}
+                    >
+                      {tile.action.label}
+                    </ButtonLink>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>

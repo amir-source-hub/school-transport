@@ -13,7 +13,7 @@ const steps = [
     description: 'اطلاعات خود را ثبت کنید و حساب خانواده را برای مدیریت سرویس مدرسه فرزندان ایجاد نمایید.',
     icon: GraduationCap,
     color: 'from-sun/20 to-transparent',
-    image: '/images/hero-family.png',
+    image: '/images/school-transport-animated2.png',
   },
   {
     number: 2,
@@ -21,7 +21,7 @@ const steps = [
     description: 'دانش‌آموز خود را اضافه کنید، مدرسه و پایه تحصیلی را انتخاب نمایید.',
     icon: ClipboardCheck,
     color: 'from-transit-blue/20 to-transparent',
-    image: '/images/hero-arrival.png',
+    image: '/images/school-transport-animated3.png',
   },
   {
     number: 3,
@@ -29,7 +29,7 @@ const steps = [
     description: 'پس از بررسی، قیمت نهایی و شرایط قرارداد را مشاهده و پذیرش کنید.',
     icon: FileText,
     color: 'from-sun/20 to-transparent',
-    image: '/images/hero-trust.png',
+    image: '/images/school-transport-animated4.png',
   },
   {
     number: 4,
@@ -37,7 +37,7 @@ const steps = [
     description: 'پرداخت را انجام دهید و از وضعیت سرویس در هر مرحله مطلع شوید.',
     icon: WalletCards,
     color: 'from-transit-blue/20 to-transparent',
-    image: '/images/hero-route.png',
+    image: '/images/animation picture-ride.png',
   },
 ];
 

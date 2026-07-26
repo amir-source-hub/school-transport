@@ -28,41 +28,11 @@ function HeroRouteLine() {
         animate={{ pathLength: 1 }}
         transition={prefersReduced ? { duration: 0 } : { duration: 1.5, ease: [0.16, 1, 0.3, 1], delay: 0.5 }}
       />
-      <motion.circle
-        cx="0" cy="64" r="4"
-        fill="var(--sun)"
-        initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.8 }}
-      />
-      <motion.circle
-        cx="360" cy="50" r="3"
-        fill="var(--transit-blue)"
-        initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2 }}
-      />
-      <motion.circle
-        cx="720" cy="40" r="4"
-        fill="var(--sun)"
-        initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2.2 }}
-      />
-      <motion.circle
-        cx="1080" cy="55" r="3"
-        fill="var(--transit-blue)"
-        initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2.4 }}
-      />
-      <motion.circle
-        cx="1440" cy="45" r="4"
-        fill="var(--sun)"
-        initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2.6 }}
-      />
+      <motion.circle cx="0" cy="64" r="4" fill="var(--sun)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }} />
+      <motion.circle cx="360" cy="50" r="3" fill="var(--transit-blue)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2 }} />
+      <motion.circle cx="720" cy="40" r="4" fill="var(--sun)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2 }} />
+      <motion.circle cx="1080" cy="55" r="3" fill="var(--transit-blue)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 }} />
+      <motion.circle cx="1440" cy="45" r="4" fill="var(--sun)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.6 }} />
       <defs>
         <linearGradient id="hero-route-gradient" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="var(--sun)" />
@@ -123,7 +93,7 @@ export function PublicHero() {
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <ButtonLink
-              href="/register"
+              href="/login"
               size="lg"
               className="min-w-44 bg-sun text-navy hover:bg-sun/90 shadow-lg shadow-sun/20"
             >

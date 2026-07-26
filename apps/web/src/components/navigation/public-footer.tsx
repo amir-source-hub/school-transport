@@ -20,7 +20,7 @@ const footerLinks = [
     items: [
       ['نحوه قیمت‌گذاری', '/pricing'],
       ['ایمنی و استانداردها', '/safety'],
-      ['پرسش‌های متداول', '/faq'],
+      ['سوالات متداول', '/faq'],
     ],
   },
   {
@@ -28,7 +28,7 @@ const footerLinks = [
     items: [
       ['درباره ما', '/about'],
       ['تماس با ما', '/contact'],
-      ['ثبت‌نام', '/register'],
+      ['ورود / ثبت‌نام', '/login'],
     ],
   },
 ] as const;
@@ -68,7 +68,7 @@ export function PublicFooter() {
               از خانه تا مدرسه، همراه شما.
             </p>
             <Link
-              href="/register"
+              href="/login"
               className="mt-5 inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-sun/15 px-5 py-2.5 text-sm font-bold text-sun transition-colors hover:bg-sun/25"
             >
               <Route aria-hidden="true" className="size-4" />

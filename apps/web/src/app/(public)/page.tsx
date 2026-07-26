@@ -1,9 +1,10 @@
-import { PublicHero } from '@/features/public-home/public-hero';
-import { JourneyStory } from '@/features/public-home/journey-story';
+import { BannerCarousel } from '@/features/public-home/banner-carousel';
 import { EcosystemBento } from '@/features/public-home/ecosystem-bento';
-import { SafetyStory } from '@/features/public-home/safety-story';
 import { FaqPreview } from '@/features/public-home/faq-preview';
 import { FinalRegistrationCta } from '@/features/public-home/final-registration-cta';
+import { JourneyStory } from '@/features/public-home/journey-story';
+import { PublicHero } from '@/features/public-home/public-hero';
+import { SafetyStory } from '@/features/public-home/safety-story';
 
 export default function HomePage() {
   return (
@@ -11,6 +12,7 @@ export default function HomePage() {
       <PublicHero />
       <JourneyStory />
       <EcosystemBento />
+      <BannerCarousel />
       <SafetyStory />
       <FaqPreview />
       <FinalRegistrationCta />

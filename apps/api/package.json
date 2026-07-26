@@ -11,9 +11,9 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:migrate:runtime": "tsx src/database/migrate.ts",
-    "db:seed": "tsx src/database/seed.ts",
-    "db:bootstrap": "tsx src/database/bootstrap-db.ts",
+    "db:migrate:runtime": "node --env-file=.env --import tsx src/database/migrate.ts",
+    "db:seed": "node --env-file=.env --import tsx src/database/seed.ts",
+    "db:bootstrap": "node --env-file=.env --import tsx src/database/bootstrap-db.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },

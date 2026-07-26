@@ -47,7 +47,7 @@ export function FaqPreview() {
       <PageContainer>
         <div className="mx-auto max-w-3xl">
           <div className="text-center">
-            <p className="font-bold text-primary">پرسش‌های متداول</p>
+            <p className="font-bold text-primary">سوالات متداول</p>
             <h2 className="mt-2 text-3xl font-black">پاسخ سؤالات شما</h2>
             <p className="mt-3 text-muted">
               سریع‌ترین راه برای پیدا کردن پاسخ سؤالات رایج.

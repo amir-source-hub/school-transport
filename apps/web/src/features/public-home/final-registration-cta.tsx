@@ -41,7 +41,7 @@ export function FinalRegistrationCta() {
           </div>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <ButtonLink
-              href="/register"
+              href="/login"
               size="lg"
               className="min-w-48 bg-sun text-navy hover:bg-sun/90 shadow-lg shadow-sun/25"
             >
