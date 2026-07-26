@@ -72,4 +72,30 @@ describe('API client', () => {
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('retries read-only requests when the API is still starting', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: true, data: { ready: true } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    await expect(apiRequest<{ ready: boolean }>('/health')).resolves.toMatchObject({
+      data: { ready: true },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry state-changing requests', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new TypeError('fetch failed'));
+
+    await expect(apiRequest('/enrollments', { method: 'POST', body: {} })).rejects.toThrow(
+      'fetch failed',
+    );
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
 });

@@ -50,7 +50,7 @@ async function performApiRequest<T>(
   }
 
   const signal = createRequestSignal(requestedSignal, timeoutMs);
-  const response = await fetch(url, {
+  const response = await fetchWithStartupRetry(url, {
     ...requestInit,
     body: serializeBody(body),
     credentials: 'include',
@@ -79,6 +79,28 @@ async function performApiRequest<T>(
   }
 
   return payload as ApiSuccess<T>;
+}
+
+async function fetchWithStartupRetry(url: string, init: RequestInit) {
+  const method = (init.method ?? 'GET').toUpperCase();
+  const canRetry = method === 'GET' || method === 'HEAD';
+  const delays = canRetry ? [0, 200, 500] : [0];
+
+  for (let attempt = 0; attempt < delays.length; attempt += 1) {
+    if (delays[attempt] > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+    }
+    try {
+      return await fetch(url, init);
+    } catch (error) {
+      const isLastAttempt = attempt === delays.length - 1;
+      if (!canRetry || isLastAttempt || !(error instanceof TypeError) || init.signal?.aborted) {
+        throw error;
+      }
+    }
+  }
+
+  throw new TypeError('API request failed.');
 }
 
 async function forwardServerCookies(headers: Headers) {
