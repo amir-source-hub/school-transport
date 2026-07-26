@@ -33,11 +33,11 @@ export function BannerCarousel() {
   }, [next, prefersReduced]);
 
   return (
-    <section className="surface-inset border-y border-border/60 py-10 sm:py-14">
-      <div className="mx-auto w-full max-w-[96rem] px-3 sm:px-5 lg:px-8">
+    <section className="bg-white py-16 sm:py-20">
+      <div className="mx-auto w-full max-w-[112rem] px-2 sm:px-4 lg:px-6">
         <div className="w-full">
-          <div className="relative overflow-hidden rounded-[var(--radius-canvas)] border border-border/60 bg-white shadow-[var(--shadow-floating)]">
-            <div className="relative aspect-[4/1]">
+          <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_30px_80px_-45px_rgba(15,23,42,.45)]">
+            <div className="relative aspect-[4.6/1] min-h-[230px] sm:min-h-0">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={current}
@@ -51,7 +51,7 @@ export function BannerCarousel() {
                     src={banners[current]}
                     alt=""
                     fill
-                    className="object-contain"
+                    className="object-cover"
                     priority={current === 0}
                     sizes="100vw"
                   />

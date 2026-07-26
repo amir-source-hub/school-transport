@@ -53,12 +53,12 @@ export function PublicHero() {
         src="/images/hero-main.png"
         alt=""
         fill
-        className="object-cover object-[center_30%]"
+        className="object-cover object-[62%_30%]"
         priority
         sizes="100vw"
       />
       <div
-        className="absolute inset-0 bg-gradient-to-l from-navy/60 via-navy/50 to-navy/80"
+        className="absolute inset-0 bg-gradient-to-r from-navy/85 via-navy/55 to-navy/30"
         aria-hidden="true"
       />
       <HeroRouteLine />
@@ -72,10 +72,10 @@ export function PublicHero() {
       </svg>
       <PageContainer className="relative z-10 flex min-h-[680px] flex-col justify-center md:min-h-[760px] lg:min-h-[860px]">
         <motion.div
-          initial={prefersReduced ? { opacity: 1 } : { opacity: 0, y: 30 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={prefersReduced ? { duration: 0 } : { duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="max-w-2xl"
+          className="max-w-2xl lg:mr-auto lg:w-[48%]"
         >
           <Badge tone="info" className="mb-5 border-sun/30 bg-sun/15 text-sun backdrop-blur-sm">
             <Route aria-hidden="true" className="size-3.5" />
@@ -111,7 +111,7 @@ export function PublicHero() {
             </ButtonLink>
           </div>
           <motion.div
-            initial={prefersReduced ? { opacity: 1 } : { opacity: 0, y: 20 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={prefersReduced ? { duration: 0 } : { duration: 0.5, delay: 0.4 }}
             className="mt-10 flex flex-wrap items-center gap-5 text-sm text-white/60"
