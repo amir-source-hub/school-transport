@@ -4,18 +4,153 @@ import {
   serviceRegistrations,
   registrationSnapshots,
   registrationReviews,
+  registrationPrices,
+  paymentPlans,
+  paymentScheduleItems,
+  contracts,
+  emergencyContacts,
 } from '../../database/schemas';
 import { students } from '../../database/schemas';
 import { familyAddresses, parents, schools } from '../../database/schemas';
 import { getTableColumns } from 'drizzle-orm';
 import { eq, and, inArray, notInArray } from 'drizzle-orm';
 import { ConflictError, NotFoundError } from '../../common/errors';
-import { generateId } from '../../common/utils';
+import { generateContractNumber, generateId } from '../../common/utils';
 import { assertRegistrationTransition } from './registration-lifecycle';
+import { isIranianNationalId } from '../../common/iranian-national-id';
 
 @Injectable()
 export class RegistrationsService {
   constructor(private readonly db: DatabaseService) {}
+
+  async createGuidedEnrollment(userId: string, data: {
+    student: { firstName: string; lastName: string; nationalId: string; birthDate?: string; gender?: string };
+    father: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
+    mother: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
+    emergencyContact: { firstName: string; lastName: string; relationship: string; phoneNumber: string };
+    address: { title: string; province: string; city: string; district?: string; streetAddress: string; postalCode: string; latitude: number; longitude: number };
+    school: { schoolId: string; educationLevel: string; grade: string };
+    service: { serviceType: string; parentNotes?: string };
+  }) {
+    const required = [
+      data.student.firstName, data.student.lastName, data.student.nationalId,
+      data.father.firstName, data.father.lastName, data.father.phoneNumber,
+      data.mother.firstName, data.mother.lastName, data.mother.phoneNumber,
+      data.emergencyContact.firstName, data.emergencyContact.phoneNumber,
+      data.address.streetAddress, data.address.postalCode,
+      data.school.schoolId, data.school.educationLevel, data.school.grade,
+      data.service.serviceType,
+    ];
+    if (required.some((value) => !String(value ?? '').trim())) {
+      throw new ConflictError('INCOMPLETE_ENROLLMENT', 'All required enrollment fields must be completed.');
+    }
+    if (![data.student.nationalId, data.father.nationalId, data.mother.nationalId].every(isIranianNationalId)) {
+      throw new ConflictError('INVALID_NATIONAL_ID', 'A valid national ID is required for the student and both parents.');
+    }
+    if (!/^09\d{9}$/.test(data.father.phoneNumber) || !/^09\d{9}$/.test(data.mother.phoneNumber) || !/^09\d{9}$/.test(data.emergencyContact.phoneNumber)) {
+      throw new ConflictError('INVALID_PHONE_NUMBER', 'Valid Iranian mobile numbers are required.');
+    }
+    if (!Number.isFinite(data.address.latitude) || !Number.isFinite(data.address.longitude)) {
+      throw new ConflictError('INVALID_LOCATION', 'A valid map location is required.');
+    }
+    const [school] = await this.db.db.select({ id: schools.id }).from(schools)
+      .where(and(eq(schools.id, data.school.schoolId), eq(schools.isActive, true))).limit(1);
+    if (!school) throw new NotFoundError('School', data.school.schoolId);
+    const duplicate = await this.db.db.select({ id: students.id }).from(students)
+      .where(eq(students.nationalId, data.student.nationalId)).limit(1);
+    if (duplicate[0]) throw new ConflictError('DUPLICATE_NATIONAL_ID', 'This student is already registered.');
+
+    return this.db.db.transaction(async (txn) => {
+      const existingFamilyParents = await txn.select({ id: parents.id, isPrimaryContact: parents.isPrimaryContact })
+        .from(parents).where(eq(parents.userId, userId));
+      for (const [parentType, parent] of [['FATHER', data.father], ['MOTHER', data.mother]] as const) {
+        const [existing] = await txn.select({ id: parents.id }).from(parents)
+          .where(and(eq(parents.userId, userId), eq(parents.parentType, parentType))).limit(1);
+        if (existing) {
+          await txn.update(parents).set({ ...parent, updatedAt: new Date() }).where(eq(parents.id, existing.id));
+        } else {
+          await txn.insert(parents).values({
+            id: generateId(), userId, parentType, ...parent,
+            isPrimaryContact: existingFamilyParents.length === 0 && parentType === 'FATHER',
+          });
+          existingFamilyParents.push({ id: '', isPrimaryContact: parentType === 'FATHER' });
+        }
+      }
+      const [emergency] = await txn.select({ id: emergencyContacts.id }).from(emergencyContacts)
+        .where(eq(emergencyContacts.userId, userId)).limit(1);
+      if (emergency) {
+        await txn.update(emergencyContacts).set({ ...data.emergencyContact, updatedAt: new Date() }).where(eq(emergencyContacts.id, emergency.id));
+      } else {
+        await txn.insert(emergencyContacts).values({ id: generateId(), userId, ...data.emergencyContact });
+      }
+
+      const addressId = generateId();
+      await txn.insert(familyAddresses).values({ id: addressId, userId, ...data.address });
+      const studentId = generateId();
+      await txn.insert(students).values({
+        id: studentId, userId, schoolId: data.school.schoolId,
+        firstName: data.student.firstName, lastName: data.student.lastName,
+        nationalId: data.student.nationalId, birthDate: data.student.birthDate || null,
+        gender: data.student.gender || null, grade: data.school.grade,
+        className: data.school.educationLevel,
+      });
+      const registrationId = generateId();
+      await txn.insert(serviceRegistrations).values({
+        id: registrationId, studentId, academicYear: '1405-1406',
+        serviceType: data.service.serviceType, selectedAddressId: addressId,
+        parentNotes: data.service.parentNotes || null, registrationStatus: 'CONTRACT_READY',
+        submittedAt: new Date(),
+      });
+      const priceId = generateId();
+      const prepaymentAmount = 40_000_000;
+      await txn.insert(registrationPrices).values({
+        id: priceId, registrationId, totalAmount: prepaymentAmount,
+        prepaymentAmount, installmentCount: 4, priceStatus: 'ACCEPTED',
+        parentConfirmedAt: new Date(), setByAdminId: null,
+      });
+      const planId = generateId();
+      await txn.insert(paymentPlans).values({
+        id: planId, registrationPriceId: priceId, planType: 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
+        totalAmount: prepaymentAmount, prepaymentAmount, remainingInstallmentAmount: 0,
+        installmentCount: 4, planStatus: 'PENDING',
+      });
+      const scheduleItemId = generateId();
+      await txn.insert(paymentScheduleItems).values({
+        id: scheduleItemId, paymentPlanId: planId, itemType: 'PREPAYMENT',
+        sequenceNumber: 0, amount: prepaymentAmount, dueDate: new Date(),
+      });
+      const contractId = generateId();
+      const snapshot = {
+        student: data.student, father: data.father, mother: data.mother,
+        emergencyContact: data.emergencyContact, address: data.address,
+        school: data.school, service: data.service, prepaymentAmount,
+      };
+      await txn.insert(contracts).values({
+        id: contractId, registrationId, registrationPriceId: priceId, paymentPlanId: planId,
+        contractNumber: generateContractNumber(), contractStatus: 'GENERATED',
+        selectedAddressId: addressId, contractDataSnapshot: JSON.stringify(snapshot),
+        generatedAt: new Date(),
+      });
+      return {
+        registrationId, studentId, contractId, scheduleItemId, prepaymentAmount,
+        contractText: this.guidedContractText(data.student.firstName, data.student.lastName),
+      };
+    });
+  }
+
+  private guidedContractText(firstName: string, lastName: string) {
+    return `قرارداد ارائه خدمات حمل‌ونقل دانش‌آموزی
+
+این قرارداد میان سامانه سرویس مدرسه و خانواده دانش‌آموز ${firstName} ${lastName} منعقد می‌شود. سامانه متعهد است با رعایت الزامات ایمنی، برنامه‌ریزی مسیر و هماهنگی با مدرسه، بیشترین تلاش خود را برای ارائه نوع سرویس درخواستی انجام دهد.
+
+نوع خودرو، ساعت حرکت، مسیر و حتی نوع سرویس ممکن است بر اساس ظرفیت، شرایط ترافیکی، محدوده پوشش، تصمیم مدرسه و الزامات ایمنی تغییر کند. هر تغییر مؤثر پیش از شروع خدمت به خانواده اطلاع داده خواهد شد.
+
+مبلغ ۴٬۰۰۰٬۰۰۰ تومان به‌عنوان پیش‌پرداخت ثابت ثبت‌نام دریافت می‌شود. مبلغ باقی‌مانده، تعداد اقساط و تاریخ سررسید هر قسط پس از برنامه‌ریزی نهایی توسط مدیریت تعیین و در حساب خانواده نمایش داده خواهد شد.
+
+خانواده مسئول صحت اطلاعات دانش‌آموز، والدین، تماس اضطراری، نشانی و موقعیت ثبت‌شده است و متعهد می‌شود تغییرات را به‌موقع اعلام کند. آغاز نهایی سرویس منوط به تأیید ظرفیت و برنامه مسیر است.
+
+با پذیرش این قرارداد، خانواده اعلام می‌کند تمام بندها را مطالعه کرده و با شرایط فوق موافق است.`;
+  }
 
   async getByFamily(userId: string) {
     const userStudents = await this.db.db

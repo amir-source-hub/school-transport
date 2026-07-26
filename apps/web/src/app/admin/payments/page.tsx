@@ -2,7 +2,7 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { getAdminPayments, getPaymentTone } from '@/features/admin-payments/admin-payments-api';
-import { ApprovePaymentDialog, RejectPaymentDialog } from '@/features/admin-payments/payment-actions';
+import { ApprovePaymentDialog, ConfigureInstallmentsDialog, RejectPaymentDialog } from '@/features/admin-payments/payment-actions';
 import { formatIrr } from '@/lib/formatters';
 
 export const metadata = { title: 'پرداخت‌ها' };
@@ -54,6 +54,11 @@ export default async function AdminPaymentsPage() {
               <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
                 <ApprovePaymentDialog paymentId={payment.id} />
                 <RejectPaymentDialog paymentId={payment.id} />
+              </div>
+            )}
+            {payment.status === 'تأییدشده' && payment.invoice === 'پیش‌پرداخت' && (
+              <div className="mt-5 border-t border-border pt-4">
+                <ConfigureInstallmentsDialog planId={payment.planId} />
               </div>
             )}
           </Card>

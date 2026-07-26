@@ -36,6 +36,13 @@
       "when": 1785080000000,
       "tag": "0004_expand_payment_plan_type",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785084421243,
+      "tag": "0005_powerful_mathemanic",
+      "breakpoints": true
     }
   ]
 }

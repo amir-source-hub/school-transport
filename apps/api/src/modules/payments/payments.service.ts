@@ -10,7 +10,7 @@ import {
   parents,
 } from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
-import { NotFoundError, ConflictError } from '../../common/errors';
+import { NotFoundError, ConflictError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
 
@@ -136,6 +136,17 @@ export class PaymentsService {
             activatedAt: new Date(),
           })
           .where(eq(paymentPlans.id, tx[0].paymentPlanId));
+        const [registration] = await txn.select({ id: serviceRegistrations.id })
+          .from(paymentPlans)
+          .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+          .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, registrationPrices.registrationId))
+          .where(eq(paymentPlans.id, tx[0].paymentPlanId))
+          .limit(1);
+        if (registration) {
+          await txn.update(serviceRegistrations)
+            .set({ registrationStatus: 'ENROLLED', updatedAt: new Date() })
+            .where(eq(serviceRegistrations.id, registration.id));
+        }
       }
 
       return txn
@@ -217,6 +228,22 @@ export class PaymentsService {
           paidAt: new Date(),
         })
         .where(eq(paymentScheduleItems.id, tx[0].paymentScheduleItemId));
+
+      if (item[0].itemType === 'PREPAYMENT') {
+        await txn.update(paymentPlans)
+          .set({ planStatus: 'ACTIVE', activatedAt: new Date(), updatedAt: new Date() })
+          .where(eq(paymentPlans.id, tx[0].paymentPlanId));
+        const [registration] = await txn.select({ id: serviceRegistrations.id })
+          .from(paymentPlans)
+          .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+          .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, registrationPrices.registrationId))
+          .where(eq(paymentPlans.id, tx[0].paymentPlanId)).limit(1);
+        if (registration) {
+          await txn.update(serviceRegistrations)
+            .set({ registrationStatus: 'ENROLLED', updatedAt: new Date() })
+            .where(eq(serviceRegistrations.id, registration.id));
+        }
+      }
 
       return tx[0];
     });
@@ -301,6 +328,7 @@ export class PaymentsService {
         ?? parentRows.find((entry) => entry.userId === userId);
       return {
         id: transaction.id,
+        planId: transaction.paymentPlanId,
         studentName: `${studentFirstName} ${studentLastName}`,
         familyName: parent ? `${parent.firstName} ${parent.lastName}` : '—',
         invoice: item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : `قسط ${item.sequenceNumber}`,
@@ -315,6 +343,38 @@ export class PaymentsService {
               ? 'ردشده'
               : 'در انتظار بررسی',
       };
+    });
+  }
+
+  async configureInstallments(
+    planId: string,
+    items: { amount: number; dueDate: string }[],
+  ) {
+    if (items.length < 1 || items.length > 12) {
+      throw new ValidationError('Installment count must be between 1 and 12.');
+    }
+    if (items.some((item) => !Number.isInteger(item.amount) || item.amount <= 0 || Number.isNaN(Date.parse(item.dueDate)))) {
+      throw new ValidationError('Each installment requires a valid amount and due date.');
+    }
+    return this.db.db.transaction(async (txn) => {
+      const [plan] = await txn.select().from(paymentPlans).where(eq(paymentPlans.id, planId)).limit(1);
+      if (!plan) throw new NotFoundError('Payment plan', planId);
+      const remaining = items.reduce((sum, item) => sum + item.amount, 0);
+      const total = plan.prepaymentAmount + remaining;
+      await txn.delete(paymentScheduleItems)
+        .where(and(eq(paymentScheduleItems.paymentPlanId, planId), eq(paymentScheduleItems.itemType, 'INSTALLMENT')));
+      await txn.insert(paymentScheduleItems).values(items.map((item, index) => ({
+        id: generateId(), paymentPlanId: planId, itemType: 'INSTALLMENT',
+        sequenceNumber: index + 1, amount: item.amount, dueDate: new Date(item.dueDate),
+      })));
+      await txn.update(paymentPlans).set({
+        planType: 'ADMIN_CONFIGURED', totalAmount: total,
+        remainingInstallmentAmount: remaining, installmentCount: items.length, updatedAt: new Date(),
+      }).where(eq(paymentPlans.id, planId));
+      await txn.update(registrationPrices).set({
+        totalAmount: total, installmentCount: items.length, updatedAt: new Date(),
+      }).where(eq(registrationPrices.id, plan.registrationPriceId));
+      return { planId, totalAmount: total, installmentCount: items.length };
     });
   }
 }

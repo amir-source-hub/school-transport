@@ -4,6 +4,7 @@ import {
   varchar,
   timestamp,
   boolean,
+  doublePrecision,
   index,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
@@ -51,6 +52,8 @@ export const familyAddresses = pgTable(
     streetAddress: varchar('street_address', { length: 500 }).notNull(),
     postalCode: varchar('postal_code', { length: 20 }),
     additionalDetails: varchar('additional_details', { length: 500 }),
+    latitude: doublePrecision('latitude'),
+    longitude: doublePrecision('longitude'),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

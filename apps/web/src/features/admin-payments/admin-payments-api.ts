@@ -3,6 +3,7 @@ import { apiRequest } from '@/lib/api-client';
 
 export const paymentSchema = z.object({
   id: z.string(),
+  planId: z.string(),
   studentName: z.string(),
   familyName: z.string(),
   invoice: z.string(),
@@ -36,6 +37,13 @@ export async function rejectPayment(txId: string): Promise<void> {
   await apiRequest(`/admin/payments/${txId}/reject`, {
     method: 'POST',
     timeoutMs: 5_000,
+  });
+}
+
+export async function configureInstallments(planId: string, items: { amount: number; dueDate: string }[]) {
+  await apiRequest(`/admin/payments/plans/${planId}/installments`, {
+    method: 'POST',
+    body: { items },
   });
 }
 

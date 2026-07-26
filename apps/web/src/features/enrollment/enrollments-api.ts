@@ -27,6 +27,49 @@ export const priceSchema = z.object({
 export type Enrollment = z.infer<typeof enrollmentSchema>;
 export type EnrollmentPrice = z.infer<typeof priceSchema>;
 
+export type GuidedEnrollmentInput = {
+  student: { firstName: string; lastName: string; nationalId: string; birthDate?: string; gender?: string };
+  father: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
+  mother: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
+  emergencyContact: { firstName: string; lastName: string; relationship: string; phoneNumber: string };
+  address: { title: string; province: string; city: string; district?: string; streetAddress: string; postalCode: string; latitude: number; longitude: number };
+  school: { schoolId: string; educationLevel: string; grade: string };
+  service: { serviceType: string; parentNotes?: string };
+};
+
+const guidedResultSchema = z.object({
+  registrationId: z.string(),
+  studentId: z.string(),
+  contractId: z.string(),
+  scheduleItemId: z.string(),
+  prepaymentAmount: z.number(),
+  contractText: z.string(),
+});
+
+export type GuidedEnrollmentResult = z.infer<typeof guidedResultSchema>;
+
+export async function createGuidedEnrollment(input: GuidedEnrollmentInput) {
+  const response = await apiRequest<unknown>('/enrollments/guided', { method: 'POST', body: input });
+  return guidedResultSchema.parse(response.data);
+}
+
+export async function acceptGuidedContract(contractId: string) {
+  await apiRequest(`/contracts/${contractId}/accept`, { method: 'POST' });
+}
+
+export async function payGuidedPrepayment(scheduleItemId: string) {
+  const idempotencyKey = crypto.randomUUID();
+  const started = await apiRequest<{ id: string; amount: number }>(
+    `/payments/${scheduleItemId}/online/start`,
+    { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey } },
+  );
+  const gatewayTransactionId = `mock:${started.data.amount}:enrollment-${started.data.id}`;
+  await apiRequest(`/payments/${started.data.id}/online/verify`, {
+    method: 'POST',
+    body: { gatewayTransactionId },
+  });
+}
+
 export async function getEnrollments() {
   const response = await apiRequest<unknown>('/enrollments', { cache: 'no-store' });
   return z.array(enrollmentSchema).parse(response.data);

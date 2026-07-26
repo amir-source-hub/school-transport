@@ -29,7 +29,6 @@ export const registrationPrices = pgTable(
     installmentCount: integer('installment_count').notNull().default(4),
     priceStatus: varchar('price_status', { length: 20 }).notNull().default('DRAFT'),
     setByAdminId: uuid('set_by_admin_id')
-      .notNull()
       .references(() => adminUsers.id),
     setAt: timestamp('set_at', { withTimezone: true }).defaultNow().notNull(),
     parentConfirmedAt: timestamp('parent_confirmed_at', { withTimezone: true }),
@@ -50,7 +49,7 @@ export const registrationPrices = pgTable(
     ),
     installmentCount: check(
       'registration_prices_installment_count',
-      sql`NOT ${table.installmentPaymentAllowed} OR ${table.installmentCount} = 4`,
+      sql`NOT ${table.installmentPaymentAllowed} OR ${table.installmentCount} BETWEEN 1 AND 12`,
     ),
   }),
 );

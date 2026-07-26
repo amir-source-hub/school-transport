@@ -32,6 +32,11 @@ export class RegistrationsController {
     return successResponse(reg);
   }
 
+  @Post('guided')
+  async createGuided(@Req() req: any, @Body() dto: Parameters<RegistrationsService['createGuidedEnrollment']>[1]) {
+    return successResponse(await this.registrationsService.createGuidedEnrollment(req.user.id, dto));
+  }
+
   @Get(':id')
   async getById(@Req() req: any, @Param('id') id: string) {
     const reg = await this.registrationsService.getById(id, req.user.id);

@@ -69,6 +69,14 @@ export class AdminPaymentsController {
     return successResponse(await this.paymentsService.getAllForAdmin());
   }
 
+  @Post('plans/:planId/installments')
+  async configureInstallments(
+    @Param('planId') planId: string,
+    @Body() dto: { items: { amount: number; dueDate: string }[] },
+  ) {
+    return successResponse(await this.paymentsService.configureInstallments(planId, dto.items));
+  }
+
   @Post(':txId/approve')
   async approve(@Param('txId') txId: string, @Req() req: any) {
     const tx = await this.paymentsService.approveOfflinePayment(txId, req.user.id);

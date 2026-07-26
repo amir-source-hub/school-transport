@@ -50,7 +50,7 @@ export const paymentPlans = pgTable(
     ),
     installmentStructure: check(
       'payment_plans_installment_structure',
-      sql`(${table.planType} = 'FULL' AND ${table.installmentCount} = 1) OR (${table.planType} = 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS' AND ${table.installmentCount} = 4)`,
+      sql`(${table.planType} = 'FULL' AND ${table.installmentCount} = 1) OR (${table.planType} IN ('PREPAYMENT_PLUS_FOUR_INSTALLMENTS', 'ADMIN_CONFIGURED') AND ${table.installmentCount} BETWEEN 1 AND 12)`,
     ),
   }),
 );
@@ -84,7 +84,7 @@ export const paymentScheduleItems = pgTable(
     positiveAmount: check('payment_schedule_amount_positive', sql`${table.amount} > 0`),
     validSequence: check(
       'payment_schedule_valid_sequence',
-      sql`(${table.itemType} = 'PREPAYMENT' AND ${table.sequenceNumber} = 0) OR (${table.itemType} = 'INSTALLMENT' AND ${table.sequenceNumber} BETWEEN 1 AND 4)`,
+      sql`(${table.itemType} = 'PREPAYMENT' AND ${table.sequenceNumber} = 0) OR (${table.itemType} = 'INSTALLMENT' AND ${table.sequenceNumber} BETWEEN 1 AND 12)`,
     ),
     noPartialPayment: check(
       'payment_schedule_no_partial_payment',
