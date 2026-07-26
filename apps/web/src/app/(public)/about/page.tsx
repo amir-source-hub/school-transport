@@ -28,7 +28,7 @@ export default function AboutPage() {
     <>
       <section className="relative overflow-hidden surface-dark pb-20 pt-32 sm:pt-36">
         <div className="absolute inset-0" aria-hidden="true">
-          <Image src="/images/multiple-content-bus-family-driver-school-in-one-image2.png" alt="" fill className="object-cover object-center" sizes="100vw" />
+          <Image src="/images/about-hero-transport-team-school-bus.png" alt="" fill className="object-cover object-center" sizes="100vw" />
           <div className="absolute inset-0 bg-gradient-to-l from-navy/60 via-navy/50 to-navy/80" />
         </div>
         <PageContainer className="relative z-10">
@@ -45,7 +45,7 @@ export default function AboutPage() {
           <div className="lg:grid lg:grid-cols-2 lg:items-center lg:gap-12">
             <div className="relative overflow-hidden rounded-[var(--radius-canvas)] mb-8 lg:mb-0">
               <div className="relative aspect-[4/3]">
-                <Image src="/images/hero-family.png" alt="خانواده و سرویس مدرسه" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
+                <Image src="/images/about-family-mother-student-driver-morning.png" alt="خانواده و راننده سرویس مدرسه" fill className="object-cover object-center" sizes="(max-width: 1024px) 100vw, 50vw" />
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-navy/30 to-transparent" />
             </div>
@@ -123,7 +123,7 @@ export default function AboutPage() {
             </div>
             <div className="relative mt-10 lg:mt-0">
               <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-canvas)]">
-                <Image src="/images/school-transport-animated8-with white space on the left.png" alt="" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
+                <Image src="/images/about-illustration-school-transport-ecosystem.png" alt="" fill className="object-cover object-center" sizes="(max-width: 1024px) 100vw, 50vw" />
               </div>
             </div>
           </div>

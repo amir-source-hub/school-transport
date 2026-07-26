@@ -6,12 +6,12 @@ import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 
 const banners = [
-  '/images/school_transport_banner_01.png',
-  '/images/school_transport_banner_02.png',
-  '/images/school_transport_banner_03.png',
-  '/images/school_transport_banner_04.png',
-  '/images/school_transport_banner_05.png',
-  '/images/school_transport_banner_06.png',
+  '/images/homepage-banner-round-trip-school-service.png',
+  '/images/homepage-banner-secure-online-payment.png',
+  '/images/homepage-banner-vehicle-selection-fleet.png',
+  '/images/homepage-banner-fast-online-enrollment.png',
+  '/images/homepage-banner-support-specialists.png',
+  '/images/homepage-banner-child-safety.png',
 ];
 
 export function BannerCarousel() {
@@ -37,7 +37,7 @@ export function BannerCarousel() {
       <div className="mx-auto w-full max-w-[112rem] px-2 sm:px-4 lg:px-6">
         <div className="w-full">
           <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_30px_80px_-45px_rgba(15,23,42,.45)]">
-            <div className="relative aspect-[4.6/1] min-h-[230px] sm:min-h-0">
+            <div className="relative aspect-[3/1] min-h-[230px] sm:min-h-0">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={current}

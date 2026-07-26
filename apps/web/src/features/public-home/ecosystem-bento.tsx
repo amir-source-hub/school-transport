@@ -28,7 +28,7 @@ export function EcosystemBento() {
             viewport={{ once: true }}
             className="relative min-h-[430px] overflow-hidden rounded-[2rem] bg-navy p-8 text-white lg:col-span-7"
           >
-            <Image src="/images/school-transport-animated8-with white space on the left.png" alt="" fill className="object-cover object-center opacity-80" sizes="60vw" />
+            <Image src="/images/illustration-parent-students-school-bus-wide-left-space.png" alt="" fill className="object-cover object-center opacity-80" sizes="60vw" />
             <div className="absolute inset-0 bg-gradient-to-l from-navy/95 via-navy/75 to-transparent" />
             <div className="relative z-10 flex h-full max-w-sm flex-col">
               <span className="flex size-12 items-center justify-center rounded-2xl bg-sun text-navy"><GraduationCap /></span>

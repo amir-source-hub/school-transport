@@ -50,7 +50,7 @@ export function PublicHero() {
   return (
     <section className="relative min-h-[680px] overflow-hidden md:min-h-[760px] lg:min-h-[860px]">
       <Image
-        src="/images/hero-main.png"
+        src="/images/homepage-hero-parent-students-boarding-school-van.png"
         alt=""
         fill
         className="object-cover object-[62%_30%]"

@@ -11,7 +11,7 @@ export default function SafetyPage() {
       <section className="relative overflow-hidden surface-dark pb-20 pt-32 sm:pt-36">
         <div className="absolute inset-0" aria-hidden="true">
           <Image
-            src="/images/school-transport-animated2.png"
+            src="/images/safety-driver-inspecting-school-van.png"
             alt=""
             fill
             className="object-cover object-center"

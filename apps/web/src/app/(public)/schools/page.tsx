@@ -14,7 +14,7 @@ export default async function SchoolsPage() {
     <>
       <section className="relative min-h-[620px] overflow-hidden bg-navy pb-20 pt-36 sm:pt-40">
         <div className="absolute inset-0" aria-hidden="true">
-          <Image src="/images/getting in bus 2.png" alt="" fill className="object-cover object-[center_55%]" sizes="100vw" />
+          <Image src="/images/schools-hero-students-boarding-school-van.png" alt="" fill className="object-cover object-center" sizes="100vw" />
           <div className="absolute inset-0 bg-gradient-to-r from-navy/95 via-navy/75 to-navy/25" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(255,193,59,.16),transparent_32%)]" />
         </div>

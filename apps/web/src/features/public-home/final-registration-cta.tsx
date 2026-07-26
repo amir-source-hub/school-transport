@@ -15,7 +15,7 @@ export function FinalRegistrationCta() {
     <section className="relative overflow-hidden surface-paper py-16 sm:py-20 lg:py-24">
       <div className="absolute inset-0" aria-hidden="true">
         <Image
-          src="/images/hero-city.png"
+          src="/images/photo-school-bus-city-mountain-road-background.png"
           alt=""
           fill
           className="object-cover object-[center_60%]"

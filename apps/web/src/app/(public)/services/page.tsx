@@ -41,7 +41,7 @@ export default function ServicesPage() {
     <>
       <section className="relative overflow-hidden surface-dark pb-20 pt-32 sm:pt-36">
         <div className="absolute inset-0" aria-hidden="true">
-          <Image src="/images/school-transport-animated3.png" alt="" fill className="object-cover object-center" sizes="100vw" />
+          <Image src="/images/banner-school-campus-vehicle-fleet-wide.png" alt="" fill className="object-cover object-center" sizes="100vw" />
           <div className="absolute inset-0 bg-gradient-to-l from-navy/60 via-navy/50 to-navy/80" />
         </div>
         <PageContainer className="relative z-10">
@@ -121,7 +121,7 @@ export default function ServicesPage() {
             </div>
             <div className="relative mt-10 lg:mt-0">
               <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-canvas)]">
-                <Image src="/images/school-transport-animated5- with white space on the left.png" alt="" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
+                <Image src="/images/services-illustration-home-school-mobile-tracking.png" alt="" fill className="object-cover object-center" sizes="(max-width: 1024px) 100vw, 50vw" />
               </div>
             </div>
           </div>

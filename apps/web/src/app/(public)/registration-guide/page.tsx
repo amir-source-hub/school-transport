@@ -16,35 +16,35 @@ const steps = [
     title: 'ایجاد حساب خانواده',
     description: 'یک حساب خانوادگی ایجاد کنید. این حساب می‌تواند چند دانش‌آموز را مدیریت کند.',
     details: ['ثبت نام و شماره تماس', 'تأیید با رمز یکبارمصرف', 'تنظیم حساب خانواده'],
-    image: '/images/animation-picture-family.png',
+    image: '/images/contact-support-specialist-laptop-desk.png',
   },
   {
     icon: GraduationCap,
     title: 'ثبت اطلاعات دانش‌آموز',
     description: 'اطلاعات لازم هر دانش‌آموز و درخواست خدمت مرتبط با او را وارد کنید.',
     details: ['مشخصات دانش‌آموز', 'انتخاب مدرسه و پایه', 'اطلاعات تماس اضطراری'],
-    image: '/images/getting in bus.png',
+    image: '/images/schools-hero-students-boarding-school-van.png',
   },
   {
     icon: ClipboardCheck,
     title: 'ارسال برای بررسی',
     description: 'پس از مرور اطلاعات، درخواست را ارسال کنید تا مدیریت آن را بررسی کند.',
     details: ['مرور اطلاعات ثبت‌شده', 'تأیید نهایی اطلاعات', 'دریافت کد پیگیری'],
-    image: '/images/school-transport-animated4.png',
+    image: '/images/contact-family-meeting-driver-school-pickup.png',
   },
   {
     icon: FileText,
     title: 'مشاهده قیمت و قرارداد',
     description: 'پس از تأیید و تعیین قیمت، جزئیات قرارداد و گزینه‌های پرداخت نمایش داده می‌شوند.',
     details: ['مشاهده قیمت نهایی', 'بررسی شرایط قرارداد', 'پذیرش یا درخواست تغییر'],
-    image: '/images/school-transport-animated6-with white space on the left.png',
+    image: '/images/services-illustration-home-school-mobile-tracking.png',
   },
   {
     icon: CheckCircle2,
     title: 'پرداخت و شروع خدمت',
     description: 'با انتخاب روش پرداخت، خدمت سرویس مدرسه برای فرزندتان فعال می‌شود.',
     details: ['انتخاب روش پرداخت', 'پرداخت آنلاین یا آفلاین', 'شروع خدمت سرویس مدرسه'],
-    image: '/images/getting in bus 2.png',
+    image: '/images/safety-driver-inspecting-school-van.png',
   },
 ];
 
@@ -56,7 +56,7 @@ export default function RegistrationGuidePage() {
     <>
       <section className="relative overflow-hidden surface-dark pb-20 pt-32 sm:pt-36">
         <div className="absolute inset-0" aria-hidden="true">
-          <Image src="/images/school-transport-animated9-with white space on the left.png" alt="" fill className="object-cover object-center" sizes="100vw" />
+          <Image src="/images/about-illustration-school-transport-ecosystem.png" alt="" fill className="object-cover object-center" sizes="100vw" />
           <div className="absolute inset-0 bg-gradient-to-l from-navy/60 via-navy/50 to-navy/80" />
         </div>
         <PageContainer className="relative z-10">
