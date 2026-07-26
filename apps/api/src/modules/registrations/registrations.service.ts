@@ -53,9 +53,19 @@ export class RegistrationsService {
     if (!Number.isFinite(data.address.latitude) || !Number.isFinite(data.address.longitude)) {
       throw new ConflictError('INVALID_LOCATION', 'A valid map location is required.');
     }
-    const [school] = await this.db.db.select({ id: schools.id }).from(schools)
+    if (!['BUS', 'MINIBUS', 'CAR', 'VAN'].includes(data.service.serviceType)) {
+      throw new ConflictError('INVALID_VEHICLE_TYPE', 'The selected vehicle type is not supported.');
+    }
+    const [school] = await this.db.db.select({
+      id: schools.id,
+      educationOptions: schools.educationOptions,
+    }).from(schools)
       .where(and(eq(schools.id, data.school.schoolId), eq(schools.isActive, true))).limit(1);
     if (!school) throw new NotFoundError('School', data.school.schoolId);
+    const selectedLevel = school.educationOptions.find(({ level }) => level === data.school.educationLevel);
+    if (!selectedLevel?.grades.includes(data.school.grade)) {
+      throw new ConflictError('INVALID_SCHOOL_PROGRAM', 'The selected education level or grade is not offered by this school.');
+    }
     const duplicate = await this.db.db.select({ id: students.id }).from(students)
       .where(eq(students.nationalId, data.student.nationalId)).limit(1);
     if (duplicate[0]) throw new ConflictError('DUPLICATE_NATIONAL_ID', 'This student is already registered.');

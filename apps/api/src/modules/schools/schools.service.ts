@@ -4,6 +4,7 @@ import { schools } from '../../database/schemas';
 import { eq } from 'drizzle-orm';
 import { NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
+import type { SchoolEducationOption } from '../../database/schemas/schools.schema';
 
 @Injectable()
 export class SchoolsService {
@@ -32,6 +33,7 @@ export class SchoolsService {
     district?: string;
     address: string;
     phoneNumber?: string;
+    educationOptions?: SchoolEducationOption[];
   }) {
     const id = generateId();
     await this.db.db.insert(schools).values({
@@ -39,6 +41,7 @@ export class SchoolsService {
       ...data,
       district: data.district || null,
       phoneNumber: data.phoneNumber || null,
+      educationOptions: data.educationOptions ?? [],
     });
     return this.getById(id);
   }
@@ -54,6 +57,7 @@ export class SchoolsService {
       district: string;
       address: string;
       phoneNumber: string;
+      educationOptions: SchoolEducationOption[];
       isActive: boolean;
     }>,
   ) {

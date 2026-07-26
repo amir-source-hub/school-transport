@@ -12,11 +12,15 @@ describe('createSecurityHeaders', () => {
 
     expect(headerMap.get('Content-Security-Policy')).toContain("frame-ancestors 'none'");
     expect(headerMap.get('Content-Security-Policy')).toContain(
+      "frame-src 'self' https://www.google.com",
+    );
+    expect(headerMap.get('Content-Security-Policy')).toContain(
       "connect-src 'self' https://api.example.test",
     );
     expect(headerMap.get('Strict-Transport-Security')).toBe('max-age=31536000; includeSubDomains');
     expect(headerMap.get('X-Content-Type-Options')).toBe('nosniff');
     expect(headerMap.get('X-Frame-Options')).toBe('DENY');
+    expect(headerMap.get('Permissions-Policy')).toContain('geolocation=(self)');
   });
 
   it('allows local development connections without enabling HSTS', () => {

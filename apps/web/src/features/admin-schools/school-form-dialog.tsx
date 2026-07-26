@@ -23,6 +23,12 @@ const genderTypes = [
   { value: 'پسرانه', label: 'پسرانه' },
 ];
 
+const educationLevels = [
+  { level: 'ابتدایی', grades: ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم'] },
+  { level: 'متوسطه اول', grades: ['هفتم', 'هشتم', 'نهم'] },
+  { level: 'متوسطه دوم', grades: ['دهم', 'یازدهم', 'دوازدهم'] },
+];
+
 type Props = {
   mode: 'create';
 } | {
@@ -44,6 +50,7 @@ export function SchoolFormDialog(props: Props) {
     district: initial?.district ?? '',
     address: initial?.address ?? '',
     phoneNumber: initial?.phoneNumber ?? '',
+    educationOptions: initial?.educationOptions ?? [],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +80,17 @@ export function SchoolFormDialog(props: Props) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleGrade = (level: string, grade: string) => {
+    const current = form.educationOptions.find((option) => option.level === level);
+    const grades = current?.grades.includes(grade)
+      ? current.grades.filter((value) => value !== grade)
+      : [...(current?.grades ?? []), grade];
+    update('educationOptions', [
+      ...form.educationOptions.filter((option) => option.level !== level),
+      ...(grades.length ? [{ level, grades }] : []),
+    ]);
   };
 
   return (
@@ -119,6 +137,27 @@ export function SchoolFormDialog(props: Props) {
           <div>
             <label htmlFor="school-address" className="text-sm font-bold">نشانی *</label>
             <Textarea id="school-address" value={form.address} onChange={(e) => update('address', e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <p className="text-sm font-bold">مقطع‌ها و پایه‌های قابل ثبت‌نام *</p>
+            <div className="mt-2 space-y-3">
+              {educationLevels.map(({ level, grades }) => (
+                <div key={level} className="rounded-xl border border-border p-3">
+                  <p className="mb-2 text-sm font-black">{level}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {grades.map((grade) => {
+                      const checked = form.educationOptions.some((option) => option.level === level && option.grades.includes(grade));
+                      return (
+                        <label key={grade} className={`cursor-pointer rounded-lg border px-3 py-2 text-xs font-bold transition ${checked ? 'border-primary bg-primary-soft text-primary' : 'border-border bg-white'}`}>
+                          <input className="sr-only" type="checkbox" checked={checked} onChange={() => toggleGrade(level, grade)} />
+                          {grade}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
           {error && <p className="text-xs text-danger">{error}</p>}
           <div className="flex gap-3">

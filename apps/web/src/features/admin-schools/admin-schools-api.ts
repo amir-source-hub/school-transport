@@ -11,6 +11,10 @@ const rawSchoolSchema = z.object({
   district: z.string().nullable(),
   address: z.string(),
   phoneNumber: z.string().nullable(),
+  educationOptions: z.array(z.object({
+    level: z.string(),
+    grades: z.array(z.string()),
+  })),
   isActive: z.boolean(),
 });
 
@@ -25,6 +29,10 @@ export const createSchoolSchema = z.object({
   district: z.string().optional(),
   address: z.string().min(1, 'نشانی الزامی است'),
   phoneNumber: z.string().optional(),
+  educationOptions: z.array(z.object({
+    level: z.string().min(1),
+    grades: z.array(z.string().min(1)).min(1),
+  })).min(1, 'حداقل یک مقطع و پایه انتخاب کنید'),
 });
 
 export type AdminSchool = z.infer<typeof schoolSchema>;

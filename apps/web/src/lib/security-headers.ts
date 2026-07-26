@@ -36,6 +36,7 @@ const createContentSecurityPolicy = ({ apiBaseUrl, production }: SecurityHeaderO
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
+    "frame-src 'self' https://www.google.com",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
@@ -54,7 +55,7 @@ export const createSecurityHeaders = (options: SecurityHeaderOptions): SecurityH
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     {
       key: 'Permissions-Policy',
-      value: 'camera=(), microphone=(), geolocation=()',
+      value: 'camera=(), microphone=(), geolocation=(self)',
     },
     { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
     { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },

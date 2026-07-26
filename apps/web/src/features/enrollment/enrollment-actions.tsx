@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronLeft, ChevronRight, FileCheck2, LocateFixed, MapPin, ShieldCheck, WalletCards } from 'lucide-react';
+import { BusFront, CarFront, Check, ChevronLeft, ChevronRight, ExternalLink, FileCheck2, LocateFixed, MapPinned, ShieldCheck, Truck, WalletCards } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,12 @@ import {
   type GuidedEnrollmentResult,
 } from './enrollments-api';
 
-type SchoolOption = { id: string; name: string; city: string };
+type SchoolOption = {
+  id: string;
+  name: string;
+  city: string;
+  educationOptions: { level: string; grades: string[] }[];
+};
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const initialForm = {
@@ -27,13 +32,28 @@ const initialForm = {
   emergencyFirst: '', emergencyLast: '', emergencyRelationship: '', emergencyPhone: '',
   addressTitle: 'منزل', province: 'تهران', city: 'تهران', district: '', streetAddress: '', postalCode: '',
   latitude: 35.7219, longitude: 51.3347,
-  schoolId: '', educationLevel: '', grade: '', serviceType: 'ROUND_TRIP', parentNotes: '',
+  schoolId: '', educationLevel: '', grade: '', serviceType: 'BUS', parentNotes: '',
 };
+
+const vehicleOptions = [
+  { value: 'BUS', label: 'اتوبوس', description: 'مناسب مسیرهای پرتراکم و گروه‌های بزرگ', icon: BusFront },
+  { value: 'MINIBUS', label: 'مینی‌بوس', description: 'مناسب مسیرهای محلی با ظرفیت متوسط', icon: Truck },
+  { value: 'CAR', label: 'خودرو سواری', description: 'ظرفیت کم و مسیرهای اختصاصی‌تر', icon: CarFront },
+  { value: 'VAN', label: 'ون', description: 'ظرفیت متوسط و دسترسی بهتر در محله‌ها', icon: BusFront },
+];
 
 export function CreateEnrollmentForm({ schools }: { schools: SchoolOption[] }) {
   const router = useRouter();
+  const firstSchool = schools[0];
+  const firstLevel = firstSchool?.educationOptions[0];
+  const createInitialForm = () => ({
+    ...initialForm,
+    schoolId: firstSchool?.id ?? '',
+    educationLevel: firstLevel?.level ?? '',
+    grade: firstLevel?.grades[0] ?? '',
+  });
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ ...initialForm, schoolId: schools[0]?.id ?? '' });
+  const [form, setForm] = useState(createInitialForm);
   const [result, setResult] = useState<GuidedEnrollmentResult>();
   const [contractRead, setContractRead] = useState(false);
   const [contractChecked, setContractChecked] = useState(false);
@@ -41,8 +61,41 @@ export function CreateEnrollmentForm({ schools }: { schools: SchoolOption[] }) {
   const [paid, setPaid] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
+  const [locationError, setLocationError] = useState<string>();
   const set = (key: keyof typeof form, value: string | number) => setForm((current) => ({ ...current, [key]: value }));
   const selectedSchool = useMemo(() => schools.find((school) => school.id === form.schoolId), [form.schoolId, schools]);
+  const levelOptions = selectedSchool?.educationOptions ?? [];
+  const gradeOptions = levelOptions.find(({ level }) => level === form.educationLevel)?.grades ?? [];
+  const googleMapUrl = `https://www.google.com/maps?q=${form.latitude},${form.longitude}&z=16`;
+
+  function selectSchool(schoolId: string) {
+    const school = schools.find(({ id }) => id === schoolId);
+    const firstLevel = school?.educationOptions[0];
+    setForm((current) => ({
+      ...current,
+      schoolId,
+      educationLevel: firstLevel?.level ?? '',
+      grade: firstLevel?.grades[0] ?? '',
+    }));
+  }
+
+  function selectLevel(educationLevel: string) {
+    const grades = selectedSchool?.educationOptions.find(({ level }) => level === educationLevel)?.grades ?? [];
+    setForm((current) => ({ ...current, educationLevel, grade: grades[0] ?? '' }));
+  }
+
+  function useCurrentLocation() {
+    setLocationError(undefined);
+    if (!navigator.geolocation) {
+      setLocationError('مرورگر شما امکان دریافت موقعیت مکانی را ندارد.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => setForm((current) => ({ ...current, latitude: coords.latitude, longitude: coords.longitude })),
+      () => setLocationError('اجازه دسترسی به موقعیت داده نشد. دسترسی Location مرورگر را فعال کنید.'),
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 30_000 },
+    );
+  }
 
   function next(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -101,20 +154,22 @@ export function CreateEnrollmentForm({ schools }: { schools: SchoolOption[] }) {
         </form>}
         {step === 2 && <form onSubmit={next} className="space-y-6">
           <Section title="نشانی محل سوار شدن"><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{field('addressTitle', 'عنوان نشانی')}{field('province', 'استان')}{field('city', 'شهر')}{field('district', 'منطقه')}<div className="sm:col-span-2">{field('streetAddress', 'نشانی کامل')}</div>{field('postalCode', 'کد پستی', 'tel')}</div></Section>
-          <div><div className="mb-3 flex items-center justify-between"><div><h3 className="font-black">موقعیت روی نقشه</h3><p className="mt-1 text-xs text-muted">برای تنظیم دقیق‌تر، روی نقشه کلیک کنید.</p></div><Button type="button" size="sm" variant="ghost" onClick={() => navigator.geolocation?.getCurrentPosition(({ coords }) => setForm((current) => ({ ...current, latitude: coords.latitude, longitude: coords.longitude })))}><LocateFixed className="size-4" />موقعیت من</Button></div>
-            <button type="button" aria-label="انتخاب موقعیت روی نقشه" onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); set('longitude', 51.15 + ((event.clientX - rect.left) / rect.width) * .45); set('latitude', 35.85 - ((event.clientY - rect.top) / rect.height) * .35); }} className="relative h-64 w-full overflow-hidden rounded-2xl border border-primary/20 bg-[linear-gradient(30deg,transparent_24%,rgba(37,99,235,.08)_25%,rgba(37,99,235,.08)_26%,transparent_27%,transparent_74%,rgba(37,99,235,.08)_75%,rgba(37,99,235,.08)_76%,transparent_77%),linear-gradient(120deg,transparent_24%,rgba(37,99,235,.08)_25%,rgba(37,99,235,.08)_26%,transparent_27%,transparent_74%,rgba(37,99,235,.08)_75%,rgba(37,99,235,.08)_76%,transparent_77%)] bg-[length:70px_120px]">
-              <span className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(37,99,235,.09),transparent_45%)]" /><span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full text-danger drop-shadow-lg"><MapPin className="size-10 fill-current" /></span><span className="absolute bottom-3 left-3 rounded-lg bg-white/90 px-3 py-1 text-xs font-bold shadow">‌{form.latitude.toFixed(5)}، {form.longitude.toFixed(5)}</span>
-            </button>
+          <div><div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-black">موقعیت روی Google Maps</h3><p className="mt-1 text-xs text-muted">موقعیت فعلی را دریافت کنید؛ همین مختصات همراه نشانی ذخیره می‌شود.</p></div><div className="flex gap-2"><Button type="button" size="sm" onClick={useCurrentLocation}><LocateFixed className="size-4" />دریافت موقعیت من</Button><a href={googleMapUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-bold"><ExternalLink className="size-4" />باز کردن نقشه</a></div></div>
+            <div className="relative h-72 overflow-hidden rounded-2xl border border-primary/20 bg-slate-100">
+              <iframe title="موقعیت انتخاب‌شده در گوگل مپ" className="h-full w-full border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src={`${googleMapUrl}&output=embed`} />
+              <span className="pointer-events-none absolute bottom-3 left-3 rounded-lg bg-white/95 px-3 py-2 text-xs font-bold shadow"><MapPinned className="ml-1 inline size-4 text-primary" />{form.latitude.toFixed(6)}، {form.longitude.toFixed(6)}</span>
+            </div>
+            {locationError && <p className="mt-2 text-sm text-danger">{locationError}</p>}
           </div>
           <WizardFooter onBack={() => setStep(1)} />
         </form>}
         {step === 3 && <form onSubmit={next} className="space-y-7">
-          <Section title="انتخاب مدرسه"><div className="grid gap-5 sm:grid-cols-3"><label className="text-sm font-bold">نام مدرسه<Select value={form.schoolId} onValueChange={(value) => set('schoolId', value)} options={schools.map((school) => ({ value: school.id, label: `${school.name} — ${school.city}` }))} className="mt-2" /></label><label className="text-sm font-bold">مقطع تحصیلی<Select value={form.educationLevel} onValueChange={(value) => set('educationLevel', value)} options={['ابتدایی', 'متوسطه اول', 'متوسطه دوم'].map((value) => ({ value, label: value }))} className="mt-2" /></label>{field('grade', 'پایه تحصیلی')}</div></Section>
+          <Section title="انتخاب مدرسه"><div className="grid gap-5 sm:grid-cols-3"><label className="text-sm font-bold">نام مدرسه<Select value={form.schoolId} onValueChange={selectSchool} options={schools.map((school) => ({ value: school.id, label: `${school.name} — ${school.city}` }))} className="mt-2" /></label><label className="text-sm font-bold">مقطع تحصیلی<Select value={form.educationLevel} onValueChange={selectLevel} options={levelOptions.map(({ level }) => ({ value: level, label: level }))} placeholder="ابتدا مدرسه را انتخاب کنید" className="mt-2" /></label><label className="text-sm font-bold">پایه تحصیلی<Select value={form.grade} onValueChange={(value) => set('grade', value)} options={gradeOptions.map((grade) => ({ value: grade, label: grade }))} placeholder="ابتدا مقطع را انتخاب کنید" className="mt-2" /></label></div></Section>
           {selectedSchool && <div className="flex items-center gap-4 rounded-2xl bg-primary-soft p-5"><span className="flex size-12 items-center justify-center rounded-2xl bg-white text-primary"><ShieldCheck /></span><div><p className="font-black">{selectedSchool.name}</p><p className="mt-1 text-sm text-muted">{selectedSchool.city} · مدرسه فعال و تأییدشده</p></div></div>}
           <WizardFooter onBack={() => setStep(2)} />
         </form>}
         {step === 4 && !result && <form onSubmit={prepareContract} className="space-y-7">
-          <Section title="نوع سرویس"><div className="grid gap-4 sm:grid-cols-2"><button type="button" onClick={() => set('serviceType', 'ROUND_TRIP')} className={`rounded-2xl border-2 p-6 text-right transition ${form.serviceType === 'ROUND_TRIP' ? 'border-primary bg-primary-soft' : 'border-slate-200'}`}><p className="font-black">رفت و برگشت</p><p className="mt-2 text-sm text-muted">سرویس رفت صبح و برگشت پس از پایان مدرسه</p></button><button type="button" onClick={() => set('serviceType', 'ONE_WAY')} className={`rounded-2xl border-2 p-6 text-right transition ${form.serviceType === 'ONE_WAY' ? 'border-primary bg-primary-soft' : 'border-slate-200'}`}><p className="font-black">یک‌طرفه</p><p className="mt-2 text-sm text-muted">فقط مسیر رفت یا برگشت بر اساس ظرفیت</p></button></div></Section>
+          <Section title="نوع وسیله نقلیه"><div className="grid gap-4 sm:grid-cols-2">{vehicleOptions.map(({ value, label, description, icon: Icon }) => <button key={value} type="button" onClick={() => set('serviceType', value)} className={`rounded-2xl border-2 p-5 text-right transition hover:-translate-y-0.5 hover:shadow-md ${form.serviceType === value ? 'border-primary bg-primary-soft' : 'border-slate-200 bg-white'}`}><span className={`mb-4 flex size-11 items-center justify-center rounded-xl ${form.serviceType === value ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'}`}><Icon className="size-5" /></span><p className="font-black">{label}</p><p className="mt-2 text-sm text-muted">{description}</p></button>)}</div></Section>
           <div className="rounded-2xl border border-sun/30 bg-sun/10 p-5"><p className="font-black text-foreground">نکته مهم درباره نوع سرویس</p><p className="mt-2 text-sm leading-7 text-muted">تمام تلاش ما ارائه سرویس انتخابی شماست؛ با این حال نوع نهایی سرویس ممکن است به دلیل ظرفیت خودرو، محدوده مسیر، شرایط ترافیکی، تصمیم مدرسه یا الزامات ایمنی تغییر کند. هر تغییر پیش از شروع خدمت اطلاع‌رسانی می‌شود.</p></div>
           <label className="text-sm font-bold">توضیحات برای واحد مسیر<Textarea className="mt-2" value={form.parentNotes} onChange={(event) => set('parentNotes', event.target.value)} /></label>
           {error && <p className="text-sm text-danger">{error}</p>}
@@ -132,7 +187,7 @@ export function CreateEnrollmentForm({ schools }: { schools: SchoolOption[] }) {
           <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-right text-sm leading-7 text-muted">مبلغ، تعداد و تاریخ اقساط بعدی پس از برنامه‌ریزی مسیر توسط مدیریت تعیین می‌شود و در پنل شما قابل مشاهده خواهد بود.</div>
           <Button className="mt-6 w-full" size="lg" loading={pending} onClick={async () => { setPending(true); setError(undefined); try { await payGuidedPrepayment(result.scheduleItemId); setPaid(true); router.refresh(); } catch (caught) { setError(getApiErrorFeedback(caught).message); } finally { setPending(false); } }}>پرداخت امن و تکمیل ثبت‌نام</Button>{error && <p className="mt-3 text-sm text-danger">{error}</p>}
         </div>}
-        {paid && <div className="py-8 text-center"><span className="mx-auto flex size-16 items-center justify-center rounded-full bg-success/10 text-success"><Check className="size-8" /></span><h3 className="mt-5 text-2xl font-black">ثبت‌نام دانش‌آموز تکمیل شد</h3><p className="mt-3 text-muted">رسید پرداخت و وضعیت سرویس در همین حساب قابل پیگیری است.</p><Button className="mt-6" onClick={() => { setStep(1); setResult(undefined); setAccepted(false); setPaid(false); setForm({ ...initialForm, schoolId: schools[0]?.id ?? '' }); }}>ثبت دانش‌آموز دیگر</Button></div>}
+        {paid && <div className="py-8 text-center"><span className="mx-auto flex size-16 items-center justify-center rounded-full bg-success/10 text-success"><Check className="size-8" /></span><h3 className="mt-5 text-2xl font-black">ثبت‌نام دانش‌آموز تکمیل شد</h3><p className="mt-3 text-muted">رسید پرداخت و وضعیت سرویس در همین حساب قابل پیگیری است.</p><Button className="mt-6" onClick={() => { setStep(1); setResult(undefined); setAccepted(false); setPaid(false); setForm(createInitialForm()); }}>ثبت دانش‌آموز دیگر</Button></div>}
       </div>
     </div>
   );

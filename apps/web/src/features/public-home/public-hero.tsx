@@ -58,7 +58,7 @@ export function PublicHero() {
         sizes="100vw"
       />
       <div
-        className="absolute inset-0 bg-gradient-to-r from-navy/85 via-navy/55 to-navy/30"
+        className="absolute inset-0 bg-gradient-to-l from-navy/88 via-navy/55 to-navy/25"
         aria-hidden="true"
       />
       <HeroRouteLine />
@@ -75,7 +75,7 @@ export function PublicHero() {
           initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={prefersReduced ? { duration: 0 } : { duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="max-w-2xl lg:mr-auto lg:w-[48%]"
+          className="max-w-2xl lg:ml-auto lg:w-[48%]"
         >
           <Badge tone="info" className="mb-5 border-sun/30 bg-sun/15 text-sun backdrop-blur-sm">
             <Route aria-hidden="true" className="size-3.5" />

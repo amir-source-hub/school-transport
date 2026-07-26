@@ -1,4 +1,9 @@
-import { pgTable, uuid, varchar, boolean, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
+
+export type SchoolEducationOption = {
+  level: string;
+  grades: string[];
+};
 
 export const schools = pgTable('schools', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -10,6 +15,10 @@ export const schools = pgTable('schools', {
   district: varchar('district', { length: 100 }),
   address: varchar('address', { length: 500 }).notNull(),
   phoneNumber: varchar('phone_number', { length: 20 }),
+  educationOptions: jsonb('education_options')
+    .$type<SchoolEducationOption[]>()
+    .notNull()
+    .default([]),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

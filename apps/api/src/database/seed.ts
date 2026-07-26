@@ -86,6 +86,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           city: 'تهران',
           district: '2',
           address: 'سعادت‌آباد، بلوار دریا',
+          educationOptions: [{ level: 'ابتدایی', grades: ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم'] }],
         },
         {
           id: ids.school2,
@@ -96,6 +97,10 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           city: 'تهران',
           district: '3',
           address: 'پاسداران، خیابان گلستان',
+          educationOptions: [
+            { level: 'ابتدایی', grades: ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم'] },
+            { level: 'متوسطه اول', grades: ['هفتم', 'هشتم', 'نهم'] },
+          ],
         },
         {
           id: ids.school3,
@@ -106,6 +111,10 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           city: 'تهران',
           district: '6',
           address: 'یوسف‌آباد، خیابان بیستم',
+          educationOptions: [
+            { level: 'متوسطه اول', grades: ['هفتم', 'هشتم', 'نهم'] },
+            { level: 'متوسطه دوم', grades: ['دهم', 'یازدهم', 'دوازدهم'] },
+          ],
         },
       ])
       .onConflictDoNothing();

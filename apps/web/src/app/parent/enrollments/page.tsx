@@ -30,7 +30,12 @@ export default async function EnrollmentsPage() {
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: 'پنل خانواده', href: '/parent/dashboard' }, { label: 'ثبت‌نام' }]} />
       <div><p className="text-sm font-bold text-primary">درخواست سرویس</p><h1 className="mt-1 text-2xl font-black sm:text-3xl">ثبت‌نام و پیگیری</h1></div>
-      <CreateEnrollmentForm schools={schools.map((school) => ({ id: school.id, name: school.name, city: school.city }))} />
+      <CreateEnrollmentForm schools={schools.map((school) => ({
+        id: school.id,
+        name: school.name,
+        city: school.city,
+        educationOptions: school.educationOptions,
+      }))} />
       <div className="space-y-4">
         {entries.map(({ enrollment, prices }) => {
           const student = students.find(({ id }) => id === enrollment.studentId);
@@ -38,7 +43,7 @@ export default async function EnrollmentsPage() {
           return (
             <Card key={enrollment.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div><h2 className="font-black">{student ? `${student.firstName} ${student.lastName}` : enrollment.studentId}</h2><p className="text-sm text-muted">{enrollment.academicYear} — {enrollment.serviceType === 'ROUND_TRIP' ? 'رفت و برگشت' : 'یک‌طرفه'}</p></div>
+                <div><h2 className="font-black">{student ? `${student.firstName} ${student.lastName}` : enrollment.studentId}</h2><p className="text-sm text-muted">{enrollment.academicYear} — {({ BUS: 'اتوبوس', MINIBUS: 'مینی‌بوس', CAR: 'خودرو سواری', VAN: 'ون', ROUND_TRIP: 'رفت و برگشت', ONE_WAY: 'یک‌طرفه' } as Record<string, string>)[enrollment.serviceType] ?? enrollment.serviceType}</p></div>
                 <Badge tone={enrollment.registrationStatus === 'REJECTED' ? 'danger' : 'info'}>{statusLabels[enrollment.registrationStatus] ?? enrollment.registrationStatus}</Badge>
               </div>
               {offered && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-primary-soft p-4"><p className="font-black">{formatIrr(offered.totalAmount)}</p><AcceptPriceButton enrollmentId={enrollment.id} priceId={offered.id} installmentAllowed={offered.installmentPaymentAllowed} /></div>}
