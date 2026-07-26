@@ -3,10 +3,10 @@ import { cn } from '@/lib/cn';
 
 type Size = 24 | 32 | 40;
 
-const sizes: Record<Size, { viewBox: string; class: string }> = {
-  24: { viewBox: '0 0 24 24', class: 'h-6 w-6' },
-  32: { viewBox: '0 0 32 32', class: 'h-8 w-8' },
-  40: { viewBox: '0 0 40 40', class: 'h-10 w-10' },
+const sizes: Record<Size, { class: string }> = {
+  24: { class: 'h-6 w-6' },
+  32: { class: 'h-8 w-8' },
+  40: { class: 'h-10 w-10' },
 };
 
 export function BrandMark({
@@ -14,25 +14,26 @@ export function BrandMark({
   className,
   ...props
 }: SVGAttributes<SVGSVGElement> & { size?: Size }) {
-  const vw = sizes[size].viewBox;
   const cls = sizes[size].class;
 
   return (
     <svg
-      viewBox={vw}
+      viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={cn(cls, 'text-primary', className)}
       aria-hidden="true"
       {...props}
     >
-      <rect x="2" y="2" width="20" height="20" rx="6" fill="currentColor" />
+      <circle cx="12" cy="12" r="10" fill="currentColor" />
       <path
-        d="M8 14 Q12 6 16 14 Q18 18 12 18 Q6 18 8 14Z"
-        fill="white"
-        opacity="0.9"
+        d="M7.5 13.75V9.7c0-1.9 1.55-3.45 3.45-3.45h2.1c1.9 0 3.45 1.55 3.45 3.45v4.05M7 13.75h10M9 16.5h.01M15 16.5h.01M9 9.5h6"
+        stroke="white"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
       />
-      <circle cx="12" cy="12" r="2.5" fill="currentColor" opacity="0.3" />
     </svg>
   );
 }

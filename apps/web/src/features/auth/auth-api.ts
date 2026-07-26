@@ -34,3 +34,10 @@ export function verifyAuthOtp(phoneNumber: string, code: string, role: AuthRole)
     timeoutMs: 10_000,
   });
 }
+
+export function logout() {
+  return apiRequest<{ loggedOut: true }>('/auth/logout', {
+    method: 'POST',
+    timeoutMs: 10_000,
+  });
+}

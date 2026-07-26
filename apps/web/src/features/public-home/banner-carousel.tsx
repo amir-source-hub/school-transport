@@ -4,7 +4,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
-import { PageContainer } from '@/components/common/page-container';
 
 const banners = [
   '/images/school_transport_banner_01.png',
@@ -34,9 +33,9 @@ export function BannerCarousel() {
   }, [next, prefersReduced]);
 
   return (
-    <section className="surface-inset border-y border-border/60 py-14">
-      <PageContainer>
-        <div className="mx-auto max-w-5xl">
+    <section className="surface-inset border-y border-border/60 py-10 sm:py-14">
+      <div className="mx-auto w-full max-w-[96rem] px-3 sm:px-5 lg:px-8">
+        <div className="w-full">
           <div className="relative overflow-hidden rounded-[var(--radius-canvas)] border border-border/60 bg-white shadow-[var(--shadow-floating)]">
             <div className="relative aspect-[4/1]">
               <AnimatePresence mode="wait">
@@ -88,7 +87,7 @@ export function BannerCarousel() {
             </div>
           </div>
         </div>
-      </PageContainer>
+      </div>
     </section>
   );
 }

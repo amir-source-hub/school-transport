@@ -23,10 +23,10 @@ import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { BrandMark } from '@/components/brand/brand-mark';
+import { LogoutMenuItem } from '@/features/auth/logout-menu-item';
 import { cn } from '@/lib/cn';
 
 const navGroups = [
@@ -107,7 +107,7 @@ function ParentNavigation({ mobile = false }: { mobile?: boolean }) {
 
 export function ParentShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[var(--paper)]">
+    <div className="min-h-screen overflow-x-clip bg-[var(--paper)]">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-white/90 backdrop-blur-lg">
         <div className="mx-auto flex min-h-16 max-w-[var(--width-portal)] items-center gap-3 px-4 sm:px-6">
           <Drawer>
@@ -149,16 +149,19 @@ export function ParentShell({ children }: { children: ReactNode }) {
             </Link>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" aria-label="منوی حساب خانواده" className="hidden sm:inline-flex">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="منوی حساب خانواده"
+                  className="sm:w-auto sm:px-4"
+                >
                   <UserRound aria-hidden="true" className="size-5" />
-                  <span>حساب خانواده</span>
-                  <ChevronDown aria-hidden="true" className="size-4" />
+                  <span className="hidden sm:inline">حساب خانواده</span>
+                  <ChevronDown aria-hidden="true" className="hidden size-4 sm:block" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem disabled>
-                  خروج پس از اتصال احراز هویت فعال می‌شود
-                </DropdownMenuItem>
+                <LogoutMenuItem />
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

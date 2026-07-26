@@ -9,7 +9,6 @@ import {
   FileText,
   GraduationCap,
   LayoutDashboard,
-  LogOut,
   Menu,
   Search,
   Settings,
@@ -28,11 +27,11 @@ import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { BrandMark } from '@/components/brand/brand-mark';
+import { LogoutMenuItem } from '@/features/auth/logout-menu-item';
 import { cn } from '@/lib/cn';
 
 const navigation = [
@@ -88,7 +87,7 @@ function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
 
 export function AdminShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[var(--mist)]">
+    <div className="min-h-screen overflow-x-clip bg-[var(--mist)]">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-white/95 backdrop-blur-lg">
         <div className="mx-auto flex min-h-14 max-w-[96rem] items-center gap-3 px-4 sm:px-6">
           <Drawer>
@@ -144,10 +143,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem disabled>
-                <LogOut aria-hidden="true" className="size-4" />
-                خروج از حساب
-              </DropdownMenuItem>
+              <LogoutMenuItem />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

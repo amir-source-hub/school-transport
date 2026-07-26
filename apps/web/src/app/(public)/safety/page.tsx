@@ -1,4 +1,5 @@
 import { BadgeCheck, FileSearch, LifeBuoy, ShieldCheck } from 'lucide-react';
+import Image from 'next/image';
 import { ButtonLink } from '@/components/ui/button';
 import { PageContainer } from '@/components/common/page-container';
 
@@ -8,6 +9,16 @@ export default function SafetyPage() {
   return (
     <>
       <section className="relative overflow-hidden surface-dark pb-20 pt-32 sm:pt-36">
+        <div className="absolute inset-0" aria-hidden="true">
+          <Image
+            src="/images/school-transport-animated2.png"
+            alt=""
+            fill
+            className="object-cover object-center"
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-navy/75" />
+        </div>
         <PageContainer className="relative z-10">
           <div className="mx-auto max-w-3xl text-center">
             <p className="font-bold text-sun flex items-center justify-center gap-2">

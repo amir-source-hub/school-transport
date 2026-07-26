@@ -82,7 +82,7 @@ export function PublicHeader() {
             style={{ color: '#ffffff' }}
             aria-label="صفحه اصلی سامانه سرویس مدرسه"
           >
-            <BrandMark size={32} className="text-white" />
+            <BrandMark size={32} style={{ color: '#ffc857' }} />
             <span className="hidden text-sm text-white sm:inline">
               سامانه سرویس مدرسه
             </span>

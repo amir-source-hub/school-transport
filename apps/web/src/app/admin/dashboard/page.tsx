@@ -127,8 +127,8 @@ export default async function AdminDashboardPage() {
         ))}
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <section className="rounded-[var(--radius-card)] border border-border/60 bg-surface-paper p-5 shadow-[var(--shadow-raised)]">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,360px)]">
+        <section className="min-w-0 rounded-[var(--radius-card)] border border-border/60 bg-surface-paper p-5 shadow-[var(--shadow-raised)]">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
               <ClipboardCheck aria-hidden="true" className="size-4 text-primary" />
