@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { ShieldCheck, UsersRound } from 'lucide-react';
 
 import { Alert } from '@/components/feedback/alert';
 import { Field } from '@/components/forms/field';
@@ -136,20 +137,26 @@ function OtpAuthForm() {
           سامانه ذخیره شده است.
         </Alert>
       )}
-      <Field label="نوع حساب" htmlFor="login-role" required>
-        <select
-          id="login-role"
-          className="min-h-12 rounded-[var(--radius-sm)] border border-border bg-surface px-3 text-sm"
-          value={role}
-          onChange={(event) => {
-            setRole(event.target.value as AuthRole);
-            setUnregistered(false);
-          }}
-        >
-          <option value="PARENT">خانواده (ورود یا ساخت حساب)</option>
-          <option value="ADMIN">مدیر سامانه</option>
-        </select>
-      </Field>
+      <fieldset>
+        <legend className="mb-2 text-sm font-bold">نوع حساب</legend>
+        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1.5">
+          {([
+            ['PARENT', 'خانواده', UsersRound],
+            ['ADMIN', 'مدیر سامانه', ShieldCheck],
+          ] as const).map(([value, label, Icon]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => { setRole(value); setUnregistered(false); }}
+              className={`flex min-h-12 items-center justify-center gap-2 rounded-xl text-sm font-black transition ${role === value ? 'bg-white text-primary shadow-sm' : 'text-muted hover:text-foreground'}`}
+              aria-pressed={role === value}
+            >
+              <Icon className="size-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
       <Field
         label="شماره همراه"
         htmlFor="auth-phone"
@@ -166,7 +173,7 @@ function OtpAuthForm() {
           {...phoneForm.register('phoneNumber')}
         />
       </Field>
-      <Button className="w-full" type="submit" disabled={phoneForm.formState.isSubmitting}>
+      <Button className="w-full rounded-xl" size="lg" type="submit" disabled={phoneForm.formState.isSubmitting}>
         {phoneForm.formState.isSubmitting ? 'در حال ارسال…' : 'دریافت کد تأیید'}
       </Button>
     </form>

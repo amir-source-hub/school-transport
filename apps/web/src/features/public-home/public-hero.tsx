@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Route, ScrollText, ShieldCheck, WalletCards } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, MapPinned, Route, ScrollText, ShieldCheck, WalletCards } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
@@ -58,7 +58,7 @@ export function PublicHero() {
         sizes="100vw"
       />
       <div
-        className="absolute inset-0 bg-gradient-to-l from-navy/88 via-navy/55 to-navy/25"
+        className="absolute inset-0 bg-[linear-gradient(90deg,rgba(16,24,40,.3)_0%,rgba(16,24,40,.18)_35%,rgba(16,24,40,.6)_65%,rgba(16,24,40,.92)_100%)]"
         aria-hidden="true"
       />
       <HeroRouteLine />
@@ -71,6 +71,31 @@ export function PublicHero() {
         <rect width="100%" height="100%" fill="url(#hero-dots)" />
       </svg>
       <PageContainer className="relative z-10 flex min-h-[680px] flex-col justify-center md:min-h-[760px] lg:min-h-[860px]">
+        <motion.div
+          initial={false}
+          animate={{ opacity: 1, x: 0 }}
+          transition={prefersReduced ? { duration: 0 } : { duration: 0.7, delay: 0.2 }}
+          className="absolute bottom-32 left-5 hidden w-72 overflow-hidden rounded-[1.75rem] border border-white/20 bg-navy/55 p-5 text-white shadow-2xl shadow-navy/30 backdrop-blur-xl lg:block xl:left-8"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-sun">مسیر روشن ثبت‌نام</p>
+              <p className="mt-1 font-black text-white">از درخواست تا شروع سرویس</p>
+            </div>
+            <span className="grid size-11 place-items-center rounded-2xl bg-sun text-navy">
+              <MapPinned className="size-5" />
+            </span>
+          </div>
+          <div className="mt-5 space-y-3">
+            {['ثبت اطلاعات و نشانی', 'انتخاب مدرسه و خودرو', 'قرارداد و پیش‌پرداخت'].map((label, index) => (
+              <div key={label} className="flex items-center gap-3 rounded-xl bg-white/8 px-3 py-2.5">
+                <CheckCircle2 className="size-4 shrink-0 text-sun" />
+                <span className="text-xs font-bold text-white/85">{label}</span>
+                <span className="mr-auto text-[10px] text-white/40">۰{index + 1}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
         <motion.div
           initial={false}
           animate={{ opacity: 1, y: 0 }}
@@ -114,7 +139,7 @@ export function PublicHero() {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={prefersReduced ? { duration: 0 } : { duration: 0.5, delay: 0.4 }}
-            className="mt-10 flex flex-wrap items-center gap-5 text-sm text-white/60"
+            className="mt-10 flex flex-wrap items-center gap-5 text-sm text-white/70"
           >
             <span className="flex items-center gap-1.5">
               <ShieldCheck aria-hidden="true" className="size-4 text-sun" />
