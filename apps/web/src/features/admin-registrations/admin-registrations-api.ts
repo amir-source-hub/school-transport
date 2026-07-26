@@ -2,103 +2,56 @@ import { z } from 'zod';
 import { apiRequest } from '@/lib/api-client';
 
 export const registrationSchema = z.object({
-  id: z.string(),
-  trackingCode: z.string(),
-  studentName: z.string(),
-  familyName: z.string(),
-  schoolName: z.string(),
-  status: z.string(),
-  nextAction: z.string(),
-  createdAt: z.string().optional(),
+  id: z.string(), trackingCode: z.string(), studentName: z.string(), familyName: z.string(),
+  schoolName: z.string(), status: z.string(), nextAction: z.string(), createdAt: z.string().optional(),
 });
-
-export const registrationDetailSchema = z.object({
-  id: z.string(),
-  trackingCode: z.string(),
-  studentName: z.string(),
-  familyName: z.string(),
-  schoolName: z.string(),
-  status: z.string(),
-  nextAction: z.string(),
-  createdAt: z.string().optional(),
-  familyId: z.string().optional(),
-  studentId: z.string().optional(),
-  schoolId: z.string().optional(),
+export const registrationDetailSchema = registrationSchema.extend({
+  familyId: z.string().optional(), studentId: z.string().optional(), schoolId: z.string().optional(),
 });
-
-export const registrationsSchema = z.array(registrationSchema);
-
 export type Registration = z.infer<typeof registrationSchema>;
 export type RegistrationDetail = z.infer<typeof registrationDetailSchema>;
+export const registrationStatuses = ['همه', 'ارسال‌شده', 'در حال بررسی', 'نیازمند اصلاح', 'تأییدشده', 'ردشده', 'در انتظار قیمت'] as const;
 
-export const registrationStatuses = [
-  'همه',
-  'ارسال‌شده',
-  'در حال بررسی',
-  'نیازمند اصلاح',
-  'تأییدشده',
-  'ردشده',
-  'در انتظار قیمت',
-] as const;
-
-const fallbackRegistrations: Registration[] = [
-  { id: 'reg-001', trackingCode: 'REG-۱۴۰۴-۰۰۱', studentName: 'سارا احمدی', familyName: 'خانواده احمدی', schoolName: 'مدرسه امید', status: 'در حال بررسی', nextAction: 'تصمیم مدیریت' },
-  { id: 'reg-002', trackingCode: 'REG-۱۴۰۴-۰۰۲', studentName: 'امیر حسینی', familyName: 'خانواده حسینی', schoolName: 'مدرسه دانش', status: 'ارسال‌شده', nextAction: 'شروع بررسی' },
-  { id: 'reg-003', trackingCode: 'REG-۱۴۰۴-۰۰۳', studentName: 'نرگس محمدی', familyName: 'خانواده محمدی', schoolName: 'مدرسه امید', status: 'نیازمند اصلاح', nextAction: 'انتظار برای خانواده' },
-  { id: 'reg-004', trackingCode: 'REG-۱۴۰۴-۰۰۴', studentName: 'علی رضایی', familyName: 'خانواده رضایی', schoolName: 'مدرسه فرهنگ', status: 'تأییدشده', nextAction: 'ثبت قیمت' },
-  { id: 'reg-005', trackingCode: 'REG-۱۴۰۴-۰۰۵', studentName: 'مریم کریمی', familyName: 'خانواده کریمی', schoolName: 'مدرسه دانش', status: 'ردشده', nextAction: 'مشاهده سابقه' },
-  { id: 'reg-006', trackingCode: 'REG-۱۴۰۴-۰۰۶', studentName: 'محمد قاسمی', familyName: 'خانواده قاسمی', schoolName: 'مدرسه فرهنگ', status: 'در انتظار قیمت', nextAction: 'ثبت قیمت' },
-];
-
-const fallbackDetail: Record<string, RegistrationDetail> = {
-  'reg-001': { id: 'reg-001', trackingCode: 'REG-۱۴۰۴-۰۰۱', studentName: 'سارا احمدی', familyName: 'خانواده احمدی', schoolName: 'مدرسه امید', status: 'در حال بررسی', nextAction: 'تصمیم مدیریت', familyId: 'fam-001', studentId: 'stu-001', schoolId: 'sch-001' },
-  'reg-002': { id: 'reg-002', trackingCode: 'REG-۱۴۰۴-۰۰۲', studentName: 'امیر حسینی', familyName: 'خانواده حسینی', schoolName: 'مدرسه دانش', status: 'ارسال‌شده', nextAction: 'شروع بررسی', familyId: 'fam-002', studentId: 'stu-002', schoolId: 'sch-002' },
-  'reg-003': { id: 'reg-003', trackingCode: 'REG-۱۴۰۴-۰۰۳', studentName: 'نرگس محمدی', familyName: 'خانواده محمدی', schoolName: 'مدرسه امید', status: 'نیازمند اصلاح', nextAction: 'انتظار برای خانواده', familyId: 'fam-003', studentId: 'stu-003', schoolId: 'sch-001' },
-  'reg-004': { id: 'reg-004', trackingCode: 'REG-۱۴۰۴-۰۰۴', studentName: 'علی رضایی', familyName: 'خانواده رضایی', schoolName: 'مدرسه فرهنگ', status: 'تأییدشده', nextAction: 'ثبت قیمت', familyId: 'fam-004', studentId: 'stu-004', schoolId: 'sch-003' },
-  'reg-005': { id: 'reg-005', trackingCode: 'REG-۱۴۰۴-۰۰۵', studentName: 'مریم کریمی', familyName: 'خانواده کریمی', schoolName: 'مدرسه دانش', status: 'ردشده', nextAction: 'مشاهده سابقه', familyId: 'fam-005', studentId: 'stu-005', schoolId: 'sch-002' },
-  'reg-006': { id: 'reg-006', trackingCode: 'REG-۱۴۰۴-۰۰۶', studentName: 'محمد قاسمی', familyName: 'خانواده قاسمی', schoolName: 'مدرسه فرهنگ', status: 'در انتظار قیمت', nextAction: 'ثبت قیمت', familyId: 'fam-004', studentId: 'stu-004', schoolId: 'sch-003' },
+const rawSchema = z.object({
+  id: z.string(), studentId: z.string(), studentName: z.string(), familyName: z.string(),
+  familyId: z.string(), schoolId: z.string(), schoolName: z.string(),
+  registrationStatus: z.string(), createdAt: z.coerce.date(),
+});
+const labels: Record<string, string> = {
+  DRAFT: 'پیش‌نویس', SUBMITTED: 'ارسال‌شده', UNDER_REVIEW: 'در حال بررسی',
+  NEEDS_CORRECTION: 'نیازمند اصلاح', APPROVED: 'تأییدشده', REJECTED: 'ردشده',
+  CONTRACT_PENDING: 'در انتظار قرارداد', CONTRACT_READY: 'قرارداد آماده',
+  CONTRACT_ACCEPTED: 'قرارداد پذیرفته‌شده', CANCELLED: 'لغوشده',
 };
-
-export async function getAdminRegistrations(): Promise<{ registrations: Registration[] }> {
-  try {
-    const response = await apiRequest<unknown>('/admin/enrollments', {
-      cache: 'no-store',
-      timeoutMs: 5_000,
-    });
-    return { registrations: registrationsSchema.parse(response.data) };
-  } catch {
-    return { registrations: fallbackRegistrations };
-  }
+const actions: Record<string, string> = {
+  SUBMITTED: 'شروع بررسی', UNDER_REVIEW: 'تصمیم مدیریت', NEEDS_CORRECTION: 'انتظار برای خانواده',
+  APPROVED: 'ثبت قیمت', CONTRACT_PENDING: 'صدور قرارداد', CONTRACT_READY: 'انتظار برای خانواده',
+};
+const map = (raw: z.infer<typeof rawSchema>): RegistrationDetail => ({
+  id: raw.id,
+  trackingCode: `REG-${raw.id.slice(0, 8).toUpperCase()}`,
+  studentName: raw.studentName,
+  familyName: raw.familyName,
+  schoolName: raw.schoolName,
+  status: labels[raw.registrationStatus] ?? raw.registrationStatus,
+  nextAction: actions[raw.registrationStatus] ?? 'مشاهده سابقه',
+  createdAt: raw.createdAt.toISOString(),
+  familyId: raw.familyId,
+  studentId: raw.studentId,
+  schoolId: raw.schoolId,
+});
+export async function getAdminRegistrations() {
+  const response = await apiRequest<unknown>('/admin/enrollments', { cache: 'no-store' });
+  return { registrations: z.array(rawSchema).parse(response.data).map(map) };
 }
-
-export async function getAdminRegistration(id: string): Promise<{ registration: RegistrationDetail | null }> {
-  try {
-    const response = await apiRequest<unknown>(`/admin/enrollments/${id}`, {
-      cache: 'no-store',
-      timeoutMs: 5_000,
-    });
-    return { registration: registrationDetailSchema.parse(response.data) };
-  } catch {
-    return { registration: fallbackDetail[id] ?? null };
-  }
+export async function getAdminRegistration(id: string) {
+  const response = await apiRequest<unknown>(`/admin/enrollments/${id}`, { cache: 'no-store' });
+  return { registration: map(rawSchema.parse(response.data)) };
 }
-
-export async function startReview(id: string): Promise<void> {
-  await apiRequest(`/admin/enrollments/${id}/start-review`, { method: 'POST', timeoutMs: 5_000 });
-}
-
-export async function approveEnrollment(id: string): Promise<void> {
-  await apiRequest(`/admin/enrollments/${id}/approve`, { method: 'POST', timeoutMs: 5_000 });
-}
-
-export async function rejectEnrollment(id: string, reason: string): Promise<void> {
-  await apiRequest(`/admin/enrollments/${id}/reject`, { method: 'POST', body: { reason }, timeoutMs: 5_000 });
-}
-
-export async function requestCorrection(id: string, reason: string): Promise<void> {
-  await apiRequest(`/admin/enrollments/${id}/request-correction`, { method: 'POST', body: { reason }, timeoutMs: 5_000 });
-}
-
+export const startReview = async (id: string) => { await apiRequest(`/admin/enrollments/${id}/start-review`, { method: 'POST' }); };
+export const approveEnrollment = async (id: string) => { await apiRequest(`/admin/enrollments/${id}/approve`, { method: 'POST' }); };
+export const rejectEnrollment = async (id: string, reason: string) => { await apiRequest(`/admin/enrollments/${id}/reject`, { method: 'POST', body: { reason } }); };
+export const requestCorrection = async (id: string, reason: string) => { await apiRequest(`/admin/enrollments/${id}/request-correction`, { method: 'POST', body: { message: reason } }); };
 export function getRegistrationTone(status: string) {
   if (status === 'تأییدشده') return 'success' as const;
   if (status === 'ردشده') return 'danger' as const;

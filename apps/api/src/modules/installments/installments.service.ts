@@ -17,6 +17,13 @@ export class InstallmentsService {
   constructor(private readonly db: DatabaseService) {}
 
   async createPlan(priceId: string, planType: string): Promise<string> {
+    const existing = await this.db.db
+      .select({ id: paymentPlans.id })
+      .from(paymentPlans)
+      .where(eq(paymentPlans.registrationPriceId, priceId))
+      .limit(1);
+    if (existing[0]) return existing[0].id;
+
     const price = await this.db.db
       .select()
       .from(registrationPrices)

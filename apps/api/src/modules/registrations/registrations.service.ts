@@ -6,6 +6,8 @@ import {
   registrationReviews,
 } from '../../database/schemas';
 import { students } from '../../database/schemas';
+import { familyAddresses, parents, schools } from '../../database/schemas';
+import { getTableColumns } from 'drizzle-orm';
 import { eq, and, inArray, notInArray } from 'drizzle-orm';
 import { ConflictError, NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -32,6 +34,37 @@ export class RegistrationsService {
 
   async getAll() {
     return this.db.db.select().from(serviceRegistrations);
+  }
+
+  async getAllForAdmin() {
+    const rows = await this.db.db
+      .select({
+        ...getTableColumns(serviceRegistrations),
+        studentFirstName: students.firstName,
+        studentLastName: students.lastName,
+        familyId: students.userId,
+        schoolId: schools.id,
+        schoolName: schools.name,
+      })
+      .from(serviceRegistrations)
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .innerJoin(schools, eq(schools.id, students.schoolId));
+    const parentRows = await this.db.db.select().from(parents);
+    return rows.map((registration) => {
+      const parent = parentRows.find((entry) => entry.userId === registration.familyId && entry.isPrimaryContact)
+        ?? parentRows.find((entry) => entry.userId === registration.familyId);
+      return {
+        ...registration,
+        studentName: `${registration.studentFirstName} ${registration.studentLastName}`,
+        familyName: parent ? `${parent.firstName} ${parent.lastName}` : '—',
+      };
+    });
+  }
+
+  async getForAdmin(registrationId: string) {
+    const record = (await this.getAllForAdmin()).find(({ id }) => id === registrationId);
+    if (!record) throw new NotFoundError('Registration', registrationId);
+    return record;
   }
 
   async getById(registrationId: string, userId?: string) {
@@ -92,12 +125,25 @@ export class RegistrationsService {
       );
     }
 
+    const [selectedAddress] = await this.db.db
+      .select({ id: familyAddresses.id })
+      .from(familyAddresses)
+      .where(and(eq(familyAddresses.userId, userId), eq(familyAddresses.isActive, true)))
+      .limit(1);
+    if (!selectedAddress) {
+      throw new ConflictError(
+        'ACTIVE_ADDRESS_REQUIRED',
+        'Add an active family address before requesting transport service.',
+      );
+    }
+
     const id = generateId();
     await this.db.db.insert(serviceRegistrations).values({
       id,
       studentId: data.studentId,
       academicYear: data.academicYear,
       serviceType: data.serviceType,
+      selectedAddressId: selectedAddress.id,
       requestedStartDate: data.requestedStartDate ? new Date(data.requestedStartDate) : null,
       parentNotes: data.parentNotes || null,
       registrationStatus: 'DRAFT',

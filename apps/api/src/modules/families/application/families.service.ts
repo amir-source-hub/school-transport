@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../../database/database.service';
-import { users, parents, familyAddresses, emergencyContacts } from '../../../database/schemas';
+import { users, parents, familyAddresses, emergencyContacts, students, schools } from '../../../database/schemas';
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
@@ -255,5 +255,66 @@ export class FamiliesService {
         .set({ phoneVerifiedAt: new Date(), updatedAt: new Date() })
         .where(eq(parents.id, primary[0].id));
     }
+  }
+
+  async updateEmergencyContact(
+    contactId: string,
+    userId: string,
+    data: Partial<{ firstName: string; lastName: string; relationship: string; phoneNumber: string }>,
+  ) {
+    const existing = await this.db.db
+      .select()
+      .from(emergencyContacts)
+      .where(and(eq(emergencyContacts.id, contactId), eq(emergencyContacts.userId, userId)))
+      .limit(1);
+    if (!existing[0]) throw new NotFoundError('Emergency contact', contactId);
+    await this.db.db
+      .update(emergencyContacts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(emergencyContacts.id, contactId));
+  }
+
+  async getAllForAdmin() {
+    const [userRows, parentRows, studentRows] = await Promise.all([
+      this.db.db.select().from(users),
+      this.db.db.select().from(parents),
+      this.db.db.select().from(students),
+    ]);
+    return userRows.map((user) => {
+      const familyParents = parentRows.filter((parent) => parent.userId === user.id);
+      const primary = familyParents.find((parent) => parent.isPrimaryContact) ?? familyParents[0];
+      return {
+        id: user.id,
+        username: primary?.lastName ?? user.username,
+        primaryPhone: primary?.phoneNumber ?? user.phoneNumber ?? null,
+        studentCount: studentRows.filter((student) => student.userId === user.id && student.isActive).length,
+        status: user.accountStatus === 'ACTIVE' ? 'فعال' : 'غیرفعال',
+        createdAt: user.createdAt.toISOString(),
+      };
+    });
+  }
+
+  async getForAdmin(userId: string) {
+    const family = (await this.getAllForAdmin()).find(({ id }) => id === userId);
+    if (!family) throw new NotFoundError('Family', userId);
+    const studentRows = await this.db.db
+      .select({
+        id: students.id,
+        firstName: students.firstName,
+        lastName: students.lastName,
+        schoolName: schools.name,
+        grade: students.grade,
+        isActive: students.isActive,
+      })
+      .from(students)
+      .innerJoin(schools, eq(schools.id, students.schoolId))
+      .where(eq(students.userId, userId));
+    return {
+      ...family,
+      students: studentRows.map((student) => ({
+        ...student,
+        status: student.isActive ? 'فعال' : 'غیرفعال',
+      })),
+    };
   }
 }

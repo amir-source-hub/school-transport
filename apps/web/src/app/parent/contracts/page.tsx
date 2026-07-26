@@ -2,41 +2,31 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { demoContract } from '@/features/finance/mock-finance';
+import { getContracts } from '@/features/finance/contracts-api';
+import { formatIrr } from '@/lib/formatters';
 
 export const metadata = { title: 'قراردادها' };
+export const dynamic = 'force-dynamic';
 
-export default function ContractsPage() {
+export default async function ContractsPage() {
+  const contracts = await getContracts();
   return (
     <div className="space-y-6">
-      <Breadcrumbs
-        items={[{ label: 'پنل خانواده', href: '/parent/dashboard' }, { label: 'قراردادها' }]}
-      />
-      <div>
-        <p className="text-sm font-bold text-primary">قراردادهای هر دانش‌آموز</p>
-        <h1 className="mt-1 text-2xl font-black sm:text-3xl">قراردادها</h1>
-        <p className="mt-2 text-sm text-muted">
-          وضعیت و نسخه قرارداد هر دانش‌آموز مستقل نمایش داده می‌شود.
-        </p>
+      <Breadcrumbs items={[{ label: 'پنل خانواده', href: '/parent/dashboard' }, { label: 'قراردادها' }]} />
+      <div><p className="text-sm font-bold text-primary">قراردادهای دانش‌آموزان</p><h1 className="mt-1 text-2xl font-black sm:text-3xl">قراردادها</h1></div>
+      {contracts.length === 0 && <Card><p className="text-muted">هنوز قراردادی برای حساب شما صادر نشده است.</p></Card>}
+      <div className="grid gap-4 md:grid-cols-2">
+        {contracts.map((contract) => (
+          <Card key={contract.id}>
+            <div className="flex items-start justify-between gap-3">
+              <div><h2 className="text-lg font-black">{contract.studentName} {contract.studentLastName}</h2><p className="text-sm text-muted">{contract.contractNumber} — نسخه {contract.versionNumber}</p></div>
+              <Badge tone={contract.contractStatus === 'ACCEPTED' ? 'success' : contract.contractStatus === 'REJECTED' ? 'danger' : 'warning'}>{contract.contractStatus}</Badge>
+            </div>
+            <p className="mt-3 font-bold">{formatIrr(contract.totalAmount)}</p>
+            <ButtonLink href={`/parent/contracts/${contract.id}`} variant="secondary" className="mt-5 w-full">مشاهده و اقدام</ButtonLink>
+          </Card>
+        ))}
       </div>
-      <Card>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-lg font-black">{demoContract.studentName}</h2>
-            <p className="mt-1 text-sm text-muted">
-              {demoContract.number} — {demoContract.version}
-            </p>
-          </div>
-          <Badge tone="warning">{demoContract.status}</Badge>
-        </div>
-        <ButtonLink
-          href={`/parent/contracts/${demoContract.id}`}
-          variant="secondary"
-          className="mt-5 w-full sm:w-auto"
-        >
-          مشاهده قرارداد نمایشی
-        </ButtonLink>
-      </Card>
     </div>
   );
 }

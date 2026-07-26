@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { FamiliesService } from './application/families.service';
-import { FamiliesController } from './presentation/families.controller';
+import { AdminFamiliesController, FamiliesController } from './presentation/families.controller';
 
 @Module({
-  controllers: [FamiliesController],
+  controllers: [FamiliesController, AdminFamiliesController],
   providers: [FamiliesService],
   exports: [FamiliesService],
 })

@@ -58,6 +58,27 @@ export class AdminStudentsController {
 
   @Get()
   async getAll() {
-    return successResponse([]);
+    return successResponse(await this.studentsService.getAllForAdmin());
+  }
+
+  @Post()
+  async create(@Body() dto: CreateStudentDto & { userId: string }) {
+    const student = await this.studentsService.create(dto.userId, dto);
+    return successResponse(student);
+  }
+
+  @Patch(':studentId')
+  async update(@Param('studentId') studentId: string, @Body() dto: UpdateStudentDto) {
+    return successResponse(await this.studentsService.updateByAdmin(studentId, dto));
+  }
+
+  @Post(':studentId/archive')
+  async archive(@Param('studentId') studentId: string) {
+    return successResponse(await this.studentsService.setActiveByAdmin(studentId, false));
+  }
+
+  @Post(':studentId/unarchive')
+  async unarchive(@Param('studentId') studentId: string) {
+    return successResponse(await this.studentsService.setActiveByAdmin(studentId, true));
   }
 }

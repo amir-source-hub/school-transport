@@ -18,7 +18,7 @@ export class ContractsController {
 
   @Get(':id')
   async getById(@Req() req: any, @Param('id') id: string) {
-    const contract = await this.contractsService.getById(id, req.user.id);
+    const contract = await this.contractsService.getDetails(id, req.user.id);
     return successResponse(contract);
   }
 

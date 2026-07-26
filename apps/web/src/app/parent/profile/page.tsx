@@ -1,9 +1,14 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { FamilyProfileForm } from '@/features/family-profile/family-profile-form';
+import { FamilyOnboardingForm } from '@/features/family-profile/family-onboarding-form';
+import { getFamilyProfile } from '@/features/family-profile/family-api';
 
 export const metadata = { title: 'اطلاعات خانواده' };
 
-export default function ProfilePage() {
+export const dynamic = 'force-dynamic';
+
+export default async function ProfilePage() {
+  const profile = await getFamilyProfile();
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -16,7 +21,9 @@ export default function ProfilePage() {
           شماره اصلی و شناسه‌های حساس از مسیرهای تأییدشده جداگانه تغییر می‌کنند.
         </p>
       </div>
-      <FamilyProfileForm />
+      {profile.mother && profile.father && profile.addresses.length > 0
+        ? <FamilyProfileForm profile={profile} />
+        : <FamilyOnboardingForm />}
     </div>
   );
 }

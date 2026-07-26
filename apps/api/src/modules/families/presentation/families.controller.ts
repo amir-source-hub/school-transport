@@ -3,6 +3,8 @@ import { FamiliesService } from '../application/families.service';
 import { AuthGuard } from '../../access-control/auth.guard';
 import { successResponse } from '../../../common/response';
 import { CreateFamilyDto } from '../domain/family.types';
+import { Roles } from '../../../common/decorators';
+import { RolesGuard } from '../../access-control/roles.guard';
 
 @UseGuards(AuthGuard)
 @Controller('families')
@@ -53,6 +55,16 @@ export class FamiliesController {
     return successResponse({ updated: true });
   }
 
+  @Patch('emergency-contacts/:contactId')
+  async updateEmergencyContact(
+    @Req() req: any,
+    @Param('contactId') contactId: string,
+    @Body() dto: { firstName?: string; lastName?: string; relationship?: string; phoneNumber?: string },
+  ) {
+    await this.familiesService.updateEmergencyContact(contactId, req.user.id, dto);
+    return successResponse({ updated: true });
+  }
+
   @Post('set-primary-phone')
   async setPrimaryPhone(@Req() req: any, @Body() dto: { parentType: 'MOTHER' | 'FATHER' }) {
     await this.familiesService.setPrimaryPhone(req.user.id, dto.parentType);
@@ -66,5 +78,22 @@ export class FamiliesController {
       updated: true,
       message: 'Primary phone changed. OTP verification required.',
     });
+  }
+}
+
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('ADMIN')
+@Controller('admin/families')
+export class AdminFamiliesController {
+  constructor(private readonly familiesService: FamiliesService) {}
+
+  @Get()
+  async getAll() {
+    return successResponse(await this.familiesService.getAllForAdmin());
+  }
+
+  @Get(':id')
+  async getById(@Param('id') id: string) {
+    return successResponse(await this.familiesService.getForAdmin(id));
   }
 }

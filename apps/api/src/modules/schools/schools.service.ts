@@ -68,4 +68,8 @@ export class SchoolsService {
   async archive(id: string) {
     return this.update(id, { isActive: false });
   }
+
+  async unarchive(id: string) {
+    return this.update(id, { isActive: true });
+  }
 }

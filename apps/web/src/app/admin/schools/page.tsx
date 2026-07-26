@@ -54,6 +54,7 @@ export default async function SchoolsPage() {
                   <Badge tone="neutral">{school.status}</Badge>
                 </div>
                 <p className="mt-2 text-sm text-muted">{school.city}، {school.district ?? school.province}</p>
+                <div className="mt-4"><ArchiveSchoolDialog archived schoolId={school.id} schoolName={school.name} /></div>
               </Card>
             ))}
           </div>

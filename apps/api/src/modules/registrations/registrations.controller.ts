@@ -59,12 +59,12 @@ export class AdminRegistrationsController {
 
   @Get()
   async getAll() {
-    return successResponse(await this.registrationsService.getAll());
+    return successResponse(await this.registrationsService.getAllForAdmin());
   }
 
   @Get(':id')
   async getById(@Param('id') id: string) {
-    const reg = await this.registrationsService.getById(id);
+    const reg = await this.registrationsService.getForAdmin(id);
     return successResponse(reg);
   }
 

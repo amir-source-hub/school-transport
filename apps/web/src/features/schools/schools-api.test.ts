@@ -36,12 +36,8 @@ describe('getSchools', () => {
     });
   });
 
-  it('uses labeled mock data when the backend is unavailable', async () => {
+  it('surfaces backend failures instead of substituting mock data', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('network unavailable'));
-
-    const result = await getSchools();
-
-    expect(result.source).toBe('mock');
-    expect(result.schools.length).toBeGreaterThan(0);
+    await expect(getSchools()).rejects.toThrow();
   });
 });

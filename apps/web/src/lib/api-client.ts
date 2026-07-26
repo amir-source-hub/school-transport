@@ -1,4 +1,4 @@
-import { getAuthSession } from '@/features/auth/auth-session';
+import { clearAuthSession, getAuthSession, setAuthSession } from '@/features/auth/auth-session';
 import type { ApiEnvelope, ApiFailure, ApiSuccess } from '@/types/api';
 
 type ApiRequestOptions = Omit<RequestInit, 'body' | 'credentials'> & {
@@ -27,6 +27,14 @@ export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<ApiSuccess<T>> {
+  return performApiRequest<T>(path, options, true);
+}
+
+async function performApiRequest<T>(
+  path: string,
+  options: ApiRequestOptions,
+  allowRefresh: boolean,
+): Promise<ApiSuccess<T>> {
   const { body, timeoutMs, signal: requestedSignal, ...requestInit } = options;
   const url = buildApiUrl(path);
   const headers = new Headers(options.headers);
@@ -35,6 +43,7 @@ export async function apiRequest<T>(
   headers.set('X-Correlation-Id', correlationId);
   const { accessToken } = getAuthSession();
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+  await forwardServerCookies(headers);
 
   if (body !== undefined && !(body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
@@ -49,6 +58,17 @@ export async function apiRequest<T>(
     signal,
   });
 
+  if (
+    response.status === 401 &&
+    allowRefresh &&
+    typeof window !== 'undefined' &&
+    !path.startsWith('/auth/')
+  ) {
+    const refreshed = await refreshBrowserSession();
+    if (refreshed) return performApiRequest<T>(path, options, false);
+    redirectToLogin();
+  }
+
   if (response.status === 204) {
     return { success: true, data: undefined as T, meta: { requestId: correlationId } };
   }
@@ -59,6 +79,46 @@ export async function apiRequest<T>(
   }
 
   return payload as ApiSuccess<T>;
+}
+
+async function forwardServerCookies(headers: Headers) {
+  if (typeof window !== 'undefined' || headers.has('Cookie')) return;
+  try {
+    const { cookies } = await import('next/headers');
+    const store = await cookies();
+    const value = store
+      .getAll()
+      .map(({ name, value: cookieValue }) => `${name}=${encodeURIComponent(cookieValue)}`)
+      .join('; ');
+    if (value) headers.set('Cookie', value);
+  } catch {
+    // Unit tests and static rendering do not always have a Next request scope.
+  }
+}
+
+async function refreshBrowserSession() {
+  try {
+    const response = await fetch(buildApiUrl('/auth/refresh'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { Accept: 'application/json', 'X-Correlation-Id': crypto.randomUUID() },
+    });
+    if (!response.ok) return false;
+    const payload = (await response.json()) as ApiSuccess<{ accessToken: string }>;
+    const role = getAuthSession().role;
+    if (payload.success && payload.data.accessToken && role) {
+      setAuthSession(payload.data.accessToken, role);
+    }
+    return payload.success;
+  } catch {
+    return false;
+  }
+}
+
+function redirectToLogin() {
+  clearAuthSession();
+  const next = `${window.location.pathname}${window.location.search}`;
+  window.location.assign(`/login?next=${encodeURIComponent(next)}`);
 }
 
 async function parseEnvelope<T>(response: Response, requestId: string): Promise<ApiEnvelope<T>> {

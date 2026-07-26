@@ -24,6 +24,33 @@ export class AuthService {
     @Inject(OTP_DELIVERY) private readonly otpDelivery: OtpDelivery,
   ) {}
 
+  async getAdmins() {
+    return this.db.db
+      .select({
+        id: adminUsers.id,
+        username: adminUsers.username,
+        firstName: adminUsers.firstName,
+        lastName: adminUsers.lastName,
+        phoneNumber: adminUsers.phoneNumber,
+        email: adminUsers.email,
+        status: adminUsers.status,
+        lastLoginAt: adminUsers.lastLoginAt,
+        createdAt: adminUsers.createdAt,
+      })
+      .from(adminUsers)
+      .orderBy(desc(adminUsers.createdAt));
+  }
+
+  async setAdminStatus(adminId: string, status: 'ACTIVE' | 'INACTIVE') {
+    const [admin] = await this.db.db
+      .update(adminUsers)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(adminUsers.id, adminId))
+      .returning();
+    if (!admin) throw new ValidationError('Administrator was not found.');
+    return admin;
+  }
+
   async requestAuthOtp(phoneNumber: string, role: 'PARENT' | 'ADMIN'): Promise<OtpResult> {
     const account = await this.findAccountByPhone(phoneNumber, role);
     // Admin accounts must be provisioned in advance. Keep production responses generic.

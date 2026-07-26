@@ -1,114 +1,41 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-
 import { Alert } from '@/components/feedback/alert';
-import { Field } from '@/components/forms/field';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { submitOfflinePayment } from './payments-api';
 
-const offlinePaymentSchema = z.object({
-  paidAt: z.string().min(1, 'تاریخ و زمان پرداخت را وارد کنید.'),
-  referenceNumber: z.string().trim().min(3, 'شماره مرجع معتبر وارد کنید.'),
-  description: z.string().trim().max(500, 'توضیحات باید حداکثر ۵۰۰ نویسه باشد.'),
-});
-
-type OfflinePaymentValues = z.infer<typeof offlinePaymentSchema>;
-
-export function OfflinePaymentForm() {
+export function OfflinePaymentForm({ items = [] }: { items?: { id: string; label: string }[] }) {
+  const router = useRouter();
+  const [scheduleItemId, setScheduleItemId] = useState(items[0]?.id ?? '');
+  const [paidAt, setPaidAt] = useState('');
+  const [referenceNumber, setReferenceNumber] = useState('');
+  const [description, setDescription] = useState('');
+  const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<OfflinePaymentValues>({
-    resolver: zodResolver(offlinePaymentSchema),
-    defaultValues: { paidAt: '', referenceNumber: '', description: '' },
-  });
-
-  const submitDemo = handleSubmit(async () => {
-    setSubmitted(false);
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    setSubmitted(true);
-  });
-
   return (
-    <form className="space-y-5" onSubmit={submitDemo} noValidate>
-      <Alert tone="warning" title="ارسال نمایشی برای بررسی مدیریت">
-        این فرم هیچ پرداختی را تأیید نمی‌کند و مانده حساب را تغییر نمی‌دهد. نتیجه فقط وضعیت «در
-        انتظار بررسی» را شبیه‌سازی می‌کند.
-      </Alert>
-
-      <div className="grid gap-5 md:grid-cols-2">
-        <Field
-          label="قسط مرتبط"
-          htmlFor="offline-invoice"
-          hint="ارسال آفلاین باید به یک فاکتور مشخص متصل باشد."
-        >
-          <Input id="offline-invoice" value="قسط ماه دوم — نمایشی" disabled />
-        </Field>
-        <Field
-          label="تاریخ و زمان پرداخت"
-          htmlFor="offline-paid-at"
-          required
-          error={errors.paidAt?.message}
-        >
-          <Input
-            id="offline-paid-at"
-            type="datetime-local"
-            dir="ltr"
-            {...register('paidAt')}
-            aria-invalid={Boolean(errors.paidAt)}
-            aria-describedby="offline-paid-at-message"
-          />
-        </Field>
-        <Field
-          label="شماره مرجع"
-          htmlFor="offline-reference"
-          required
-          error={errors.referenceNumber?.message}
-        >
-          <Input
-            id="offline-reference"
-            dir="ltr"
-            {...register('referenceNumber')}
-            aria-invalid={Boolean(errors.referenceNumber)}
-            aria-describedby="offline-reference-message"
-          />
-        </Field>
-        <div className="md:col-span-2">
-          <Field
-            label="توضیحات اختیاری"
-            htmlFor="offline-description"
-            error={errors.description?.message}
-          >
-            <Textarea
-              id="offline-description"
-              {...register('description')}
-              aria-invalid={Boolean(errors.description)}
-              aria-describedby="offline-description-message"
-            />
-          </Field>
-        </div>
-      </div>
-
-      <p className="text-sm text-muted">
-        بارگذاری تصویر رسید تا زمان تصویب نوع فایل، سقف حجم و قرارداد رسانه‌ای غیرفعال است.
-      </p>
-
-      {submitted && (
-        <Alert title="جزئیات نمایشی در انتظار بررسی قرار گرفت">
-          این تأیید فقط از آداپتور mock آمده است؛ پرداخت هنوز تأییدشده یا پرداخت‌شده نیست.
-        </Alert>
-      )}
-
-      <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'در حال ارسال نمایشی…' : 'ارسال نمایشی برای بررسی'}
-      </Button>
+    <form className="space-y-5" onSubmit={async (event) => {
+      event.preventDefault();
+      setPending(true);
+      setSubmitted(false);
+      try {
+        await submitOfflinePayment(scheduleItemId, { paidAt, referenceNumber, description: description || undefined });
+        setSubmitted(true);
+        router.refresh();
+      } finally {
+        setPending(false);
+      }
+    }}>
+      <Select value={scheduleItemId} onValueChange={setScheduleItemId} options={items.map((item) => ({ value: item.id, label: item.label }))} placeholder="قسط را انتخاب کنید" />
+      <Input required type="datetime-local" dir="ltr" value={paidAt} onChange={(event) => setPaidAt(event.target.value)} />
+      <Input required dir="ltr" placeholder="شماره مرجع" value={referenceNumber} onChange={(event) => setReferenceNumber(event.target.value)} />
+      <Textarea placeholder="توضیحات اختیاری" value={description} onChange={(event) => setDescription(event.target.value)} />
+      {submitted && <Alert title="پرداخت برای بررسی مدیریت ارسال شد">پس از تأیید مدیر، وضعیت قسط به‌روزرسانی می‌شود.</Alert>}
+      <Button type="submit" loading={pending} disabled={!scheduleItemId}>ارسال برای بررسی</Button>
     </form>
   );
 }

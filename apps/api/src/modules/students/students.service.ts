@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { students } from '../../database/schemas';
+import { parents, schools, students, users } from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
+import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { EditableStudentFields, parseEditableStudentFields } from './student-update';
@@ -12,8 +13,9 @@ export class StudentsService {
 
   async getAllByFamily(userId: string) {
     return this.db.db
-      .select()
+      .select({ ...getTableColumns(students), schoolName: schools.name })
       .from(students)
+      .innerJoin(schools, eq(schools.id, students.schoolId))
       .where(and(eq(students.userId, userId), eq(students.isActive, true)));
   }
 
@@ -21,8 +23,9 @@ export class StudentsService {
     const conditions = [eq(students.id, studentId)];
     if (userId) conditions.push(eq(students.userId, userId));
     const result = await this.db.db
-      .select()
+      .select({ ...getTableColumns(students), schoolName: schools.name })
       .from(students)
+      .innerJoin(schools, eq(schools.id, students.schoolId))
       .where(and(...conditions))
       .limit(1);
     if (result.length === 0) throw new NotFoundError('Student', studentId);
@@ -88,5 +91,47 @@ export class StudentsService {
       .update(students)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(students.id, studentId));
+  }
+
+  async getAllForAdmin() {
+    const rows = await this.db.db
+      .select({
+        ...getTableColumns(students),
+        schoolName: schools.name,
+        username: users.username,
+      })
+      .from(students)
+      .innerJoin(schools, eq(schools.id, students.schoolId))
+      .innerJoin(users, eq(users.id, students.userId));
+
+    const parentRows = await this.db.db
+      .select()
+      .from(parents);
+
+    return rows.map((student) => {
+      const familyParent = parentRows.find(
+        (parent) => parent.userId === student.userId && parent.isPrimaryContact,
+      ) ?? parentRows.find((parent) => parent.userId === student.userId);
+      return {
+        ...student,
+        familyName: familyParent
+          ? `${familyParent.firstName} ${familyParent.lastName}`
+          : student.username,
+      };
+    });
+  }
+
+  async updateByAdmin(studentId: string, data: EditableStudentFields) {
+    const student = await this.getById(studentId);
+    return this.update(studentId, student.userId, data);
+  }
+
+  async setActiveByAdmin(studentId: string, isActive: boolean) {
+    await this.getById(studentId);
+    await this.db.db
+      .update(students)
+      .set({ isActive, updatedAt: new Date() })
+      .where(eq(students.id, studentId));
+    return this.getById(studentId);
   }
 }

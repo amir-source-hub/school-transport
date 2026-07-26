@@ -21,7 +21,7 @@ export default async function ContractsPage() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {contracts.map((record) => {
           const action = getContractActionLabel(record.status, record.price);
-          const needsContract = record.price !== null && record.status !== 'پذیرفته‌شده';
+          const needsContract = record.price !== null && record.status === 'بدون قرارداد';
           return (
             <Card key={record.id}>
               <div className="flex items-start justify-between gap-3">
@@ -35,7 +35,7 @@ export default async function ContractsPage() {
               <div className="mt-4">
                 {needsContract ? (
                   <GenerateContractDialog enrollmentId={record.enrollmentId} label={action.label} />
-                ) : record.status === 'پذیرفته‌شده' ? (
+                ) : record.status === 'ACCEPTED' ? (
                   <p className="text-sm text-muted">قرارداد توسط خانواده پذیرفته شده است.</p>
                 ) : (
                   <p className="text-sm text-muted">در انتظار ثبت قیمت</p>

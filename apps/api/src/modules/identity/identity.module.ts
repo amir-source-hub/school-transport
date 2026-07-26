@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '../../config/config.service';
 import { AuthService } from './application/auth.service';
-import { AuthController } from './presentation/auth.controller';
+import { AdminIdentityController, AuthController } from './presentation/auth.controller';
 import { TrustedOriginGuard } from '../access-control/trusted-origin.guard';
 import {
   ConsoleOtpDelivery,
@@ -21,7 +21,7 @@ import { OTP_DELIVERY } from './application/otp-delivery.port';
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AdminIdentityController],
   providers: [
     AuthService,
     TrustedOriginGuard,

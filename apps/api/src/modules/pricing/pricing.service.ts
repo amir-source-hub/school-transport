@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { registrationPrices, serviceRegistrations, students } from '../../database/schemas';
+import { paymentPlans, paymentScheduleItems, registrationPrices, serviceRegistrations, students } from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError, ValidationError, ConflictError } from '../../common/errors';
-import { generateId } from '../../common/utils';
+import { calculateInstallmentAmounts, generateId } from '../../common/utils';
+import { addMonths } from 'date-fns';
 
 @Injectable()
 export class PricingService {
@@ -15,6 +16,17 @@ export class PricingService {
       .from(registrationPrices)
       .where(eq(registrationPrices.registrationId, registrationId))
       .orderBy(registrationPrices.versionNumber);
+  }
+
+  async getByRegistrationForFamily(registrationId: string, userId: string) {
+    const owned = await this.db.db
+      .select({ id: serviceRegistrations.id })
+      .from(serviceRegistrations)
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(and(eq(serviceRegistrations.id, registrationId), eq(students.userId, userId)))
+      .limit(1);
+    if (!owned[0]) throw new NotFoundError('Registration', registrationId);
+    return this.getByRegistration(registrationId);
   }
 
   async getLatest(registrationId: string) {
@@ -105,5 +117,43 @@ export class PricingService {
       .where(eq(serviceRegistrations.id, reg[0].registration.id));
 
     return priceId;
+  }
+
+  async createPaymentPlan(priceId: string, planType: 'FULL' | 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS') {
+    const [existing] = await this.db.db.select({ id: paymentPlans.id }).from(paymentPlans)
+      .where(eq(paymentPlans.registrationPriceId, priceId)).limit(1);
+    if (existing) return existing.id;
+    const [price] = await this.db.db.select().from(registrationPrices)
+      .where(eq(registrationPrices.id, priceId)).limit(1);
+    if (!price) throw new NotFoundError('Price');
+
+    const id = generateId();
+    const isFull = planType === 'FULL';
+    const prepayment = isFull ? price.totalAmount : price.prepaymentAmount;
+    const installments = isFull
+      ? []
+      : calculateInstallmentAmounts(price.totalAmount, prepayment, price.installmentCount);
+    await this.db.db.insert(paymentPlans).values({
+      id,
+      registrationPriceId: price.id,
+      planType,
+      totalAmount: price.totalAmount,
+      prepaymentAmount: prepayment,
+      remainingInstallmentAmount: price.totalAmount - prepayment,
+      installmentCount: isFull ? 1 : price.installmentCount,
+      planStatus: 'PENDING',
+    });
+    const now = new Date();
+    await this.db.db.insert(paymentScheduleItems).values({
+      id: generateId(), paymentPlanId: id, itemType: 'PREPAYMENT',
+      sequenceNumber: 0, amount: prepayment, dueDate: now,
+    });
+    if (installments.length) {
+      await this.db.db.insert(paymentScheduleItems).values(installments.map((amount, index) => ({
+        id: generateId(), paymentPlanId: id, itemType: 'INSTALLMENT',
+        sequenceNumber: index + 1, amount, dueDate: addMonths(now, index + 1),
+      })));
+    }
+    return id;
   }
 }

@@ -3,7 +3,6 @@
 import { Building2, MapPin, Phone, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { Alert } from '@/components/feedback/alert';
 import { Input } from '@/components/ui/input';
 import { PageContainer } from '@/components/common/page-container';
 import { cn } from '@/lib/cn';
@@ -20,7 +19,7 @@ type School = {
 
 const districts = ['همه مناطق', 'منطقه ۱', 'منطقه ۲', 'منطقه ۳', 'منطقه ۴', 'منطقه ۵'];
 
-export function SchoolsDirectory({ schools, source }: { schools: readonly School[]; source: string }) {
+export function SchoolsDirectory({ schools }: { schools: readonly School[]; source: string }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDistrict, setActiveDistrict] = useState('همه مناطق');
 
@@ -66,11 +65,6 @@ export function SchoolsDirectory({ schools, source }: { schools: readonly School
 
       <section className="surface-paper py-14">
         <PageContainer>
-          {source === 'mock' && (
-            <Alert tone="warning" title="حالت توسعه آفلاین">
-              ارتباط با سرویس مدارس برقرار نشد؛ فهرست زیر داده نمایشی است.
-            </Alert>
-          )}
           {filtered.length === 0 ? (
             <div className="mx-auto max-w-lg text-center py-12">
               <Building2 aria-hidden="true" className="mx-auto size-12 text-muted/30" />

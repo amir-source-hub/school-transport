@@ -16,6 +16,10 @@ export class NotificationsService {
       .orderBy(notifications.createdAt);
   }
 
+  async getAll() {
+    return this.db.db.select().from(notifications).orderBy(notifications.createdAt);
+  }
+
   async getUnreadCount(userId: string) {
     const result = await this.db.db
       .select()

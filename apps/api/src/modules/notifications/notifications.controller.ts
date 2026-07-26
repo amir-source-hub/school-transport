@@ -2,6 +2,8 @@ import { Controller, Get, Post, Patch, Param, UseGuards, Req } from '@nestjs/com
 import { NotificationsService } from './notifications.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { successResponse } from '../../common/response';
+import { Roles } from '../../common/decorators';
+import { RolesGuard } from '../access-control/roles.guard';
 
 @UseGuards(AuthGuard)
 @Controller('notifications')
@@ -30,5 +32,17 @@ export class NotificationsController {
   async markAllRead(@Req() req: any) {
     await this.notificationsService.markAllRead(req.user.id);
     return successResponse({ read: true });
+  }
+}
+
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('ADMIN')
+@Controller('admin/notifications')
+export class AdminNotificationsController {
+  constructor(private readonly notificationsService: NotificationsService) {}
+
+  @Get()
+  async getAll() {
+    return successResponse(await this.notificationsService.getAll());
   }
 }

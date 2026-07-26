@@ -1,51 +1,32 @@
 import { z } from 'zod';
-import { apiRequest } from '@/lib/api-client';
+import { getAdminContracts } from '@/features/admin-finance/admin-contracts-api';
+import { getAdminPayments } from '@/features/admin-payments/admin-payments-api';
+import { getAdminRegistrations } from '@/features/admin-registrations/admin-registrations-api';
 
 export const dashboardSummarySchema = z.object({
-  pendingEnrollments: z.number(),
-  contractsAwaitingAcceptance: z.number(),
-  offlinePaymentsAwaitingReview: z.number(),
-  upcomingPayments: z.number(),
-  overduePayments: z.number(),
+  pendingEnrollments: z.number(), contractsAwaitingAcceptance: z.number(),
+  offlinePaymentsAwaitingReview: z.number(), upcomingPayments: z.number(), overduePayments: z.number(),
 });
-
 export const recentEnrollmentSchema = z.object({
-  trackingCode: z.string(),
-  studentName: z.string(),
-  status: z.string(),
-  nextAction: z.string(),
+  trackingCode: z.string(), studentName: z.string(), status: z.string(), nextAction: z.string(),
 });
-
-export const dashboardDataSchema = z.object({
-  summary: dashboardSummarySchema,
-  recentEnrollments: z.array(recentEnrollmentSchema),
-});
-
 export type DashboardSummary = z.infer<typeof dashboardSummarySchema>;
 export type RecentEnrollment = z.infer<typeof recentEnrollmentSchema>;
 
-const fallbackSummary: DashboardSummary = {
-  pendingEnrollments: 12,
-  contractsAwaitingAcceptance: 5,
-  offlinePaymentsAwaitingReview: 3,
-  upcomingPayments: 18,
-  overduePayments: 4,
-};
-
-const fallbackEnrollments: RecentEnrollment[] = [
-  { trackingCode: 'REG-۱۴۰۴-۰۰۱', studentName: 'سارا احمدی', status: 'در حال بررسی', nextAction: 'بررسی درخواست' },
-  { trackingCode: 'REG-۱۴۰۴-۰۰۲', studentName: 'امیر حسینی', status: 'در انتظار قیمت', nextAction: 'ثبت قیمت' },
-  { trackingCode: 'REG-۱۴۰۴-۰۰۳', studentName: 'نرگس محمدی', status: 'نیازمند اصلاح', nextAction: 'انتظار برای خانواده' },
-];
-
-export async function getAdminDashboard(): Promise<{ summary: DashboardSummary; recentEnrollments: RecentEnrollment[] }> {
-  try {
-    const response = await apiRequest<unknown>('/admin/dashboard', {
-      cache: 'no-store',
-      timeoutMs: 5_000,
-    });
-    return dashboardDataSchema.parse(response.data);
-  } catch {
-    return { summary: fallbackSummary, recentEnrollments: fallbackEnrollments };
-  }
+export async function getAdminDashboard() {
+  const [{ registrations }, { contracts }, { payments }] = await Promise.all([
+    getAdminRegistrations(), getAdminContracts(), getAdminPayments(),
+  ]);
+  return {
+    summary: {
+      pendingEnrollments: registrations.filter(({ status }) => ['ارسال‌شده', 'در حال بررسی'].includes(status)).length,
+      contractsAwaitingAcceptance: contracts.filter(({ status }) => status === 'GENERATED').length,
+      offlinePaymentsAwaitingReview: payments.filter(({ status }) => status === 'در انتظار بررسی').length,
+      upcomingPayments: payments.filter(({ status }) => status !== 'تأییدشده').length,
+      overduePayments: payments.filter(({ status }) => status === 'ردشده').length,
+    },
+    recentEnrollments: registrations.slice(0, 5).map(({ trackingCode, studentName, status, nextAction }) => ({
+      trackingCode, studentName, status, nextAction,
+    })),
+  };
 }

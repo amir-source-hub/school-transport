@@ -1,14 +1,14 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
+import { getAdminAccounts } from '@/features/admin-admins/admin-admins-api';
+import { AdminAccountAction } from '@/features/admin-admins/admin-account-action';
 
 export const metadata = { title: 'مدیران سامانه' };
 
-const demoAdmins = [
-  { id: 'admin-001', username: 'demo-admin', role: 'مدیر ارشد', status: 'فعال', lastLogin: '۱۴۰۴/۰۳/۱۵ ۱۰:۳۰' },
-  { id: 'admin-002', username: 'admin2', role: 'مدیر مالی', status: 'فعال', lastLogin: '۱۴۰۴/۰۳/۱۴ ۰۹:۰۰' },
-];
+export const dynamic = 'force-dynamic';
 
-export default function AdminsPage() {
+export default async function AdminsPage() {
+  const admins = await getAdminAccounts();
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: 'پنل مدیریت', href: '/admin/dashboard' }, { label: 'مدیران' }]} />
@@ -21,18 +21,20 @@ export default function AdminsPage() {
           <thead>
             <tr className="border-b border-border text-muted">
               <th className="px-3 py-3">نام کاربری</th>
-              <th className="px-3 py-3">نقش</th>
+              <th className="px-3 py-3">نام</th>
               <th className="px-3 py-3">وضعیت</th>
               <th className="px-3 py-3">آخرین ورود</th>
+              <th className="px-3 py-3">اقدام</th>
             </tr>
           </thead>
           <tbody>
-            {demoAdmins.map((admin) => (
+            {admins.map((admin) => (
               <tr key={admin.id} className="border-b border-border last:border-0">
                 <td className="px-3 py-3 font-bold">{admin.username}</td>
-                <td className="px-3 py-3">{admin.role}</td>
-                <td className="px-3 py-3"><Badge tone="success">{admin.status}</Badge></td>
-                <td className="px-3 py-3 text-muted" dir="ltr">{admin.lastLogin}</td>
+                <td className="px-3 py-3">{admin.firstName} {admin.lastName}</td>
+                <td className="px-3 py-3"><Badge tone={admin.status === 'ACTIVE' ? 'success' : 'neutral'}>{admin.status === 'ACTIVE' ? 'فعال' : 'غیرفعال'}</Badge></td>
+                <td className="px-3 py-3 text-muted" dir="ltr">{admin.lastLoginAt?.toLocaleString('fa-IR') ?? '—'}</td>
+                <td className="px-3 py-3"><AdminAccountAction id={admin.id} active={admin.status === 'ACTIVE'} /></td>
               </tr>
             ))}
           </tbody>

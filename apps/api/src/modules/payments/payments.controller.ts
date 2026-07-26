@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Param, UseGuards, Req, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Headers } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
@@ -9,6 +9,11 @@ import { successResponse } from '../../common/response';
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
+
+  @Get()
+  async getAll(@Req() req: any) {
+    return successResponse(await this.paymentsService.getOverview(req.user.id));
+  }
 
   @Post(':scheduleItemId/online/start')
   async startOnline(
@@ -58,6 +63,11 @@ export class PaymentsController {
 @Controller('admin/payments')
 export class AdminPaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
+
+  @Get()
+  async getAll() {
+    return successResponse(await this.paymentsService.getAllForAdmin());
+  }
 
   @Post(':txId/approve')
   async approve(@Param('txId') txId: string, @Req() req: any) {

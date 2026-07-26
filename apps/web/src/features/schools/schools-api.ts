@@ -1,5 +1,4 @@
 import { z } from 'zod';
-
 import { apiRequest } from '@/lib/api-client';
 
 const schoolSchema = z.object({
@@ -14,49 +13,10 @@ const schoolSchema = z.object({
   phoneNumber: z.string().nullable(),
 });
 
-const schoolsSchema = z.array(schoolSchema);
-
 export type School = z.infer<typeof schoolSchema>;
-
-export type SchoolsResult = {
-  schools: School[];
-  source: 'api' | 'mock';
-};
-
-const fallbackSchools: School[] = [
-  {
-    id: 'school-demo-1',
-    name: 'مدرسه نمونه یک',
-    schoolType: 'PUBLIC',
-    genderType: 'MIXED',
-    province: 'تهران',
-    city: 'تهران',
-    district: 'مرکزی',
-    address: 'نشانی نمایشی برای توسعه محلی',
-    phoneNumber: null,
-  },
-  {
-    id: 'school-demo-2',
-    name: 'مدرسه نمونه دو',
-    schoolType: 'PUBLIC',
-    genderType: 'MIXED',
-    province: 'تهران',
-    city: 'تهران',
-    district: null,
-    address: 'نشانی نمایشی برای توسعه محلی',
-    phoneNumber: null,
-  },
-];
+export type SchoolsResult = { schools: School[]; source: 'api' };
 
 export async function getSchools(): Promise<SchoolsResult> {
-  try {
-    const response = await apiRequest<unknown>('/schools', {
-      cache: 'no-store',
-      timeoutMs: 3_000,
-    });
-
-    return { schools: schoolsSchema.parse(response.data), source: 'api' };
-  } catch {
-    return { schools: fallbackSchools, source: 'mock' };
-  }
+  const response = await apiRequest<unknown>('/schools', { cache: 'no-store', timeoutMs: 8_000 });
+  return { schools: z.array(schoolSchema).parse(response.data), source: 'api' };
 }

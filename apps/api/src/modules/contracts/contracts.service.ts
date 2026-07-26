@@ -8,6 +8,7 @@ import {
   students,
 } from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
+import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ValidationError } from '../../common/errors';
 import { generateId, generateContractNumber } from '../../common/utils';
 
@@ -17,16 +18,35 @@ export class ContractsService {
 
   async getByFamily(userId: string) {
     const result = await this.db.db
-      .select({ contract: contracts })
+      .select({
+        ...getTableColumns(contracts),
+        studentName: students.firstName,
+        studentLastName: students.lastName,
+        academicYear: serviceRegistrations.academicYear,
+        serviceType: serviceRegistrations.serviceType,
+        totalAmount: registrationPrices.totalAmount,
+      })
       .from(contracts)
       .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, contracts.registrationId))
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, contracts.registrationPriceId))
       .where(eq(students.userId, userId));
-    return result.map(({ contract }) => contract);
+    return result;
   }
 
   async getAll() {
-    return this.db.db.select().from(contracts);
+    return this.db.db
+      .select({
+        ...getTableColumns(contracts),
+        studentName: students.firstName,
+        studentLastName: students.lastName,
+        academicYear: serviceRegistrations.academicYear,
+        totalAmount: registrationPrices.totalAmount,
+      })
+      .from(contracts)
+      .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, contracts.registrationId))
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, contracts.registrationPriceId));
   }
 
   async getById(contractId: string, userId?: string) {
@@ -50,6 +70,27 @@ export class ContractsService {
     }
 
     return result[0];
+  }
+
+  async getDetails(contractId: string, userId?: string) {
+    await this.getById(contractId, userId);
+    const details = await this.db.db
+      .select({
+        ...getTableColumns(contracts),
+        studentName: students.firstName,
+        studentLastName: students.lastName,
+        academicYear: serviceRegistrations.academicYear,
+        serviceType: serviceRegistrations.serviceType,
+        totalAmount: registrationPrices.totalAmount,
+        prepaymentAmount: registrationPrices.prepaymentAmount,
+      })
+      .from(contracts)
+      .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, contracts.registrationId))
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, contracts.registrationPriceId))
+      .where(eq(contracts.id, contractId))
+      .limit(1);
+    return details[0];
   }
 
   async generate(enrollmentId: string, adminId: string) {
@@ -132,7 +173,12 @@ export class ContractsService {
       })
       .where(eq(contracts.id, contractId));
 
-    return this.getById(contractId);
+    await this.db.db
+      .update(serviceRegistrations)
+      .set({ registrationStatus: 'CONTRACT_ACCEPTED', updatedAt: new Date() })
+      .where(eq(serviceRegistrations.id, contract.registrationId));
+
+    return this.getDetails(contractId, userId);
   }
 
   async reject(contractId: string, userId: string) {
@@ -144,6 +190,10 @@ export class ContractsService {
       .update(contracts)
       .set({ contractStatus: 'REJECTED' })
       .where(eq(contracts.id, contractId));
-    return this.getById(contractId);
+    await this.db.db
+      .update(serviceRegistrations)
+      .set({ registrationStatus: 'CONTRACT_PENDING', updatedAt: new Date() })
+      .where(eq(serviceRegistrations.id, contract.registrationId));
+    return this.getDetails(contractId, userId);
   }
 }

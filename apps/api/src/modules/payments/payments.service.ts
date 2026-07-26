@@ -7,6 +7,7 @@ import {
   registrationPrices,
   serviceRegistrations,
   students,
+  parents,
 } from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../common/errors';
@@ -168,6 +169,7 @@ export class PaymentsService {
       userId,
       amount: item.amount,
       paymentMethod: 'MANUAL_ADMIN_ENTRY',
+      gatewayTransactionId: _data.referenceNumber,
       transactionStatus: 'CREATED',
     });
 
@@ -251,5 +253,68 @@ export class PaymentsService {
           eq(paymentTransactions.paymentMethod, 'MANUAL_ADMIN_ENTRY'),
         ),
       );
+  }
+
+  async getOverview(userId: string) {
+    const plans = await this.db.db
+      .select({
+        plan: paymentPlans,
+        studentId: students.id,
+        studentFirstName: students.firstName,
+        studentLastName: students.lastName,
+      })
+      .from(paymentPlans)
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, registrationPrices.registrationId))
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(eq(students.userId, userId));
+
+    return Promise.all(
+      plans.map(async ({ plan, ...student }) => {
+        const [items, transactions] = await Promise.all([
+          this.db.db.select().from(paymentScheduleItems).where(eq(paymentScheduleItems.paymentPlanId, plan.id)),
+          this.db.db.select().from(paymentTransactions).where(eq(paymentTransactions.paymentPlanId, plan.id)),
+        ]);
+        return { plan, ...student, items, transactions };
+      }),
+    );
+  }
+
+  async getAllForAdmin() {
+    const rows = await this.db.db
+      .select({
+        transaction: paymentTransactions,
+        item: paymentScheduleItems,
+        studentFirstName: students.firstName,
+        studentLastName: students.lastName,
+        userId: students.userId,
+      })
+      .from(paymentTransactions)
+      .innerJoin(paymentScheduleItems, eq(paymentScheduleItems.id, paymentTransactions.paymentScheduleItemId))
+      .innerJoin(paymentPlans, eq(paymentPlans.id, paymentTransactions.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, registrationPrices.registrationId))
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId));
+    const parentRows = await this.db.db.select().from(parents);
+    return rows.map(({ transaction, item, studentFirstName, studentLastName, userId }) => {
+      const parent = parentRows.find((entry) => entry.userId === userId && entry.isPrimaryContact)
+        ?? parentRows.find((entry) => entry.userId === userId);
+      return {
+        id: transaction.id,
+        studentName: `${studentFirstName} ${studentLastName}`,
+        familyName: parent ? `${parent.firstName} ${parent.lastName}` : '—',
+        invoice: item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : `قسط ${item.sequenceNumber}`,
+        expectedAmount: item.amount,
+        submittedAmount: transaction.amount,
+        reference: transaction.gatewayTransactionId ?? '—',
+        paidAt: transaction.verifiedAt?.toISOString() ?? transaction.requestedAt.toISOString(),
+        status:
+          transaction.transactionStatus === 'SUCCEEDED'
+            ? 'تأییدشده'
+            : transaction.transactionStatus === 'FAILED'
+              ? 'ردشده'
+              : 'در انتظار بررسی',
+      };
+    });
   }
 }

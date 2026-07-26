@@ -19,7 +19,20 @@ import { Alert } from '@/components/feedback/alert';
 import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
-import type { DemoStudentDashboard } from './mock-parent-dashboard';
+export type StudentDashboard = {
+  id: string;
+  name: string;
+  schoolAndGrade: string;
+  academicYear: string;
+  enrollmentStatus: string;
+  enrollmentTone: string;
+  nextAction: string;
+  warning: string | null;
+  contractStatus: string;
+  paymentSummary: string;
+  nextPayment: string;
+  notifications: readonly string[];
+};
 
 const journeySteps = [
   { key: 'profile', label: 'حساب', icon: UserRound },
@@ -45,7 +58,7 @@ function StudentIdentitySwitcher({
   selectedId,
   onSelect,
 }: {
-  students: readonly DemoStudentDashboard[];
+  students: readonly StudentDashboard[];
   selectedId: string;
   onSelect: (id: string) => void;
 }) {
@@ -236,7 +249,7 @@ function EventTimeline({ notifications }: { notifications: readonly string[] }) 
   );
 }
 
-export function ParentDashboard({ students }: { students: readonly DemoStudentDashboard[] }) {
+export function ParentDashboard({ students }: { students: readonly StudentDashboard[] }) {
   const [selectedId, setSelectedId] = useState(students[0]?.id);
   const selectedStudent = students.find(({ id }) => id === selectedId) ?? students[0];
 

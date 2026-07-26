@@ -53,4 +53,10 @@ export class AdminSchoolsController {
     const school = await this.schoolsService.archive(id);
     return successResponse(school);
   }
+
+  @Post(':id/unarchive')
+  async unarchive(@Param('id') id: string) {
+    const school = await this.schoolsService.unarchive(id);
+    return successResponse(school);
+  }
 }

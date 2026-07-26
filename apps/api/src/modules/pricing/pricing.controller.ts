@@ -5,6 +5,35 @@ import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { successResponse } from '../../common/response';
 
+@UseGuards(AuthGuard)
+@Controller('enrollments/:enrollmentId/pricing')
+export class ParentPricingController {
+  constructor(
+    private readonly pricingService: PricingService,
+  ) {}
+
+  @Get()
+  async getPrices(@Req() req: any, @Param('enrollmentId') enrollmentId: string) {
+    return successResponse(
+      await this.pricingService.getByRegistrationForFamily(enrollmentId, req.user.id),
+    );
+  }
+
+  @Post(':priceId/accept')
+  async accept(
+    @Req() req: any,
+    @Param('priceId') priceId: string,
+    @Body() dto: { planType?: 'FULL' | 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS' },
+  ) {
+    await this.pricingService.acceptPrice(priceId, req.user.id);
+    const paymentPlanId = await this.pricingService.createPaymentPlan(
+      priceId,
+      dto.planType ?? 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
+    );
+    return successResponse({ accepted: true, paymentPlanId });
+  }
+}
+
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')
 @Controller('admin/enrollments/:enrollmentId/pricing')

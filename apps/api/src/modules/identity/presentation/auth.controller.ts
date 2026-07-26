@@ -8,6 +8,7 @@ import {
   Get,
   Req,
   Res,
+  Param,
 } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import type { CookieSerializeOptions } from '@fastify/cookie';
@@ -18,6 +19,8 @@ import { successResponse } from '../../../common/response';
 import { ConfigService } from '../../../config/config.service';
 import { ValidationError } from '../../../common/errors';
 import { TrustedOriginGuard } from '../../access-control/trusted-origin.guard';
+import { RolesGuard } from '../../access-control/roles.guard';
+import { Roles } from '../../../common/decorators';
 import { IsIn, IsString, Matches } from 'class-validator';
 
 class RequestOtpDto {
@@ -28,6 +31,28 @@ class RequestOtpDto {
   @IsString()
   @IsIn(['PARENT', 'ADMIN'])
   role!: 'PARENT' | 'ADMIN';
+}
+
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('ADMIN')
+@Controller('admin/admins')
+export class AdminIdentityController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Get()
+  async getAll() {
+    return successResponse(await this.authService.getAdmins());
+  }
+
+  @Post(':adminId/archive')
+  async archive(@Param('adminId') adminId: string) {
+    return successResponse(await this.authService.setAdminStatus(adminId, 'INACTIVE'));
+  }
+
+  @Post(':adminId/unarchive')
+  async unarchive(@Param('adminId') adminId: string) {
+    return successResponse(await this.authService.setAdminStatus(adminId, 'ACTIVE'));
+  }
 }
 
 class VerifyAuthOtpDto extends RequestOtpDto {
@@ -81,6 +106,7 @@ export class AuthController {
       context,
     );
     this.setRefreshCookie(reply, result.refreshToken, result.user.role === 'ADMIN');
+    this.setAccessCookie(reply, result.accessToken, result.user.role === 'ADMIN');
     return successResponse({
       user: result.user,
       accessToken: result.accessToken,
@@ -98,6 +124,7 @@ export class AuthController {
     }
     const tokens = await this.authService.refreshTokens(refreshToken);
     this.setRefreshCookie(reply, tokens.refreshToken, tokens.role === 'ADMIN');
+    this.setAccessCookie(reply, tokens.accessToken, tokens.role === 'ADMIN');
     return successResponse({ accessToken: tokens.accessToken });
   }
 
@@ -110,6 +137,7 @@ export class AuthController {
       await this.authService.logout(userId, req.user.sessionId);
     }
     reply.clearCookie('refresh_token', { path: '/api/v1/auth' });
+    reply.clearCookie('access_token', { path: '/' });
     return successResponse({ loggedOut: true });
   }
 
@@ -126,6 +154,17 @@ export class AuthController {
       secure: this.config.nodeEnv === 'production',
       sameSite: 'lax',
       path: '/api/v1/auth',
+      maxAge,
+    });
+  }
+
+  private setAccessCookie(reply: CookieReply, token: string, isAdmin = false) {
+    const maxAge = isAdmin ? this.config.adminJwtAccessTokenTtl : this.config.jwtAccessTokenTtl;
+    reply.setCookie('access_token', token, {
+      httpOnly: true,
+      secure: this.config.nodeEnv === 'production',
+      sameSite: 'lax',
+      path: '/',
       maxAge,
     });
   }
