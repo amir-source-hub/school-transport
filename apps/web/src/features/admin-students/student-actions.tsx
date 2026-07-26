@@ -59,10 +59,12 @@ export function AdminStudentForm({
   families,
   schools,
   student,
+  onSuccess,
 }: {
   families: Option[];
   schools: Option[];
   student?: AdminStudent;
+  onSuccess?: () => void;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -95,6 +97,7 @@ export function AdminStudentForm({
       } else {
         await createAdminStudent(form);
       }
+      onSuccess?.();
       router.refresh();
     } catch (caught) {
       setError(getApiErrorFeedback(caught).message);
@@ -127,11 +130,12 @@ export function AdminStudentForm({
 }
 
 export function AdminStudentDialog({ families, schools, student }: { families: Option[]; schools: Option[]; student?: AdminStudent }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button variant={student ? 'ghost' : 'primary'} size="sm">{student ? 'ویرایش' : 'افزودن دانش‌آموز'}</Button></DialogTrigger>
-      <DialogContent title={student ? 'ویرایش دانش‌آموز' : 'افزودن دانش‌آموز'} description="اطلاعات از این فرم مستقیماً در پایگاه داده ذخیره می‌شود.">
-        <AdminStudentForm families={families} schools={schools} student={student} />
+      <DialogContent className="max-w-2xl" title={student ? 'ویرایش دانش‌آموز' : 'افزودن دانش‌آموز'} description="اطلاعات از این فرم مستقیماً در پایگاه داده ذخیره می‌شود.">
+        <AdminStudentForm families={families} schools={schools} student={student} onSuccess={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
   );

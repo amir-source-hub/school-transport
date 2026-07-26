@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { ButtonLink } from '@/components/ui/button';
 import { getAdminRegistration, getRegistrationTone } from '@/features/admin-registrations/admin-registrations-api';
 import { ApproveButton, RejectButton, RequestCorrectionButton, StartReviewButton } from '@/features/admin-registrations/enrollment-actions';
 
@@ -80,9 +81,9 @@ export default async function RegistrationPage({
             </>
           )}
           {(isApproved || awaitingPricing) && (
-            <a href="/admin/pricing" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-[var(--shadow-raised)] transition-all duration-[var(--duration-fast)] hover:bg-primary-hover active:scale-[0.97]">
+            <ButtonLink href="/admin/pricing">
               رفتن به قیمت‌گذاری
-            </a>
+            </ButtonLink>
           )}
         </div>
       </Card>

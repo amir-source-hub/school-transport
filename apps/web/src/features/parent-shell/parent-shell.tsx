@@ -189,7 +189,7 @@ export function ParentShell({ children }: { children: ReactNode }) {
             </ButtonLink>
           </div>
         </aside>
-        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="portal-main min-w-0 flex-1 p-4 sm:p-6 lg:p-8 xl:p-10">{children}</main>
       </div>
 
       <nav

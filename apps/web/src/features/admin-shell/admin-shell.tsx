@@ -61,15 +61,19 @@ function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
             aria-current={active ? 'page' : undefined}
             className={cn(
               'flex min-h-10 items-center gap-3 rounded-[var(--radius-control)] px-3 text-sm font-bold transition-all duration-[var(--duration-fast)]',
-              active
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted hover:bg-surface-muted hover:text-foreground',
+              mobile
+                ? active
+                  ? 'bg-primary-soft text-primary'
+                  : 'text-muted hover:bg-surface-muted hover:text-foreground'
+                : active
+                  ? 'bg-sun text-navy shadow-lg shadow-sun/10'
+                  : 'text-white/60 hover:bg-white/8 hover:text-white',
             )}
           >
-            <Icon aria-hidden="true" className={cn('size-4', active && 'text-primary')} />
+            <Icon aria-hidden="true" className={cn('size-4', active && (mobile ? 'text-primary' : 'text-navy'))} />
             {label}
             {active && (
-              <span className="mr-auto h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+              <span className={cn('mr-auto h-1.5 w-1.5 rounded-full', mobile ? 'bg-primary' : 'bg-navy')} aria-hidden="true" />
             )}
           </Link>
         );
@@ -87,8 +91,8 @@ function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
 
 export function AdminShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen overflow-x-clip bg-[var(--mist)]">
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-white/95 backdrop-blur-lg">
+    <div className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_15%_10%,rgba(34,87,230,.08),transparent_24%),var(--mist)]">
+      <header className="sticky top-0 z-40 border-b border-white/70 bg-white/85 shadow-sm backdrop-blur-xl">
         <div className="mx-auto flex min-h-14 max-w-[96rem] items-center gap-3 px-4 sm:px-6">
           <Drawer>
             <DrawerTrigger asChild>
@@ -150,10 +154,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
       </header>
 
       <div className="mx-auto flex max-w-[96rem]">
-        <aside className="hidden min-h-[calc(100vh-3.5rem)] w-[15rem] shrink-0 border-l border-border/60 bg-white p-4 lg:block">
+        <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[16rem] shrink-0 overflow-y-auto bg-navy p-4 lg:block">
+          <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs font-bold text-sun">مرکز عملیات</p>
+            <p className="mt-1 text-sm font-black text-white">مدیریت سرویس مدارس</p>
+            <p className="mt-2 text-[11px] leading-5 text-white/45">ثبت‌نام، قرارداد، مسیر و پرداخت در یک فضای یکپارچه</p>
+          </div>
           <AdminNavigation />
         </aside>
-        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="portal-main min-w-0 flex-1 p-4 sm:p-6 lg:p-8 xl:p-10">{children}</main>
       </div>
     </div>
   );

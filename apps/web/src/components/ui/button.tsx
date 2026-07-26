@@ -7,10 +7,10 @@ type Size = 'sm' | 'md' | 'lg' | 'icon';
 
 const variantStyles: Record<Variant, string> = {
   primary:
-    'bg-primary text-white hover:bg-primary-hover shadow-[var(--shadow-raised)] active:scale-[0.97]',
+    'bg-primary text-white hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/20 shadow-[var(--shadow-raised)] active:translate-y-0 active:scale-[0.97]',
   secondary:
-    'border border-border bg-surface text-foreground hover:border-primary hover:text-primary',
-  ghost: 'text-foreground hover:bg-surface-muted',
+    'border border-border bg-surface text-foreground hover:-translate-y-0.5 hover:border-primary hover:bg-primary-soft/40 hover:text-primary',
+  ghost: 'text-foreground hover:bg-surface-muted hover:text-primary',
   inverse: 'bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm',
   danger: 'bg-danger text-white hover:opacity-90',
 };

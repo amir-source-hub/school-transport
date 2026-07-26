@@ -5,8 +5,8 @@ type Variant = 'raised' | 'outlined' | 'inset' | 'dark' | 'transparent';
 type Padding = 'none' | 'sm' | 'md' | 'lg';
 
 const variantStyles: Record<Variant, string> = {
-  raised: 'bg-surface-paper shadow-[var(--shadow-raised)]',
-  outlined: 'border border-border bg-surface-paper',
+  raised: 'border border-white/80 bg-surface-paper shadow-[0_18px_55px_-38px_rgba(15,23,42,.38)]',
+  outlined: 'border border-border/80 bg-surface-paper shadow-[0_12px_35px_-32px_rgba(15,23,42,.28)]',
   inset: 'surface-inset',
   dark: 'surface-dark',
   transparent: 'bg-transparent',
@@ -31,7 +31,7 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-[var(--radius-card)]',
+        'rounded-[1.25rem] transition-[transform,box-shadow,border-color] duration-200',
         variantStyles[variant],
         paddingStyles[padding],
         className,

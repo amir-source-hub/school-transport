@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
+import { ButtonLink } from '@/components/ui/button';
 import { getAdminFamilies } from '@/features/admin-families/admin-families-api';
 
 export const metadata = { title: 'خانواده‌ها' };
@@ -37,10 +37,10 @@ export default async function FamiliesPage() {
                 <td className="px-3 py-3">{family.studentCount}</td>
                 <td className="px-3 py-3"><Badge tone={family.status === 'فعال' ? 'success' : 'neutral'}>{family.status}</Badge></td>
                 <td className="px-3 py-3">
-                  <Link href={`/admin/families/${family.id}`} className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:text-primary-hover">
+                  <ButtonLink href={`/admin/families/${family.id}`} variant="secondary" size="sm">
                     مشاهده
                     <ChevronLeft aria-hidden="true" className="size-4" />
-                  </Link>
+                  </ButtonLink>
                 </td>
               </tr>
             ))}

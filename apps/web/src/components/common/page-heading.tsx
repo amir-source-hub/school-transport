@@ -25,12 +25,13 @@ export function PageHeading({
   return (
     <header
       className={cn(
-        'mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
+        'relative mb-7 flex flex-col gap-4 overflow-hidden rounded-[1.5rem] border border-white/80 bg-white px-5 py-6 shadow-[0_20px_60px_-45px_rgba(15,23,42,.45)] sm:flex-row sm:items-center sm:justify-between sm:px-7',
         mode === 'compact' && 'mb-4',
         className,
       )}
     >
-      <div className="min-w-0">
+      <span className="pointer-events-none absolute -left-10 -top-16 size-40 rounded-full bg-primary/8 blur-2xl" />
+      <div className="relative min-w-0">
         {eyebrow && (
           <p className="mb-1 text-xs font-bold uppercase tracking-wider text-primary">
             {eyebrow}
