@@ -4,6 +4,10 @@ dist/
 .turbo/
 coverage/
 .cache/
+.runtime/
+
+# Codex tool logs
+.codex-*.log
 
 # Environment and secrets
 .env
@@ -32,4 +36,11 @@ storage/
 .DS_Store
 .idea/
 .vscode/
+.vscode-server/
 Thumbs.db
+
+# GitHub Codespaces
+.devcontainer/
+
+# GitHub CLI local config
+.config/gh/
