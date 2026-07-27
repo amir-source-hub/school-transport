@@ -6,7 +6,7 @@ import { BrandMark } from '@/components/brand/brand-mark';
 export default function AuthLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
-      <Image src="/images/auth-background-city-road-school-minibus-portrait.png" alt="" fill className="object-cover object-center" priority sizes="100vw" />
+      <Image src="/images/banner-school-campus-vehicle-fleet-wide.png" alt="" fill className="object-cover object-center" priority sizes="100vw" />
       <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(16,24,40,.82),rgba(16,24,40,.38)_48%,rgba(34,87,230,.25))]" />
       <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_20%_20%,rgba(255,200,87,.65),transparent_26%),radial-gradient(circle_at_80%_75%,rgba(34,87,230,.7),transparent_28%)]" />
       <Link href="/" className="absolute right-5 top-5 z-20 inline-flex items-center gap-2 rounded-full border border-white/20 bg-navy/35 px-4 py-2 text-sm font-bold text-white backdrop-blur-xl sm:right-8 sm:top-8">
