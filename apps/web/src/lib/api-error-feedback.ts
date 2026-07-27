@@ -65,22 +65,69 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
   }
 
   if (error.status === 404 || error.code === 'RESOURCE_NOT_FOUND') {
+    const notFoundMessages: Record<string, string> = {
+      'Accepted price': 'قیمت هنوز توسط خانواده پذیرفته نشده است. ابتدا منتظر پذیرش قیمت باشید.',
+    };
+    const specificMessage = error.message
+      ? Object.entries(notFoundMessages).find(([key]) => error.message.includes(key))?.[1]
+      : undefined;
     return {
       ...base,
-      target: 'page',
-      title: 'اطلاعات پیدا نشد',
-      message: 'مورد درخواستی وجود ندارد یا دیگر در دسترس نیست.',
+      target: specificMessage ? 'form' : 'page',
+      title: specificMessage ? 'قیمت پذیرفته نشده' : 'اطلاعات پیدا نشد',
+      message: specificMessage ?? 'مورد درخواستی وجود ندارد یا دیگر در دسترس نیست.',
       canRetry: false,
     };
   }
 
   if (error.status === 409) {
+    const conflictMessages: Record<string, string> = {
+      INVALID_NATIONAL_ID: 'کد ملی واردشده معتبر نیست. فقط عدد و حداکثر ۲۰ رقم وارد کنید.',
+      INVALID_PHONE_NUMBER: 'شماره همراه واردشده معتبر نیست. باید با ۰۹ شروع شود.',
+      INCOMPLETE_ENROLLMENT: 'تمام فیلدهای ضروری را پر کنید.',
+      INVALID_LOCATION: 'موقعیت مکانی معتبر انتخاب کنید.',
+      INVALID_VEHICLE_TYPE: 'نوع وسیله نقلیه انتخاب‌شده معتبر نیست.',
+      INVALID_SCHOOL_PROGRAM: 'مقطع یا پایه تحصیلی انتخاب‌شده در این مدرسه ارائه نمی‌شود.',
+      DUPLICATE_NATIONAL_ID: 'این دانش‌آموز قبلاً ثبت‌نام شده است.',
+      DUPLICATE_ACTIVE_ENROLLMENT:
+        'یک ثبت‌نام فعال برای این دانش‌آموز در سال تحصیلی جاری وجود دارد.',
+      ACTIVE_ADDRESS_REQUIRED: 'لطفاً ابتدا یک نشانی فعال ثبت کنید.',
+      PRICE_ALREADY_ACCEPTED: 'قیمت قبلاً پذیرفته شده است. نسخه جدیدی ایجاد کنید.',
+      PAYMENT_ALREADY_COMPLETED: 'این پرداخت قبلاً انجام شده است.',
+    };
+    const specificMessage = error.code ? conflictMessages[error.code] : undefined;
     return {
       ...base,
-      target: 'dialog',
-      title: 'اطلاعات تغییر کرده است',
-      message: 'وضعیت این مورد تغییر کرده است. اطلاعات را دوباره دریافت و سپس اقدام کنید.',
-      canRetry: true,
+      target: specificMessage ? 'form' : 'dialog',
+      title: specificMessage ? 'خطا در اطلاعات' : 'اطلاعات تغییر کرده است',
+      message:
+        specificMessage ??
+        'وضعیت این مورد تغییر کرده است. اطلاعات را دوباره دریافت و سپس اقدام کنید.',
+      canRetry: !specificMessage,
+    };
+  }
+
+  if (error.status === 400 || error.code === 'VALIDATION_ERROR' || error.code === 'HTTP_ERROR') {
+    const validationMessages: Array<[string, string]> = [
+      ['installment', 'مبلغ و تاریخ شمسی تمام اقساط را بررسی کنید.'],
+      ['Administrator was not found', 'حساب مدیر پیدا نشد.'],
+      [
+        'administrator with this username',
+        'نام کاربری یا شماره همراه برای مدیر دیگری ثبت شده است.',
+      ],
+      ['approved before generating', 'ثبت‌نام باید پیش از صدور قرارداد تأیید شود.'],
+      ['pickup address', 'پیش از صدور قرارداد، نشانی سوار شدن را انتخاب کنید.'],
+      ['Payment plan', 'پیش از پذیرش قرارداد، برنامه پرداخت را ایجاد کنید.'],
+    ];
+    const translated = validationMessages.find(([key]) =>
+      error.message.toLowerCase().includes(key.toLowerCase()),
+    )?.[1];
+    return {
+      ...base,
+      target: 'form',
+      title: 'اطلاعات نیاز به اصلاح دارد',
+      message: translated ?? error.message,
+      canRetry: false,
     };
   }
 

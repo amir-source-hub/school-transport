@@ -17,7 +17,7 @@ export class IranianNationalIdConstraint implements ValidatorConstraintInterface
   }
 
   defaultMessage(): string {
-    return 'nationalId must be a valid Iranian national ID.';
+    return 'nationalId must contain between 1 and 20 digits.';
   }
 }
 

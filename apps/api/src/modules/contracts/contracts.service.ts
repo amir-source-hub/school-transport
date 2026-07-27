@@ -122,7 +122,10 @@ export class ContractsService {
         ),
       )
       .limit(1);
-    if (price.length === 0) throw new NotFoundError('Accepted price');
+    if (price.length === 0)
+      throw new NotFoundError(
+        'Accepted price. The parent must accept the offered price before a contract can be generated.',
+      );
 
     const contractId = generateId();
     const contractNumber = generateContractNumber();

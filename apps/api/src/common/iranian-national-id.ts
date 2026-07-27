@@ -14,9 +14,5 @@ export function normalizeIranianDigits(value: string): string {
 
 export function isIranianNationalId(value: string): boolean {
   const normalized = normalizeIranianDigits(value).trim();
-  if (!/^\d{10}$/.test(normalized) || /^(\d)\1{9}$/.test(normalized)) return false;
-  const digits = [...normalized].map(Number);
-  const sum = digits.slice(0, 9).reduce((total, digit, index) => total + digit * (10 - index), 0);
-  const remainder = sum % 11;
-  return digits[9] === (remainder < 2 ? remainder : 11 - remainder);
+  return /^\d{1,20}$/.test(normalized);
 }

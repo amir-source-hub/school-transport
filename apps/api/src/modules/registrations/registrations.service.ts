@@ -17,132 +17,256 @@ import { eq, and, inArray, notInArray } from 'drizzle-orm';
 import { ConflictError, NotFoundError } from '../../common/errors';
 import { generateContractNumber, generateId } from '../../common/utils';
 import { assertRegistrationTransition } from './registration-lifecycle';
-import { isIranianNationalId } from '../../common/iranian-national-id';
+import { isIranianNationalId, normalizeIranianDigits } from '../../common/iranian-national-id';
 
 @Injectable()
 export class RegistrationsService {
   constructor(private readonly db: DatabaseService) {}
 
-  async createGuidedEnrollment(userId: string, data: {
-    student: { firstName: string; lastName: string; nationalId: string; birthDate?: string; gender?: string };
-    father: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
-    mother: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
-    emergencyContact: { firstName: string; lastName: string; relationship: string; phoneNumber: string };
-    address: { title: string; province: string; city: string; district?: string; streetAddress: string; postalCode: string; latitude: number; longitude: number };
-    school: { schoolId: string; educationLevel: string; grade: string };
-    service: { serviceType: string; parentNotes?: string };
-  }) {
+  async createGuidedEnrollment(
+    userId: string,
+    data: {
+      student: {
+        firstName: string;
+        lastName: string;
+        nationalId: string;
+        birthDate?: string;
+        gender?: string;
+      };
+      father: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
+      mother: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
+      emergencyContact: {
+        firstName: string;
+        lastName: string;
+        relationship: string;
+        phoneNumber: string;
+      };
+      address: {
+        title: string;
+        province: string;
+        city: string;
+        district?: string;
+        streetAddress: string;
+        postalCode: string;
+        latitude: number;
+        longitude: number;
+      };
+      school: { schoolId: string; educationLevel: string; grade: string };
+      service: { serviceType: string; parentNotes?: string };
+    },
+  ) {
+    data.student.nationalId = normalizeIranianDigits(data.student.nationalId).trim();
+    data.father.nationalId = normalizeIranianDigits(data.father.nationalId).trim();
+    data.mother.nationalId = normalizeIranianDigits(data.mother.nationalId).trim();
     const required = [
-      data.student.firstName, data.student.lastName, data.student.nationalId,
-      data.father.firstName, data.father.lastName, data.father.phoneNumber,
-      data.mother.firstName, data.mother.lastName, data.mother.phoneNumber,
-      data.emergencyContact.firstName, data.emergencyContact.phoneNumber,
-      data.address.streetAddress, data.address.postalCode,
-      data.school.schoolId, data.school.educationLevel, data.school.grade,
+      data.student.firstName,
+      data.student.lastName,
+      data.student.nationalId,
+      data.father.firstName,
+      data.father.lastName,
+      data.father.phoneNumber,
+      data.mother.firstName,
+      data.mother.lastName,
+      data.mother.phoneNumber,
+      data.emergencyContact.firstName,
+      data.emergencyContact.phoneNumber,
+      data.address.streetAddress,
+      data.address.postalCode,
+      data.school.schoolId,
+      data.school.educationLevel,
+      data.school.grade,
       data.service.serviceType,
     ];
     if (required.some((value) => !String(value ?? '').trim())) {
-      throw new ConflictError('INCOMPLETE_ENROLLMENT', 'All required enrollment fields must be completed.');
+      throw new ConflictError(
+        'INCOMPLETE_ENROLLMENT',
+        'All required enrollment fields must be completed.',
+      );
     }
-    if (![data.student.nationalId, data.father.nationalId, data.mother.nationalId].every(isIranianNationalId)) {
-      throw new ConflictError('INVALID_NATIONAL_ID', 'A valid national ID is required for the student and both parents.');
+    if (
+      ![data.student.nationalId, data.father.nationalId, data.mother.nationalId].every(
+        isIranianNationalId,
+      )
+    ) {
+      throw new ConflictError(
+        'INVALID_NATIONAL_ID',
+        'A valid national ID is required for the student and both parents.',
+      );
     }
-    if (!/^09\d{9}$/.test(data.father.phoneNumber) || !/^09\d{9}$/.test(data.mother.phoneNumber) || !/^09\d{9}$/.test(data.emergencyContact.phoneNumber)) {
+    if (
+      !/^09\d{9}$/.test(data.father.phoneNumber) ||
+      !/^09\d{9}$/.test(data.mother.phoneNumber) ||
+      !/^09\d{9}$/.test(data.emergencyContact.phoneNumber)
+    ) {
       throw new ConflictError('INVALID_PHONE_NUMBER', 'Valid Iranian mobile numbers are required.');
     }
     if (!Number.isFinite(data.address.latitude) || !Number.isFinite(data.address.longitude)) {
       throw new ConflictError('INVALID_LOCATION', 'A valid map location is required.');
     }
     if (!['BUS', 'MINIBUS', 'CAR', 'VAN'].includes(data.service.serviceType)) {
-      throw new ConflictError('INVALID_VEHICLE_TYPE', 'The selected vehicle type is not supported.');
+      throw new ConflictError(
+        'INVALID_VEHICLE_TYPE',
+        'The selected vehicle type is not supported.',
+      );
     }
-    const [school] = await this.db.db.select({
-      id: schools.id,
-      educationOptions: schools.educationOptions,
-    }).from(schools)
-      .where(and(eq(schools.id, data.school.schoolId), eq(schools.isActive, true))).limit(1);
+    const [school] = await this.db.db
+      .select({
+        id: schools.id,
+        educationOptions: schools.educationOptions,
+      })
+      .from(schools)
+      .where(and(eq(schools.id, data.school.schoolId), eq(schools.isActive, true)))
+      .limit(1);
     if (!school) throw new NotFoundError('School', data.school.schoolId);
-    const selectedLevel = school.educationOptions.find(({ level }) => level === data.school.educationLevel);
+    const selectedLevel = school.educationOptions.find(
+      ({ level }) => level === data.school.educationLevel,
+    );
     if (!selectedLevel?.grades.includes(data.school.grade)) {
-      throw new ConflictError('INVALID_SCHOOL_PROGRAM', 'The selected education level or grade is not offered by this school.');
+      throw new ConflictError(
+        'INVALID_SCHOOL_PROGRAM',
+        'The selected education level or grade is not offered by this school.',
+      );
     }
-    const duplicate = await this.db.db.select({ id: students.id }).from(students)
-      .where(eq(students.nationalId, data.student.nationalId)).limit(1);
-    if (duplicate[0]) throw new ConflictError('DUPLICATE_NATIONAL_ID', 'This student is already registered.');
+    const duplicate = await this.db.db
+      .select({ id: students.id })
+      .from(students)
+      .where(eq(students.nationalId, data.student.nationalId))
+      .limit(1);
+    if (duplicate[0])
+      throw new ConflictError('DUPLICATE_NATIONAL_ID', 'This student is already registered.');
 
     return this.db.db.transaction(async (txn) => {
-      const existingFamilyParents = await txn.select({ id: parents.id, isPrimaryContact: parents.isPrimaryContact })
-        .from(parents).where(eq(parents.userId, userId));
-      for (const [parentType, parent] of [['FATHER', data.father], ['MOTHER', data.mother]] as const) {
-        const [existing] = await txn.select({ id: parents.id }).from(parents)
-          .where(and(eq(parents.userId, userId), eq(parents.parentType, parentType))).limit(1);
+      const existingFamilyParents = await txn
+        .select({ id: parents.id, isPrimaryContact: parents.isPrimaryContact })
+        .from(parents)
+        .where(eq(parents.userId, userId));
+      for (const [parentType, parent] of [
+        ['FATHER', data.father],
+        ['MOTHER', data.mother],
+      ] as const) {
+        const [existing] = await txn
+          .select({ id: parents.id })
+          .from(parents)
+          .where(and(eq(parents.userId, userId), eq(parents.parentType, parentType)))
+          .limit(1);
         if (existing) {
-          await txn.update(parents).set({ ...parent, updatedAt: new Date() }).where(eq(parents.id, existing.id));
+          await txn
+            .update(parents)
+            .set({ ...parent, updatedAt: new Date() })
+            .where(eq(parents.id, existing.id));
         } else {
           await txn.insert(parents).values({
-            id: generateId(), userId, parentType, ...parent,
+            id: generateId(),
+            userId,
+            parentType,
+            ...parent,
             isPrimaryContact: existingFamilyParents.length === 0 && parentType === 'FATHER',
           });
           existingFamilyParents.push({ id: '', isPrimaryContact: parentType === 'FATHER' });
         }
       }
-      const [emergency] = await txn.select({ id: emergencyContacts.id }).from(emergencyContacts)
-        .where(eq(emergencyContacts.userId, userId)).limit(1);
+      const [emergency] = await txn
+        .select({ id: emergencyContacts.id })
+        .from(emergencyContacts)
+        .where(eq(emergencyContacts.userId, userId))
+        .limit(1);
       if (emergency) {
-        await txn.update(emergencyContacts).set({ ...data.emergencyContact, updatedAt: new Date() }).where(eq(emergencyContacts.id, emergency.id));
+        await txn
+          .update(emergencyContacts)
+          .set({ ...data.emergencyContact, updatedAt: new Date() })
+          .where(eq(emergencyContacts.id, emergency.id));
       } else {
-        await txn.insert(emergencyContacts).values({ id: generateId(), userId, ...data.emergencyContact });
+        await txn
+          .insert(emergencyContacts)
+          .values({ id: generateId(), userId, ...data.emergencyContact });
       }
 
       const addressId = generateId();
       await txn.insert(familyAddresses).values({ id: addressId, userId, ...data.address });
       const studentId = generateId();
       await txn.insert(students).values({
-        id: studentId, userId, schoolId: data.school.schoolId,
-        firstName: data.student.firstName, lastName: data.student.lastName,
-        nationalId: data.student.nationalId, birthDate: data.student.birthDate || null,
-        gender: data.student.gender || null, grade: data.school.grade,
+        id: studentId,
+        userId,
+        schoolId: data.school.schoolId,
+        firstName: data.student.firstName,
+        lastName: data.student.lastName,
+        nationalId: data.student.nationalId,
+        birthDate: data.student.birthDate || null,
+        gender: data.student.gender || null,
+        grade: data.school.grade,
         className: data.school.educationLevel,
       });
       const registrationId = generateId();
       await txn.insert(serviceRegistrations).values({
-        id: registrationId, studentId, academicYear: '1405-1406',
-        serviceType: data.service.serviceType, selectedAddressId: addressId,
-        parentNotes: data.service.parentNotes || null, registrationStatus: 'CONTRACT_READY',
+        id: registrationId,
+        studentId,
+        academicYear: '1405-1406',
+        serviceType: data.service.serviceType,
+        selectedAddressId: addressId,
+        parentNotes: data.service.parentNotes || null,
+        registrationStatus: 'CONTRACT_READY',
         submittedAt: new Date(),
       });
       const priceId = generateId();
       const prepaymentAmount = 40_000_000;
       await txn.insert(registrationPrices).values({
-        id: priceId, registrationId, totalAmount: prepaymentAmount,
-        prepaymentAmount, installmentCount: 4, priceStatus: 'ACCEPTED',
-        parentConfirmedAt: new Date(), setByAdminId: null,
+        id: priceId,
+        registrationId,
+        totalAmount: prepaymentAmount,
+        prepaymentAmount,
+        installmentCount: 4,
+        priceStatus: 'ACCEPTED',
+        parentConfirmedAt: new Date(),
+        setByAdminId: null,
       });
       const planId = generateId();
       await txn.insert(paymentPlans).values({
-        id: planId, registrationPriceId: priceId, planType: 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
-        totalAmount: prepaymentAmount, prepaymentAmount, remainingInstallmentAmount: 0,
-        installmentCount: 4, planStatus: 'PENDING',
+        id: planId,
+        registrationPriceId: priceId,
+        planType: 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
+        totalAmount: prepaymentAmount,
+        prepaymentAmount,
+        remainingInstallmentAmount: 0,
+        installmentCount: 4,
+        planStatus: 'PENDING',
       });
       const scheduleItemId = generateId();
       await txn.insert(paymentScheduleItems).values({
-        id: scheduleItemId, paymentPlanId: planId, itemType: 'PREPAYMENT',
-        sequenceNumber: 0, amount: prepaymentAmount, dueDate: new Date(),
+        id: scheduleItemId,
+        paymentPlanId: planId,
+        itemType: 'PREPAYMENT',
+        sequenceNumber: 0,
+        amount: prepaymentAmount,
+        dueDate: new Date(),
       });
       const contractId = generateId();
       const snapshot = {
-        student: data.student, father: data.father, mother: data.mother,
-        emergencyContact: data.emergencyContact, address: data.address,
-        school: data.school, service: data.service, prepaymentAmount,
+        student: data.student,
+        father: data.father,
+        mother: data.mother,
+        emergencyContact: data.emergencyContact,
+        address: data.address,
+        school: data.school,
+        service: data.service,
+        prepaymentAmount,
       };
       await txn.insert(contracts).values({
-        id: contractId, registrationId, registrationPriceId: priceId, paymentPlanId: planId,
-        contractNumber: generateContractNumber(), contractStatus: 'GENERATED',
-        selectedAddressId: addressId, contractDataSnapshot: JSON.stringify(snapshot),
+        id: contractId,
+        registrationId,
+        registrationPriceId: priceId,
+        paymentPlanId: planId,
+        contractNumber: generateContractNumber(),
+        contractStatus: 'GENERATED',
+        selectedAddressId: addressId,
+        contractDataSnapshot: JSON.stringify(snapshot),
         generatedAt: new Date(),
       });
       return {
-        registrationId, studentId, contractId, scheduleItemId, prepaymentAmount,
+        registrationId,
+        studentId,
+        contractId,
+        scheduleItemId,
+        prepaymentAmount,
         contractText: this.guidedContractText(data.student.firstName, data.student.lastName),
       };
     });
@@ -196,8 +320,10 @@ export class RegistrationsService {
       .innerJoin(schools, eq(schools.id, students.schoolId));
     const parentRows = await this.db.db.select().from(parents);
     return rows.map((registration) => {
-      const parent = parentRows.find((entry) => entry.userId === registration.familyId && entry.isPrimaryContact)
-        ?? parentRows.find((entry) => entry.userId === registration.familyId);
+      const parent =
+        parentRows.find(
+          (entry) => entry.userId === registration.familyId && entry.isPrimaryContact,
+        ) ?? parentRows.find((entry) => entry.userId === registration.familyId);
       return {
         ...registration,
         studentName: `${registration.studentFirstName} ${registration.studentLastName}`,

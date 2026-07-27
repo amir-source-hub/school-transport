@@ -67,9 +67,7 @@ function ParentNavigation({ mobile = false }: { mobile?: boolean }) {
 
   const content = navGroups.map(({ group, items }) => (
     <div key={group} className="space-y-1">
-      <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-white/40">
-        {group}
-      </p>
+      <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-white/40">{group}</p>
       {items.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         const link = (
@@ -78,15 +76,16 @@ function ParentNavigation({ mobile = false }: { mobile?: boolean }) {
             aria-current={active ? 'page' : undefined}
             className={cn(
               'relative flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 text-sm font-bold transition-all duration-[var(--duration-fast)]',
-              active
-                ? 'bg-sun/15 text-sun'
-                : 'text-white/60 hover:bg-white/5 hover:text-white',
+              active ? 'bg-sun/15 text-sun' : 'text-white/60 hover:bg-white/5 hover:text-white',
             )}
           >
             <Icon aria-hidden="true" className="size-5" />
             {label}
             {active && (
-              <span className="absolute right-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-sun" aria-hidden="true" />
+              <span
+                className="absolute right-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-sun"
+                aria-hidden="true"
+              />
             )}
           </Link>
         );
@@ -126,19 +125,22 @@ export function ParentShell({ children }: { children: ReactNode }) {
             </DrawerContent>
           </Drawer>
 
-          <Link href="/parent/dashboard" className="flex items-center gap-2.5 font-black text-foreground">
+          <Link
+            href="/parent/dashboard"
+            className="flex items-center gap-2.5 font-black text-foreground"
+          >
             <BrandMark size={24} />
             <span className="hidden sm:inline">پنل خانواده</span>
           </Link>
 
           <div className="ms-auto flex items-center gap-2">
             <ButtonLink
-              href="/parent/students/new"
+              href="/parent/enrollments"
               size="sm"
               className="bg-navy text-white hover:bg-navy/90 hidden sm:inline-flex"
             >
               <Plus aria-hidden="true" className="size-4" />
-              افزودن دانش‌آموز
+              ثبت‌نام دانش‌آموز
             </ButtonLink>
             <Link
               href="/parent/notifications"
@@ -180,12 +182,12 @@ export function ParentShell({ children }: { children: ReactNode }) {
           <ParentNavigation />
           <div className="mt-8 border-t border-white/10 pt-6">
             <ButtonLink
-              href="/parent/students/new"
+              href="/parent/enrollments"
               size="sm"
               className="w-full bg-sun text-navy hover:bg-sun/90"
             >
               <Plus aria-hidden="true" className="size-4" />
-              افزودن دانش‌آموز
+              ثبت‌نام دانش‌آموز
             </ButtonLink>
           </div>
         </aside>

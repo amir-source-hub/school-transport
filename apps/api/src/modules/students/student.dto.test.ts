@@ -22,7 +22,7 @@ describe('student DTO validation', () => {
       schoolId: 'school-1',
       firstName: 'Ali',
       lastName: 'Ahmadi',
-      nationalId: '1234567890',
+      nationalId: 'not-a-number',
     });
 
     const properties = (await validate(dto)).map((error) => error.property);

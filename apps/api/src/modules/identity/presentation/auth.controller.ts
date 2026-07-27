@@ -9,6 +9,7 @@ import {
   Req,
   Res,
   Param,
+  Patch,
 } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import type { CookieSerializeOptions } from '@fastify/cookie';
@@ -21,7 +22,53 @@ import { ValidationError } from '../../../common/errors';
 import { TrustedOriginGuard } from '../../access-control/trusted-origin.guard';
 import { RolesGuard } from '../../access-control/roles.guard';
 import { Roles } from '../../../common/decorators';
-import { IsIn, IsString, Matches } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
+
+class CreateAdminDto {
+  @IsString()
+  @Length(3, 100)
+  username!: string;
+
+  @IsString()
+  @Length(1, 100)
+  firstName!: string;
+
+  @IsString()
+  @Length(1, 100)
+  lastName!: string;
+
+  @Matches(/^09\d{9}$/)
+  phoneNumber!: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+}
+
+class UpdateAdminDto {
+  @IsOptional()
+  @IsString()
+  @Length(3, 100)
+  username?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  firstName?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  lastName?: string;
+
+  @IsOptional()
+  @Matches(/^09\d{9}$/)
+  phoneNumber?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+}
 
 class RequestOtpDto {
   @IsString()
@@ -42,6 +89,21 @@ export class AdminIdentityController {
   @Get()
   async getAll() {
     return successResponse(await this.authService.getAdmins());
+  }
+
+  @Get('me')
+  async getMe(@Req() req: any) {
+    return successResponse(await this.authService.getAdmin(req.user.id));
+  }
+
+  @Post()
+  async create(@Body() dto: CreateAdminDto) {
+    return successResponse(await this.authService.createAdmin(dto));
+  }
+
+  @Patch(':adminId')
+  async update(@Param('adminId') adminId: string, @Body() dto: UpdateAdminDto) {
+    return successResponse(await this.authService.updateAdmin(adminId, dto));
   }
 
   @Post(':adminId/archive')

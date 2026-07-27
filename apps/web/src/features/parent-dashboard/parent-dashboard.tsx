@@ -115,7 +115,12 @@ function StudentIdentitySwitcher({
   );
 }
 
-function JourneyStatusCanvas({ enrollmentStatus }: { enrollmentStatus: string; enrollmentTone: string }) {
+function JourneyStatusCanvas({
+  enrollmentStatus,
+}: {
+  enrollmentStatus: string;
+  enrollmentTone: string;
+}) {
   const current = getJourneyIndex(enrollmentStatus);
   const prefersReduced = useReducedMotion();
 
@@ -125,9 +130,18 @@ function JourneyStatusCanvas({ enrollmentStatus }: { enrollmentStatus: string; e
         <Route aria-hidden="true" className="size-4 text-primary" />
         <p className="text-xs font-bold text-muted uppercase tracking-wider">مسیر خدمت</p>
       </div>
-      <div className="relative flex items-center justify-between" role="progressbar" aria-valuenow={current} aria-valuemin={0} aria-valuemax={journeySteps.length - 1}>
+      <div
+        className="relative flex items-center justify-between"
+        role="progressbar"
+        aria-valuenow={current}
+        aria-valuemin={0}
+        aria-valuemax={journeySteps.length - 1}
+      >
         {!prefersReduced && (
-          <div className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-border/50" aria-hidden="true">
+          <div
+            className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-border/50"
+            aria-hidden="true"
+          >
             <motion.div
               className="h-full bg-gradient-to-l from-primary via-sun to-primary"
               initial={{ width: '0%' }}
@@ -146,17 +160,25 @@ function JourneyStatusCanvas({ enrollmentStatus }: { enrollmentStatus: string; e
                   'flex size-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-[var(--duration-ui)]',
                   isCompleted && 'bg-primary text-white shadow-sm shadow-primary/30',
                   isCurrent && 'border-2 border-sun bg-sun/10 text-sun shadow-sm shadow-sun/20',
-                  !isCompleted && !isCurrent && 'border border-border/60 bg-surface-inset text-muted',
+                  !isCompleted &&
+                    !isCurrent &&
+                    'border border-border/60 bg-surface-inset text-muted',
                 )}
               >
-                {isCompleted ? <CheckCircle2 aria-hidden="true" className="size-4" /> : <step.icon aria-hidden="true" className="size-3.5" />}
+                {isCompleted ? (
+                  <CheckCircle2 aria-hidden="true" className="size-4" />
+                ) : (
+                  <step.icon aria-hidden="true" className="size-3.5" />
+                )}
               </span>
-              <span className={cn(
-                'text-[10px] font-medium whitespace-nowrap',
-                isCurrent && 'text-sun font-bold',
-                isCompleted && 'text-primary',
-                !isCompleted && !isCurrent && 'text-muted',
-              )}>
+              <span
+                className={cn(
+                  'text-[10px] font-medium whitespace-nowrap',
+                  isCurrent && 'text-sun font-bold',
+                  isCompleted && 'text-primary',
+                  !isCompleted && !isCurrent && 'text-muted',
+                )}
+              >
                 {step.label}
               </span>
             </div>
@@ -169,30 +191,41 @@ function JourneyStatusCanvas({ enrollmentStatus }: { enrollmentStatus: string; e
 
 function NextBestAction({ nextAction, warning }: { nextAction: string; warning: string | null }) {
   return (
-    <div className={cn(
-      'rounded-[var(--radius-canvas)] p-6',
-      warning
-        ? 'bg-gradient-to-br from-danger/10 to-danger/5 border border-danger/20'
-        : 'bg-gradient-to-br from-sun/15 to-sun/5 border border-sun/20',
-    )}>
+    <div
+      className={cn(
+        'rounded-[var(--radius-canvas)] p-6',
+        warning
+          ? 'bg-gradient-to-br from-danger/10 to-danger/5 border border-danger/20'
+          : 'bg-gradient-to-br from-sun/15 to-sun/5 border border-sun/20',
+      )}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-muted">اقدام بعدی</p>
-          <h3 className="mt-1 text-lg font-black">
-            {warning || 'در انتظار بررسی درخواست'}
-          </h3>
+          <h3 className="mt-1 text-lg font-black">{warning || 'در انتظار بررسی درخواست'}</h3>
           <p className="mt-1 text-sm text-muted">{nextAction}</p>
         </div>
-        <span className={cn(
-          'flex size-12 shrink-0 items-center justify-center rounded-2xl',
-          warning ? 'bg-danger/10 text-danger' : 'bg-sun/20 text-navy',
-        )}>
-          {warning ? <AlertCircle aria-hidden="true" className="size-6" /> : <Clock aria-hidden="true" className="size-6" />}
+        <span
+          className={cn(
+            'flex size-12 shrink-0 items-center justify-center rounded-2xl',
+            warning ? 'bg-danger/10 text-danger' : 'bg-sun/20 text-navy',
+          )}
+        >
+          {warning ? (
+            <AlertCircle aria-hidden="true" className="size-6" />
+          ) : (
+            <Clock aria-hidden="true" className="size-6" />
+          )}
         </span>
       </div>
       {!warning && (
         <div className="mt-4">
-          <ButtonLink href="/parent/enrollments" size="sm" variant="primary" className="bg-navy text-white hover:bg-navy/90">
+          <ButtonLink
+            href="/parent/enrollments"
+            size="sm"
+            variant="primary"
+            className="bg-navy text-white hover:bg-navy/90"
+          >
             مشاهده وضعیت ثبت‌نام
             <ArrowLeft aria-hidden="true" className="size-3.5" />
           </ButtonLink>
@@ -202,7 +235,13 @@ function NextBestAction({ nextAction, warning }: { nextAction: string; warning: 
   );
 }
 
-function MoneyStrip({ paymentSummary, nextPayment }: { paymentSummary: string; nextPayment: string }) {
+function MoneyStrip({
+  paymentSummary,
+  nextPayment,
+}: {
+  paymentSummary: string;
+  nextPayment: string;
+}) {
   return (
     <div className="rounded-[var(--radius-card)] border border-border/60 bg-surface-paper p-5 shadow-[var(--shadow-raised)]">
       <div className="flex items-center gap-2 mb-3">
@@ -237,9 +276,15 @@ function EventTimeline({ notifications }: { notifications: readonly string[] }) 
         )}
         {notifications.map((notification, i) => (
           <div key={i} className="relative mr-4 pr-4 last:pb-0">
-            <div className="absolute right-0 top-1.5 h-2 w-2 rounded-full bg-primary/40" aria-hidden="true" />
+            <div
+              className="absolute right-0 top-1.5 h-2 w-2 rounded-full bg-primary/40"
+              aria-hidden="true"
+            />
             {i < notifications.length - 1 && (
-              <div className="absolute right-[3px] top-4 h-full w-px bg-border/50" aria-hidden="true" />
+              <div
+                className="absolute right-[3px] top-4 h-full w-px bg-border/50"
+                aria-hidden="true"
+              />
             )}
             <p className="text-sm text-muted">{notification}</p>
           </div>
@@ -269,13 +314,15 @@ export function ParentDashboard({ students }: { students: readonly StudentDashbo
             <Home aria-hidden="true" className="size-4 text-primary" />
             <p className="text-sm font-bold text-primary">خوش آمدید</p>
           </div>
-          <h1 className="mt-1 text-2xl font-black sm:text-3xl">
-            وضعیت سرویس را دنبال کنید
-          </h1>
+          <h1 className="mt-1 text-2xl font-black sm:text-3xl">وضعیت سرویس را دنبال کنید</h1>
         </div>
-        <ButtonLink href="/parent/students/new" size="sm" className="bg-navy text-white hover:bg-navy/90">
+        <ButtonLink
+          href="/parent/enrollments"
+          size="sm"
+          className="bg-navy text-white hover:bg-navy/90"
+        >
           <GraduationCap aria-hidden="true" className="size-4" />
-          افزودن دانش‌آموز
+          ثبت‌نام دانش‌آموز
         </ButtonLink>
       </div>
 
@@ -315,7 +362,9 @@ export function ParentDashboard({ students }: { students: readonly StudentDashbo
               <FileText aria-hidden="true" className="size-4 text-muted" />
               <p className="text-xs font-bold text-muted uppercase tracking-wider">قرارداد</p>
             </div>
-            <Badge tone="neutral" className="text-xs">{selectedStudent.contractStatus}</Badge>
+            <Badge tone="neutral" className="text-xs">
+              {selectedStudent.contractStatus}
+            </Badge>
             <div className="mt-4">
               <ButtonLink href="/parent/contracts" variant="ghost" size="sm" className="px-0">
                 مشاهده قراردادها
@@ -330,7 +379,9 @@ export function ParentDashboard({ students }: { students: readonly StudentDashbo
         <div className="rounded-[var(--radius-card)] border border-border/60 bg-surface-paper p-5 shadow-[var(--shadow-raised)]">
           <div className="flex items-center gap-2 mb-3">
             <UserRound aria-hidden="true" className="size-4 text-muted" />
-            <p className="text-xs font-bold text-muted uppercase tracking-wider">اطلاعات دانش‌آموز</p>
+            <p className="text-xs font-bold text-muted uppercase tracking-wider">
+              اطلاعات دانش‌آموز
+            </p>
           </div>
           <dl className="divide-y divide-border/50 text-sm">
             <div className="flex items-center justify-between py-2.5">

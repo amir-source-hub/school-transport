@@ -95,7 +95,10 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="شاخص‌های کلیدی عملیات">
+      <section
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"
+        aria-label="شاخص‌های کلیدی عملیات"
+      >
         {kpis.map(({ label, value, icon: Icon, href, trend, trendUp, color, iconColor }) => (
           <a
             key={label}
@@ -113,7 +116,11 @@ export default async function AdminDashboardPage() {
                   trendUp ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger',
                 )}
               >
-                {trendUp ? <ArrowUp aria-hidden="true" className="size-3" /> : <ArrowDown aria-hidden="true" className="size-3" />}
+                {trendUp ? (
+                  <ArrowUp aria-hidden="true" className="size-3" />
+                ) : (
+                  <ArrowDown aria-hidden="true" className="size-3" />
+                )}
                 {trend}
               </span>
             </div>
@@ -134,9 +141,16 @@ export default async function AdminDashboardPage() {
               <ClipboardCheck aria-hidden="true" className="size-4 text-primary" />
               <h2 className="font-black">ثبت‌نام‌های اخیر</h2>
             </div>
-            <ButtonLink href="/admin/registrations" variant="ghost" size="sm">همه</ButtonLink>
+            <ButtonLink href="/admin/registrations" variant="ghost" size="sm">
+              همه
+            </ButtonLink>
           </div>
-          <div className="overflow-x-auto" role="region" aria-label="جدول ثبت‌نام‌های اخیر" tabIndex={0}>
+          <div
+            className="overflow-x-auto"
+            role="region"
+            aria-label="جدول ثبت‌نام‌های اخیر"
+            tabIndex={0}
+          >
             <table className="w-full min-w-[36rem] text-right text-sm">
               <thead>
                 <tr className="border-b border-border/50 text-muted text-[10px] uppercase tracking-wider">
@@ -148,14 +162,24 @@ export default async function AdminDashboardPage() {
               </thead>
               <tbody>
                 {recentEnrollments.map((item) => (
-                  <tr key={item.trackingCode} className="border-b border-border/30 last:border-0 hover:bg-surface-inset/50 transition-colors">
-                    <td className="px-3 py-3.5 font-bold" dir="ltr">{item.trackingCode}</td>
+                  <tr
+                    key={item.id}
+                    className="border-b border-border/30 last:border-0 hover:bg-surface-inset/50 transition-colors"
+                  >
+                    <td className="px-3 py-3.5 font-bold" dir="ltr">
+                      {item.trackingCode}
+                    </td>
                     <td className="px-3 py-3.5">{item.studentName}</td>
                     <td className="px-3 py-3.5">
-                      <Badge tone={
-                        item.status === 'نیازمند اصلاح' ? 'danger' :
-                        item.status === 'در انتظار قیمت' ? 'warning' : 'info'
-                      }>
+                      <Badge
+                        tone={
+                          item.status === 'نیازمند اصلاح'
+                            ? 'danger'
+                            : item.status === 'در انتظار قیمت'
+                              ? 'warning'
+                              : 'info'
+                        }
+                      >
                         {item.status}
                       </Badge>
                     </td>
@@ -175,31 +199,57 @@ export default async function AdminDashboardPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between rounded-lg bg-danger/5 p-3 border border-danger/10">
               <div>
-                <p className="text-sm font-bold text-danger">{formatPersianNumber(summary.overduePayments)} قسط سررسید گذشته</p>
+                <p className="text-sm font-bold text-danger">
+                  {formatPersianNumber(summary.overduePayments)} قسط سررسید گذشته
+                </p>
                 <p className="text-xs text-muted mt-0.5">نیازمند پیگیری فوری</p>
               </div>
-              <ButtonLink href="/admin/payments" variant="ghost" size="sm" className="text-danger shrink-0">مشاهده</ButtonLink>
+              <ButtonLink
+                href="/admin/payments"
+                variant="ghost"
+                size="sm"
+                className="text-danger shrink-0"
+              >
+                مشاهده
+              </ButtonLink>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-sun/5 p-3 border border-sun/10">
               <div>
-                <p className="text-sm font-bold">{formatPersianNumber(summary.pendingEnrollments)} ثبت‌نام در انتظار</p>
+                <p className="text-sm font-bold">
+                  {formatPersianNumber(summary.pendingEnrollments)} ثبت‌نام در انتظار
+                </p>
                 <p className="text-xs text-muted mt-0.5">منتظر بررسی مدیریت</p>
               </div>
-              <ButtonLink href="/admin/registrations" variant="ghost" size="sm" className="shrink-0">مشاهده</ButtonLink>
+              <ButtonLink
+                href="/admin/registrations"
+                variant="ghost"
+                size="sm"
+                className="shrink-0"
+              >
+                مشاهده
+              </ButtonLink>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-primary/5 p-3 border border-primary/10">
               <div>
-                <p className="text-sm font-bold">{formatPersianNumber(summary.contractsAwaitingAcceptance)} قرارداد منتظر پذیرش</p>
+                <p className="text-sm font-bold">
+                  {formatPersianNumber(summary.contractsAwaitingAcceptance)} قرارداد منتظر پذیرش
+                </p>
                 <p className="text-xs text-muted mt-0.5">منتظر تأیید نهایی</p>
               </div>
-              <ButtonLink href="/admin/contracts" variant="ghost" size="sm" className="shrink-0">مشاهده</ButtonLink>
+              <ButtonLink href="/admin/contracts" variant="ghost" size="sm" className="shrink-0">
+                مشاهده
+              </ButtonLink>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-surface-inset p-3">
               <div>
-                <p className="text-sm font-bold">{formatPersianNumber(summary.offlinePaymentsAwaitingReview)} پرداخت آفلاین</p>
+                <p className="text-sm font-bold">
+                  {formatPersianNumber(summary.offlinePaymentsAwaitingReview)} پرداخت آفلاین
+                </p>
                 <p className="text-xs text-muted mt-0.5">منتظر بررسی مدارک</p>
               </div>
-              <ButtonLink href="/admin/payments" variant="ghost" size="sm" className="shrink-0">مشاهده</ButtonLink>
+              <ButtonLink href="/admin/payments" variant="ghost" size="sm" className="shrink-0">
+                مشاهده
+              </ButtonLink>
             </div>
           </div>
         </section>

@@ -11,20 +11,42 @@ export default async function StudentsPage() {
   const students = await getStudents();
   return (
     <div className="space-y-6">
-      <Breadcrumbs items={[{ label: 'پنل خانواده', href: '/parent/dashboard' }, { label: 'دانش‌آموزان' }]} />
+      <Breadcrumbs
+        items={[{ label: 'پنل خانواده', href: '/parent/dashboard' }, { label: 'دانش‌آموزان' }]}
+      />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div><p className="text-sm font-bold text-primary">حساب خانواده</p><h1 className="mt-1 text-2xl font-black sm:text-3xl">دانش‌آموزان</h1></div>
-        <ButtonLink href="/parent/students/new">افزودن دانش‌آموز</ButtonLink>
+        <div>
+          <p className="text-sm font-bold text-primary">حساب خانواده</p>
+          <h1 className="mt-1 text-2xl font-black sm:text-3xl">دانش‌آموزان</h1>
+        </div>
+        <ButtonLink href="/parent/enrollments">ثبت‌نام دانش‌آموز جدید</ButtonLink>
       </div>
-      {students.length === 0 && <Card><p className="text-muted">هنوز دانش‌آموزی ثبت نشده است.</p></Card>}
+      {students.length === 0 && (
+        <Card>
+          <p className="text-muted">هنوز دانش‌آموزی ثبت نشده است.</p>
+        </Card>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         {students.map((student) => (
           <Card key={student.id}>
             <div className="flex items-start justify-between gap-3">
-              <div><h2 className="text-lg font-black">{student.firstName} {student.lastName}</h2><p className="mt-1 text-sm text-muted">{student.schoolName} — پایه {student.grade}</p></div>
+              <div>
+                <h2 className="text-lg font-black">
+                  {student.firstName} {student.lastName}
+                </h2>
+                <p className="mt-1 text-sm text-muted">
+                  {student.schoolName} — پایه {student.grade}
+                </p>
+              </div>
               <Badge tone="success">فعال</Badge>
             </div>
-            <ButtonLink href={`/parent/students/${student.id}`} variant="secondary" className="mt-5 w-full">مشاهده و ویرایش</ButtonLink>
+            <ButtonLink
+              href={`/parent/students/${student.id}`}
+              variant="secondary"
+              className="mt-5 w-full"
+            >
+              مشاهده و ویرایش
+            </ButtonLink>
           </Card>
         ))}
       </div>

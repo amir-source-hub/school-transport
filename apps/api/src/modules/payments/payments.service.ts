@@ -136,14 +136,22 @@ export class PaymentsService {
             activatedAt: new Date(),
           })
           .where(eq(paymentPlans.id, tx[0].paymentPlanId));
-        const [registration] = await txn.select({ id: serviceRegistrations.id })
+        const [registration] = await txn
+          .select({ id: serviceRegistrations.id })
           .from(paymentPlans)
-          .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
-          .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, registrationPrices.registrationId))
+          .innerJoin(
+            registrationPrices,
+            eq(registrationPrices.id, paymentPlans.registrationPriceId),
+          )
+          .innerJoin(
+            serviceRegistrations,
+            eq(serviceRegistrations.id, registrationPrices.registrationId),
+          )
           .where(eq(paymentPlans.id, tx[0].paymentPlanId))
           .limit(1);
         if (registration) {
-          await txn.update(serviceRegistrations)
+          await txn
+            .update(serviceRegistrations)
             .set({ registrationStatus: 'ENROLLED', updatedAt: new Date() })
             .where(eq(serviceRegistrations.id, registration.id));
         }
@@ -230,16 +238,26 @@ export class PaymentsService {
         .where(eq(paymentScheduleItems.id, tx[0].paymentScheduleItemId));
 
       if (item[0].itemType === 'PREPAYMENT') {
-        await txn.update(paymentPlans)
+        await txn
+          .update(paymentPlans)
           .set({ planStatus: 'ACTIVE', activatedAt: new Date(), updatedAt: new Date() })
           .where(eq(paymentPlans.id, tx[0].paymentPlanId));
-        const [registration] = await txn.select({ id: serviceRegistrations.id })
+        const [registration] = await txn
+          .select({ id: serviceRegistrations.id })
           .from(paymentPlans)
-          .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
-          .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, registrationPrices.registrationId))
-          .where(eq(paymentPlans.id, tx[0].paymentPlanId)).limit(1);
+          .innerJoin(
+            registrationPrices,
+            eq(registrationPrices.id, paymentPlans.registrationPriceId),
+          )
+          .innerJoin(
+            serviceRegistrations,
+            eq(serviceRegistrations.id, registrationPrices.registrationId),
+          )
+          .where(eq(paymentPlans.id, tx[0].paymentPlanId))
+          .limit(1);
         if (registration) {
-          await txn.update(serviceRegistrations)
+          await txn
+            .update(serviceRegistrations)
             .set({ registrationStatus: 'ENROLLED', updatedAt: new Date() })
             .where(eq(serviceRegistrations.id, registration.id));
         }
@@ -292,15 +310,24 @@ export class PaymentsService {
       })
       .from(paymentPlans)
       .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
-      .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, registrationPrices.registrationId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
       .where(eq(students.userId, userId));
 
     return Promise.all(
       plans.map(async ({ plan, ...student }) => {
         const [items, transactions] = await Promise.all([
-          this.db.db.select().from(paymentScheduleItems).where(eq(paymentScheduleItems.paymentPlanId, plan.id)),
-          this.db.db.select().from(paymentTransactions).where(eq(paymentTransactions.paymentPlanId, plan.id)),
+          this.db.db
+            .select()
+            .from(paymentScheduleItems)
+            .where(eq(paymentScheduleItems.paymentPlanId, plan.id)),
+          this.db.db
+            .select()
+            .from(paymentTransactions)
+            .where(eq(paymentTransactions.paymentPlanId, plan.id)),
         ]);
         return { plan, ...student, items, transactions };
       }),
@@ -317,15 +344,22 @@ export class PaymentsService {
         userId: students.userId,
       })
       .from(paymentTransactions)
-      .innerJoin(paymentScheduleItems, eq(paymentScheduleItems.id, paymentTransactions.paymentScheduleItemId))
+      .innerJoin(
+        paymentScheduleItems,
+        eq(paymentScheduleItems.id, paymentTransactions.paymentScheduleItemId),
+      )
       .innerJoin(paymentPlans, eq(paymentPlans.id, paymentTransactions.paymentPlanId))
       .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
-      .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, registrationPrices.registrationId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId));
     const parentRows = await this.db.db.select().from(parents);
     return rows.map(({ transaction, item, studentFirstName, studentLastName, userId }) => {
-      const parent = parentRows.find((entry) => entry.userId === userId && entry.isPrimaryContact)
-        ?? parentRows.find((entry) => entry.userId === userId);
+      const parent =
+        parentRows.find((entry) => entry.userId === userId && entry.isPrimaryContact) ??
+        parentRows.find((entry) => entry.userId === userId);
       return {
         id: transaction.id,
         planId: transaction.paymentPlanId,
@@ -346,34 +380,57 @@ export class PaymentsService {
     });
   }
 
-  async configureInstallments(
-    planId: string,
-    items: { amount: number; dueDate: string }[],
-  ) {
+  async configureInstallments(planId: string, items: { amount: number; dueDate: string }[]) {
     if (items.length < 1 || items.length > 12) {
       throw new ValidationError('Installment count must be between 1 and 12.');
     }
-    if (items.some((item) => !Number.isInteger(item.amount) || item.amount <= 0 || Number.isNaN(Date.parse(item.dueDate)))) {
+    if (
+      items.some(
+        (item) =>
+          !Number.isInteger(item.amount) ||
+          item.amount <= 0 ||
+          Number.isNaN(Date.parse(item.dueDate)),
+      )
+    ) {
       throw new ValidationError('Each installment requires a valid amount and due date.');
     }
     return this.db.db.transaction(async (txn) => {
-      const [plan] = await txn.select().from(paymentPlans).where(eq(paymentPlans.id, planId)).limit(1);
+      const [plan] = await txn
+        .select()
+        .from(paymentPlans)
+        .where(eq(paymentPlans.id, planId))
+        .limit(1);
       if (!plan) throw new NotFoundError('Payment plan', planId);
       const remaining = items.reduce((sum, item) => sum + item.amount, 0);
       const total = plan.prepaymentAmount + remaining;
-      await txn.delete(paymentScheduleItems)
-        .where(and(eq(paymentScheduleItems.paymentPlanId, planId), eq(paymentScheduleItems.itemType, 'INSTALLMENT')));
-      await txn.insert(paymentScheduleItems).values(items.map((item, index) => ({
-        id: generateId(), paymentPlanId: planId, itemType: 'INSTALLMENT',
-        sequenceNumber: index + 1, amount: item.amount, dueDate: new Date(item.dueDate),
-      })));
-      await txn.update(paymentPlans).set({
-        planType: 'ADMIN_CONFIGURED', totalAmount: total,
-        remainingInstallmentAmount: remaining, installmentCount: items.length, updatedAt: new Date(),
-      }).where(eq(paymentPlans.id, planId));
-      await txn.update(registrationPrices).set({
-        totalAmount: total, installmentCount: items.length, updatedAt: new Date(),
-      }).where(eq(registrationPrices.id, plan.registrationPriceId));
+      await txn
+        .delete(paymentScheduleItems)
+        .where(
+          and(
+            eq(paymentScheduleItems.paymentPlanId, planId),
+            eq(paymentScheduleItems.itemType, 'INSTALLMENT'),
+          ),
+        );
+      await txn.insert(paymentScheduleItems).values(
+        items.map((item, index) => ({
+          id: generateId(),
+          paymentPlanId: planId,
+          itemType: 'INSTALLMENT',
+          sequenceNumber: index + 1,
+          amount: item.amount,
+          dueDate: new Date(item.dueDate),
+        })),
+      );
+      await txn
+        .update(paymentPlans)
+        .set({
+          planType: 'ADMIN_CONFIGURED',
+          totalAmount: total,
+          remainingInstallmentAmount: remaining,
+          installmentCount: items.length,
+          updatedAt: new Date(),
+        })
+        .where(eq(paymentPlans.id, planId));
       return { planId, totalAmount: total, installmentCount: items.length };
     });
   }

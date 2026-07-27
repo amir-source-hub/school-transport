@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { addSeconds, isPast } from 'date-fns';
-import { eq, and, desc, isNull } from 'drizzle-orm';
+import { eq, and, desc, isNull, or } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { ConfigService } from '../../../config/config.service';
 import { DatabaseService } from '../../../database/database.service';
@@ -41,6 +41,70 @@ export class AuthService {
       .orderBy(desc(adminUsers.createdAt));
   }
 
+  async getAdmin(adminId: string) {
+    const admins = await this.db.db
+      .select({
+        id: adminUsers.id,
+        username: adminUsers.username,
+        firstName: adminUsers.firstName,
+        lastName: adminUsers.lastName,
+        phoneNumber: adminUsers.phoneNumber,
+        email: adminUsers.email,
+        status: adminUsers.status,
+        lastLoginAt: adminUsers.lastLoginAt,
+        createdAt: adminUsers.createdAt,
+      })
+      .from(adminUsers)
+      .where(eq(adminUsers.id, adminId))
+      .limit(1);
+    if (!admins[0]) throw new ValidationError('Administrator was not found.');
+    return admins[0];
+  }
+
+  async createAdmin(data: {
+    username: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    email?: string;
+  }) {
+    await this.ensureAdminIdentityIsUnique(data.username, data.phoneNumber);
+    const [admin] = await this.db.db
+      .insert(adminUsers)
+      .values({ id: generateId(), ...data, email: data.email || null, status: 'ACTIVE' })
+      .returning();
+    return admin;
+  }
+
+  async updateAdmin(
+    adminId: string,
+    data: Partial<{
+      username: string;
+      firstName: string;
+      lastName: string;
+      phoneNumber: string;
+      email: string;
+    }>,
+  ) {
+    const current = await this.getAdmin(adminId);
+    await this.ensureAdminIdentityIsUnique(
+      data.username ?? current.username,
+      data.phoneNumber ?? current.phoneNumber,
+      adminId,
+    );
+    const changes = {
+      ...data,
+      ...(data.email !== undefined ? { email: data.email || null } : {}),
+      updatedAt: new Date(),
+    };
+    const [admin] = await this.db.db
+      .update(adminUsers)
+      .set(changes)
+      .where(eq(adminUsers.id, adminId))
+      .returning();
+    return admin;
+  }
+
   async setAdminStatus(adminId: string, status: 'ACTIVE' | 'INACTIVE') {
     const [admin] = await this.db.db
       .update(adminUsers)
@@ -49,6 +113,22 @@ export class AuthService {
       .returning();
     if (!admin) throw new ValidationError('Administrator was not found.');
     return admin;
+  }
+
+  private async ensureAdminIdentityIsUnique(
+    username: string,
+    phoneNumber: string,
+    excludedAdminId?: string,
+  ) {
+    const matches = await this.db.db
+      .select({ id: adminUsers.id })
+      .from(adminUsers)
+      .where(or(eq(adminUsers.username, username), eq(adminUsers.phoneNumber, phoneNumber)));
+    if (matches.some(({ id }) => id !== excludedAdminId)) {
+      throw new ValidationError(
+        'An administrator with this username or phone number already exists.',
+      );
+    }
   }
 
   async requestAuthOtp(phoneNumber: string, role: 'PARENT' | 'ADMIN'): Promise<OtpResult> {
