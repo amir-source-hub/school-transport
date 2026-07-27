@@ -20,7 +20,7 @@ export async function getAdminNotifications() {
     message: item.message,
     type: item.notificationType.includes('PAYMENT') ? 'warning' : 'info',
     readAt: item.notificationStatus === 'PENDING' ? null : item.sentAt?.toISOString() ?? item.createdAt.toISOString(),
-    createdAt: item.createdAt.toLocaleString('fa-IR'),
+    createdAt: item.createdAt.toISOString(),
   }));
   return { notifications };
 }

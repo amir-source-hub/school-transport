@@ -375,6 +375,8 @@ export class PaymentsService {
         studentFirstName: students.firstName,
         studentLastName: students.lastName,
         userId: students.userId,
+        planType: paymentPlans.planType,
+        remainingAmount: paymentPlans.remainingInstallmentAmount,
       })
       .from(paymentTransactions)
       .innerJoin(
@@ -389,13 +391,24 @@ export class PaymentsService {
       )
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId));
     const parentRows = await this.db.db.select().from(parents);
-    return rows.map(({ transaction, item, studentFirstName, studentLastName, userId }) => {
+    return rows.map(
+      ({
+        transaction,
+        item,
+        studentFirstName,
+        studentLastName,
+        userId,
+        planType,
+        remainingAmount,
+      }) => {
       const parent =
         parentRows.find((entry) => entry.userId === userId && entry.isPrimaryContact) ??
         parentRows.find((entry) => entry.userId === userId);
       return {
         id: transaction.id,
         planId: transaction.paymentPlanId,
+        planType,
+        planConfigured: remainingAmount > 0,
         studentName: `${studentFirstName} ${studentLastName}`,
         familyName: parent ? `${parent.firstName} ${parent.lastName}` : '—',
         invoice: item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : `قسط ${item.sequenceNumber}`,
@@ -410,7 +423,8 @@ export class PaymentsService {
               ? 'ردشده'
               : 'در انتظار بررسی',
       };
-    });
+      },
+    );
   }
 
   async configureInstallments(planId: string, items: { amount: number; dueDate: string }[]) {
@@ -427,13 +441,16 @@ export class PaymentsService {
     ) {
       throw new ValidationError('Each installment requires a valid amount and due date.');
     }
-    return this.db.db.transaction(async (txn) => {
+    const result = await this.db.db.transaction(async (txn) => {
       const [plan] = await txn
         .select()
         .from(paymentPlans)
         .where(eq(paymentPlans.id, planId))
         .limit(1);
       if (!plan) throw new NotFoundError('Payment plan', planId);
+      if (plan.planType === 'FULL' && items.length !== 1) {
+        throw new ValidationError('Full payment requires exactly one remaining payment.');
+      }
       const remaining = items.reduce((sum, item) => sum + item.amount, 0);
       const total = plan.prepaymentAmount + remaining;
       await txn
@@ -457,7 +474,7 @@ export class PaymentsService {
       await txn
         .update(paymentPlans)
         .set({
-          planType: 'ADMIN_CONFIGURED',
+          planType: plan.planType === 'FULL' ? 'FULL' : 'ADMIN_CONFIGURED',
           totalAmount: total,
           remainingInstallmentAmount: remaining,
           installmentCount: items.length,
@@ -466,5 +483,30 @@ export class PaymentsService {
         .where(eq(paymentPlans.id, planId));
       return { planId, totalAmount: total, installmentCount: items.length };
     });
+    const [owner] = await this.db.db
+      .select({ userId: students.userId })
+      .from(paymentPlans)
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(eq(paymentPlans.id, planId))
+      .limit(1);
+    if (owner) {
+      await this.notifications.create({
+        userId: owner.userId,
+        notificationType: 'PAYMENT_PLAN_READY',
+        title: 'برنامه پرداخت آماده است',
+        message:
+          items.length === 1
+            ? 'مبلغ باقی‌مانده و تاریخ پرداخت یکجا توسط مدیریت ثبت شد.'
+            : 'مبالغ و تاریخ‌های برنامه اقساط توسط مدیریت ثبت شد.',
+        relatedEntityType: 'PAYMENT_PLAN',
+        relatedEntityId: planId,
+      });
+    }
+    return result;
   }
 }

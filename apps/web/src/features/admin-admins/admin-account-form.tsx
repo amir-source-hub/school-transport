@@ -49,8 +49,20 @@ export function AdminAccountForm({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(undefined);
+    if (!form.firstName.trim() || !form.lastName.trim()) {
+      setError('نام و نام خانوادگی مدیر الزامی است.');
+      return;
+    }
+    if (form.username.trim().length < 3) {
+      setError('نام کاربری باید حداقل ۳ نویسه باشد.');
+      return;
+    }
     if (!/^09\d{9}$/.test(form.phoneNumber)) {
       setError('شماره همراه باید ۱۱ رقم و با ۰۹ شروع شود.');
+      return;
+    }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setError('نشانی ایمیل معتبر نیست.');
       return;
     }
     setPending(true);

@@ -4,6 +4,8 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { getAdminFamily } from '@/features/admin-families/admin-families-api';
+import { formatJalaliDate } from '@/lib/formatters';
+import { DeleteParentButton, ParentEditor } from '@/features/admin-families/parent-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +41,7 @@ export default async function FamilyDetailPage({
             ['نام خانوادگی', family.username],
             ['شماره تماس', family.primaryPhone ?? 'ثبت نشده'],
             ['تعداد دانش‌آموز', String(family.studentCount)],
-            ['تاریخ ثبت‌نام', family.createdAt ?? '—'],
+            ['تاریخ ثبت‌نام', family.createdAt ? formatJalaliDate(family.createdAt) : '—'],
           ].map(([label, value]) => (
             <div key={label} className="grid gap-1 py-3 sm:grid-cols-[10rem_1fr]">
               <dt className="text-muted">{label}</dt>
@@ -47,6 +49,31 @@ export default async function FamilyDetailPage({
             </div>
           ))}
         </dl>
+      </Card>
+      <Card>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-black">والدین</h2>
+          {family.parents.length < 2 && <ParentEditor familyId={family.id} />}
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          {family.parents.map((parent) => (
+            <section key={parent.id} className="rounded-xl border border-border p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-black">{parent.firstName} {parent.lastName}</p>
+                  <p className="mt-1 text-sm text-muted">{parent.parentType === 'FATHER' ? 'پدر' : 'مادر'}</p>
+                </div>
+                {parent.isPrimaryContact && <Badge tone="success">تماس اصلی</Badge>}
+              </div>
+              <p className="mt-3 text-sm" dir="ltr">{parent.phoneNumber}</p>
+              <p className="mt-1 text-sm" dir="ltr">{parent.nationalId}</p>
+              <div className="mt-4 flex gap-2 border-t border-border pt-4">
+                <ParentEditor familyId={family.id} parent={parent} />
+                <DeleteParentButton familyId={family.id} parentId={parent.id} />
+              </div>
+            </section>
+          ))}
+        </div>
       </Card>
       {family.students && family.students.length > 0 && (
         <Card>

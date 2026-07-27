@@ -3,7 +3,6 @@
 import {
   Bell,
   Building2,
-  BusFront,
   ChevronDown,
   ClipboardCheck,
   FileText,
@@ -13,7 +12,6 @@ import {
   Search,
   Settings,
   Shield,
-  Tags,
   UserRound,
   UsersRound,
   WalletCards,
@@ -31,6 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { BrandMark } from '@/components/brand/brand-mark';
+import { AutoSubmitForm } from '@/components/forms/auto-submit-form';
 import { LogoutMenuItem } from '@/features/auth/logout-menu-item';
 import { cn } from '@/lib/cn';
 
@@ -40,9 +39,7 @@ const navigation = [
   { href: '/admin/families', label: 'خانواده‌ها', icon: UsersRound },
   { href: '/admin/students', label: 'دانش‌آموزان', icon: GraduationCap },
   { href: '/admin/schools', label: 'مدارس', icon: Building2 },
-  { href: '/admin/service-requests', label: 'درخواست خدمت', icon: BusFront },
   { href: '/admin/contracts', label: 'قراردادها', icon: FileText },
-  { href: '/admin/pricing', label: 'قیمت‌گذاری', icon: Tags },
   { href: '/admin/payments', label: 'پرداخت‌ها', icon: WalletCards },
   { href: '/admin/notifications', label: 'اعلان‌ها', icon: Bell },
   { href: '/admin/admins', label: 'مدیران', icon: Shield },
@@ -115,16 +112,18 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <span className="hidden sm:inline">پنل مدیریت</span>
           </Link>
 
-          <label className="ms-auto hidden w-full max-w-xs lg:block">
-            <span className="sr-only">جست‌وجوی مدیریتی</span>
-            <span className="relative block">
+          <AutoSubmitForm action="/admin/registrations" method="get" className="ms-auto hidden w-full max-w-xs lg:block">
+            <label>
+              <span className="sr-only">جست‌وجوی مدیریتی</span>
+              <span className="relative block">
               <Search
                 aria-hidden="true"
                 className="absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted"
               />
-              <Input placeholder="جست‌وجوی سریع..." className="pe-10 h-9 text-sm rounded-[var(--radius-pill)] bg-surface-muted border-0" />
-            </span>
-          </label>
+                <Input type="search" name="q" placeholder="جست‌وجوی ثبت‌نام‌ها..." className="pe-10 h-9 text-sm rounded-[var(--radius-pill)] bg-surface-muted border-0" />
+              </span>
+            </label>
+          </AutoSubmitForm>
 
           <Link
             href="/admin/notifications"

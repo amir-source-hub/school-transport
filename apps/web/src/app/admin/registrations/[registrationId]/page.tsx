@@ -25,6 +25,7 @@ export default async function RegistrationPage({
   const isApproved = status === 'تأییدشده';
   const isRejected = status === 'ردشده';
   const awaitingPricing = status === 'در انتظار قیمت';
+  const prepaid = status === 'پیش‌پرداخت انجام‌شده';
 
   return (
     <div className="space-y-6">
@@ -70,6 +71,7 @@ export default async function RegistrationPage({
           {isApproved && 'این درخواست تأیید شده است. برای ثبت قیمت به بخش قیمت‌گذاری مراجعه کنید.'}
           {isRejected && 'این درخواست رد شده است.'}
           {awaitingPricing && 'درخواست تأیید شده و در انتظار ثبت قیمت است.'}
+          {prepaid && 'قرارداد پذیرفته و پیش‌پرداخت انجام شده است. برنامه پرداخت باقی‌مانده را در بخش پرداخت‌ها ثبت کنید.'}
         </p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           {canStartReview && <StartReviewButton enrollmentId={registrationId} />}
@@ -81,10 +83,11 @@ export default async function RegistrationPage({
             </>
           )}
           {(isApproved || awaitingPricing) && (
-            <ButtonLink href="/admin/pricing">
-              رفتن به قیمت‌گذاری
+            <ButtonLink href="/admin/payments">
+              مدیریت برنامه پرداخت
             </ButtonLink>
           )}
+          {prepaid && <ButtonLink href="/admin/payments">تنظیم مبلغ و سررسیدهای باقی‌مانده</ButtonLink>}
         </div>
       </Card>
     </div>

@@ -17,6 +17,15 @@ export const familyDetailSchema = z.object({
   studentCount: z.number(),
   status: z.string(),
   createdAt: z.string().optional(),
+  parents: z.array(z.object({
+    id: z.string(),
+    parentType: z.string(),
+    firstName: z.string(),
+    lastName: z.string(),
+    nationalId: z.string(),
+    phoneNumber: z.string(),
+    isPrimaryContact: z.boolean(),
+  })),
   students: z.array(z.object({
     id: z.string(),
     firstName: z.string(),
@@ -31,6 +40,7 @@ export const familiesSchema = z.array(familySchema);
 
 export type Family = z.infer<typeof familySchema>;
 export type FamilyDetail = z.infer<typeof familyDetailSchema>;
+export type AdminParent = FamilyDetail['parents'][number];
 
 export async function getAdminFamilies(): Promise<{ families: Family[] }> {
   const response = await apiRequest<unknown>('/admin/families', {
@@ -38,6 +48,28 @@ export async function getAdminFamilies(): Promise<{ families: Family[] }> {
     timeoutMs: 8_000,
   });
   return { families: familiesSchema.parse(response.data) };
+}
+
+export async function createFamilyParent(
+  familyId: string,
+  data: Omit<AdminParent, 'id'>,
+) {
+  await apiRequest(`/admin/families/${familyId}/parents`, { method: 'POST', body: data });
+}
+
+export async function updateFamilyParent(
+  familyId: string,
+  parentId: string,
+  data: Omit<AdminParent, 'id' | 'parentType'>,
+) {
+  await apiRequest(`/admin/families/${familyId}/parents/${parentId}`, {
+    method: 'PATCH',
+    body: data,
+  });
+}
+
+export async function deleteFamilyParent(familyId: string, parentId: string) {
+  await apiRequest(`/admin/families/${familyId}/parents/${parentId}`, { method: 'DELETE' });
 }
 
 export async function getAdminFamily(id: string): Promise<{ family: FamilyDetail | null }> {

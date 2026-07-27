@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { notifications } from '../../database/schemas';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { generateId } from '../../common/utils';
 
 @Injectable()
@@ -32,7 +32,20 @@ export class NotificationsService {
   }
 
   async getAll() {
-    return this.db.db.select().from(notifications).orderBy(notifications.createdAt);
+    return this.db.db
+      .select()
+      .from(notifications)
+      .where(
+        inArray(notifications.notificationType, [
+          'ACCOUNT_REGISTERED',
+          'ENROLLMENT_CREATED',
+          'PAYMENT_SUCCEEDED',
+          'OFFLINE_PAYMENT_SUBMITTED',
+          'CONTRACT_ACCEPTED',
+          'CONTRACT_REJECTED',
+        ]),
+      )
+      .orderBy(desc(notifications.createdAt));
   }
 
   async getUnreadCount(userId: string) {

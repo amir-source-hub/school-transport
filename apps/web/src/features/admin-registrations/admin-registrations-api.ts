@@ -26,6 +26,10 @@ export const registrationStatuses = [
   'تأییدشده',
   'ردشده',
   'در انتظار قیمت',
+  'در انتظار قرارداد',
+  'قرارداد آماده',
+  'قرارداد پذیرفته‌شده',
+  'پیش‌پرداخت انجام‌شده',
 ] as const;
 
 const rawSchema = z.object({
@@ -50,6 +54,7 @@ const labels: Record<string, string> = {
   CONTRACT_READY: 'قرارداد آماده',
   CONTRACT_ACCEPTED: 'قرارداد پذیرفته‌شده',
   CANCELLED: 'لغوشده',
+  ENROLLED: 'پیش‌پرداخت انجام‌شده',
 };
 const actions: Record<string, string> = {
   SUBMITTED: 'شروع بررسی',
@@ -58,6 +63,8 @@ const actions: Record<string, string> = {
   APPROVED: 'ثبت قیمت',
   CONTRACT_PENDING: 'صدور قرارداد',
   CONTRACT_READY: 'انتظار برای خانواده',
+  CONTRACT_ACCEPTED: 'انتظار برای پیش‌پرداخت',
+  ENROLLED: 'تنظیم مبلغ باقی‌مانده',
 };
 function generateTrackingCode(id: string): string {
   const lastSegment = id.split('-').pop()?.toUpperCase() ?? id.slice(0, 8);
@@ -101,7 +108,7 @@ export const requestCorrection = async (id: string, reason: string) => {
   });
 };
 export function getRegistrationTone(status: string) {
-  if (status === 'تأییدشده') return 'success' as const;
+  if (status === 'تأییدشده' || status === 'پیش‌پرداخت انجام‌شده') return 'success' as const;
   if (status === 'ردشده') return 'danger' as const;
   return 'warning' as const;
 }

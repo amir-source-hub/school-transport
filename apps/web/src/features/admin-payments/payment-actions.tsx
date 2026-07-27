@@ -60,7 +60,13 @@ export function ApprovePaymentDialog({ paymentId }: { paymentId: string }) {
   );
 }
 
-export function ConfigureInstallmentsDialog({ planId }: { planId: string }) {
+export function ConfigureInstallmentsDialog({
+  planId,
+  fullPayment = false,
+}: {
+  planId: string;
+  fullPayment?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -73,11 +79,15 @@ export function ConfigureInstallmentsDialog({ planId }: { planId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary">تنظیم اقساط</Button>
+        <Button>{fullPayment ? 'تنظیم پرداخت باقی‌مانده' : 'تنظیم برنامه اقساط'}</Button>
       </DialogTrigger>
       <DialogContent
-        title="برنامه اقساط"
-        description="تعداد، مبلغ و تاریخ هر قسط را تعیین کنید. پیش‌پرداخت ۴ میلیون تومان ثابت می‌ماند."
+        title={fullPayment ? 'پرداخت یکجای باقی‌مانده' : 'برنامه اقساط'}
+        description={
+          fullPayment
+            ? 'مبلغ باقی‌مانده و تاریخ پرداخت را تعیین کنید. پیش‌پرداخت ثابت می‌ماند.'
+            : 'تعداد، مبلغ و تاریخ هر قسط را تعیین کنید. پیش‌پرداخت ۴ میلیون تومان ثابت می‌ماند.'
+        }
       >
         <div className="max-h-[65vh] space-y-4 overflow-y-auto">
           {items.map((item, index) => (
@@ -86,7 +96,7 @@ export function ConfigureInstallmentsDialog({ planId }: { planId: string }) {
               className="grid grid-cols-[auto_1fr_1fr] items-end gap-3 rounded-xl bg-surface-muted p-3"
             >
               <span className="pb-3 text-sm font-black">
-                قسط {(index + 1).toLocaleString('fa-IR')}
+                {fullPayment ? 'باقی‌مانده' : `قسط ${(index + 1).toLocaleString('fa-IR')}`}
               </span>
               <label className="text-xs font-bold">
                 مبلغ (ریال)
@@ -109,7 +119,7 @@ export function ConfigureInstallmentsDialog({ planId }: { planId: string }) {
             </div>
           ))}
           <div className="flex gap-2">
-            {items.length < 12 && (
+            {!fullPayment && items.length < 12 && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -118,7 +128,7 @@ export function ConfigureInstallmentsDialog({ planId }: { planId: string }) {
                 افزودن قسط
               </Button>
             )}
-            {items.length > 1 && (
+            {!fullPayment && items.length > 1 && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -150,7 +160,7 @@ export function ConfigureInstallmentsDialog({ planId }: { planId: string }) {
               }
             }}
           >
-            ذخیره برنامه اقساط
+            {fullPayment ? 'ثبت پرداخت باقی‌مانده' : 'ذخیره برنامه اقساط'}
           </Button>
         </div>
       </DialogContent>

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, UseGuards, Req, Param } from '@nestjs/common';
+import { Controller, Delete, Get, Post, Patch, Body, UseGuards, Req, Param } from '@nestjs/common';
 import { FamiliesService } from '../application/families.service';
 import { AuthGuard } from '../../access-control/auth.guard';
 import { successResponse } from '../../../common/response';
@@ -103,5 +103,24 @@ export class AdminFamiliesController {
   @Get(':id')
   async getById(@Param('id') id: string) {
     return successResponse(await this.familiesService.getForAdmin(id));
+  }
+
+  @Post(':id/parents')
+  async createParent(@Param('id') id: string, @Body() dto: any) {
+    return successResponse(await this.familiesService.adminCreateParent(id, dto));
+  }
+
+  @Patch(':id/parents/:parentId')
+  async updateParent(
+    @Param('id') id: string,
+    @Param('parentId') parentId: string,
+    @Body() dto: any,
+  ) {
+    return successResponse(await this.familiesService.adminUpdateParent(id, parentId, dto));
+  }
+
+  @Delete(':id/parents/:parentId')
+  async deleteParent(@Param('id') id: string, @Param('parentId') parentId: string) {
+    return successResponse(await this.familiesService.adminDeleteParent(id, parentId));
   }
 }

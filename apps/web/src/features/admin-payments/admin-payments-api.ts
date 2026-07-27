@@ -4,6 +4,8 @@ import { apiRequest } from '@/lib/api-client';
 export const paymentSchema = z.object({
   id: z.string(),
   planId: z.string(),
+  planType: z.string(),
+  planConfigured: z.boolean(),
   studentName: z.string(),
   familyName: z.string(),
   invoice: z.string(),

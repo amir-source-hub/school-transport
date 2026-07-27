@@ -10,7 +10,8 @@ const variantStyles: Record<Variant, string> = {
     'bg-primary text-white hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/20 shadow-[var(--shadow-raised)] active:translate-y-0 active:scale-[0.97]',
   secondary:
     'border border-border bg-surface text-foreground hover:-translate-y-0.5 hover:border-primary hover:bg-primary-soft/40 hover:text-primary',
-  ghost: 'text-foreground hover:bg-surface-muted hover:text-primary',
+  ghost:
+    'border border-border/80 bg-surface text-foreground shadow-sm hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary-soft/40 hover:text-primary',
   inverse: 'bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm',
   danger: 'bg-danger text-white hover:opacity-90',
 };

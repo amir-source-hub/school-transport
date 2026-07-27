@@ -34,7 +34,11 @@ export type GuidedEnrollmentInput = {
   emergencyContact: { firstName: string; lastName: string; relationship: string; phoneNumber: string };
   address: { title: string; province: string; city: string; district?: string; streetAddress: string; postalCode: string; latitude: number; longitude: number };
   school: { schoolId: string; educationLevel: string; grade: string };
-  service: { serviceType: string; parentNotes?: string };
+  service: {
+    serviceType: string;
+    paymentPlanType: 'FULL' | 'INSTALLMENTS';
+    parentNotes?: string;
+  };
 };
 
 const guidedResultSchema = z.object({

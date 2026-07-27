@@ -85,6 +85,7 @@ const initialForm = {
   educationLevel: '',
   grade: '',
   serviceType: 'BUS',
+  paymentPlanType: 'INSTALLMENTS',
   parentNotes: '',
 };
 
@@ -305,7 +306,11 @@ export function CreateEnrollmentForm({
             educationLevel: form.educationLevel,
             grade: form.grade,
           },
-          service: { serviceType: form.serviceType, parentNotes: form.parentNotes || undefined },
+          service: {
+            serviceType: form.serviceType,
+            paymentPlanType: form.paymentPlanType as 'FULL' | 'INSTALLMENTS',
+            parentNotes: form.parentNotes || undefined,
+          },
         }),
       );
     } catch (caught) {
@@ -570,6 +575,41 @@ export function CreateEnrollmentForm({
                 تغییر پیش از شروع خدمت اطلاع‌رسانی می‌شود.
               </p>
             </div>
+            <Section title="روش پرداخت مبلغ باقی‌مانده">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[
+                  {
+                    value: 'FULL',
+                    title: 'پرداخت یکجا',
+                    description:
+                      'مدیریت مبلغ باقی‌مانده و یک سررسید را پس از بررسی مسیر تعیین می‌کند.',
+                  },
+                  {
+                    value: 'INSTALLMENTS',
+                    title: 'پرداخت اقساطی',
+                    description:
+                      'مدیریت تعداد اقساط، مبلغ هر قسط و تاریخ‌های شمسی را جداگانه تعیین می‌کند.',
+                  },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => set('paymentPlanType', option.value)}
+                    className={`rounded-2xl border-2 p-5 text-right transition hover:-translate-y-0.5 hover:shadow-md ${
+                      form.paymentPlanType === option.value
+                        ? 'border-primary bg-primary-soft'
+                        : 'border-border bg-white'
+                    }`}
+                  >
+                    <p className="font-black">{option.title}</p>
+                    <p className="mt-2 text-sm leading-7 text-muted">{option.description}</p>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-sm text-muted">
+                پیش‌پرداخت ثابت ۴٬۰۰۰٬۰۰۰ تومان در هر دو روش همین حالا پرداخت می‌شود.
+              </p>
+            </Section>
             <label className="text-sm font-bold">
               توضیحات برای واحد مسیر
               <Textarea
@@ -655,8 +695,9 @@ export function CreateEnrollmentForm({
               ۴٬۰۰۰٬۰۰۰ <span className="text-base">تومان</span>
             </p>
             <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-right text-sm leading-7 text-muted">
-              مبلغ، تعداد و تاریخ اقساط بعدی پس از برنامه‌ریزی مسیر توسط مدیریت تعیین می‌شود و در
-              پنل شما قابل مشاهده خواهد بود.
+              {form.paymentPlanType === 'FULL'
+                ? 'مبلغ باقی‌مانده و تاریخ پرداخت یکجا پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'
+                : 'تعداد، مبلغ و تاریخ اقساط پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'}
             </div>
             <Button
               className="mt-6 w-full"

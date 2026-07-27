@@ -2,9 +2,10 @@ import { Search } from 'lucide-react';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Pagination } from '@/components/navigation/pagination';
 import { Badge } from '@/components/ui/badge';
-import { Button, ButtonLink } from '@/components/ui/button';
+import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { AutoSubmitForm } from '@/components/forms/auto-submit-form';
 import { getAdminRegistrations, getRegistrationTone, registrationStatuses } from '@/features/admin-registrations/admin-registrations-api';
 
 export const metadata = { title: 'درخواست‌های ثبت‌نام' };
@@ -47,12 +48,12 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">درخواست‌های ثبت‌نام</h1>
       </div>
       <Card>
-        <form method="get" className="grid gap-4 md:grid-cols-[1fr_13rem_13rem_auto] md:items-end">
+        <AutoSubmitForm method="get" className="grid gap-4 md:grid-cols-[1fr_13rem_13rem] md:items-end">
           <label className="text-sm font-bold">
             جست‌وجو
             <span className="relative mt-2 block">
               <Search aria-hidden="true" className="absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-              <Input name="q" defaultValue={query} placeholder="کد، دانش‌آموز، خانواده یا مدرسه" className="pe-10" />
+              <Input type="search" name="q" defaultValue={query} placeholder="کد، دانش‌آموز، خانواده یا مدرسه" className="pe-10" />
             </span>
           </label>
           <label className="text-sm font-bold">
@@ -68,8 +69,7 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
               <option value="student">نام دانش‌آموز</option>
             </select>
           </label>
-          <Button type="submit">اعمال فیلتر</Button>
-        </form>
+        </AutoSubmitForm>
       </Card>
 
       {visible.length === 0 ? (
@@ -87,7 +87,7 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
                   <div><dt className="text-muted">خانواده</dt><dd className="font-bold">{item.familyName}</dd></div>
                   <div><dt className="text-muted">اقدام بعدی</dt><dd className="font-bold">{item.nextAction}</dd></div>
                 </dl>
-                <ButtonLink href={`/admin/registrations/${item.id}`} variant="secondary" className="mt-4 w-full">مشاهده و بررسی</ButtonLink>
+                <ButtonLink href={`/admin/registrations/${item.id}`} className="mt-4 w-full">مشاهده جزئیات و اقدامات</ButtonLink>
               </Card>
             ))}
           </div>
@@ -110,7 +110,7 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
                       <td className="px-3 py-3">{item.studentName}</td>
                       <td className="px-3 py-3">{item.familyName}</td>
                       <td className="px-3 py-3"><Badge tone={getRegistrationTone(item.status)}>{item.status}</Badge></td>
-                      <td className="px-3 py-3"><ButtonLink href={`/admin/registrations/${item.id}`} variant="ghost" className="min-h-10 px-2">بررسی</ButtonLink></td>
+                      <td className="px-3 py-3"><ButtonLink href={`/admin/registrations/${item.id}`} size="sm">جزئیات و اقدامات</ButtonLink></td>
                     </tr>
                   ))}
                 </tbody>

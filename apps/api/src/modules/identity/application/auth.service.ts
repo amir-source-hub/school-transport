@@ -13,6 +13,7 @@ import { AppLogger } from '../../../common/logger';
 import { AuthTokens, LoginResult, OtpResult } from '../domain/auth.types';
 import { JwtPayload } from '../../../common/authentication.types';
 import { OTP_DELIVERY, OtpDelivery } from './otp-delivery.port';
+import { InAppNotificationService } from '../../../infrastructure/notifications/in-app-notification.service';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +23,7 @@ export class AuthService {
     private readonly db: DatabaseService,
     private readonly logger: AppLogger,
     @Inject(OTP_DELIVERY) private readonly otpDelivery: OtpDelivery,
+    private readonly notifications: InAppNotificationService,
   ) {}
 
   async getAdmins() {
@@ -168,6 +170,14 @@ export class AuthService {
         accountStatus: 'ACTIVE',
       });
       account = { id: userId, username: phoneNumber, status: 'ACTIVE' };
+      await this.notifications.create({
+        userId,
+        notificationType: 'ACCOUNT_REGISTERED',
+        title: 'ثبت‌نام حساب با موفقیت انجام شد',
+        message: 'حساب خانواده ایجاد شد. اکنون می‌توانید اطلاعات خانواده و دانش‌آموز را ثبت کنید.',
+        relatedEntityType: 'USER',
+        relatedEntityId: userId,
+      });
       this.logger.log('Parent account created after OTP verification.');
     }
 

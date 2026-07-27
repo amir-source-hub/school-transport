@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { getAdminPayments, getPaymentTone } from '@/features/admin-payments/admin-payments-api';
 import { ApprovePaymentDialog, ConfigureInstallmentsDialog, RejectPaymentDialog } from '@/features/admin-payments/payment-actions';
-import { formatIrr } from '@/lib/formatters';
+import { formatIrr, formatJalaliDateTime } from '@/lib/formatters';
 
 export const metadata = { title: 'پرداخت‌ها' };
 export const dynamic = 'force-dynamic';
@@ -48,7 +48,7 @@ export default async function AdminPaymentsPage() {
               <div><dt className="text-muted">مبلغ مورد انتظار</dt><dd className="mt-1 font-bold">{formatIrr(payment.expectedAmount)}</dd></div>
               <div><dt className="text-muted">مبلغ ارسالی</dt><dd className="mt-1 font-bold">{formatIrr(payment.submittedAmount)}</dd></div>
               <div><dt className="text-muted">شماره مرجع</dt><dd className="mt-1 font-bold" dir="ltr">{payment.reference}</dd></div>
-              <div><dt className="text-muted">زمان پرداخت</dt><dd className="mt-1 font-bold">{payment.paidAt}</dd></div>
+              <div><dt className="text-muted">زمان پرداخت</dt><dd className="mt-1 font-bold">{formatJalaliDateTime(payment.paidAt)}</dd></div>
             </dl>
             {payment.status === 'در انتظار بررسی' && (
               <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
@@ -56,10 +56,18 @@ export default async function AdminPaymentsPage() {
                 <RejectPaymentDialog paymentId={payment.id} />
               </div>
             )}
-            {payment.status === 'تأییدشده' && payment.invoice === 'پیش‌پرداخت' && (
+            {payment.status === 'تأییدشده' && payment.invoice === 'پیش‌پرداخت' && !payment.planConfigured && (
               <div className="mt-5 border-t border-border pt-4">
-                <ConfigureInstallmentsDialog planId={payment.planId} />
+                <ConfigureInstallmentsDialog
+                  planId={payment.planId}
+                  fullPayment={payment.planType === 'FULL'}
+                />
               </div>
+            )}
+            {payment.invoice === 'پیش‌پرداخت' && payment.planConfigured && (
+              <p className="mt-5 border-t border-border pt-4 text-sm font-bold text-success">
+                برنامه پرداخت باقی‌مانده ثبت و برای خانواده ارسال شده است.
+              </p>
             )}
           </Card>
         ))}

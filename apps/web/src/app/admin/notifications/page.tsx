@@ -2,6 +2,7 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { getAdminNotifications } from '@/features/admin-notifications/admin-notifications-api';
+import { formatJalaliDateTime } from '@/lib/formatters';
 
 export const metadata = { title: 'اعلان‌ها' };
 
@@ -32,7 +33,7 @@ export default async function NotificationsPage() {
               <Badge tone={typeStyles[notif.type] ?? 'neutral'}>{notif.type === 'warning' ? 'هشدار' : notif.type === 'success' ? 'موفق' : 'اطلاع'}</Badge>
             </div>
             <p className="mt-2 text-sm text-muted">{notif.message}</p>
-            <p className="mt-2 text-xs text-muted">{notif.createdAt}</p>
+            <p className="mt-2 text-xs text-muted">{formatJalaliDateTime(notif.createdAt)}</p>
           </Card>
         ))}
       </div>

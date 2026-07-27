@@ -12,6 +12,9 @@ export const contractSchema = z.object({
   version: z.number().optional(),
   issuedAt: z.string().optional(),
   acceptedAt: z.string().nullable().optional(),
+  contractNumber: z.string().optional(),
+  contractDataSnapshot: z.string().nullable().optional(),
+  academicYear: z.string().optional(),
 });
 export type Contract = z.infer<typeof contractSchema>;
 const rawContractSchema = z.object({
@@ -21,6 +24,10 @@ const rawContractSchema = z.object({
   versionNumber: z.number(),
   generatedAt: z.coerce.date().nullable(),
   acceptedAt: z.coerce.date().nullable(),
+  contractNumber: z.string(),
+  contractDataSnapshot: z.string().nullable(),
+  academicYear: z.string(),
+  totalAmount: z.number(),
 });
 
 export async function getAdminContracts() {
@@ -40,8 +47,11 @@ export async function getAdminContracts() {
         priceStatus: enrollment.priceStatus,
         status: contract?.contractStatus ?? 'بدون قرارداد',
         version: contract?.versionNumber,
-        issuedAt: contract?.generatedAt?.toLocaleDateString('fa-IR'),
-        acceptedAt: contract?.acceptedAt?.toLocaleDateString('fa-IR') ?? null,
+        issuedAt: contract?.generatedAt?.toISOString(),
+        acceptedAt: contract?.acceptedAt?.toISOString() ?? null,
+        contractNumber: contract?.contractNumber,
+        contractDataSnapshot: contract?.contractDataSnapshot,
+        academicYear: contract?.academicYear,
       };
     }),
   };

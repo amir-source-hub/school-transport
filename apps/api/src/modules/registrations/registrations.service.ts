@@ -57,7 +57,11 @@ export class RegistrationsService {
         longitude: number;
       };
       school: { schoolId: string; educationLevel: string; grade: string };
-      service: { serviceType: string; parentNotes?: string };
+      service: {
+        serviceType: string;
+        paymentPlanType: 'FULL' | 'INSTALLMENTS';
+        parentNotes?: string;
+      };
     },
   ) {
     data.student.nationalId = normalizeIranianDigits(data.student.nationalId).trim();
@@ -112,6 +116,12 @@ export class RegistrationsService {
       throw new ConflictError(
         'INVALID_VEHICLE_TYPE',
         'The selected vehicle type is not supported.',
+      );
+    }
+    if (!['FULL', 'INSTALLMENTS'].includes(data.service.paymentPlanType)) {
+      throw new ConflictError(
+        'INVALID_PAYMENT_PLAN',
+        'Select full or installment payment for the remaining service amount.',
       );
     }
     const [school] = await this.db.db
@@ -266,11 +276,14 @@ export class RegistrationsService {
       await txn.insert(paymentPlans).values({
         id: planId,
         registrationPriceId: priceId,
-        planType: 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
+        planType:
+          data.service.paymentPlanType === 'FULL'
+            ? 'FULL'
+            : 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
         totalAmount: prepaymentAmount,
         prepaymentAmount,
         remainingInstallmentAmount: 0,
-        installmentCount: 4,
+        installmentCount: data.service.paymentPlanType === 'FULL' ? 1 : 4,
         planStatus: 'PENDING',
       });
       const scheduleItemId = generateId();

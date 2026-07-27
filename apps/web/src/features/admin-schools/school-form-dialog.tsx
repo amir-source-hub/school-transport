@@ -13,7 +13,9 @@ import type { AdminSchool, CreateSchoolInput } from '@/features/admin-schools/ad
 
 const schoolTypes = [
   { value: 'دولتی', label: 'دولتی' },
-  { value: 'غیردولتی', label: 'غیردولتی' },
+  { value: 'نمونه دولتی', label: 'نمونه دولتی' },
+  { value: 'تیزهوشان', label: 'تیزهوشان' },
+  { value: 'غیرانتفاعی', label: 'غیرانتفاعی' },
   { value: 'هیئت امنایی', label: 'هیئت امنایی' },
 ];
 

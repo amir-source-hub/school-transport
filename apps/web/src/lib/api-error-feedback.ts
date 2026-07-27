@@ -87,6 +87,7 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
       INCOMPLETE_ENROLLMENT: 'تمام فیلدهای ضروری را پر کنید.',
       INVALID_LOCATION: 'موقعیت مکانی معتبر انتخاب کنید.',
       INVALID_VEHICLE_TYPE: 'نوع وسیله نقلیه انتخاب‌شده معتبر نیست.',
+      INVALID_PAYMENT_PLAN: 'روش پرداخت مبلغ باقی‌مانده را انتخاب کنید.',
       INVALID_SCHOOL_PROGRAM: 'مقطع یا پایه تحصیلی انتخاب‌شده در این مدرسه ارائه نمی‌شود.',
       DUPLICATE_NATIONAL_ID: 'این کد ملی قبلاً در سامانه ثبت شده است.',
       DUPLICATE_PHONE_NUMBER: 'این شماره همراه قبلاً برای حساب دیگری ثبت شده است.',
@@ -94,6 +95,7 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
         'شماره ورود باید با شماره همراه پدر یا مادر یکسان باشد؛ همان والد به‌عنوان تماس اصلی ثبت می‌شود.',
       PARENT_PROFILE_CHANGED:
         'اطلاعات والدین از پروفایل خانواده خوانده می‌شود. برای تغییر آن ابتدا به تنظیمات پروفایل بروید.',
+      PARENT_TYPE_EXISTS: 'اطلاعات این والد قبلاً ثبت شده است؛ از گزینه ویرایش استفاده کنید.',
       DUPLICATE_ACTIVE_ENROLLMENT:
         'یک ثبت‌نام فعال برای این دانش‌آموز در سال تحصیلی جاری وجود دارد.',
       ACTIVE_ADDRESS_REQUIRED: 'لطفاً ابتدا یک نشانی فعال ثبت کنید.',

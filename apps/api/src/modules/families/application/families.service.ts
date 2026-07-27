@@ -424,12 +424,154 @@ export class FamiliesService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .where(eq(students.userId, userId));
+    const parentRows = await this.db.db
+      .select()
+      .from(parents)
+      .where(eq(parents.userId, userId));
     return {
       ...family,
+      parents: parentRows.map((parent) => ({
+        id: parent.id,
+        parentType: parent.parentType,
+        firstName: parent.firstName,
+        lastName: parent.lastName,
+        nationalId: parent.nationalId,
+        phoneNumber: parent.phoneNumber,
+        isPrimaryContact: parent.isPrimaryContact,
+      })),
       students: studentRows.map((student) => ({
         ...student,
         status: student.isActive ? 'فعال' : 'غیرفعال',
       })),
     };
+  }
+
+  async adminCreateParent(
+    userId: string,
+    data: {
+      parentType: 'MOTHER' | 'FATHER';
+      firstName: string;
+      lastName: string;
+      nationalId: string;
+      phoneNumber: string;
+      isPrimaryContact?: boolean;
+    },
+  ) {
+    await this.getFamilyProfile(userId);
+    const [sameType] = await this.db.db
+      .select({ id: parents.id })
+      .from(parents)
+      .where(and(eq(parents.userId, userId), eq(parents.parentType, data.parentType)))
+      .limit(1);
+    if (sameType) {
+      throw new ConflictError('PARENT_TYPE_EXISTS', 'This parent type already exists.');
+    }
+    const nationalId = normalizeIranianDigits(data.nationalId).trim();
+    const phoneNumber = normalizeIranianDigits(data.phoneNumber).trim();
+    if (!/^\d{1,20}$/.test(nationalId) || !/^09\d{9}$/.test(phoneNumber)) {
+      throw new ValidationError('A valid national ID and Iranian mobile number are required.');
+    }
+    const [duplicate] = await this.db.db
+      .select({ id: parents.id })
+      .from(parents)
+      .where(eq(parents.nationalId, nationalId))
+      .limit(1);
+    if (duplicate) throw new ConflictError('DUPLICATE_NATIONAL_ID', 'Parent already exists.');
+    const id = generateId();
+    await this.db.db.transaction(async (txn) => {
+      if (data.isPrimaryContact) {
+        await txn
+          .update(parents)
+          .set({ isPrimaryContact: false, updatedAt: new Date() })
+          .where(eq(parents.userId, userId));
+      }
+      await txn.insert(parents).values({
+        id,
+        userId,
+        parentType: data.parentType,
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        nationalId,
+        phoneNumber,
+        isPrimaryContact: !!data.isPrimaryContact,
+      });
+      if (data.isPrimaryContact) {
+        await txn.update(users).set({ phoneNumber, updatedAt: new Date() }).where(eq(users.id, userId));
+      }
+    });
+    return { id };
+  }
+
+  async adminUpdateParent(
+    userId: string,
+    parentId: string,
+    data: Partial<{
+      firstName: string;
+      lastName: string;
+      nationalId: string;
+      phoneNumber: string;
+      isPrimaryContact: boolean;
+    }>,
+  ) {
+    const [existing] = await this.db.db
+      .select()
+      .from(parents)
+      .where(and(eq(parents.id, parentId), eq(parents.userId, userId)))
+      .limit(1);
+    if (!existing) throw new NotFoundError('Parent', parentId);
+    const nationalId = data.nationalId
+      ? normalizeIranianDigits(data.nationalId).trim()
+      : existing.nationalId;
+    const phoneNumber = data.phoneNumber
+      ? normalizeIranianDigits(data.phoneNumber).trim()
+      : existing.phoneNumber;
+    if (!/^\d{1,20}$/.test(nationalId) || !/^09\d{9}$/.test(phoneNumber)) {
+      throw new ValidationError('A valid national ID and Iranian mobile number are required.');
+    }
+    await this.db.db.transaction(async (txn) => {
+      if (data.isPrimaryContact) {
+        await txn
+          .update(parents)
+          .set({ isPrimaryContact: false, updatedAt: new Date() })
+          .where(eq(parents.userId, userId));
+      }
+      await txn
+        .update(parents)
+        .set({
+          firstName: data.firstName?.trim() ?? existing.firstName,
+          lastName: data.lastName?.trim() ?? existing.lastName,
+          nationalId,
+          phoneNumber,
+          isPrimaryContact: data.isPrimaryContact ?? existing.isPrimaryContact,
+          updatedAt: new Date(),
+        })
+        .where(eq(parents.id, parentId));
+      if (data.isPrimaryContact || existing.isPrimaryContact) {
+        await txn.update(users).set({ phoneNumber, updatedAt: new Date() }).where(eq(users.id, userId));
+      }
+    });
+    return { updated: true };
+  }
+
+  async adminDeleteParent(userId: string, parentId: string) {
+    const [existing] = await this.db.db
+      .select()
+      .from(parents)
+      .where(and(eq(parents.id, parentId), eq(parents.userId, userId)))
+      .limit(1);
+    if (!existing) throw new NotFoundError('Parent', parentId);
+    await this.db.db.delete(parents).where(eq(parents.id, parentId));
+    const [replacement] = await this.db.db
+      .select()
+      .from(parents)
+      .where(eq(parents.userId, userId))
+      .limit(1);
+    if (existing.isPrimaryContact && replacement) {
+      await this.setPrimaryPhone(
+        userId,
+        replacement.parentType as 'MOTHER' | 'FATHER',
+      );
+    }
+    return { deleted: true };
   }
 }

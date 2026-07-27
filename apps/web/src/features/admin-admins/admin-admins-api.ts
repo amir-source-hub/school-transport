@@ -33,9 +33,15 @@ export async function getCurrentAdminAccount() {
 }
 
 export async function createAdminAccount(input: AdminAccountInput) {
-  await apiRequest('/admin/admins', { method: 'POST', body: input });
+  await apiRequest('/admin/admins', {
+    method: 'POST',
+    body: { ...input, email: input.email?.trim() || undefined },
+  });
 }
 
 export async function updateAdminAccount(id: string, input: AdminAccountInput) {
-  await apiRequest(`/admin/admins/${id}`, { method: 'PATCH', body: input });
+  await apiRequest(`/admin/admins/${id}`, {
+    method: 'PATCH',
+    body: { ...input, email: input.email?.trim() || undefined },
+  });
 }
