@@ -432,15 +432,49 @@ export class RegistrationsService {
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
       .innerJoin(schools, eq(schools.id, students.schoolId));
     const parentRows = await this.db.db.select().from(parents);
+    const paymentRows = await this.db.db
+      .select({
+        registrationId: registrationPrices.registrationId,
+        itemType: paymentScheduleItems.itemType,
+        itemStatus: paymentScheduleItems.itemStatus,
+      })
+      .from(registrationPrices)
+      .innerJoin(paymentPlans, eq(paymentPlans.registrationPriceId, registrationPrices.id))
+      .innerJoin(
+        paymentScheduleItems,
+        eq(paymentScheduleItems.paymentPlanId, paymentPlans.id),
+      )
+      .where(eq(registrationPrices.priceStatus, 'ACCEPTED'));
+
     return rows.map((registration) => {
       const parent =
         parentRows.find(
           (entry) => entry.userId === registration.familyId && entry.isPrimaryContact,
         ) ?? parentRows.find((entry) => entry.userId === registration.familyId);
+      const schedule = paymentRows.filter(
+        (payment) => payment.registrationId === registration.id,
+      );
+      const installments = schedule.filter((payment) => payment.itemType === 'INSTALLMENT');
+      const paidInstallments = installments.filter(
+        (payment) => payment.itemStatus === 'PAID',
+      ).length;
+      const prepaymentPaid = schedule.some(
+        (payment) => payment.itemType === 'PREPAYMENT' && payment.itemStatus === 'PAID',
+      );
+      const allPaymentsPaid =
+        installments.length > 0 && schedule.every((payment) => payment.itemStatus === 'PAID');
+      const derivedStatus = allPaymentsPaid
+        ? 'PAYMENT_COMPLETED'
+        : prepaymentPaid && paidInstallments > 0
+          ? 'INSTALLMENTS_IN_PROGRESS'
+          : registration.registrationStatus;
       return {
         ...registration,
+        registrationStatus: derivedStatus,
         studentName: `${registration.studentFirstName} ${registration.studentLastName}`,
         familyName: parent ? `${parent.firstName} ${parent.lastName}` : '—',
+        paidInstallmentCount: paidInstallments,
+        installmentCount: installments.length,
       };
     });
   }

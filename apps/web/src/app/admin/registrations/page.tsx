@@ -22,7 +22,7 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
   const { registrations } = await getAdminRegistrations();
 
   const filtered = registrations
-    .filter((item) => status === 'همه' || item.status === status)
+    .filter((item) => status === 'همه' || item.status === status || item.status.startsWith(`${status} (`))
     .filter((item) => !query || `${item.trackingCode} ${item.studentName} ${item.familyName} ${item.schoolName}`.includes(query))
     .toSorted((a, b) => sort === 'student' ? a.studentName.localeCompare(b.studentName, 'fa') : a.trackingCode.localeCompare(b.trackingCode, 'fa'));
 

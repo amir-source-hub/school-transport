@@ -178,15 +178,19 @@ export class PaymentsService {
         .from(paymentScheduleItems)
         .where(eq(paymentScheduleItems.paymentPlanId, tx[0].paymentPlanId));
 
-      const allPaid = planItems.every((i) => i.itemStatus === 'PAID');
+      const remainingPaymentsConfigured = planItems.some((i) => i.itemType === 'INSTALLMENT');
+      const allPaid =
+        remainingPaymentsConfigured && planItems.every((i) => i.itemStatus === 'PAID');
       const prepaid = planItems.some((i) => i.itemType === 'PREPAYMENT' && i.itemStatus === 'PAID');
 
       if (prepaid) {
         await txn
           .update(paymentPlans)
           .set({
-            planStatus: prepaid ? (allPaid ? 'COMPLETED' : 'ACTIVE') : 'PENDING',
+            planStatus: allPaid ? 'COMPLETED' : 'ACTIVE',
             activatedAt: new Date(),
+            completedAt: allPaid ? new Date() : null,
+            updatedAt: new Date(),
           })
           .where(eq(paymentPlans.id, tx[0].paymentPlanId));
         const [registration] = await txn
@@ -324,10 +328,30 @@ export class PaymentsService {
         })
         .where(eq(paymentScheduleItems.id, tx[0].paymentScheduleItemId));
 
-      if (item[0].itemType === 'PREPAYMENT') {
+      const planItems = await txn
+        .select()
+        .from(paymentScheduleItems)
+        .where(eq(paymentScheduleItems.paymentPlanId, tx[0].paymentPlanId));
+      const prepaid = planItems.some(
+        (scheduleItem) =>
+          scheduleItem.itemType === 'PREPAYMENT' && scheduleItem.itemStatus === 'PAID',
+      );
+      const remainingPaymentsConfigured = planItems.some(
+        (scheduleItem) => scheduleItem.itemType === 'INSTALLMENT',
+      );
+      const allPaid =
+        remainingPaymentsConfigured &&
+        planItems.every((scheduleItem) => scheduleItem.itemStatus === 'PAID');
+
+      if (prepaid) {
         await txn
           .update(paymentPlans)
-          .set({ planStatus: 'ACTIVE', activatedAt: new Date(), updatedAt: new Date() })
+          .set({
+            planStatus: allPaid ? 'COMPLETED' : 'ACTIVE',
+            activatedAt: new Date(),
+            completedAt: allPaid ? new Date() : null,
+            updatedAt: new Date(),
+          })
           .where(eq(paymentPlans.id, tx[0].paymentPlanId));
         const [registration] = await txn
           .select({ id: serviceRegistrations.id })
