@@ -244,6 +244,23 @@ export class PaymentsService {
     if (item.itemStatus === 'PAID') {
       throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Already paid.');
     }
+    const [pendingSubmission] = await this.db.db
+      .select({ id: paymentTransactions.id })
+      .from(paymentTransactions)
+      .where(
+        and(
+          eq(paymentTransactions.paymentScheduleItemId, scheduleItemId),
+          eq(paymentTransactions.paymentMethod, 'MANUAL_ADMIN_ENTRY'),
+          eq(paymentTransactions.transactionStatus, 'CREATED'),
+        ),
+      )
+      .limit(1);
+    if (pendingSubmission) {
+      throw new ConflictError(
+        'OFFLINE_PAYMENT_PENDING',
+        'An offline payment receipt is already awaiting admin review for this installment.',
+      );
+    }
     const paidAt = new Date(_data.paidAt);
     if (Number.isNaN(paidAt.getTime()) || !_data.referenceNumber.trim()) {
       throw new ValidationError('A valid payment date and reference number are required.');

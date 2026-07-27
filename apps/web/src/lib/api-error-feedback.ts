@@ -103,6 +103,8 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
       ACTIVE_ADDRESS_REQUIRED: 'لطفاً ابتدا یک نشانی فعال ثبت کنید.',
       PRICE_ALREADY_ACCEPTED: 'قیمت قبلاً پذیرفته شده است. نسخه جدیدی ایجاد کنید.',
       PAYMENT_ALREADY_COMPLETED: 'این پرداخت قبلاً انجام شده است.',
+      OFFLINE_PAYMENT_PENDING:
+        'یک رسید آفلاین برای این قسط در انتظار بررسی مدیریت است. پس از رد آن می‌توانید رسید دیگری ارسال کنید.',
     };
     const specificMessage = error.code ? conflictMessages[error.code] : undefined;
     return {

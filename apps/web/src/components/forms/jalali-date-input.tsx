@@ -9,11 +9,13 @@ export function JalaliDateInput({
   onChange,
   required,
   id,
+  disabled,
 }: {
   value: string;
   onChange: (isoDate: string) => void;
   required?: boolean;
   id?: string;
+  disabled?: boolean;
 }) {
   const [display, setDisplay] = useState(() => isoToJalaliDate(value));
   const valid = !display || jalaliToIsoDate(display) !== null;
@@ -25,6 +27,7 @@ export function JalaliDateInput({
         dir="ltr"
         inputMode="numeric"
         required={required}
+        disabled={disabled}
         placeholder="۱۴۰۵/۰۱/۰۱"
         value={display}
         aria-invalid={!valid}

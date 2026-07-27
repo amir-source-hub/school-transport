@@ -12,8 +12,21 @@ export const dynamic = 'force-dynamic';
 
 export default async function PaymentsPage() {
   const overviews = await getPayments();
+  const pendingOfflineItemIds = new Set(
+    overviews.flatMap(({ transactions }) =>
+      transactions
+        .filter(
+          (transaction) =>
+            transaction.paymentMethod === 'MANUAL_ADMIN_ENTRY' &&
+            transaction.transactionStatus === 'CREATED',
+        )
+        .map((transaction) => transaction.paymentScheduleItemId),
+    ),
+  );
   const unpaid = overviews.flatMap(({ items, studentFirstName, studentLastName }) =>
-    items.filter(({ itemStatus }) => itemStatus !== 'PAID').map((item) => ({
+    items.filter(
+      ({ id, itemStatus }) => itemStatus !== 'PAID' && !pendingOfflineItemIds.has(id),
+    ).map((item) => ({
       id: item.id,
       label: `${studentFirstName} ${studentLastName} — ${item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : `قسط ${item.sequenceNumber}`} — ${formatIrr(item.amount)}`,
     })),
@@ -60,7 +73,10 @@ export default async function PaymentsPage() {
           </Card>
         );
       })}
-      {unpaid.length > 0 && <Card><h2 className="mb-4 text-lg font-black">ثبت پرداخت آفلاین</h2><OfflinePaymentForm items={unpaid} /></Card>}
+      <Card>
+        <h2 className="mb-4 text-lg font-black">ثبت پرداخت آفلاین</h2>
+        <OfflinePaymentForm items={unpaid} />
+      </Card>
     </div>
   );
 }
