@@ -244,6 +244,10 @@ export class PaymentsService {
     if (item.itemStatus === 'PAID') {
       throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Already paid.');
     }
+    const paidAt = new Date(_data.paidAt);
+    if (Number.isNaN(paidAt.getTime()) || !_data.referenceNumber.trim()) {
+      throw new ValidationError('A valid payment date and reference number are required.');
+    }
 
     const txId = generateId();
     await this.db.db.insert(paymentTransactions).values({
@@ -253,8 +257,9 @@ export class PaymentsService {
       userId,
       amount: item.amount,
       paymentMethod: 'MANUAL_ADMIN_ENTRY',
-      gatewayTransactionId: _data.referenceNumber,
+      gatewayTransactionId: _data.referenceNumber.trim(),
       transactionStatus: 'CREATED',
+      requestedAt: paidAt,
     });
 
     return txId;
@@ -413,7 +418,8 @@ export class PaymentsService {
           this.db.db
             .select()
             .from(paymentScheduleItems)
-            .where(eq(paymentScheduleItems.paymentPlanId, plan.id)),
+            .where(eq(paymentScheduleItems.paymentPlanId, plan.id))
+            .orderBy(paymentScheduleItems.sequenceNumber),
           this.db.db
             .select()
             .from(paymentTransactions)

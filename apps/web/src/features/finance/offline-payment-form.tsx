@@ -23,11 +23,27 @@ export function OfflinePaymentForm({ items = [] }: { items?: { id: string; label
   return (
     <form className="space-y-5" onSubmit={async (event) => {
       event.preventDefault();
-      setPending(true);
       setSubmitted(false);
       setError(undefined);
+      if (!scheduleItemId) {
+        setError('ابتدا قسط موردنظر را انتخاب کنید.');
+        return;
+      }
+      if (!paidAt) {
+        setError('تاریخ شمسی معتبر را وارد کنید.');
+        return;
+      }
+      if (!referenceNumber.trim()) {
+        setError('شماره پیگیری یا مرجع پرداخت را وارد کنید.');
+        return;
+      }
+      setPending(true);
       try {
-        await submitOfflinePayment(scheduleItemId, { paidAt, referenceNumber, description: description || undefined });
+        await submitOfflinePayment(scheduleItemId, {
+          paidAt,
+          referenceNumber: referenceNumber.trim(),
+          description: description || undefined,
+        });
         setSubmitted(true);
         router.refresh();
       } catch (caught) {
@@ -36,16 +52,26 @@ export function OfflinePaymentForm({ items = [] }: { items?: { id: string; label
         setPending(false);
       }
     }}>
+      <div className="rounded-xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
+        اگر مبلغ را خارج از درگاه سامانه، مانند کارت‌به‌کارت یا واریز بانکی، پرداخت کرده‌اید؛ قسط،
+        تاریخ شمسی و شماره پیگیری بانکی را ثبت کنید. پرداخت پس از تأیید مدیر «پرداخت‌شده» می‌شود.
+      </div>
       <Select value={scheduleItemId} onValueChange={setScheduleItemId} options={items.map((item) => ({ value: item.id, label: item.label }))} placeholder="قسط را انتخاب کنید" />
       <label className="text-sm font-bold">
         تاریخ پرداخت (شمسی)
         <div className="mt-2"><JalaliDateInput required value={paidAt} onChange={setPaidAt} /></div>
       </label>
-      <Input required dir="ltr" placeholder="شماره مرجع" value={referenceNumber} onChange={(event) => setReferenceNumber(event.target.value)} />
-      <Textarea placeholder="توضیحات اختیاری" value={description} onChange={(event) => setDescription(event.target.value)} />
+      <label className="text-sm font-bold">
+        شماره پیگیری بانکی
+        <Input required className="mt-2" dir="ltr" placeholder="مثلاً 123456789" value={referenceNumber} onChange={(event) => setReferenceNumber(event.target.value)} />
+      </label>
+      <label className="text-sm font-bold">
+        توضیحات یا نام صاحب حساب (اختیاری)
+        <Textarea className="mt-2" placeholder="اطلاعات تکمیلی پرداخت" value={description} onChange={(event) => setDescription(event.target.value)} />
+      </label>
       {submitted && <Alert title="پرداخت برای بررسی مدیریت ارسال شد">پس از تأیید مدیر، وضعیت قسط به‌روزرسانی می‌شود.</Alert>}
       {error && <p className="text-sm text-danger">{error}</p>}
-      <Button type="submit" loading={pending} disabled={!scheduleItemId || !paidAt}>ارسال برای بررسی</Button>
+      <Button type="submit" loading={pending} disabled={pending}>ارسال رسید برای بررسی مدیر</Button>
     </form>
   );
 }
