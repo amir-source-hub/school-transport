@@ -26,7 +26,14 @@ export class FamiliesController {
   @Patch('me')
   async updateProfile(
     @Req() req: any,
-    @Body() dto: { firstName?: string; lastName?: string; parentType?: string },
+    @Body()
+    dto: {
+      firstName?: string;
+      lastName?: string;
+      nationalId?: string;
+      phoneNumber?: string;
+      parentType?: string;
+    },
   ) {
     await this.familiesService.updateProfile(req.user.id, dto);
     return successResponse({ updated: true });
@@ -59,7 +66,8 @@ export class FamiliesController {
   async updateEmergencyContact(
     @Req() req: any,
     @Param('contactId') contactId: string,
-    @Body() dto: { firstName?: string; lastName?: string; relationship?: string; phoneNumber?: string },
+    @Body()
+    dto: { firstName?: string; lastName?: string; relationship?: string; phoneNumber?: string },
   ) {
     await this.familiesService.updateEmergencyContact(contactId, req.user.id, dto);
     return successResponse({ updated: true });

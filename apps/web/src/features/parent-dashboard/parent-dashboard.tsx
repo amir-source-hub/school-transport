@@ -24,6 +24,7 @@ export type StudentDashboard = {
   name: string;
   schoolAndGrade: string;
   academicYear: string;
+  enrollmentCode: string;
   enrollmentStatus: string;
   enrollmentTone: string;
   nextAction: string;
@@ -35,7 +36,6 @@ export type StudentDashboard = {
 };
 
 const journeySteps = [
-  { key: 'profile', label: 'حساب', icon: UserRound },
   { key: 'request', label: 'درخواست', icon: Route },
   { key: 'review', label: 'بررسی', icon: Clock },
   { key: 'price', label: 'قیمت', icon: CreditCard },
@@ -44,13 +44,19 @@ const journeySteps = [
   { key: 'active', label: 'خدمت فعال', icon: CheckCircle2 },
 ] as const;
 
-function getJourneyIndex(enrollmentStatus: string): number {
-  if (enrollmentStatus.includes('بررسی')) return 2;
-  if (enrollmentStatus.includes('اصلاح')) return 2;
-  if (enrollmentStatus.includes('قیمت')) return 3;
-  if (enrollmentStatus.includes('قرارداد')) return 4;
-  if (enrollmentStatus.includes('پرداخت')) return 5;
-  return 1;
+function getJourneyIndex(enrollmentCode: string): number {
+  const indexes: Record<string, number> = {
+    DRAFT: 0,
+    SUBMITTED: 0,
+    UNDER_REVIEW: 1,
+    NEEDS_CORRECTION: 1,
+    APPROVED: 2,
+    CONTRACT_PENDING: 3,
+    CONTRACT_READY: 3,
+    CONTRACT_ACCEPTED: 4,
+    ENROLLED: 5,
+  };
+  return indexes[enrollmentCode] ?? 0;
 }
 
 function StudentIdentitySwitcher({
@@ -116,12 +122,14 @@ function StudentIdentitySwitcher({
 }
 
 function JourneyStatusCanvas({
+  enrollmentCode,
   enrollmentStatus,
 }: {
+  enrollmentCode: string;
   enrollmentStatus: string;
   enrollmentTone: string;
 }) {
-  const current = getJourneyIndex(enrollmentStatus);
+  const current = getJourneyIndex(enrollmentCode);
   const prefersReduced = useReducedMotion();
 
   return (
@@ -130,6 +138,10 @@ function JourneyStatusCanvas({
         <Route aria-hidden="true" className="size-4 text-primary" />
         <p className="text-xs font-bold text-muted uppercase tracking-wider">مسیر خدمت</p>
       </div>
+      <p className="mb-5 text-sm text-muted">
+        مرحله فعلی: <strong className="text-foreground">{enrollmentStatus}</strong>. مراحل آبی تکمیل
+        شده‌اند و مرحله زرد در حال انجام است.
+      </p>
       <div
         className="relative flex items-center justify-between"
         role="progressbar"
@@ -348,6 +360,7 @@ export function ParentDashboard({ students }: { students: readonly StudentDashbo
             warning={selectedStudent.warning}
           />
           <JourneyStatusCanvas
+            enrollmentCode={selectedStudent.enrollmentCode}
             enrollmentStatus={selectedStudent.enrollmentStatus}
             enrollmentTone={selectedStudent.enrollmentTone}
           />

@@ -37,7 +37,7 @@ const createContentSecurityPolicy = ({ apiBaseUrl, production }: SecurityHeaderO
     "frame-ancestors 'none'",
     "form-action 'self'",
     "frame-src 'self' https://www.google.com",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
     `script-src ${scriptSources.join(' ')}`,

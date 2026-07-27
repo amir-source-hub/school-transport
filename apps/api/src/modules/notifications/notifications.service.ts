@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { notifications } from '../../database/schemas';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { generateId } from '../../common/utils';
 
 @Injectable()
@@ -9,11 +9,26 @@ export class NotificationsService {
   constructor(private readonly db: DatabaseService) {}
 
   async getByUser(userId: string) {
-    return this.db.db
+    let items = await this.db.db
       .select()
       .from(notifications)
       .where(eq(notifications.userId, userId))
-      .orderBy(notifications.createdAt);
+      .orderBy(desc(notifications.createdAt));
+    if (items.length === 0) {
+      await this.create({
+        userId,
+        notificationType: 'WELCOME',
+        title: 'به پنل خانواده خوش آمدید',
+        message:
+          'از این بخش می‌توانید ثبت‌نام، تصمیم‌های مدیریت، قراردادها، پرداخت‌ها و سررسیدها را دنبال کنید.',
+      });
+      items = await this.db.db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, userId))
+        .orderBy(desc(notifications.createdAt));
+    }
+    return items;
   }
 
   async getAll() {

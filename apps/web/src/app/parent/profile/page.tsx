@@ -16,14 +16,16 @@ export default async function ProfilePage() {
       />
       <div>
         <p className="text-sm font-bold text-primary">پروفایل خانواده</p>
-        <h1 className="mt-1 text-2xl font-black sm:text-3xl">اطلاعات مجاز را ویرایش کنید</h1>
+        <h1 className="mt-1 text-2xl font-black sm:text-3xl">اطلاعات خانواده</h1>
         <p className="mt-2 text-sm text-muted">
-          شماره اصلی و شناسه‌های حساس از مسیرهای تأییدشده جداگانه تغییر می‌کنند.
+          ابتدا اطلاعات ثبت‌شده را بررسی کنید؛ برای تغییر هر بخش از دکمه ویرایش استفاده کنید.
         </p>
       </div>
-      {profile.mother && profile.father && profile.addresses.length > 0
-        ? <FamilyProfileForm profile={profile} />
-        : <FamilyOnboardingForm />}
+      {profile.mother && profile.father && profile.addresses.length > 0 ? (
+        <FamilyProfileForm profile={profile} />
+      ) : (
+        <FamilyOnboardingForm />
+      )}
     </div>
   );
 }

@@ -11,10 +11,14 @@ import { eq, and } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ValidationError } from '../../common/errors';
 import { generateId, generateContractNumber } from '../../common/utils';
+import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 
 @Injectable()
 export class ContractsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly notifications: InAppNotificationService,
+  ) {}
 
   async getByFamily(userId: string) {
     const result = await this.db.db
@@ -147,6 +151,23 @@ export class ContractsService {
       .set({ registrationStatus: 'CONTRACT_READY', updatedAt: new Date() })
       .where(eq(serviceRegistrations.id, enrollmentId));
 
+    const [owner] = await this.db.db
+      .select({ userId: students.userId })
+      .from(serviceRegistrations)
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(eq(serviceRegistrations.id, enrollmentId))
+      .limit(1);
+    if (owner) {
+      await this.notifications.create({
+        userId: owner.userId,
+        notificationType: 'CONTRACT_READY',
+        title: 'قرارداد آماده بررسی است',
+        message: 'قرارداد سرویس صادر شد. لطفاً متن و برنامه پرداخت را بررسی کنید.',
+        relatedEntityType: 'CONTRACT',
+        relatedEntityId: contractId,
+      });
+    }
+
     return this.getById(contractId);
   }
 
@@ -181,6 +202,15 @@ export class ContractsService {
       .set({ registrationStatus: 'CONTRACT_ACCEPTED', updatedAt: new Date() })
       .where(eq(serviceRegistrations.id, contract.registrationId));
 
+    await this.notifications.create({
+      userId,
+      notificationType: 'CONTRACT_ACCEPTED',
+      title: 'قرارداد پذیرفته شد',
+      message: 'پذیرش قرارداد با موفقیت ثبت شد.',
+      relatedEntityType: 'CONTRACT',
+      relatedEntityId: contractId,
+    });
+
     return this.getDetails(contractId, userId);
   }
 
@@ -197,6 +227,14 @@ export class ContractsService {
       .update(serviceRegistrations)
       .set({ registrationStatus: 'CONTRACT_PENDING', updatedAt: new Date() })
       .where(eq(serviceRegistrations.id, contract.registrationId));
+    await this.notifications.create({
+      userId,
+      notificationType: 'CONTRACT_REJECTED',
+      title: 'قرارداد رد شد',
+      message: 'رد قرارداد ثبت شد و درخواست برای بازبینی به مدیریت بازگشت.',
+      relatedEntityType: 'CONTRACT',
+      relatedEntityId: contractId,
+    });
     return this.getDetails(contractId, userId);
   }
 }

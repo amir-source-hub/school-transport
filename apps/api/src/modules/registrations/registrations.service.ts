@@ -18,10 +18,14 @@ import { ConflictError, NotFoundError } from '../../common/errors';
 import { generateContractNumber, generateId } from '../../common/utils';
 import { assertRegistrationTransition } from './registration-lifecycle';
 import { isIranianNationalId, normalizeIranianDigits } from '../../common/iranian-national-id';
+import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 
 @Injectable()
 export class RegistrationsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly notifications: InAppNotificationService,
+  ) {}
 
   async createGuidedEnrollment(
     userId: string,
@@ -135,7 +139,7 @@ export class RegistrationsService {
     if (duplicate[0])
       throw new ConflictError('DUPLICATE_NATIONAL_ID', 'This student is already registered.');
 
-    return this.db.db.transaction(async (txn) => {
+    const result = await this.db.db.transaction(async (txn) => {
       const existingFamilyParents = await txn
         .select({ id: parents.id, isPrimaryContact: parents.isPrimaryContact })
         .from(parents)
@@ -270,6 +274,15 @@ export class RegistrationsService {
         contractText: this.guidedContractText(data.student.firstName, data.student.lastName),
       };
     });
+    await this.notifications.create({
+      userId,
+      notificationType: 'ENROLLMENT_CREATED',
+      title: 'ثبت‌نام دانش‌آموز انجام شد',
+      message: `ثبت‌نام ${data.student.firstName} ${data.student.lastName} ثبت شد و قرارداد آماده بررسی است.`,
+      relatedEntityType: 'REGISTRATION',
+      relatedEntityId: result.registrationId,
+    });
+    return result;
   }
 
   private guidedContractText(firstName: string, lastName: string) {
@@ -463,6 +476,12 @@ export class RegistrationsService {
       .where(eq(serviceRegistrations.id, registrationId));
 
     await this.addReview(registrationId, adminId, 'START_REVIEW');
+    await this.notifyOwner(
+      registrationId,
+      'ENROLLMENT_UNDER_REVIEW',
+      'بررسی ثبت‌نام آغاز شد',
+      'مدیریت بررسی درخواست سرویس دانش‌آموز را آغاز کرد.',
+    );
     return this.getById(registrationId);
   }
 
@@ -481,6 +500,12 @@ export class RegistrationsService {
       .where(eq(serviceRegistrations.id, registrationId));
 
     await this.addReview(registrationId, adminId, 'APPROVE');
+    await this.notifyOwner(
+      registrationId,
+      'ENROLLMENT_APPROVED',
+      'ثبت‌نام تأیید شد',
+      'درخواست سرویس توسط مدیریت تأیید شد و وارد مرحله قیمت‌گذاری شده است.',
+    );
     return this.getById(registrationId);
   }
 
@@ -500,6 +525,12 @@ export class RegistrationsService {
       .where(eq(serviceRegistrations.id, registrationId));
 
     await this.addReview(registrationId, adminId, 'REJECT', reason);
+    await this.notifyOwner(
+      registrationId,
+      'ENROLLMENT_REJECTED',
+      'ثبت‌نام رد شد',
+      reason || 'درخواست سرویس توسط مدیریت رد شد.',
+    );
     return this.getById(registrationId);
   }
 
@@ -518,6 +549,12 @@ export class RegistrationsService {
       .where(eq(serviceRegistrations.id, registrationId));
 
     await this.addReview(registrationId, adminId, 'REQUEST_CORRECTION', message);
+    await this.notifyOwner(
+      registrationId,
+      'ENROLLMENT_NEEDS_CORRECTION',
+      'اصلاح اطلاعات لازم است',
+      message,
+    );
     return this.getById(registrationId);
   }
 
@@ -533,6 +570,29 @@ export class RegistrationsService {
       adminId,
       reviewAction: action,
       comment: comment || null,
+    });
+  }
+
+  private async notifyOwner(
+    registrationId: string,
+    notificationType: string,
+    title: string,
+    message: string,
+  ) {
+    const [owner] = await this.db.db
+      .select({ userId: students.userId })
+      .from(serviceRegistrations)
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(eq(serviceRegistrations.id, registrationId))
+      .limit(1);
+    if (!owner) return;
+    await this.notifications.create({
+      userId: owner.userId,
+      notificationType,
+      title,
+      message,
+      relatedEntityType: 'REGISTRATION',
+      relatedEntityId: registrationId,
     });
   }
 

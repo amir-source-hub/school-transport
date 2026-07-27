@@ -2,7 +2,6 @@
 
 import {
   Bell,
-  BusFront,
   ChevronDown,
   ClipboardList,
   FileText,
@@ -42,7 +41,6 @@ const navGroups = [
     items: [
       { href: '/parent/students', label: 'دانش‌آموزان', icon: GraduationCap },
       { href: '/parent/enrollments', label: 'ثبت‌نام', icon: ClipboardList },
-      { href: '/parent/service-requests', label: 'درخواست خدمت', icon: BusFront },
     ],
   },
   {

@@ -13,12 +13,14 @@ import { eq, and } from 'drizzle-orm';
 import { NotFoundError, ConflictError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
+import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 
 @Injectable()
 export class PaymentsService {
   constructor(
     private readonly db: DatabaseService,
     @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
+    private readonly notifications: InAppNotificationService,
   ) {}
 
   private async getOwnedScheduleItem(scheduleItemId: string, userId: string) {
@@ -90,7 +92,7 @@ export class PaymentsService {
     });
     const gatewayTransactionId = assertGatewayVerification(tx[0].amount, gatewayResult);
 
-    return await this.db.db.transaction(async (txn) => {
+    const result = await this.db.db.transaction(async (txn) => {
       const item = await txn
         .select()
         .from(paymentScheduleItems)
@@ -164,6 +166,15 @@ export class PaymentsService {
         .limit(1)
         .then((r) => r[0]);
     });
+    await this.notifications.create({
+      userId,
+      notificationType: 'PAYMENT_SUCCEEDED',
+      title: 'پرداخت با موفقیت انجام شد',
+      message: `پرداخت ${tx[0].amount.toLocaleString('fa-IR')} ریال با موفقیت ثبت شد.`,
+      relatedEntityType: 'PAYMENT',
+      relatedEntityId: txId,
+    });
+    return result;
   }
 
   async createOfflineSubmission(
@@ -196,7 +207,7 @@ export class PaymentsService {
   }
 
   async approveOfflinePayment(txId: string, adminId: string) {
-    return this.db.db.transaction(async (txn) => {
+    const result = await this.db.db.transaction(async (txn) => {
       const tx = await txn
         .select()
         .from(paymentTransactions)
@@ -265,6 +276,17 @@ export class PaymentsService {
 
       return tx[0];
     });
+    if (result.userId) {
+      await this.notifications.create({
+        userId: result.userId,
+        notificationType: 'PAYMENT_APPROVED',
+        title: 'پرداخت تأیید شد',
+        message: `پرداخت ${result.amount.toLocaleString('fa-IR')} ریال توسط مدیریت تأیید شد.`,
+        relatedEntityType: 'PAYMENT',
+        relatedEntityId: txId,
+      });
+    }
+    return result;
   }
 
   async rejectOfflinePayment(txId: string, adminId: string, reason?: string) {
@@ -284,6 +306,17 @@ export class PaymentsService {
         recordedByAdminId: adminId,
       })
       .where(eq(paymentTransactions.id, txId));
+
+    if (tx[0].userId) {
+      await this.notifications.create({
+        userId: tx[0].userId,
+        notificationType: 'PAYMENT_REJECTED',
+        title: 'پرداخت تأیید نشد',
+        message: reason || 'پرداخت ارسالی توسط مدیریت رد شد. لطفاً اطلاعات پرداخت را بررسی کنید.',
+        relatedEntityType: 'PAYMENT',
+        relatedEntityId: txId,
+      });
+    }
 
     return { rejected: true };
   }

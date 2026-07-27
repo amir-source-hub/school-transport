@@ -1,14 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { paymentPlans, paymentScheduleItems, registrationPrices, serviceRegistrations, students } from '../../database/schemas';
+import {
+  paymentPlans,
+  paymentScheduleItems,
+  registrationPrices,
+  serviceRegistrations,
+  students,
+} from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError, ValidationError, ConflictError } from '../../common/errors';
 import { calculateInstallmentAmounts, generateId } from '../../common/utils';
 import { addMonths } from 'date-fns';
+import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 
 @Injectable()
 export class PricingService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly notifications: InAppNotificationService,
+  ) {}
 
   async getByRegistration(registrationId: string) {
     return this.db.db
@@ -79,6 +89,23 @@ export class PricingService {
         .where(eq(registrationPrices.id, existing.id));
     }
 
+    const [owner] = await this.db.db
+      .select({ userId: students.userId })
+      .from(serviceRegistrations)
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(eq(serviceRegistrations.id, registrationId))
+      .limit(1);
+    if (owner) {
+      await this.notifications.create({
+        userId: owner.userId,
+        notificationType: 'PRICE_OFFERED',
+        title: 'قیمت سرویس اعلام شد',
+        message: `قیمت پیشنهادی ${data.totalAmount.toLocaleString('fa-IR')} ریال است. لطفاً آن را بررسی کنید.`,
+        relatedEntityType: 'REGISTRATION',
+        relatedEntityId: registrationId,
+      });
+    }
+
     return this.getByRegistration(registrationId);
   }
 
@@ -116,15 +143,30 @@ export class PricingService {
       .set({ registrationStatus: 'CONTRACT_PENDING', updatedAt: new Date() })
       .where(eq(serviceRegistrations.id, reg[0].registration.id));
 
+    await this.notifications.create({
+      userId,
+      notificationType: 'PRICE_ACCEPTED',
+      title: 'قیمت پذیرفته شد',
+      message: 'پذیرش قیمت ثبت شد و درخواست وارد مرحله صدور قرارداد شد.',
+      relatedEntityType: 'REGISTRATION',
+      relatedEntityId: price[0].registrationId,
+    });
+
     return priceId;
   }
 
   async createPaymentPlan(priceId: string, planType: 'FULL' | 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS') {
-    const [existing] = await this.db.db.select({ id: paymentPlans.id }).from(paymentPlans)
-      .where(eq(paymentPlans.registrationPriceId, priceId)).limit(1);
+    const [existing] = await this.db.db
+      .select({ id: paymentPlans.id })
+      .from(paymentPlans)
+      .where(eq(paymentPlans.registrationPriceId, priceId))
+      .limit(1);
     if (existing) return existing.id;
-    const [price] = await this.db.db.select().from(registrationPrices)
-      .where(eq(registrationPrices.id, priceId)).limit(1);
+    const [price] = await this.db.db
+      .select()
+      .from(registrationPrices)
+      .where(eq(registrationPrices.id, priceId))
+      .limit(1);
     if (!price) throw new NotFoundError('Price');
 
     const id = generateId();
@@ -145,14 +187,24 @@ export class PricingService {
     });
     const now = new Date();
     await this.db.db.insert(paymentScheduleItems).values({
-      id: generateId(), paymentPlanId: id, itemType: 'PREPAYMENT',
-      sequenceNumber: 0, amount: prepayment, dueDate: now,
+      id: generateId(),
+      paymentPlanId: id,
+      itemType: 'PREPAYMENT',
+      sequenceNumber: 0,
+      amount: prepayment,
+      dueDate: now,
     });
     if (installments.length) {
-      await this.db.db.insert(paymentScheduleItems).values(installments.map((amount, index) => ({
-        id: generateId(), paymentPlanId: id, itemType: 'INSTALLMENT',
-        sequenceNumber: index + 1, amount, dueDate: addMonths(now, index + 1),
-      })));
+      await this.db.db.insert(paymentScheduleItems).values(
+        installments.map((amount, index) => ({
+          id: generateId(),
+          paymentPlanId: id,
+          itemType: 'INSTALLMENT',
+          sequenceNumber: index + 1,
+          amount,
+          dueDate: addMonths(now, index + 1),
+        })),
+      );
     }
     return id;
   }

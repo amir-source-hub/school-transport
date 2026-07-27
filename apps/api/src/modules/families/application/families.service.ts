@@ -1,9 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../../database/database.service';
-import { users, parents, familyAddresses, emergencyContacts, students, schools } from '../../../database/schemas';
-import { eq, and } from 'drizzle-orm';
-import { NotFoundError, ConflictError } from '../../../common/errors';
+import {
+  users,
+  parents,
+  familyAddresses,
+  emergencyContacts,
+  students,
+  schools,
+} from '../../../database/schemas';
+import { eq, and, ne } from 'drizzle-orm';
+import { NotFoundError, ConflictError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
+import { normalizeIranianDigits } from '../../../common/iranian-national-id';
 import {
   CreateFamilyDto,
   FamilyProfile,
@@ -11,10 +19,14 @@ import {
   AddressProfile,
 } from '../domain/family.types';
 import { parseEditableAddressFields } from '../domain/address-update';
+import { InAppNotificationService } from '../../../infrastructure/notifications/in-app-notification.service';
 
 @Injectable()
 export class FamiliesService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly notifications: InAppNotificationService,
+  ) {}
 
   async createFamily(userId: string, dto: CreateFamilyDto): Promise<FamilyProfile> {
     const existingMother = await this.db.db
@@ -153,7 +165,13 @@ export class FamiliesService {
 
   async updateProfile(
     userId: string,
-    data: { firstName?: string; lastName?: string; parentType?: string },
+    data: {
+      firstName?: string;
+      lastName?: string;
+      nationalId?: string;
+      phoneNumber?: string;
+      parentType?: string;
+    },
   ): Promise<void> {
     if (data.parentType) {
       const existing = await this.db.db
@@ -164,14 +182,65 @@ export class FamiliesService {
 
       if (existing.length === 0) throw new NotFoundError('Parent');
 
-      await this.db.db
-        .update(parents)
-        .set({
-          firstName: data.firstName || existing[0].firstName,
-          lastName: data.lastName || existing[0].lastName,
-          updatedAt: new Date(),
-        })
-        .where(eq(parents.id, existing[0].id));
+      const nationalId = data.nationalId
+        ? normalizeIranianDigits(data.nationalId).trim()
+        : existing[0].nationalId;
+      const phoneNumber = data.phoneNumber
+        ? normalizeIranianDigits(data.phoneNumber).trim()
+        : existing[0].phoneNumber;
+      if (!/^\d{1,20}$/.test(nationalId)) {
+        throw new ValidationError('National ID must contain between 1 and 20 digits.');
+      }
+      if (!/^09\d{9}$/.test(phoneNumber)) {
+        throw new ValidationError('Phone number must contain 11 digits and start with 09.');
+      }
+      const duplicate = await this.db.db
+        .select({ id: parents.id })
+        .from(parents)
+        .where(and(eq(parents.nationalId, nationalId), ne(parents.id, existing[0].id)))
+        .limit(1);
+      if (duplicate[0]) {
+        throw new ConflictError('DUPLICATE_NATIONAL_ID', 'This national ID is already in use.');
+      }
+      if (existing[0].isPrimaryContact && phoneNumber !== existing[0].phoneNumber) {
+        const phoneOwner = await this.db.db
+          .select({ id: users.id })
+          .from(users)
+          .where(and(eq(users.phoneNumber, phoneNumber), ne(users.id, userId)))
+          .limit(1);
+        if (phoneOwner[0]) {
+          throw new ConflictError('DUPLICATE_PHONE_NUMBER', 'This phone number is already in use.');
+        }
+      }
+
+      await this.db.db.transaction(async (txn) => {
+        await txn
+          .update(parents)
+          .set({
+            firstName: data.firstName?.trim() || existing[0].firstName,
+            lastName: data.lastName?.trim() || existing[0].lastName,
+            nationalId,
+            phoneNumber,
+            phoneVerifiedAt:
+              phoneNumber === existing[0].phoneNumber ? existing[0].phoneVerifiedAt : null,
+            updatedAt: new Date(),
+          })
+          .where(eq(parents.id, existing[0].id));
+        if (existing[0].isPrimaryContact && phoneNumber !== existing[0].phoneNumber) {
+          await txn
+            .update(users)
+            .set({ phoneNumber, updatedAt: new Date() })
+            .where(eq(users.id, userId));
+        }
+      });
+      await this.notifications.create({
+        userId,
+        notificationType: 'PROFILE_UPDATED',
+        title: 'اطلاعات والد به‌روزرسانی شد',
+        message: `اطلاعات ${data.parentType === 'MOTHER' ? 'مادر' : 'پدر'} با موفقیت ذخیره شد.`,
+        relatedEntityType: 'PARENT',
+        relatedEntityId: existing[0].id,
+      });
     }
   }
 
@@ -220,6 +289,14 @@ export class FamiliesService {
       .update(familyAddresses)
       .set({ ...editableFields, updatedAt: new Date() })
       .where(eq(familyAddresses.id, addressId));
+    await this.notifications.create({
+      userId,
+      notificationType: 'ADDRESS_UPDATED',
+      title: 'نشانی به‌روزرسانی شد',
+      message: 'نشانی فعال خانواده با موفقیت ذخیره شد.',
+      relatedEntityType: 'ADDRESS',
+      relatedEntityId: addressId,
+    });
   }
 
   async setPrimaryPhone(userId: string, parentType: 'MOTHER' | 'FATHER'): Promise<void> {
@@ -260,7 +337,12 @@ export class FamiliesService {
   async updateEmergencyContact(
     contactId: string,
     userId: string,
-    data: Partial<{ firstName: string; lastName: string; relationship: string; phoneNumber: string }>,
+    data: Partial<{
+      firstName: string;
+      lastName: string;
+      relationship: string;
+      phoneNumber: string;
+    }>,
   ) {
     const existing = await this.db.db
       .select()
@@ -272,6 +354,14 @@ export class FamiliesService {
       .update(emergencyContacts)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(emergencyContacts.id, contactId));
+    await this.notifications.create({
+      userId,
+      notificationType: 'EMERGENCY_CONTACT_UPDATED',
+      title: 'تماس اضطراری به‌روزرسانی شد',
+      message: 'اطلاعات تماس اضطراری با موفقیت ذخیره شد.',
+      relatedEntityType: 'EMERGENCY_CONTACT',
+      relatedEntityId: contactId,
+    });
   }
 
   async getAllForAdmin() {
@@ -287,7 +377,9 @@ export class FamiliesService {
         id: user.id,
         username: primary?.lastName ?? user.username,
         primaryPhone: primary?.phoneNumber ?? user.phoneNumber ?? null,
-        studentCount: studentRows.filter((student) => student.userId === user.id && student.isActive).length,
+        studentCount: studentRows.filter(
+          (student) => student.userId === user.id && student.isActive,
+        ).length,
         status: user.accountStatus === 'ACTIVE' ? 'فعال' : 'غیرفعال',
         createdAt: user.createdAt.toISOString(),
       };

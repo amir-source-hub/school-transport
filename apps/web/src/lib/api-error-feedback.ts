@@ -88,7 +88,8 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
       INVALID_LOCATION: 'موقعیت مکانی معتبر انتخاب کنید.',
       INVALID_VEHICLE_TYPE: 'نوع وسیله نقلیه انتخاب‌شده معتبر نیست.',
       INVALID_SCHOOL_PROGRAM: 'مقطع یا پایه تحصیلی انتخاب‌شده در این مدرسه ارائه نمی‌شود.',
-      DUPLICATE_NATIONAL_ID: 'این دانش‌آموز قبلاً ثبت‌نام شده است.',
+      DUPLICATE_NATIONAL_ID: 'این کد ملی قبلاً در سامانه ثبت شده است.',
+      DUPLICATE_PHONE_NUMBER: 'این شماره همراه قبلاً برای حساب دیگری ثبت شده است.',
       DUPLICATE_ACTIVE_ENROLLMENT:
         'یک ثبت‌نام فعال برای این دانش‌آموز در سال تحصیلی جاری وجود دارد.',
       ACTIVE_ADDRESS_REQUIRED: 'لطفاً ابتدا یک نشانی فعال ثبت کنید.',

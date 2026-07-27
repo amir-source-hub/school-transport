@@ -29,14 +29,6 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
     async function initMap() {
       const L = await import('leaflet');
 
-      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl:
-          'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      });
-
       if (!mapRef.current || mapInstanceRef.current) return;
 
       map = L.map(mapRef.current, {
@@ -52,7 +44,15 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
 
       marker = L.marker(
         [initialPositionRef.current.latitude, initialPositionRef.current.longitude],
-        { draggable: true },
+        {
+          draggable: true,
+          icon: L.divIcon({
+            className: 'location-picker-marker',
+            html: '<span aria-hidden="true"></span>',
+            iconSize: [34, 42],
+            iconAnchor: [17, 42],
+          }),
+        },
       ).addTo(map);
 
       marker.on('dragend', () => {
@@ -93,7 +93,11 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
 
   return (
     <div className="relative">
-      <div ref={mapRef} className="h-72 w-full rounded-2xl border border-primary/20 z-0" />
+      <div
+        ref={mapRef}
+        className="z-0 h-72 w-full rounded-2xl border border-primary/20"
+        aria-label="نقشه انتخاب موقعیت؛ برای جابه‌جایی نشانگر روی نقشه کلیک کنید"
+      />
       <span className="pointer-events-none absolute bottom-3 left-3 rounded-lg bg-white/95 px-3 py-2 text-xs font-bold shadow z-[1000]">
         <MapPin className="ml-1 inline size-4 text-primary" />
         {latitude.toFixed(6)}، {longitude.toFixed(6)}

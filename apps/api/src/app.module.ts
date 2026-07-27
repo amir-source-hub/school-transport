@@ -20,6 +20,7 @@ import { GracefulShutdownService } from './common/graceful-shutdown';
 import { ResponseMetadataInterceptor } from './common/response-metadata.interceptor';
 import { QueueModule } from './infrastructure/queue/queue.module';
 import { LoggingModule } from './common/logging.module';
+import { InAppNotificationModule } from './infrastructure/notifications/in-app-notification.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { LoggingModule } from './common/logging.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     ConfigModule,
     DatabaseModule,
+    InAppNotificationModule,
     IdentityModule,
     FamiliesModule,
     SchoolsModule,

@@ -26,11 +26,28 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     this.connection = new IORedis(config.redisUrl, {
       maxRetriesPerRequest: null,
       enableReadyCheck: true,
+      lazyConnect: true,
+      retryStrategy: config.queueRequired ? undefined : () => null,
+    });
+    this.connection.on('error', (error) => {
+      if (this.config.queueRequired)
+        this.logger.error('Redis queue connection failed.', error.stack);
     });
   }
 
   async onModuleInit(): Promise<void> {
-    await this.connection.ping();
+    try {
+      await this.connection.connect();
+      await this.connection.ping();
+    } catch (error) {
+      if (this.config.queueRequired) throw error;
+      this.connection.disconnect();
+      this.logger.warn(
+        'Redis is unavailable; background queues are disabled for this development API process.',
+        'QueueService',
+      );
+      return;
+    }
     this.queues.push(
       new Queue(QUEUE_NAMES.notifications, { connection: this.connection }),
       new Queue(QUEUE_NAMES.maintenance, { connection: this.connection }),
@@ -60,6 +77,10 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   async enqueueNotification(data: Record<string, unknown>, jobId: string): Promise<void> {
+    if (this.queues.length === 0) {
+      this.logger.warn('Notification queue skipped because Redis is unavailable.', 'QueueService');
+      return;
+    }
     await this.queue(QUEUE_NAMES.notifications).add('deliver', data, {
       jobId,
       attempts: 5,
@@ -70,6 +91,10 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   async enqueueMaintenance(name: string, data: Record<string, unknown> = {}): Promise<void> {
+    if (this.queues.length === 0) {
+      this.logger.warn('Maintenance queue skipped because Redis is unavailable.', 'QueueService');
+      return;
+    }
     await this.queue(QUEUE_NAMES.maintenance).add(name, data, {
       attempts: 3,
       backoff: { type: 'exponential', delay: 10_000 },
@@ -81,7 +106,8 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     await Promise.all(this.workers.map((worker) => worker.close()));
     await Promise.all(this.queues.map((queue) => queue.close()));
-    await this.connection.quit();
+    if (this.connection.status === 'ready') await this.connection.quit();
+    else this.connection.disconnect();
   }
 
   private queue(name: string): Queue {

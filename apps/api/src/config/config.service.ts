@@ -21,6 +21,10 @@ const envSchema = z.object({
   PAYMENT_GATEWAY_PROVIDER: z.enum(['mock', 'none']).default('none'),
   SERVICE_ROLE: z.enum(['api', 'worker']).default('api'),
   AUTH_SESSION_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
+  QUEUE_REQUIRED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 @Injectable()
@@ -92,6 +96,13 @@ export class ConfigService implements OnApplicationShutdown {
   }
   get authSessionRetentionDays(): number {
     return this.env.AUTH_SESSION_RETENTION_DAYS;
+  }
+  get queueRequired(): boolean {
+    return (
+      this.env.QUEUE_REQUIRED ||
+      this.env.SERVICE_ROLE === 'worker' ||
+      this.env.NODE_ENV === 'production'
+    );
   }
 
   onApplicationShutdown() {}
