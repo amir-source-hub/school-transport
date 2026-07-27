@@ -63,7 +63,7 @@ export class AdminStudentsController {
 
   @Post()
   async create(@Body() dto: CreateStudentDto & { userId: string }) {
-    const student = await this.studentsService.create(dto.userId, dto);
+    const student = await this.studentsService.createByAdmin(dto.userId, dto);
     return successResponse(student);
   }
 

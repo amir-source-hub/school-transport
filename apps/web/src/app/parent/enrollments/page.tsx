@@ -32,6 +32,10 @@ export default async function EnrollmentsPage() {
       ? await getEnrollmentPrices(enrollment.id)
       : [],
   })));
+  const enrolledStudentIds = new Set(enrollments.map((enrollment) => enrollment.studentId));
+  const availableStudents = students.filter((student) => !enrolledStudentIds.has(student.id));
+  const activeAddress = family.addresses.find((address) => address.isActive);
+  const activeEmergency = family.emergencyContacts.find((contact) => contact.isActive);
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: 'پنل خانواده', href: '/parent/dashboard' }, { label: 'ثبت‌نام' }]} />
@@ -44,6 +48,8 @@ export default async function EnrollmentsPage() {
           educationOptions: school.educationOptions,
         }))}
         savedParents={{ father: family.father, mother: family.mother }}
+        existingStudents={availableStudents}
+        defaults={{ address: activeAddress, emergencyContact: activeEmergency }}
       />
       <div className="space-y-4">
         {entries.map(({ enrollment, prices }) => {

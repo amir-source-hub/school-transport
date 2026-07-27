@@ -41,6 +41,57 @@ export class PaymentsService {
     return result[0].item;
   }
 
+  private async getPaymentEventDetails(txId: string) {
+    const [detail] = await this.db.db
+      .select({
+        amount: paymentTransactions.amount,
+        verifiedAt: paymentTransactions.verifiedAt,
+        requestedAt: paymentTransactions.requestedAt,
+        itemType: paymentScheduleItems.itemType,
+        sequenceNumber: paymentScheduleItems.sequenceNumber,
+        studentFirstName: students.firstName,
+        studentLastName: students.lastName,
+        userId: students.userId,
+      })
+      .from(paymentTransactions)
+      .innerJoin(
+        paymentScheduleItems,
+        eq(paymentScheduleItems.id, paymentTransactions.paymentScheduleItemId),
+      )
+      .innerJoin(paymentPlans, eq(paymentPlans.id, paymentTransactions.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(eq(paymentTransactions.id, txId))
+      .limit(1);
+    if (!detail) return null;
+    const familyParents = await this.db.db
+      .select()
+      .from(parents)
+      .where(eq(parents.userId, detail.userId));
+    const parent =
+      familyParents.find((item) => item.isPrimaryContact) ?? familyParents[0];
+    const invoice =
+      detail.itemType === 'PREPAYMENT'
+        ? 'پیش‌پرداخت'
+        : `قسط شماره ${detail.sequenceNumber.toLocaleString('fa-IR')}`;
+    const parentName = parent ? `${parent.firstName} ${parent.lastName}` : 'خانواده';
+    const studentName = `${detail.studentFirstName} ${detail.studentLastName}`;
+    const amountToman = Math.round(detail.amount / 10).toLocaleString('fa-IR');
+    const date = (detail.verifiedAt ?? detail.requestedAt).toLocaleString('fa-IR', {
+      dateStyle: 'full',
+      timeStyle: 'short',
+      timeZone: 'Asia/Tehran',
+    });
+    return {
+      userId: detail.userId,
+      message: `${parentName}، ${invoice} دانش‌آموز ${studentName} را به مبلغ ${amountToman} تومان در تاریخ ${date} پرداخت کرد.`,
+    };
+  }
+
   async startOnlinePayment(scheduleItemId: string, userId: string, idempotencyKey: string) {
     const item = await this.getOwnedScheduleItem(scheduleItemId, userId);
     if (item.itemStatus === 'PAID') {
@@ -166,11 +217,14 @@ export class PaymentsService {
         .limit(1)
         .then((r) => r[0]);
     });
+    const paymentDetails = await this.getPaymentEventDetails(txId);
     await this.notifications.create({
       userId,
       notificationType: 'PAYMENT_SUCCEEDED',
       title: 'پرداخت با موفقیت انجام شد',
-      message: `پرداخت ${tx[0].amount.toLocaleString('fa-IR')} ریال با موفقیت ثبت شد.`,
+      message:
+        paymentDetails?.message ??
+        `پرداخت ${tx[0].amount.toLocaleString('fa-IR')} ریال با موفقیت ثبت شد.`,
       relatedEntityType: 'PAYMENT',
       relatedEntityId: txId,
     });
@@ -277,11 +331,14 @@ export class PaymentsService {
       return tx[0];
     });
     if (result.userId) {
+      const paymentDetails = await this.getPaymentEventDetails(txId);
       await this.notifications.create({
         userId: result.userId,
         notificationType: 'PAYMENT_APPROVED',
         title: 'پرداخت تأیید شد',
-        message: `پرداخت ${result.amount.toLocaleString('fa-IR')} ریال توسط مدیریت تأیید شد.`,
+        message: paymentDetails
+          ? `${paymentDetails.message} این پرداخت توسط مدیریت تأیید شد.`
+          : `پرداخت ${result.amount.toLocaleString('fa-IR')} ریال توسط مدیریت تأیید شد.`,
         relatedEntityType: 'PAYMENT',
         relatedEntityId: txId,
       });
@@ -484,7 +541,11 @@ export class PaymentsService {
       return { planId, totalAmount: total, installmentCount: items.length };
     });
     const [owner] = await this.db.db
-      .select({ userId: students.userId })
+      .select({
+        userId: students.userId,
+        studentFirstName: students.firstName,
+        studentLastName: students.lastName,
+      })
       .from(paymentPlans)
       .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
       .innerJoin(
@@ -495,14 +556,25 @@ export class PaymentsService {
       .where(eq(paymentPlans.id, planId))
       .limit(1);
     if (owner) {
+      const familyParents = await this.db.db
+        .select()
+        .from(parents)
+        .where(eq(parents.userId, owner.userId));
+      const parent =
+        familyParents.find((item) => item.isPrimaryContact) ?? familyParents[0];
+      const parentName = parent ? `${parent.firstName} ${parent.lastName}` : 'خانواده';
+      const studentName = `${owner.studentFirstName} ${owner.studentLastName}`;
+      const schedule = items
+        .map(
+          (item, index) =>
+            `${items.length === 1 ? 'پرداخت باقی‌مانده' : `قسط ${index + 1}`}: ${Math.round(item.amount / 10).toLocaleString('fa-IR')} تومان، سررسید ${new Date(item.dueDate).toLocaleDateString('fa-IR', { dateStyle: 'full' })}`,
+        )
+        .join('؛ ');
       await this.notifications.create({
         userId: owner.userId,
         notificationType: 'PAYMENT_PLAN_READY',
         title: 'برنامه پرداخت آماده است',
-        message:
-          items.length === 1
-            ? 'مبلغ باقی‌مانده و تاریخ پرداخت یکجا توسط مدیریت ثبت شد.'
-            : 'مبالغ و تاریخ‌های برنامه اقساط توسط مدیریت ثبت شد.',
+        message: `مدیریت برنامه پرداخت دانش‌آموز ${studentName} از خانواده ${parentName} را ثبت کرد. ${schedule}`,
         relatedEntityType: 'PAYMENT_PLAN',
         relatedEntityId: planId,
       });

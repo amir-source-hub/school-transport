@@ -53,3 +53,13 @@ export async function startOnlinePayment(scheduleItemId: string) {
   });
   return response.data;
 }
+
+export async function verifyOnlinePayment(
+  transactionId: string,
+  gatewayTransactionId: string,
+) {
+  await apiRequest(`/payments/${transactionId}/online/verify`, {
+    method: 'POST',
+    body: { gatewayTransactionId },
+  });
+}

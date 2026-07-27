@@ -56,6 +56,8 @@ export interface AddressProfile {
   district?: string;
   streetAddress: string;
   postalCode?: string;
+  latitude?: number;
+  longitude?: number;
   isActive: boolean;
 }
 

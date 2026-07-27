@@ -28,7 +28,14 @@ export type Enrollment = z.infer<typeof enrollmentSchema>;
 export type EnrollmentPrice = z.infer<typeof priceSchema>;
 
 export type GuidedEnrollmentInput = {
-  student: { firstName: string; lastName: string; nationalId: string; birthDate?: string; gender?: string };
+  student: {
+    id?: string;
+    firstName: string;
+    lastName: string;
+    nationalId: string;
+    birthDate?: string;
+    gender?: string;
+  };
   father: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
   mother: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
   emergencyContact: { firstName: string; lastName: string; relationship: string; phoneNumber: string };

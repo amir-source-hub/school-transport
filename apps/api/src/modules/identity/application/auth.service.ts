@@ -174,7 +174,7 @@ export class AuthService {
         userId,
         notificationType: 'ACCOUNT_REGISTERED',
         title: 'ثبت‌نام حساب با موفقیت انجام شد',
-        message: 'حساب خانواده ایجاد شد. اکنون می‌توانید اطلاعات خانواده و دانش‌آموز را ثبت کنید.',
+        message: `حساب خانواده با شماره همراه ${phoneNumber} ایجاد شد. اکنون اطلاعات خانواده و دانش‌آموز قابل ثبت است.`,
         relatedEntityType: 'USER',
         relatedEntityId: userId,
       });

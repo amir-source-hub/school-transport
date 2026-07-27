@@ -169,6 +169,8 @@ export class FamiliesService {
         district: a.district || undefined,
         streetAddress: a.streetAddress,
         postalCode: a.postalCode || undefined,
+        latitude: a.latitude ?? undefined,
+        longitude: a.longitude ?? undefined,
         isActive: a.isActive,
       })),
       emergencyContacts: emergencyRecords.map((e) => ({

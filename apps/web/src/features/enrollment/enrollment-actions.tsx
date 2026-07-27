@@ -53,9 +53,39 @@ type SavedParents = {
   father: SavedParent | null;
   mother: SavedParent | null;
 };
+type ExistingStudent = {
+  id: string;
+  schoolId: string;
+  firstName: string;
+  lastName: string;
+  nationalId: string;
+  birthDate: string | null;
+  gender: string | null;
+  grade: string | null;
+  className: string | null;
+};
+type EnrollmentDefaults = {
+  address?: {
+    title: string;
+    province: string;
+    city: string;
+    district?: string;
+    streetAddress: string;
+    postalCode?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  emergencyContact?: {
+    firstName: string;
+    lastName: string;
+    relationship: string;
+    phoneNumber: string;
+  };
+};
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const initialForm = {
+  existingStudentId: '',
   studentFirst: '',
   studentLast: '',
   studentNationalId: '',
@@ -119,15 +149,32 @@ const vehicleOptions = [
 export function CreateEnrollmentForm({
   schools,
   savedParents,
+  existingStudents,
+  defaults,
 }: {
   schools: SchoolOption[];
   savedParents: SavedParents;
+  existingStudents: ExistingStudent[];
+  defaults: EnrollmentDefaults;
 }) {
   const router = useRouter();
   const firstSchool = schools[0];
   const firstLevel = firstSchool?.educationOptions[0];
+  const firstExisting = existingStudents[0];
+  const existingSchool = schools.find((school) => school.id === firstExisting?.schoolId);
+  const existingLevel =
+    existingSchool?.educationOptions.find((option) => option.level === firstExisting?.className) ??
+    existingSchool?.educationOptions.find((option) =>
+      option.grades.includes(firstExisting?.grade ?? ''),
+    );
   const createInitialForm = () => ({
     ...initialForm,
+    existingStudentId: firstExisting?.id ?? '',
+    studentFirst: firstExisting?.firstName ?? '',
+    studentLast: firstExisting?.lastName ?? '',
+    studentNationalId: firstExisting?.nationalId ?? '',
+    birthDate: firstExisting?.birthDate ?? '',
+    gender: firstExisting?.gender ?? '',
     fatherFirst: savedParents.father?.firstName ?? '',
     fatherLast: savedParents.father?.lastName ?? '',
     fatherNationalId: savedParents.father?.nationalId ?? '',
@@ -136,9 +183,21 @@ export function CreateEnrollmentForm({
     motherLast: savedParents.mother?.lastName ?? '',
     motherNationalId: savedParents.mother?.nationalId ?? '',
     motherPhone: savedParents.mother?.phoneNumber ?? '',
-    schoolId: firstSchool?.id ?? '',
-    educationLevel: firstLevel?.level ?? '',
-    grade: firstLevel?.grades[0] ?? '',
+    emergencyFirst: defaults.emergencyContact?.firstName ?? '',
+    emergencyLast: defaults.emergencyContact?.lastName ?? '',
+    emergencyRelationship: defaults.emergencyContact?.relationship ?? '',
+    emergencyPhone: defaults.emergencyContact?.phoneNumber ?? '',
+    addressTitle: defaults.address?.title ?? initialForm.addressTitle,
+    province: defaults.address?.province ?? initialForm.province,
+    city: defaults.address?.city ?? initialForm.city,
+    district: defaults.address?.district ?? '',
+    streetAddress: defaults.address?.streetAddress ?? '',
+    postalCode: defaults.address?.postalCode ?? '',
+    latitude: defaults.address?.latitude ?? initialForm.latitude,
+    longitude: defaults.address?.longitude ?? initialForm.longitude,
+    schoolId: firstExisting?.schoolId ?? firstSchool?.id ?? '',
+    educationLevel: existingLevel?.level ?? firstLevel?.level ?? '',
+    grade: firstExisting?.grade ?? existingLevel?.grades[0] ?? firstLevel?.grades[0] ?? '',
   });
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(createInitialForm);
@@ -176,6 +235,43 @@ export function CreateEnrollmentForm({
     const grades =
       selectedSchool?.educationOptions.find(({ level }) => level === educationLevel)?.grades ?? [];
     setForm((current) => ({ ...current, educationLevel, grade: grades[0] ?? '' }));
+  }
+
+  function selectExistingStudent(studentId: string) {
+    if (studentId === '__NEW__') studentId = '';
+    const student = existingStudents.find((item) => item.id === studentId);
+    if (!student) {
+      setForm((current) => ({
+        ...current,
+        existingStudentId: '',
+        studentFirst: '',
+        studentLast: '',
+        studentNationalId: '',
+        birthDate: '',
+        gender: '',
+        schoolId: firstSchool?.id ?? '',
+        educationLevel: firstLevel?.level ?? '',
+        grade: firstLevel?.grades[0] ?? '',
+      }));
+      return;
+    }
+    const school = schools.find((item) => item.id === student.schoolId);
+    const level =
+      school?.educationOptions.find((item) => item.level === student.className) ??
+      school?.educationOptions.find((item) => item.grades.includes(student.grade ?? '')) ??
+      school?.educationOptions[0];
+    setForm((current) => ({
+      ...current,
+      existingStudentId: student.id,
+      studentFirst: student.firstName,
+      studentLast: student.lastName,
+      studentNationalId: student.nationalId,
+      birthDate: student.birthDate ?? '',
+      gender: student.gender ?? '',
+      schoolId: student.schoolId,
+      educationLevel: level?.level ?? '',
+      grade: student.grade ?? level?.grades[0] ?? '',
+    }));
   }
 
   function useCurrentLocation() {
@@ -267,6 +363,7 @@ export function CreateEnrollmentForm({
       setResult(
         await createGuidedEnrollment({
           student: {
+            id: form.existingStudentId || undefined,
             firstName: form.studentFirst,
             lastName: form.studentLast,
             nationalId: normalizeDigits(form.studentNationalId),
@@ -328,6 +425,11 @@ export function CreateEnrollmentForm({
       ? (['motherFirst', 'motherLast', 'motherNationalId', 'motherPhone'] as const)
       : []),
   ]);
+  if (form.existingStudentId) {
+    lockedParentFields.add('studentFirst');
+    lockedParentFields.add('studentLast');
+    lockedParentFields.add('studentNationalId');
+  }
   const field = (key: keyof typeof form, label: string, type = 'text') => (
     <label className="text-sm font-bold text-foreground">
       {label}
@@ -375,6 +477,29 @@ export function CreateEnrollmentForm({
       <div className="p-5 sm:p-8">
         {step === 1 && (
           <form onSubmit={next} className="space-y-7">
+            {existingStudents.length > 0 && (
+              <Section title="ادامه ثبت‌نام دانش‌آموز موجود">
+                <label className="text-sm font-bold">
+                  انتخاب دانش‌آموز
+                  <Select
+                    className="mt-2"
+                    value={form.existingStudentId || '__NEW__'}
+                    onValueChange={selectExistingStudent}
+                    options={[
+                      { value: '__NEW__', label: 'ثبت دانش‌آموز جدید' },
+                      ...existingStudents.map((student) => ({
+                        value: student.id,
+                        label: `${student.firstName} ${student.lastName}`,
+                      })),
+                    ]}
+                  />
+                </label>
+                <p className="mt-2 text-sm leading-7 text-muted">
+                  دانش‌آموز افزوده‌شده توسط مدیریت را انتخاب کنید و اطلاعات سرویس، نشانی، قرارداد و
+                  پیش‌پرداخت را تکمیل کنید.
+                </p>
+              </Section>
+            )}
             <Section title="مشخصات دانش‌آموز">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {field('studentFirst', 'نام دانش‌آموز')}

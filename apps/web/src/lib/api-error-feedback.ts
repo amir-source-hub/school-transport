@@ -96,6 +96,8 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
       PARENT_PROFILE_CHANGED:
         'اطلاعات والدین از پروفایل خانواده خوانده می‌شود. برای تغییر آن ابتدا به تنظیمات پروفایل بروید.',
       PARENT_TYPE_EXISTS: 'اطلاعات این والد قبلاً ثبت شده است؛ از گزینه ویرایش استفاده کنید.',
+      STUDENT_PROFILE_CHANGED:
+        'مشخصات هویتی دانش‌آموز تغییر کرده است. ابتدا اطلاعات دانش‌آموز را در پروفایل اصلاح کنید.',
       DUPLICATE_ACTIVE_ENROLLMENT:
         'یک ثبت‌نام فعال برای این دانش‌آموز در سال تحصیلی جاری وجود دارد.',
       ACTIVE_ADDRESS_REQUIRED: 'لطفاً ابتدا یک نشانی فعال ثبت کنید.',

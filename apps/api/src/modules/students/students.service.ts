@@ -6,10 +6,14 @@ import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { EditableStudentFields, parseEditableStudentFields } from './student-update';
+import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 
 @Injectable()
 export class StudentsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly notifications: InAppNotificationService,
+  ) {}
 
   async getAllByFamily(userId: string) {
     return this.db.db
@@ -124,6 +128,28 @@ export class StudentsService {
   async updateByAdmin(studentId: string, data: EditableStudentFields) {
     const student = await this.getById(studentId);
     return this.update(studentId, student.userId, data);
+  }
+
+  async createByAdmin(
+    userId: string,
+    data: Parameters<StudentsService['create']>[1],
+  ) {
+    const student = await this.create(userId, data);
+    const familyParents = await this.db.db.select().from(parents).where(eq(parents.userId, userId));
+    const primaryParent =
+      familyParents.find((parent) => parent.isPrimaryContact) ?? familyParents[0];
+    const familyName = primaryParent
+      ? `${primaryParent.firstName} ${primaryParent.lastName}`
+      : 'خانواده';
+    await this.notifications.create({
+      userId,
+      notificationType: 'ADMIN_STUDENT_ADDED',
+      title: 'دانش‌آموز به حساب خانواده افزوده شد',
+      message: `مدیریت دانش‌آموز ${student.firstName} ${student.lastName} را به حساب خانواده ${familyName} و مدرسه ${student.schoolName} افزود. برای انتخاب سرویس، تکمیل نشانی، پذیرش قرارداد و پرداخت پیش‌پرداخت به بخش ثبت‌نام بروید.`,
+      relatedEntityType: 'STUDENT',
+      relatedEntityId: student.id,
+    });
+    return student;
   }
 
   async setActiveByAdmin(studentId: string, isActive: boolean) {

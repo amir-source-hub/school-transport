@@ -19,6 +19,8 @@ const addressSchema = z.object({
   district: z.string().optional(),
   streetAddress: z.string(),
   postalCode: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
   isActive: z.boolean(),
 });
 const emergencySchema = z.object({

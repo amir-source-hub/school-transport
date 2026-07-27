@@ -32,6 +32,7 @@ export class RegistrationsService {
     userId: string,
     data: {
       student: {
+        id?: string;
         firstName: string;
         lastName: string;
         nationalId: string;
@@ -142,13 +143,45 @@ export class RegistrationsService {
         'The selected education level or grade is not offered by this school.',
       );
     }
-    const duplicate = await this.db.db
-      .select({ id: students.id })
-      .from(students)
-      .where(eq(students.nationalId, data.student.nationalId))
-      .limit(1);
-    if (duplicate[0])
-      throw new ConflictError('DUPLICATE_NATIONAL_ID', 'This student is already registered.');
+    if (data.student.id) {
+      const [existingStudent] = await this.db.db
+        .select({ id: students.id, nationalId: students.nationalId })
+        .from(students)
+        .where(and(eq(students.id, data.student.id), eq(students.userId, userId)))
+        .limit(1);
+      if (!existingStudent) throw new NotFoundError('Student', data.student.id);
+      if (existingStudent.nationalId !== data.student.nationalId) {
+        throw new ConflictError(
+          'STUDENT_PROFILE_CHANGED',
+          'Saved student identity must be changed from the student profile.',
+        );
+      }
+      const [existingEnrollment] = await this.db.db
+        .select({ id: serviceRegistrations.id })
+        .from(serviceRegistrations)
+        .where(
+          and(
+            eq(serviceRegistrations.studentId, existingStudent.id),
+            notInArray(serviceRegistrations.registrationStatus, ['REJECTED', 'CANCELLED']),
+          ),
+        )
+        .limit(1);
+      if (existingEnrollment) {
+        throw new ConflictError(
+          'DUPLICATE_ACTIVE_ENROLLMENT',
+          'This student already has an active enrollment.',
+        );
+      }
+    } else {
+      const duplicate = await this.db.db
+        .select({ id: students.id })
+        .from(students)
+        .where(eq(students.nationalId, data.student.nationalId))
+        .limit(1);
+      if (duplicate[0]) {
+        throw new ConflictError('DUPLICATE_NATIONAL_ID', 'This student is already registered.');
+      }
+    }
 
     const result = await this.db.db.transaction(async (txn) => {
       const [account] = await txn
@@ -236,19 +269,33 @@ export class RegistrationsService {
 
       const addressId = generateId();
       await txn.insert(familyAddresses).values({ id: addressId, userId, ...data.address });
-      const studentId = generateId();
-      await txn.insert(students).values({
-        id: studentId,
-        userId,
-        schoolId: data.school.schoolId,
-        firstName: data.student.firstName,
-        lastName: data.student.lastName,
-        nationalId: data.student.nationalId,
-        birthDate: data.student.birthDate || null,
-        gender: data.student.gender || null,
-        grade: data.school.grade,
-        className: data.school.educationLevel,
-      });
+      const studentId = data.student.id ?? generateId();
+      if (data.student.id) {
+        await txn
+          .update(students)
+          .set({
+            schoolId: data.school.schoolId,
+            birthDate: data.student.birthDate || null,
+            gender: data.student.gender || null,
+            grade: data.school.grade,
+            className: data.school.educationLevel,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(students.id, studentId), eq(students.userId, userId)));
+      } else {
+        await txn.insert(students).values({
+          id: studentId,
+          userId,
+          schoolId: data.school.schoolId,
+          firstName: data.student.firstName,
+          lastName: data.student.lastName,
+          nationalId: data.student.nationalId,
+          birthDate: data.student.birthDate || null,
+          gender: data.student.gender || null,
+          grade: data.school.grade,
+          className: data.school.educationLevel,
+        });
+      }
       const registrationId = generateId();
       await txn.insert(serviceRegistrations).values({
         id: registrationId,
@@ -331,7 +378,7 @@ export class RegistrationsService {
       userId,
       notificationType: 'ENROLLMENT_CREATED',
       title: 'ثبت‌نام دانش‌آموز انجام شد',
-      message: `ثبت‌نام ${data.student.firstName} ${data.student.lastName} ثبت شد و قرارداد آماده بررسی است.`,
+      message: `خانواده ${data.father.firstName} ${data.father.lastName}، ثبت‌نام دانش‌آموز ${data.student.firstName} ${data.student.lastName} را با نوع سرویس ${data.service.serviceType} ثبت کرد؛ قرارداد آماده بررسی است.`,
       relatedEntityType: 'REGISTRATION',
       relatedEntityId: result.registrationId,
     });

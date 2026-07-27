@@ -38,9 +38,12 @@ export class NotificationsService {
       .where(
         inArray(notifications.notificationType, [
           'ACCOUNT_REGISTERED',
+          'ADMIN_STUDENT_ADDED',
           'ENROLLMENT_CREATED',
           'PAYMENT_SUCCEEDED',
-          'OFFLINE_PAYMENT_SUBMITTED',
+          'PAYMENT_APPROVED',
+          'PAYMENT_REJECTED',
+          'PAYMENT_PLAN_READY',
           'CONTRACT_ACCEPTED',
           'CONTRACT_REJECTED',
         ]),

@@ -63,7 +63,7 @@ export default async function ContractsPage({
               )}
               <div className="mt-4">
                 <ButtonLink
-                  href={`/admin/contracts?selected=${record.id}`}
+                  href={`/admin/contracts?selected=${record.id}#contract-details`}
                   variant={selectedContract?.id === record.id ? 'primary' : 'secondary'}
                   size="sm"
                   className="mb-3 w-full"
@@ -83,7 +83,7 @@ export default async function ContractsPage({
         })}
       </div>
       {selectedContract && (
-        <Card>
+        <Card id="contract-details" className="scroll-mt-24 ring-2 ring-primary/20">
           <h2 className="text-xl font-black">جزئیات قرارداد {selectedContract.contractNumber}</h2>
           <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div><dt className="text-muted">دانش‌آموز</dt><dd className="mt-1 font-bold">{selectedContract.studentName}</dd></div>
