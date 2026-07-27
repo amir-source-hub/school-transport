@@ -1,6 +1,5 @@
 'use client';
 
-import { Route } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -101,19 +100,10 @@ export function PublicHeader() {
           <div className="hidden items-center gap-2 sm:flex">
             <ButtonLink
               href="/login"
-              variant="ghost"
               size="sm"
-              className="!text-[#fff] hover:bg-white/10"
+              className="min-w-32 bg-sun text-navy hover:bg-sun/90 shadow-lg shadow-sun/20"
             >
-              ورود
-            </ButtonLink>
-            <ButtonLink
-              href="/login"
-              size="sm"
-              className="min-w-28 bg-sun text-navy hover:bg-sun/90 shadow-lg shadow-sun/20"
-            >
-              <Route aria-hidden="true" className="size-3.5" />
-              ثبت‌نام
+              ثبت‌نام / ورود
             </ButtonLink>
           </div>
 
@@ -137,9 +127,14 @@ export function PublicHeader() {
             <nav aria-label="ناوبری موبایل" className="flex flex-col gap-1">
               <PublicNavLinks mobile onNavigate={() => setMobileOpen(false)} />
             </nav>
-            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/60 pt-3">
-              <ButtonLink href="/login" variant="secondary" size="sm">ورود</ButtonLink>
-              <ButtonLink href="/login" size="sm" className="bg-navy text-white hover:bg-navy/90">ورود / ثبت‌نام</ButtonLink>
+            <div className="mt-3 border-t border-border/60 pt-3">
+              <ButtonLink
+                href="/login"
+                size="sm"
+                className="w-full bg-navy text-white hover:bg-navy/90"
+              >
+                ثبت‌نام / ورود
+              </ButtonLink>
             </div>
           </div>
         )}
