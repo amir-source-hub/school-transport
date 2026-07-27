@@ -1,33 +1,186 @@
 # School Transport Platform
 
-Persian-first school transport MVP implemented as a TypeScript monorepo.
+A Persian-first platform for managing school transport enrollment, contracts, and payments. The
+repository contains a public website, a parent portal, an administrative dashboard, and the API
+that supports them.
 
-## Applications
+> The project is under active development and currently uses development OTP and payment
+> providers. It is not ready for production deployment without configuring approved external
+> providers and production secrets.
 
-- `apps/web`: Next.js App Router application for public, authentication, parent, and admin areas.
-- `apps/api`: NestJS and Fastify modular-monolith API.
+## What is included
 
-Worker and scheduler applications remain gated by the unresolved infrastructure decision recorded in `APP_DEVELOPMENT_PLAN.md`.
+### Parent experience
+
+- Mobile-number registration and sign-in with OTP
+- Multi-student family accounts
+- Guided enrollment with school, grade, service, address, and map location selection
+- Reuse of saved parent and family information for subsequent enrollments
+- Contract review and acceptance
+- Fixed prepayment followed by an admin-configured full or installment payment plan
+- Online payments and offline receipt submissions
+- Jalali dates and RTL Persian interfaces
+- Payment, enrollment, contract, decision, and account notifications
+- Editable family profile, addresses, emergency contacts, and parent phone numbers
+
+### Administration
+
+- Operational dashboard and detailed notifications
+- Enrollment review, correction, approval, and rejection workflows
+- Family, student, school, contract, and administrator management
+- Remaining-price and installment schedule configuration per student
+- Online payment history and offline payment approval or rejection
+- Payment-derived enrollment statuses, including installment progress and full settlement
+- Contract and enrollment details in a unified view
+
+## Technology
+
+| Area                 | Technology                                     |
+| -------------------- | ---------------------------------------------- |
+| Monorepo             | pnpm workspaces, Turborepo, TypeScript         |
+| Web                  | Next.js 16, React 19, Tailwind CSS 4, Radix UI |
+| API                  | NestJS 10, Fastify, REST, OpenAPI              |
+| Data                 | PostgreSQL 16, Drizzle ORM                     |
+| Background work      | Redis 7, BullMQ                                |
+| Validation and forms | Zod, class-validator, React Hook Form          |
+| Testing              | Vitest, Testing Library, Playwright            |
+| Infrastructure       | Docker Compose, GitHub Actions                 |
+
+## Repository structure
+
+```text
+.
+├── apps/
+│   ├── api/             # NestJS API, database schema, migrations, and seed data
+│   └── web/             # Public website, parent portal, and admin dashboard
+├── docs/                # Product, architecture, security, and workflow specifications
+├── infrastructure/      # PostgreSQL initialization and infrastructure support
+├── packages/            # Shared TypeScript and ESLint configuration
+├── docker-compose.yml
+└── package.json
+```
 
 ## Requirements
 
 - Node.js 20 or newer
-- pnpm 9 or newer
-- PostgreSQL for API development
+- pnpm 9 or newer; the repository currently pins pnpm 10.29.2
+- Docker Desktop, or local PostgreSQL 16 and Redis 7 instances
 
-## Local setup
+## Local development
 
-1. Copy `.env.example` values into the appropriate app-local environment files.
-2. Replace every development placeholder secret.
-3. Run `pnpm install` from the repository root.
-4. Run `pnpm dev` to start available applications.
+### 1. Install dependencies
 
-## Quality commands
+```bash
+pnpm install
+```
 
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test`
-- `pnpm build`
-- `pnpm format:check`
+### 2. Start PostgreSQL and Redis
 
-Project behavior and architecture must remain traceable to the specifications in `docs/`.
+```bash
+docker compose up -d postgres redis
+```
+
+The development configuration exposes PostgreSQL on port `5433` and Redis on port `6379`.
+Starting Redis prevents repeated `ECONNREFUSED 127.0.0.1:6379` messages from the API.
+
+### 3. Configure environment variables
+
+Copy `apps/api/.env.example` to `apps/api/.env`, then replace the placeholder JWT secret.
+
+Create `apps/web/.env.local` with:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api/v1
+```
+
+Never commit `.env` files or real credentials.
+
+### 4. Prepare sample data
+
+Run migrations and load the development seed:
+
+```bash
+pnpm --filter @school-transport/api db:bootstrap
+```
+
+This command is intended for a development database and seeds demo parent and administrator
+accounts. With `OTP_PROVIDER=console`, sign-in codes are printed by the API process.
+
+### 5. Start the applications
+
+```bash
+pnpm dev
+```
+
+| Service               | URL                                   |
+| --------------------- | ------------------------------------- |
+| Web application       | <http://localhost:3000>               |
+| API                   | <http://localhost:5000/api/v1>        |
+| OpenAPI documentation | <http://localhost:5000/api/docs>      |
+| Health check          | <http://localhost:5000/api/v1/health> |
+
+## Docker API environment
+
+To build and run PostgreSQL, Redis, database bootstrap, the API, and its worker together:
+
+```bash
+docker compose up --build
+```
+
+The Next.js application is currently run separately with pnpm.
+
+## Useful commands
+
+```bash
+# Run all workspaces
+pnpm dev
+pnpm build
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm format:check
+
+# Database operations
+pnpm --filter @school-transport/api db:generate
+pnpm --filter @school-transport/api db:migrate
+pnpm --filter @school-transport/api db:seed
+pnpm --filter @school-transport/api db:studio
+
+# Web end-to-end tests
+pnpm --filter web test:e2e
+```
+
+## Payment development behavior
+
+Local development defaults to `PAYMENT_GATEWAY_PROVIDER=mock`. This provider is deterministic and
+exists only for development and automated testing. Offline payments are submitted by parents with
+a Jalali payment date and bank reference, then approved or rejected by an administrator. A pending
+offline receipt blocks duplicate submissions for the same installment until it is rejected.
+
+Payment plan status is derived from its schedule:
+
+- Paying only the prepayment activates the enrollment.
+- Paying some configured installments shows installment progress.
+- Paying the prepayment and every configured remaining payment marks the plan fully settled.
+
+## Security notes
+
+- OTPs, tokens, passwords, payment credentials, and real personal data must never be committed or
+  logged.
+- Console OTP and mock payment providers are disabled as production solutions by design.
+- Payment, contract, authorization, and student-data changes require negative-path and ownership
+  tests.
+- Review the documents under `docs/` before changing business rules or permissions.
+
+## Documentation and contribution
+
+The specifications under [`docs/`](docs/) are the source of truth for approved behavior. Start with
+[`APP_DEVELOPMENT_PLAN.md`](APP_DEVELOPMENT_PLAN.md) for the documentation map and implementation
+status.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for branch, commit, testing, and pull-request requirements.
+
+## License
+
+No open-source license has been added. All rights are reserved unless the repository owner states
+otherwise.
