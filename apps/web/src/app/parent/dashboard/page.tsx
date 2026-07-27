@@ -40,6 +40,27 @@ export default async function ParentDashboardPage() {
     const payment = payments.find((item) => item.studentId === student.id);
     const nextItem = payment?.items.find((item) => item.itemStatus !== 'PAID');
     const status = enrollment?.registrationStatus ?? 'DRAFT';
+    const lifecycleEvents = [
+      ...(payment?.transactions.some((item) => item.transactionStatus === 'SUCCESS')
+        ? ['پرداخت موفق برای این دانش‌آموز ثبت شده است.']
+        : []),
+      ...(contract
+        ? [
+            contract.contractStatus === 'ACCEPTED'
+              ? 'قرارداد این دانش‌آموز پذیرفته شده است.'
+              : 'قرارداد این دانش‌آموز صادر شده است.',
+          ]
+        : []),
+      ...(enrollment
+        ? [`درخواست سرویس با وضعیت «${statusLabel[status] ?? status}» ثبت شده است.`]
+        : []),
+      'پروفایل دانش‌آموز در پنل خانواده ایجاد شده است.',
+    ];
+    const recentEvents = [
+      ...(nextItem?.dueDate ? [`سررسید پرداخت بعدی: ${formatJalaliDate(nextItem.dueDate)}`] : []),
+      ...notifications.map((item) => item.message),
+      ...lifecycleEvents,
+    ].filter((event, index, items) => items.indexOf(event) === index);
     return {
       id: student.id,
       name: `${student.firstName} ${student.lastName}`,
@@ -67,10 +88,7 @@ export default async function ParentDashboardPage() {
         : payment
           ? 'تسویه‌شده'
           : 'پس از پذیرش قرارداد مشخص می‌شود',
-      notifications: [
-        ...(nextItem?.dueDate ? [`سررسید پرداخت بعدی: ${formatJalaliDate(nextItem.dueDate)}`] : []),
-        ...notifications.slice(0, 3).map((item) => item.message),
-      ].slice(0, 4),
+      notifications: recentEvents.slice(0, 5),
     };
   });
   return <ParentDashboard students={dashboards} />;

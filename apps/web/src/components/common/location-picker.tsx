@@ -37,7 +37,7 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
         zoomControl: true,
       });
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer('/api/map-tiles/{z}/{x}/{y}', {
         attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 19,
       }).addTo(map);

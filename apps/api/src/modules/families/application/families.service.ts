@@ -29,6 +29,23 @@ export class FamiliesService {
   ) {}
 
   async createFamily(userId: string, dto: CreateFamilyDto): Promise<FamilyProfile> {
+    const [account] = await this.db.db
+      .select({ phoneNumber: users.phoneNumber })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    const primaryParent =
+      account?.phoneNumber === dto.mother.phoneNumber
+        ? 'MOTHER'
+        : account?.phoneNumber === dto.father.phoneNumber
+          ? 'FATHER'
+          : null;
+    if (!primaryParent) {
+      throw new ConflictError(
+        'LOGIN_PHONE_MUST_MATCH_PARENT',
+        'The login phone number must match the father or mother phone number.',
+      );
+    }
     const existingMother = await this.db.db
       .select({ id: parents.id })
       .from(parents)
@@ -67,7 +84,8 @@ export class FamiliesService {
         lastName: dto.mother.lastName,
         nationalId: dto.mother.nationalId,
         phoneNumber: dto.mother.phoneNumber,
-        isPrimaryContact: dto.primaryParent === 'MOTHER',
+        isPrimaryContact: primaryParent === 'MOTHER',
+        phoneVerifiedAt: primaryParent === 'MOTHER' ? new Date() : null,
       },
       {
         id: fatherId,
@@ -77,7 +95,8 @@ export class FamiliesService {
         lastName: dto.father.lastName,
         nationalId: dto.father.nationalId,
         phoneNumber: dto.father.phoneNumber,
-        isPrimaryContact: dto.primaryParent === 'FATHER',
+        isPrimaryContact: primaryParent === 'FATHER',
+        phoneVerifiedAt: primaryParent === 'FATHER' ? new Date() : null,
       },
     ]);
 
@@ -317,6 +336,10 @@ export class FamiliesService {
       .update(parents)
       .set({ isPrimaryContact: true, updatedAt: new Date() })
       .where(eq(parents.id, target[0].id));
+    await this.db.db
+      .update(users)
+      .set({ phoneNumber: target[0].phoneNumber, updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 
   async markPhoneVerified(userId: string): Promise<void> {

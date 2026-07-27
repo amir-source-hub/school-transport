@@ -174,6 +174,34 @@ export class AuthService {
     if (account.status !== 'ACTIVE') {
       throw new AuthenticationError('Account is disabled or suspended.');
     }
+    if (role === 'PARENT') {
+      const familyParents = await this.db.db
+        .select({ id: parents.id, phoneNumber: parents.phoneNumber })
+        .from(parents)
+        .where(eq(parents.userId, account.id));
+      if (familyParents.length > 0) {
+        const matchingParent = familyParents.find((parent) => parent.phoneNumber === phoneNumber);
+        if (!matchingParent) {
+          throw new AuthenticationError(
+            'The login phone number must belong to one of the registered parents.',
+          );
+        }
+        await this.db.db.transaction(async (txn) => {
+          await txn
+            .update(parents)
+            .set({ isPrimaryContact: false, updatedAt: new Date() })
+            .where(eq(parents.userId, account!.id));
+          await txn
+            .update(parents)
+            .set({ isPrimaryContact: true, phoneVerifiedAt: new Date(), updatedAt: new Date() })
+            .where(eq(parents.id, matchingParent.id));
+          await txn
+            .update(users)
+            .set({ phoneNumber, updatedAt: new Date() })
+            .where(eq(users.id, account!.id));
+        });
+      }
+    }
     const table = role === 'ADMIN' ? adminUsers : users;
     await this.db.db.update(table).set({ lastLoginAt: new Date() }).where(eq(table.id, account.id));
     const tokens = await this.generateTokens(account.id, role, context);

@@ -9,6 +9,7 @@ import {
   paymentScheduleItems,
   contracts,
   emergencyContacts,
+  users,
 } from '../../database/schemas';
 import { students } from '../../database/schemas';
 import { familyAddresses, parents, schools } from '../../database/schemas';
@@ -140,35 +141,73 @@ export class RegistrationsService {
       throw new ConflictError('DUPLICATE_NATIONAL_ID', 'This student is already registered.');
 
     const result = await this.db.db.transaction(async (txn) => {
+      const [account] = await txn
+        .select({ phoneNumber: users.phoneNumber })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      const loginPhone = account?.phoneNumber;
+      const matchingParentType =
+        loginPhone === data.father.phoneNumber
+          ? 'FATHER'
+          : loginPhone === data.mother.phoneNumber
+            ? 'MOTHER'
+            : null;
+      if (!matchingParentType) {
+        throw new ConflictError(
+          'LOGIN_PHONE_MUST_MATCH_PARENT',
+          'The login phone number must match the father or mother phone number.',
+        );
+      }
       const existingFamilyParents = await txn
-        .select({ id: parents.id, isPrimaryContact: parents.isPrimaryContact })
+        .select({
+          id: parents.id,
+          parentType: parents.parentType,
+          firstName: parents.firstName,
+          lastName: parents.lastName,
+          nationalId: parents.nationalId,
+          phoneNumber: parents.phoneNumber,
+          isPrimaryContact: parents.isPrimaryContact,
+        })
         .from(parents)
         .where(eq(parents.userId, userId));
       for (const [parentType, parent] of [
         ['FATHER', data.father],
         ['MOTHER', data.mother],
       ] as const) {
-        const [existing] = await txn
-          .select({ id: parents.id })
-          .from(parents)
-          .where(and(eq(parents.userId, userId), eq(parents.parentType, parentType)))
-          .limit(1);
+        const existing = existingFamilyParents.find((item) => item.parentType === parentType);
         if (existing) {
-          await txn
-            .update(parents)
-            .set({ ...parent, updatedAt: new Date() })
-            .where(eq(parents.id, existing.id));
+          const unchanged =
+            existing.firstName === parent.firstName &&
+            existing.lastName === parent.lastName &&
+            existing.nationalId === parent.nationalId &&
+            existing.phoneNumber === parent.phoneNumber;
+          if (!unchanged) {
+            throw new ConflictError(
+              'PARENT_PROFILE_CHANGED',
+              'Saved parent information must be changed from the family profile.',
+            );
+          }
         } else {
           await txn.insert(parents).values({
             id: generateId(),
             userId,
             parentType,
             ...parent,
-            isPrimaryContact: existingFamilyParents.length === 0 && parentType === 'FATHER',
+            isPrimaryContact: false,
           });
-          existingFamilyParents.push({ id: '', isPrimaryContact: parentType === 'FATHER' });
         }
       }
+      await txn
+        .update(parents)
+        .set({ isPrimaryContact: false, updatedAt: new Date() })
+        .where(eq(parents.userId, userId));
+      await txn
+        .update(parents)
+        .set({ isPrimaryContact: true, phoneVerifiedAt: new Date(), updatedAt: new Date() })
+        .where(
+          and(eq(parents.userId, userId), eq(parents.parentType, matchingParentType)),
+        );
       const [emergency] = await txn
         .select({ id: emergencyContacts.id })
         .from(emergencyContacts)
@@ -253,6 +292,7 @@ export class RegistrationsService {
         school: data.school,
         service: data.service,
         prepaymentAmount,
+        contractText: this.guidedContractText(data.student.firstName, data.student.lastName),
       };
       await txn.insert(contracts).values({
         id: contractId,

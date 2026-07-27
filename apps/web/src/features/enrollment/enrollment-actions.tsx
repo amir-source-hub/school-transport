@@ -43,6 +43,16 @@ type SchoolOption = {
   city: string;
   educationOptions: { level: string; grades: string[] }[];
 };
+type SavedParent = {
+  firstName: string;
+  lastName: string;
+  nationalId: string;
+  phoneNumber: string;
+};
+type SavedParents = {
+  father: SavedParent | null;
+  mother: SavedParent | null;
+};
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const initialForm = {
@@ -105,12 +115,26 @@ const vehicleOptions = [
   },
 ];
 
-export function CreateEnrollmentForm({ schools }: { schools: SchoolOption[] }) {
+export function CreateEnrollmentForm({
+  schools,
+  savedParents,
+}: {
+  schools: SchoolOption[];
+  savedParents: SavedParents;
+}) {
   const router = useRouter();
   const firstSchool = schools[0];
   const firstLevel = firstSchool?.educationOptions[0];
   const createInitialForm = () => ({
     ...initialForm,
+    fatherFirst: savedParents.father?.firstName ?? '',
+    fatherLast: savedParents.father?.lastName ?? '',
+    fatherNationalId: savedParents.father?.nationalId ?? '',
+    fatherPhone: savedParents.father?.phoneNumber ?? '',
+    motherFirst: savedParents.mother?.firstName ?? '',
+    motherLast: savedParents.mother?.lastName ?? '',
+    motherNationalId: savedParents.mother?.nationalId ?? '',
+    motherPhone: savedParents.mother?.phoneNumber ?? '',
     schoolId: firstSchool?.id ?? '',
     educationLevel: firstLevel?.level ?? '',
     grade: firstLevel?.grades[0] ?? '',
@@ -291,6 +315,14 @@ export function CreateEnrollmentForm({ schools }: { schools: SchoolOption[] }) {
     }
   }
 
+  const lockedParentFields = new Set<keyof typeof form>([
+    ...(savedParents.father
+      ? (['fatherFirst', 'fatherLast', 'fatherNationalId', 'fatherPhone'] as const)
+      : []),
+    ...(savedParents.mother
+      ? (['motherFirst', 'motherLast', 'motherNationalId', 'motherPhone'] as const)
+      : []),
+  ]);
   const field = (key: keyof typeof form, label: string, type = 'text') => (
     <label className="text-sm font-bold text-foreground">
       {label}
@@ -299,8 +331,9 @@ export function CreateEnrollmentForm({ schools }: { schools: SchoolOption[] }) {
         type={type}
         value={String(form[key])}
         dir={['tel', 'number'].includes(type) ? 'ltr' : undefined}
+        disabled={lockedParentFields.has(key)}
         onChange={(event) => set(key, event.target.value)}
-        className="mt-2"
+        className="mt-2 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
       />
     </label>
   );
@@ -366,6 +399,11 @@ export function CreateEnrollmentForm({ schools }: { schools: SchoolOption[] }) {
               </div>
             </Section>
             <Section title="اطلاعات پدر">
+              {savedParents.father && (
+                <p className="mb-4 text-sm text-muted">
+                  اطلاعات ذخیره‌شده پدر از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر نیست.
+                </p>
+              )}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {field('fatherFirst', 'نام')}
                 {field('fatherLast', 'نام خانوادگی')}
@@ -374,6 +412,11 @@ export function CreateEnrollmentForm({ schools }: { schools: SchoolOption[] }) {
               </div>
             </Section>
             <Section title="اطلاعات مادر">
+              {savedParents.mother && (
+                <p className="mb-4 text-sm text-muted">
+                  اطلاعات ذخیره‌شده مادر از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر نیست.
+                </p>
+              )}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {field('motherFirst', 'نام')}
                 {field('motherLast', 'نام خانوادگی')}

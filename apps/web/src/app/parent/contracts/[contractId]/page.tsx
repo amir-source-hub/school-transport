@@ -46,7 +46,9 @@ function parseContractSnapshot(snapshot: string | null) {
   if (!snapshot) return [];
   try {
     const parsed = JSON.parse(snapshot) as Record<string, unknown>;
-    return Object.entries(parsed).map(([group, value]) => ({
+    return Object.entries(parsed)
+      .filter(([group]) => group !== 'contractText')
+      .map(([group, value]) => ({
       title: groupLabels[group] ?? contractLabels[group] ?? group,
       fields:
         value && typeof value === 'object' && !Array.isArray(value)
@@ -56,6 +58,28 @@ function parseContractSnapshot(snapshot: string | null) {
   } catch {
     return [{ title: 'متن قرارداد', fields: [['text', snapshot] as [string, unknown]] }];
   }
+}
+
+function getContractText(snapshot: string | null, studentName: string) {
+  if (snapshot) {
+    try {
+      const parsed = JSON.parse(snapshot) as Record<string, unknown>;
+      if (typeof parsed.contractText === 'string' && parsed.contractText.trim()) {
+        return parsed.contractText;
+      }
+    } catch {
+      if (snapshot.trim()) return snapshot;
+    }
+  }
+  return `قرارداد ارائه خدمات حمل‌ونقل دانش‌آموزی
+
+این قرارداد میان سامانه سرویس مدرسه و خانواده دانش‌آموز ${studentName} منعقد می‌شود. سامانه متعهد است با رعایت الزامات ایمنی، برنامه‌ریزی مسیر و هماهنگی با مدرسه، بیشترین تلاش خود را برای ارائه سرویس درخواستی انجام دهد.
+
+نوع خودرو، ساعت حرکت و مسیر ممکن است بر اساس ظرفیت، شرایط ترافیکی، محدوده پوشش، تصمیم مدرسه و الزامات ایمنی تغییر کند. هر تغییر مؤثر پیش از شروع خدمت به خانواده اطلاع داده خواهد شد.
+
+خانواده مسئول صحت اطلاعات دانش‌آموز، والدین، تماس اضطراری، نشانی و موقعیت ثبت‌شده است و متعهد می‌شود تغییرات را به‌موقع اعلام کند. آغاز نهایی سرویس منوط به تأیید ظرفیت و برنامه مسیر است.
+
+با پذیرش این قرارداد، خانواده اعلام می‌کند تمام بندها را مطالعه کرده و با شرایط فوق موافق است.`;
 }
 
 function formatContractValue(key: string, value: unknown) {
@@ -74,6 +98,10 @@ export default async function ContractPage({
   const contract = await getContract(contractId);
   const payment = contract.paymentPlanId ? await getPaymentPlan(contract.paymentPlanId) : null;
   const snapshot = parseContractSnapshot(contract.contractDataSnapshot);
+  const contractText = getContractText(
+    contract.contractDataSnapshot,
+    `${contract.studentName} ${contract.studentLastName}`,
+  );
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -155,6 +183,12 @@ export default async function ContractPage({
             ))}
           </div>
         )}
+      </Card>
+      <Card>
+        <h2 className="text-lg font-black">متن قرارداد</h2>
+        <div className="mt-4 whitespace-pre-line rounded-xl border border-border bg-surface-muted/40 p-5 text-sm leading-8">
+          {contractText}
+        </div>
       </Card>
       {payment && (
         <Card>

@@ -32,4 +32,14 @@ describe('API error feedback', () => {
     expect(feedback.target).toBe('dialog');
     expect(feedback.canRetry).toBe(true);
   });
+
+  it('explains that the login phone must belong to a parent', () => {
+    const feedback = getApiErrorFeedback(
+      new ApiClientError(409, 'LOGIN_PHONE_MUST_MATCH_PARENT', 'technical detail'),
+    );
+
+    expect(feedback.target).toBe('form');
+    expect(feedback.message).toContain('شماره ورود');
+    expect(feedback.canRetry).toBe(false);
+  });
 });

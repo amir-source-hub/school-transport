@@ -6,6 +6,7 @@ import { getEnrollmentPrices, getEnrollments } from '@/features/enrollment/enrol
 import { getStudents } from '@/features/students/students-api';
 import { getSchools } from '@/features/schools/schools-api';
 import { formatIrr } from '@/lib/formatters';
+import { getFamilyProfile } from '@/features/family-profile/family-api';
 
 export const metadata = { title: 'ثبت‌نام' };
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,12 @@ const statusLabels: Record<string, string> = {
 };
 
 export default async function EnrollmentsPage() {
-  const [students, enrollments, { schools }] = await Promise.all([getStudents(), getEnrollments(), getSchools()]);
+  const [students, enrollments, { schools }, family] = await Promise.all([
+    getStudents(),
+    getEnrollments(),
+    getSchools(),
+    getFamilyProfile(),
+  ]);
   const entries = await Promise.all(enrollments.map(async (enrollment) => ({
     enrollment,
     prices: ['APPROVED', 'CONTRACT_PENDING', 'CONTRACT_READY', 'CONTRACT_ACCEPTED'].includes(enrollment.registrationStatus)
@@ -30,12 +36,15 @@ export default async function EnrollmentsPage() {
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: 'پنل خانواده', href: '/parent/dashboard' }, { label: 'ثبت‌نام' }]} />
       <div><p className="text-sm font-bold text-primary">درخواست سرویس</p><h1 className="mt-1 text-2xl font-black sm:text-3xl">ثبت‌نام و پیگیری</h1></div>
-      <CreateEnrollmentForm schools={schools.map((school) => ({
-        id: school.id,
-        name: school.name,
-        city: school.city,
-        educationOptions: school.educationOptions,
-      }))} />
+      <CreateEnrollmentForm
+        schools={schools.map((school) => ({
+          id: school.id,
+          name: school.name,
+          city: school.city,
+          educationOptions: school.educationOptions,
+        }))}
+        savedParents={{ father: family.father, mother: family.mother }}
+      />
       <div className="space-y-4">
         {entries.map(({ enrollment, prices }) => {
           const student = students.find(({ id }) => id === enrollment.studentId);
