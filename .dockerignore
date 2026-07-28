@@ -3,6 +3,9 @@
 .turbo
 **/node_modules
 **/dist
+**/.next
+**/.turbo
+**/test-results
 **/.env
 **/.env.*
 !.env.example
