@@ -1,19 +1,37 @@
 import { z } from 'zod';
 import { apiRequest } from '@/lib/api-client';
 
-export const paymentSchema = z.object({
+const transactionSchema = z.object({
   id: z.string(),
+  submittedAmount: z.number(),
+  reference: z.string(),
+  submittedAt: z.string(),
+  status: z.string(),
+});
+
+const scheduleItemSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  sequenceNumber: z.number(),
+  amount: z.number(),
+  dueDate: z.string().nullable(),
+  paidAmount: z.number(),
+  paidAt: z.string().nullable(),
+  paid: z.boolean(),
+  transaction: transactionSchema.nullable(),
+});
+
+export const paymentSchema = z.object({
+  studentId: z.string(),
   planId: z.string(),
   planType: z.string(),
+  planStatus: z.string(),
   planConfigured: z.boolean(),
   studentName: z.string(),
   familyName: z.string(),
-  invoice: z.string(),
-  expectedAmount: z.number(),
-  submittedAmount: z.number(),
-  reference: z.string(),
-  paidAt: z.string(),
-  status: z.string(),
+  totalAmount: z.number(),
+  prepayment: scheduleItemSchema,
+  installments: z.array(scheduleItemSchema),
 });
 
 export const paymentsSchema = z.array(paymentSchema);

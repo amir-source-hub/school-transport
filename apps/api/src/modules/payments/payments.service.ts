@@ -9,7 +9,7 @@ import {
   students,
   parents,
 } from '../../database/schemas';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { NotFoundError, ConflictError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
@@ -472,63 +472,97 @@ export class PaymentsService {
   }
 
   async getAllForAdmin() {
-    const rows = await this.db.db
+    const plans = await this.db.db
       .select({
-        transaction: paymentTransactions,
-        item: paymentScheduleItems,
+        plan: paymentPlans,
+        studentId: students.id,
         studentFirstName: students.firstName,
         studentLastName: students.lastName,
         userId: students.userId,
-        planType: paymentPlans.planType,
-        remainingAmount: paymentPlans.remainingInstallmentAmount,
       })
-      .from(paymentTransactions)
-      .innerJoin(
-        paymentScheduleItems,
-        eq(paymentScheduleItems.id, paymentTransactions.paymentScheduleItemId),
-      )
-      .innerJoin(paymentPlans, eq(paymentPlans.id, paymentTransactions.paymentPlanId))
+      .from(paymentPlans)
       .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
       .innerJoin(
         serviceRegistrations,
         eq(serviceRegistrations.id, registrationPrices.registrationId),
       )
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId));
+
+    if (plans.length === 0) return [];
+
+    const planIds = plans.map(({ plan }) => plan.id);
+    const items = await this.db.db
+      .select()
+      .from(paymentScheduleItems)
+      .where(inArray(paymentScheduleItems.paymentPlanId, planIds));
+    const itemIds = items.map((item) => item.id);
+    const transactions =
+      itemIds.length === 0
+        ? []
+        : await this.db.db
+            .select()
+            .from(paymentTransactions)
+            .where(inArray(paymentTransactions.paymentScheduleItemId, itemIds));
     const parentRows = await this.db.db.select().from(parents);
-    return rows.map(
-      ({
-        transaction,
-        item,
-        studentFirstName,
-        studentLastName,
-        userId,
-        planType,
-        remainingAmount,
-      }) => {
+
+    return plans
+      .map(({ plan, studentId, studentFirstName, studentLastName, userId }) => {
+        const planItems = items
+          .filter((item) => item.paymentPlanId === plan.id)
+          .sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+        const prepayment = planItems.find((item) => item.itemType === 'PREPAYMENT');
+        if (!prepayment) return null;
+        const mapItem = (item: typeof paymentScheduleItems.$inferSelect) => {
+          const itemTransactions = transactions
+            .filter((transaction) => transaction.paymentScheduleItemId === item.id)
+            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+          const latestTransaction = itemTransactions[0];
+          return {
+            id: item.id,
+            type: item.itemType,
+            sequenceNumber: item.sequenceNumber,
+            amount: item.amount,
+            dueDate: item.dueDate?.toISOString() ?? null,
+            paidAmount: item.paidAmount,
+            paidAt: item.paidAt?.toISOString() ?? null,
+            paid: item.itemStatus === 'PAID',
+            transaction: latestTransaction
+              ? {
+                  id: latestTransaction.id,
+                  submittedAmount: latestTransaction.amount,
+                  reference: latestTransaction.gatewayTransactionId ?? '—',
+                  submittedAt:
+                    latestTransaction.verifiedAt?.toISOString() ??
+                    latestTransaction.requestedAt.toISOString(),
+                  status:
+                    latestTransaction.transactionStatus === 'SUCCEEDED'
+                      ? 'تأییدشده'
+                      : latestTransaction.transactionStatus === 'FAILED'
+                        ? 'ردشده'
+                        : 'در انتظار بررسی',
+                }
+              : null,
+          };
+        };
       const parent =
         parentRows.find((entry) => entry.userId === userId && entry.isPrimaryContact) ??
         parentRows.find((entry) => entry.userId === userId);
       return {
-        id: transaction.id,
-        planId: transaction.paymentPlanId,
-        planType,
-        planConfigured: remainingAmount > 0,
+        studentId,
+        planId: plan.id,
+        planType: plan.planType,
+        planStatus: plan.planStatus,
+        planConfigured: plan.planType === 'ADMIN_CONFIGURED',
         studentName: `${studentFirstName} ${studentLastName}`,
         familyName: parent ? `${parent.firstName} ${parent.lastName}` : '—',
-        invoice: item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : `قسط ${item.sequenceNumber}`,
-        expectedAmount: item.amount,
-        submittedAmount: transaction.amount,
-        reference: transaction.gatewayTransactionId ?? '—',
-        paidAt: transaction.verifiedAt?.toISOString() ?? transaction.requestedAt.toISOString(),
-        status:
-          transaction.transactionStatus === 'SUCCEEDED'
-            ? 'تأییدشده'
-            : transaction.transactionStatus === 'FAILED'
-              ? 'ردشده'
-              : 'در انتظار بررسی',
+        totalAmount: plan.totalAmount,
+        prepayment: mapItem(prepayment),
+        installments: planItems
+          .filter((item) => item.itemType === 'INSTALLMENT')
+          .map(mapItem),
       };
-      },
-    );
+      })
+      .filter((account) => account !== null && account.prepayment.transaction !== null);
   }
 
   async configureInstallments(planId: string, items: { amount: number; dueDate: string }[]) {

@@ -3,15 +3,18 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { getAdminPayments, getPaymentTone } from '@/features/admin-payments/admin-payments-api';
 import { ApprovePaymentDialog, ConfigureInstallmentsDialog, RejectPaymentDialog } from '@/features/admin-payments/payment-actions';
-import { formatIrr, formatJalaliDateTime } from '@/lib/formatters';
+import { formatIrr, formatJalaliDate, formatJalaliDateTime } from '@/lib/formatters';
 
 export const metadata = { title: 'پرداخت‌ها' };
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPaymentsPage() {
   const { payments } = await getAdminPayments();
-  const awaitingReview = payments.filter((p) => p.status === 'در انتظار بررسی').length;
-  const approved = payments.filter((p) => p.status === 'تأییدشده').length;
+  const allItems = payments.flatMap((payment) => [payment.prepayment, ...payment.installments]);
+  const awaitingReview = allItems.filter(
+    (item) => item.transaction?.status === 'در انتظار بررسی',
+  ).length;
+  const approved = allItems.filter((item) => item.paid).length;
 
   return (
     <div className="space-y-6">
@@ -22,7 +25,7 @@ export default async function AdminPaymentsPage() {
       </div>
       <section className="grid gap-4 sm:grid-cols-3" aria-label="خلاصه پرداخت‌ها">
         <Card>
-          <p className="text-sm text-muted">کل تراکنش‌ها</p>
+          <p className="text-sm text-muted">دانش‌آموزان دارای پرداخت</p>
           <p className="mt-2 text-2xl font-black">{payments.length}</p>
         </Card>
         <Card>
@@ -35,42 +38,86 @@ export default async function AdminPaymentsPage() {
         </Card>
       </section>
       <div className="grid gap-4">
-        {payments.map((payment) => (
-          <Card key={payment.id}>
+        {payments.map((payment) => {
+          const prepaymentStatus = payment.prepayment.transaction?.status ?? 'پرداخت نشده';
+          const canConfigure =
+            payment.prepayment.paid &&
+            !payment.planConfigured &&
+            payment.planType !== 'FULL';
+          return (
+          <Card key={payment.planId}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="font-black">{payment.studentName}</p>
-                <p className="mt-1 text-sm text-muted">{payment.familyName} — {payment.invoice}</p>
+                <p className="mt-1 text-sm text-muted">خانواده {payment.familyName} — مبلغ کل {formatIrr(payment.totalAmount)}</p>
               </div>
-              <Badge tone={getPaymentTone(payment.status)}>{payment.status}</Badge>
+              <Badge tone={payment.planStatus === 'COMPLETED' ? 'success' : 'neutral'}>
+                {payment.planStatus === 'COMPLETED' ? 'تسویه شده' : 'در حال پرداخت'}
+              </Badge>
             </div>
-            <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-              <div><dt className="text-muted">مبلغ مورد انتظار</dt><dd className="mt-1 font-bold">{formatIrr(payment.expectedAmount)}</dd></div>
-              <div><dt className="text-muted">مبلغ ارسالی</dt><dd className="mt-1 font-bold">{formatIrr(payment.submittedAmount)}</dd></div>
-              <div><dt className="text-muted">شماره مرجع</dt><dd className="mt-1 font-bold" dir="ltr">{payment.reference}</dd></div>
-              <div><dt className="text-muted">زمان پرداخت</dt><dd className="mt-1 font-bold">{formatJalaliDateTime(payment.paidAt)}</dd></div>
-            </dl>
-            {payment.status === 'در انتظار بررسی' && (
-              <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
-                <ApprovePaymentDialog paymentId={payment.id} />
-                <RejectPaymentDialog paymentId={payment.id} />
+            <section className="mt-5 rounded-xl border border-border bg-surface-muted/40 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <h3 className="font-black">پیش‌پرداخت</h3>
+                <Badge tone={getPaymentTone(prepaymentStatus)}>{payment.prepayment.paid ? 'پرداخت شده' : prepaymentStatus}</Badge>
               </div>
-            )}
-            {payment.status === 'تأییدشده' && payment.invoice === 'پیش‌پرداخت' && !payment.planConfigured && (
-              <div className="mt-5 border-t border-border pt-4">
+              <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                <div><dt className="text-muted">مبلغ</dt><dd className="mt-1 font-bold">{formatIrr(payment.prepayment.amount)}</dd></div>
+                <div><dt className="text-muted">مبلغ ثبت‌شده</dt><dd className="mt-1 font-bold">{formatIrr(payment.prepayment.transaction?.submittedAmount ?? 0)}</dd></div>
+                <div><dt className="text-muted">شماره مرجع</dt><dd className="mt-1 font-bold" dir="ltr">{payment.prepayment.transaction?.reference ?? '—'}</dd></div>
+                <div><dt className="text-muted">زمان ثبت</dt><dd className="mt-1 font-bold">{payment.prepayment.transaction ? formatJalaliDateTime(payment.prepayment.transaction.submittedAt) : '—'}</dd></div>
+              </dl>
+              {payment.prepayment.transaction?.status === 'در انتظار بررسی' && (
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+                  <ApprovePaymentDialog paymentId={payment.prepayment.transaction.id} />
+                  <RejectPaymentDialog paymentId={payment.prepayment.transaction.id} />
+                </div>
+              )}
+              {canConfigure && (
+                <div className="mt-4 border-t border-border pt-4">
                 <ConfigureInstallmentsDialog
                   planId={payment.planId}
-                  fullPayment={payment.planType === 'FULL'}
+                  fullPayment={false}
                 />
               </div>
-            )}
-            {payment.invoice === 'پیش‌پرداخت' && payment.planConfigured && (
-              <p className="mt-5 border-t border-border pt-4 text-sm font-bold text-success">
-                برنامه پرداخت باقی‌مانده ثبت و برای خانواده ارسال شده است.
-              </p>
+              )}
+            </section>
+            {payment.planConfigured && (
+              <section className="mt-5 border-t border-border pt-5">
+                <h3 className="font-black">برنامه اقساط</h3>
+                <div className="mt-3 space-y-3">
+                  {payment.installments.map((installment) => {
+                    const transactionStatus = installment.transaction?.status ?? 'پرداخت نشده';
+                    return (
+                      <div key={installment.id} className="rounded-xl border border-border p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-bold">قسط {installment.sequenceNumber.toLocaleString('fa-IR')}</p>
+                            <p className="mt-1 text-sm text-muted">{formatIrr(installment.amount)} — سررسید {installment.dueDate ? formatJalaliDate(installment.dueDate) : 'تعیین نشده'}</p>
+                          </div>
+                          <Badge tone={installment.paid ? 'success' : getPaymentTone(transactionStatus)}>
+                            {installment.paid ? 'پرداخت شده' : transactionStatus}
+                          </Badge>
+                        </div>
+                        {installment.transaction && (
+                          <p className="mt-3 text-sm text-muted">
+                            مرجع <span dir="ltr">{installment.transaction.reference}</span> — {formatJalaliDateTime(installment.transaction.submittedAt)}
+                          </p>
+                        )}
+                        {installment.transaction?.status === 'در انتظار بررسی' && (
+                          <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+                            <ApprovePaymentDialog paymentId={installment.transaction.id} />
+                            <RejectPaymentDialog paymentId={installment.transaction.id} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
             )}
           </Card>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

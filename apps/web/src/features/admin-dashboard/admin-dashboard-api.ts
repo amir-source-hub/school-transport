@@ -26,16 +26,26 @@ export async function getAdminDashboard() {
     getAdminContracts(),
     getAdminPayments(),
   ]);
+  const scheduleItems = payments.flatMap(({ prepayment, installments }) => [
+    prepayment,
+    ...installments,
+  ]);
+  const now = Date.now();
   return {
     summary: {
       pendingEnrollments: registrations.filter(({ status }) =>
         ['ارسال‌شده', 'در حال بررسی'].includes(status),
       ).length,
       contractsAwaitingAcceptance: contracts.filter(({ status }) => status === 'GENERATED').length,
-      offlinePaymentsAwaitingReview: payments.filter(({ status }) => status === 'در انتظار بررسی')
-        .length,
-      upcomingPayments: payments.filter(({ status }) => status !== 'تأییدشده').length,
-      overduePayments: payments.filter(({ status }) => status === 'ردشده').length,
+      offlinePaymentsAwaitingReview: scheduleItems.filter(
+        ({ transaction }) => transaction?.status === 'در انتظار بررسی',
+      ).length,
+      upcomingPayments: scheduleItems.filter(
+        ({ paid, dueDate }) => !paid && (!dueDate || Date.parse(dueDate) >= now),
+      ).length,
+      overduePayments: scheduleItems.filter(
+        ({ paid, dueDate }) => !paid && Boolean(dueDate) && Date.parse(dueDate!) < now,
+      ).length,
     },
     recentEnrollments: registrations
       .slice(0, 5)
