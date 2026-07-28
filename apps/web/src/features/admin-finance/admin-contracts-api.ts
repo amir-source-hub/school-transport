@@ -28,6 +28,33 @@ const rawContractSchema = z.object({
   contractDataSnapshot: z.string().nullable(),
   academicYear: z.string(),
   totalAmount: z.number(),
+  paymentPlan: z.object({
+    id: z.string(),
+    planType: z.string(),
+    totalAmount: z.number(),
+    prepaymentAmount: z.number(),
+    remainingInstallmentAmount: z.number(),
+    installmentCount: z.number(),
+    planStatus: z.string(),
+    items: z.array(z.object({
+      id: z.string(),
+      itemType: z.string(),
+      sequenceNumber: z.number(),
+      amount: z.number(),
+      dueDate: z.coerce.date().nullable(),
+      itemStatus: z.string(),
+      paidAmount: z.number(),
+      paidAt: z.coerce.date().nullable(),
+      transactions: z.array(z.object({
+        id: z.string(),
+        amount: z.number(),
+        paymentMethod: z.string(),
+        transactionStatus: z.string(),
+        verifiedAt: z.coerce.date().nullable(),
+        createdAt: z.coerce.date(),
+      })),
+    })),
+  }).nullable(),
 });
 
 export async function getAdminContracts() {
@@ -52,6 +79,21 @@ export async function getAdminContracts() {
         contractNumber: contract?.contractNumber,
         contractDataSnapshot: contract?.contractDataSnapshot,
         academicYear: contract?.academicYear,
+        paymentPlan: contract?.paymentPlan
+          ? {
+              ...contract.paymentPlan,
+              items: contract.paymentPlan.items.map((item) => ({
+                ...item,
+                dueDate: item.dueDate?.toISOString() ?? null,
+                paidAt: item.paidAt?.toISOString() ?? null,
+                transactions: item.transactions.map((transaction) => ({
+                  ...transaction,
+                  verifiedAt: transaction.verifiedAt?.toISOString() ?? null,
+                  createdAt: transaction.createdAt.toISOString(),
+                })),
+              })),
+            }
+          : null,
       };
     }),
   };
