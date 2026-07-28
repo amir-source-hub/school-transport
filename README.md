@@ -53,18 +53,77 @@ that supports them.
 ├── apps/
 │   ├── api/             # NestJS API, database schema, migrations, and seed data
 │   └── web/             # Public website, parent portal, and admin dashboard
-├── docs/                # Product, architecture, security, and workflow specifications
 ├── infrastructure/      # PostgreSQL initialization and infrastructure support
 ├── packages/            # Shared TypeScript and ESLint configuration
+├── Dockerfile           # Production-style API and web image targets
 ├── docker-compose.yml
 └── package.json
 ```
 
 ## Requirements
 
-- Node.js 20 or newer
-- pnpm 9 or newer; the repository currently pins pnpm 10.29.2
-- Docker Desktop, or local PostgreSQL 16 and Redis 7 instances
+- Docker Desktop with Docker Compose
+- Git, when cloning the repository
+
+Node.js and pnpm are only required for development outside Docker.
+
+## Run the complete application with Docker
+
+From the repository root, build and start the web application, API, background worker,
+PostgreSQL, Redis, database migrations, and seed data with one command:
+
+```bash
+docker compose up --build
+```
+
+The first run downloads the base images and installs dependencies, so it can take several minutes.
+The `bootstrap` service waits for PostgreSQL, applies all migrations, seeds the development data,
+and exits successfully before the API starts. Seeding is idempotent and is safe to run again.
+
+When the services are ready:
+
+| Service               | URL                                   |
+| --------------------- | ------------------------------------- |
+| Web application       | <http://localhost:3000>               |
+| API                   | <http://localhost:5000/api/v1>        |
+| OpenAPI documentation | <http://localhost:5000/api/docs>      |
+| Health check          | <http://localhost:5000/api/v1/health> |
+
+Seeded development accounts:
+
+| Role   | Username      | Phone number  |
+| ------ | ------------- | ------------- |
+| Parent | `demo-parent` | `09121111111` |
+| Admin  | `demo-admin`  | `09120000000` |
+
+The local stack uses the console OTP provider. To see generated OTP codes and follow startup:
+
+```bash
+docker compose logs -f api
+```
+
+Useful Docker commands:
+
+```bash
+# Start an existing stack in the background
+docker compose up -d
+
+# Rebuild after source-code changes
+docker compose up -d --build
+
+# Check container and health status
+docker compose ps -a
+
+# Follow all service logs
+docker compose logs -f
+
+# Stop containers while preserving database and Redis data
+docker compose down
+
+# Remove containers and persisted local data, then start from a clean database
+docker compose down --volumes
+docker compose up --build
+```
 
 ## Local development
 
@@ -119,16 +178,6 @@ pnpm dev
 | OpenAPI documentation | <http://localhost:5000/api/docs>      |
 | Health check          | <http://localhost:5000/api/v1/health> |
 
-## Docker API environment
-
-To build and run PostgreSQL, Redis, database bootstrap, the API, and its worker together:
-
-```bash
-docker compose up --build
-```
-
-The Next.js application is currently run separately with pnpm.
-
 ## Useful commands
 
 ```bash
@@ -138,7 +187,6 @@ pnpm build
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm format:check
 
 # Database operations
 pnpm --filter @school-transport/api db:generate
@@ -170,15 +218,6 @@ Payment plan status is derived from its schedule:
 - Console OTP and mock payment providers are disabled as production solutions by design.
 - Payment, contract, authorization, and student-data changes require negative-path and ownership
   tests.
-- Review the documents under `docs/` before changing business rules or permissions.
-
-## Documentation and contribution
-
-The specifications under [`docs/`](docs/) are the source of truth for approved behavior. Start with
-[`APP_DEVELOPMENT_PLAN.md`](APP_DEVELOPMENT_PLAN.md) for the documentation map and implementation
-status.
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for branch, commit, testing, and pull-request requirements.
 
 ## License
 
