@@ -16,7 +16,13 @@ export default async function StudentsPage() {
     getAdminSchools(),
   ]);
   const familyOptions = families.map((family) => ({ id: family.id, name: family.username }));
-  const schoolOptions = schools.filter((school) => school.isActive).map((school) => ({ id: school.id, name: school.name }));
+  const schoolOptions = schools
+    .filter((school) => school.isActive)
+    .map((school) => ({
+      id: school.id,
+      name: school.name,
+      educationOptions: school.educationOptions,
+    }));
 
   return (
     <div className="space-y-6">
