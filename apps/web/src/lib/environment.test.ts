@@ -25,6 +25,18 @@ describe('validateWebEnvironment', () => {
     ).toThrow('NEXT_PUBLIC_API_BASE_URL must use HTTPS in production.');
   });
 
+  it('allows the documented loopback API URL for a local production container', () => {
+    expect(
+      validateWebEnvironment({
+        apiBaseUrl: 'http://localhost:5000/api/v1',
+        production: true,
+      }),
+    ).toEqual({
+      apiBaseUrl: 'http://localhost:5000/api/v1',
+      production: true,
+    });
+  });
+
   it('normalizes an approved production API URL', () => {
     expect(
       validateWebEnvironment({

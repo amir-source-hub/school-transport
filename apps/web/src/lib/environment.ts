@@ -29,7 +29,8 @@ export const validateWebEnvironment = ({
     throw new Error('NEXT_PUBLIC_API_BASE_URL must be an absolute URL.');
   }
 
-  if (production && parsedUrl.protocol !== 'https:') {
+  const isLoopback = ['localhost', '127.0.0.1', '::1'].includes(parsedUrl.hostname);
+  if (production && parsedUrl.protocol !== 'https:' && !isLoopback) {
     throw new Error('NEXT_PUBLIC_API_BASE_URL must use HTTPS in production.');
   }
 
