@@ -30,6 +30,25 @@ export async function apiRequest<T>(
   return performApiRequest<T>(path, options, true);
 }
 
+export async function downloadApiFile(path: string): Promise<{ blob: Blob; filename: string }> {
+  const headers = new Headers({
+    Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const { accessToken } = getAuthSession();
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+  const response = await fetch(buildApiUrl(path), {
+    credentials: 'include',
+    headers,
+  });
+  if (!response.ok) {
+    if (response.status === 401) redirectToLogin();
+    throw new ApiClientError(response.status, 'DOWNLOAD_FAILED', 'Report download failed.');
+  }
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const filename = disposition.match(/filename="([^"]+)"/i)?.[1] ?? `school-transport-report.xlsx`;
+  return { blob: await response.blob(), filename };
+}
+
 async function performApiRequest<T>(
   path: string,
   options: ApiRequestOptions,

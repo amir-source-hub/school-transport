@@ -21,6 +21,7 @@ import { ResponseMetadataInterceptor } from './common/response-metadata.intercep
 import { QueueModule } from './infrastructure/queue/queue.module';
 import { LoggingModule } from './common/logging.module';
 import { InAppNotificationModule } from './infrastructure/notifications/in-app-notification.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { InAppNotificationModule } from './infrastructure/notifications/in-app-n
     AuditModule,
     HealthModule,
     QueueModule,
+    ReportsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
