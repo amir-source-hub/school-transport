@@ -9,7 +9,42 @@ import {
 import { GenerateContractDialog } from '@/features/admin-finance/generate-contract-dialog';
 import { formatIrr } from '@/lib/formatters';
 import { ButtonLink } from '@/components/ui/button';
-import { formatJalaliDate } from '@/lib/formatters';
+import { formatJalaliDate, formatJalaliDateTime } from '@/lib/formatters';
+
+const detailLabels: Record<string, string> = {
+  price: 'اطلاعات مالی قرارداد',
+  totalAmount: 'مبلغ کل',
+  prepaymentAmount: 'مبلغ پیش‌پرداخت',
+  installmentCount: 'تعداد اقساط',
+  currency: 'واحد پول',
+  priceStatus: 'وضعیت قیمت',
+  fullPaymentAllowed: 'امکان پرداخت کامل',
+  installmentPaymentAllowed: 'امکان پرداخت اقساطی',
+  versionNumber: 'نسخه',
+  registrationId: 'شناسه ثبت‌نام',
+  setAt: 'زمان ثبت قیمت',
+  parentConfirmedAt: 'زمان تأیید خانواده',
+};
+
+const statusLabels: Record<string, string> = {
+  PENDING: 'پرداخت نشده',
+  PAID: 'پرداخت شده',
+  SUCCEEDED: 'موفق',
+  FAILED: 'ناموفق',
+  CREATED: 'ایجاد شده',
+  ACTIVE: 'فعال',
+  COMPLETED: 'تکمیل شده',
+  ACCEPTED: 'پذیرفته شده',
+  DRAFT: 'پیش‌نویس',
+};
+
+function formatDetailValue(key: string, value: unknown) {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'boolean') return value ? 'بله' : 'خیر';
+  if (typeof value === 'number' && key.toLowerCase().includes('amount')) return formatIrr(value);
+  if (typeof value === 'string' && /(At|Date)$/i.test(key)) return formatJalaliDateTime(value);
+  return statusLabels[String(value)] ?? String(value);
+}
 
 export const metadata = { title: 'قراردادها' };
 export const dynamic = 'force-dynamic';
@@ -92,15 +127,24 @@ export default async function ContractsPage({
             <div><dt className="text-muted">وضعیت</dt><dd className="mt-1 font-bold">{selectedContract.status}</dd></div>
           </dl>
           {selectedSnapshot && (
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="mt-6 space-y-4">
               {Object.entries(selectedSnapshot)
                 .filter(([key]) => key !== 'contractText')
                 .map(([key, value]) => (
                   <section key={key} className="rounded-xl border border-border bg-surface-muted/40 p-4">
-                    <h3 className="font-black">{key}</h3>
-                    <pre className="mt-3 whitespace-pre-wrap break-words font-sans text-sm leading-7">
-                      {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
-                    </pre>
+                    <h3 className="font-black">{detailLabels[key] ?? key}</h3>
+                    {value && typeof value === 'object' && !Array.isArray(value) ? (
+                      <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                        {Object.entries(value).map(([field, fieldValue]) => (
+                          <div key={field}>
+                            <dt className="text-muted">{detailLabels[field] ?? field}</dt>
+                            <dd className="mt-1 break-words font-bold">{formatDetailValue(field, fieldValue)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : (
+                      <p className="mt-3 text-sm">{formatDetailValue(key, value)}</p>
+                    )}
                   </section>
                 ))}
             </div>
@@ -110,6 +154,55 @@ export default async function ContractsPage({
               {selectedSnapshot.contractText}
             </div>
           )}
+          <section className="mt-6 border-t border-border pt-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black">برنامه و سوابق پرداخت</h3>
+                <p className="mt-1 text-sm text-muted">پیش‌پرداخت و اقساط مرتبط با همین قرارداد</p>
+              </div>
+              {selectedContract.paymentPlan && (
+                <Badge tone={selectedContract.paymentPlan.planStatus === 'COMPLETED' ? 'success' : 'warning'}>
+                  {statusLabels[selectedContract.paymentPlan.planStatus] ?? selectedContract.paymentPlan.planStatus}
+                </Badge>
+              )}
+            </div>
+            {!selectedContract.paymentPlan ? (
+              <p className="mt-4 rounded-xl bg-surface-muted p-4 text-sm text-muted">هنوز برنامه پرداختی برای این قرارداد ایجاد نشده است.</p>
+            ) : (
+              <>
+                <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                  <div><dt className="text-muted">مبلغ کل</dt><dd className="mt-1 font-bold">{formatIrr(selectedContract.paymentPlan.totalAmount)}</dd></div>
+                  <div><dt className="text-muted">پیش‌پرداخت</dt><dd className="mt-1 font-bold">{formatIrr(selectedContract.paymentPlan.prepaymentAmount)}</dd></div>
+                  <div><dt className="text-muted">مانده اقساط</dt><dd className="mt-1 font-bold">{formatIrr(selectedContract.paymentPlan.remainingInstallmentAmount)}</dd></div>
+                  <div><dt className="text-muted">تعداد اقساط</dt><dd className="mt-1 font-bold">{selectedContract.paymentPlan.installmentCount}</dd></div>
+                </dl>
+                <div className="mt-5 space-y-3">
+                  {selectedContract.paymentPlan.items.map((item) => {
+                    const paid = item.itemStatus === 'PAID';
+                    const latestTransaction = item.transactions[0];
+                    return (
+                      <div key={item.id} className="rounded-xl border border-border p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-black">{item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : `قسط ${item.sequenceNumber}`}</p>
+                            <p className="mt-1 text-sm text-muted">{formatIrr(item.amount)}{item.dueDate ? ` — سررسید ${formatJalaliDate(item.dueDate)}` : ''}</p>
+                          </div>
+                          <Badge tone={paid ? 'success' : 'neutral'}>{paid ? 'پرداخت شده' : 'پرداخت نشده'}</Badge>
+                        </div>
+                        {paid && item.paidAt && <p className="mt-3 text-sm">پرداخت: {formatJalaliDateTime(item.paidAt)} — {formatIrr(item.paidAmount)}</p>}
+                        {latestTransaction && (
+                          <p className="mt-2 text-xs text-muted">
+                            آخرین تراکنش: {statusLabels[latestTransaction.transactionStatus] ?? latestTransaction.transactionStatus}
+                            {' — '}{formatJalaliDateTime(latestTransaction.verifiedAt ?? latestTransaction.createdAt)}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </section>
         </Card>
       )}
     </div>

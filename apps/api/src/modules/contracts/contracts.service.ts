@@ -5,9 +5,11 @@ import {
   serviceRegistrations,
   registrationPrices,
   paymentPlans,
+  paymentScheduleItems,
+  paymentTransactions,
   students,
 } from '../../database/schemas';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ValidationError } from '../../common/errors';
 import { generateId, generateContractNumber } from '../../common/utils';
@@ -39,7 +41,7 @@ export class ContractsService {
   }
 
   async getAll() {
-    return this.db.db
+    const contractRows = await this.db.db
       .select({
         ...getTableColumns(contracts),
         studentName: students.firstName,
@@ -51,6 +53,48 @@ export class ContractsService {
       .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, contracts.registrationId))
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
       .innerJoin(registrationPrices, eq(registrationPrices.id, contracts.registrationPriceId));
+
+    if (contractRows.length === 0) return [];
+
+    const priceIds = contractRows.map((contract) => contract.registrationPriceId);
+    const plans = await this.db.db
+      .select()
+      .from(paymentPlans)
+      .where(inArray(paymentPlans.registrationPriceId, priceIds));
+    const planIds = plans.map((plan) => plan.id);
+    const scheduleItems =
+      planIds.length === 0
+        ? []
+        : await this.db.db
+            .select()
+            .from(paymentScheduleItems)
+            .where(inArray(paymentScheduleItems.paymentPlanId, planIds));
+    const scheduleItemIds = scheduleItems.map((item) => item.id);
+    const transactions =
+      scheduleItemIds.length === 0
+        ? []
+        : await this.db.db
+            .select()
+            .from(paymentTransactions)
+            .where(inArray(paymentTransactions.paymentScheduleItemId, scheduleItemIds));
+
+    return contractRows.map((contract) => {
+      const plan = plans.find(
+        (candidate) => candidate.registrationPriceId === contract.registrationPriceId,
+      );
+      const items = plan
+        ? scheduleItems
+            .filter((item) => item.paymentPlanId === plan.id)
+            .sort((a, b) => a.sequenceNumber - b.sequenceNumber)
+            .map((item) => ({
+              ...item,
+              transactions: transactions
+                .filter((transaction) => transaction.paymentScheduleItemId === item.id)
+                .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+            }))
+        : [];
+      return { ...contract, paymentPlan: plan ? { ...plan, items } : null };
+    });
   }
 
   async getById(contractId: string, userId?: string) {
