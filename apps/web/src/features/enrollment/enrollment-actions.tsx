@@ -36,88 +36,14 @@ import {
   payGuidedPrepayment,
   type GuidedEnrollmentResult,
 } from './enrollments-api';
-
-type SchoolOption = {
-  id: string;
-  name: string;
-  city: string;
-  educationOptions: { level: string; grades: string[] }[];
-};
-type SavedParent = {
-  firstName: string;
-  lastName: string;
-  nationalId: string;
-  phoneNumber: string;
-};
-type SavedParents = {
-  father: SavedParent | null;
-  mother: SavedParent | null;
-};
-type ExistingStudent = {
-  id: string;
-  schoolId: string;
-  firstName: string;
-  lastName: string;
-  nationalId: string;
-  birthDate: string | null;
-  gender: string | null;
-  grade: string | null;
-  className: string | null;
-};
-type EnrollmentDefaults = {
-  address?: {
-    title: string;
-    province: string;
-    city: string;
-    district?: string;
-    streetAddress: string;
-    postalCode?: string;
-    latitude?: number;
-    longitude?: number;
-  };
-  emergencyContact?: {
-    firstName: string;
-    lastName: string;
-    relationship: string;
-    phoneNumber: string;
-  };
-};
+import {
+  createEnrollmentFormState,
+  type EnrollmentDefaults,
+  type ExistingStudent,
+  type SavedParents,
+  type SchoolOption,
+} from './enrollment-form-model';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
-
-const initialForm = {
-  existingStudentId: '',
-  studentFirst: '',
-  studentLast: '',
-  studentNationalId: '',
-  birthDate: '',
-  gender: '',
-  fatherFirst: '',
-  fatherLast: '',
-  fatherNationalId: '',
-  fatherPhone: '',
-  motherFirst: '',
-  motherLast: '',
-  motherNationalId: '',
-  motherPhone: '',
-  emergencyFirst: '',
-  emergencyLast: '',
-  emergencyRelationship: '',
-  emergencyPhone: '',
-  addressTitle: 'منزل',
-  province: 'تهران',
-  city: 'تهران',
-  district: '',
-  streetAddress: '',
-  postalCode: '',
-  latitude: 35.7219,
-  longitude: 51.3347,
-  schoolId: '',
-  educationLevel: '',
-  grade: '',
-  serviceType: 'BUS',
-  paymentPlanType: 'INSTALLMENTS',
-  parentNotes: '',
-};
 
 const vehicleOptions = [
   {
@@ -160,45 +86,8 @@ export function CreateEnrollmentForm({
   const router = useRouter();
   const firstSchool = schools[0];
   const firstLevel = firstSchool?.educationOptions[0];
-  const firstExisting = existingStudents[0];
-  const existingSchool = schools.find((school) => school.id === firstExisting?.schoolId);
-  const existingLevel =
-    existingSchool?.educationOptions.find((option) => option.level === firstExisting?.className) ??
-    existingSchool?.educationOptions.find((option) =>
-      option.grades.includes(firstExisting?.grade ?? ''),
-    );
-  const createInitialForm = () => ({
-    ...initialForm,
-    existingStudentId: firstExisting?.id ?? '',
-    studentFirst: firstExisting?.firstName ?? '',
-    studentLast: firstExisting?.lastName ?? '',
-    studentNationalId: firstExisting?.nationalId ?? '',
-    birthDate: firstExisting?.birthDate ?? '',
-    gender: firstExisting?.gender ?? '',
-    fatherFirst: savedParents.father?.firstName ?? '',
-    fatherLast: savedParents.father?.lastName ?? '',
-    fatherNationalId: savedParents.father?.nationalId ?? '',
-    fatherPhone: savedParents.father?.phoneNumber ?? '',
-    motherFirst: savedParents.mother?.firstName ?? '',
-    motherLast: savedParents.mother?.lastName ?? '',
-    motherNationalId: savedParents.mother?.nationalId ?? '',
-    motherPhone: savedParents.mother?.phoneNumber ?? '',
-    emergencyFirst: defaults.emergencyContact?.firstName ?? '',
-    emergencyLast: defaults.emergencyContact?.lastName ?? '',
-    emergencyRelationship: defaults.emergencyContact?.relationship ?? '',
-    emergencyPhone: defaults.emergencyContact?.phoneNumber ?? '',
-    addressTitle: defaults.address?.title ?? initialForm.addressTitle,
-    province: defaults.address?.province ?? initialForm.province,
-    city: defaults.address?.city ?? initialForm.city,
-    district: defaults.address?.district ?? '',
-    streetAddress: defaults.address?.streetAddress ?? '',
-    postalCode: defaults.address?.postalCode ?? '',
-    latitude: defaults.address?.latitude ?? initialForm.latitude,
-    longitude: defaults.address?.longitude ?? initialForm.longitude,
-    schoolId: firstExisting?.schoolId ?? firstSchool?.id ?? '',
-    educationLevel: existingLevel?.level ?? firstLevel?.level ?? '',
-    grade: firstExisting?.grade ?? existingLevel?.grades[0] ?? firstLevel?.grades[0] ?? '',
-  });
+  const createInitialForm = () =>
+    createEnrollmentFormState({ schools, savedParents, existingStudents, defaults });
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(createInitialForm);
   const [result, setResult] = useState<GuidedEnrollmentResult>();
