@@ -5,8 +5,6 @@ services:
       POSTGRES_DB: school_transport
       POSTGRES_USER: school_transport
       POSTGRES_PASSWORD: school_transport_dev
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -14,36 +12,38 @@ services:
       test: ["CMD-SHELL", "pg_isready -U school_transport -d school_transport"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
     restart: unless-stopped
+    networks:
+      - backend
 
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "redis_dev_password"]
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "redis_dev_password", "ping"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
     restart: unless-stopped
+    networks:
+      - backend
 
   api:
-    image: school-transport-api:local
+    image: school-transport-api:server
     build:
       context: .
       dockerfile: Dockerfile
       target: api
-    environment:
+    environment: &api-environment
       NODE_ENV: development
       PORT: 5000
       HOST: 0.0.0.0
       DATABASE_URL: postgresql://school_transport:school_transport_dev@postgres:5432/school_transport
       REDIS_URL: redis://:redis_dev_password@redis:6379
-      JWT_SECRET: local-development-secret-change-before-production
+      JWT_SECRET: ${JWT_SECRET:-demo-only-samingasht-change-this-to-a-long-random-secret}
       JWT_ACCESS_TOKEN_TTL: 3600
       JWT_REFRESH_TOKEN_TTL: 2592000
       ADMIN_JWT_ACCESS_TOKEN_TTL: 3600
@@ -51,15 +51,13 @@ services:
       OTP_EXPIRY_SECONDS: 300
       OTP_MAX_ATTEMPTS: 5
       OTP_RESEND_COOLDOWN_SECONDS: 60
-      CORS_ORIGINS: http://localhost:3000
+      CORS_ORIGINS: https://samingasht.ir
       LOG_LEVEL: debug
       OTP_PROVIDER: console
       PAYMENT_GATEWAY_PROVIDER: mock
       SERVICE_ROLE: api
       AUTH_SESSION_RETENTION_DAYS: 30
       QUEUE_REQUIRED: "false"
-    ports:
-      - "5000:5000"
     depends_on:
       bootstrap:
         condition: service_completed_successfully
@@ -75,34 +73,20 @@ services:
         ]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 12
+      start_period: 20s
     restart: unless-stopped
+    networks:
+      - backend
+      - frontend
 
   worker:
-    image: school-transport-api:local
+    image: school-transport-api:server
     pull_policy: never
     command: ["node", "dist/worker.js"]
     environment:
-      NODE_ENV: development
-      PORT: 5000
-      HOST: 0.0.0.0
-      DATABASE_URL: postgresql://school_transport:school_transport_dev@postgres:5432/school_transport
-      REDIS_URL: redis://:redis_dev_password@redis:6379
-      JWT_SECRET: local-development-secret-change-before-production
-      JWT_ACCESS_TOKEN_TTL: 3600
-      JWT_REFRESH_TOKEN_TTL: 2592000
-      ADMIN_JWT_ACCESS_TOKEN_TTL: 3600
-      ADMIN_JWT_REFRESH_TOKEN_TTL: 604800
-      OTP_EXPIRY_SECONDS: 300
-      OTP_MAX_ATTEMPTS: 5
-      OTP_RESEND_COOLDOWN_SECONDS: 60
-      CORS_ORIGINS: http://localhost:3000
-      LOG_LEVEL: debug
-      OTP_PROVIDER: console
-      PAYMENT_GATEWAY_PROVIDER: mock
+      <<: *api-environment
       SERVICE_ROLE: worker
-      AUTH_SESSION_RETENTION_DAYS: 30
-      QUEUE_REQUIRED: "false"
     depends_on:
       bootstrap:
         condition: service_completed_successfully
@@ -111,9 +95,11 @@ services:
     healthcheck:
       disable: true
     restart: unless-stopped
+    networks:
+      - backend
 
   bootstrap:
-    image: school-transport-api:local
+    image: school-transport-api:server
     pull_policy: never
     command: ["node", "dist/database/bootstrap-db.js"]
     environment:
@@ -122,21 +108,21 @@ services:
       postgres:
         condition: service_healthy
     restart: "no"
+    networks:
+      - backend
 
   web:
-    image: school-transport-web:local
+    image: school-transport-web:server
     build:
       context: .
       dockerfile: Dockerfile
       target: web
       args:
-        NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api/v1
+        NEXT_PUBLIC_API_BASE_URL: https://samingasht.ir/api/v1
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api/v1
+      NEXT_PUBLIC_API_BASE_URL: https://samingasht.ir/api/v1
       API_INTERNAL_BASE_URL: http://api:5000/api/v1
-    ports:
-      - "3000:3000"
     depends_on:
       api:
         condition: service_healthy
@@ -150,9 +136,38 @@ services:
         ]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 12
+      start_period: 20s
     restart: unless-stopped
+    networks:
+      - frontend
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - frontend
+
+networks:
+  backend:
+    internal: true
+  frontend:
 
 volumes:
   postgres_data:
   redis_data:
+  caddy_data:
+  caddy_config:
