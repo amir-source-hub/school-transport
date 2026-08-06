@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as argon2 from 'argon2';
 import { createHash } from 'node:crypto';
 import { AuthService } from './auth.service';
@@ -102,7 +102,7 @@ function txnUpdate(rows: OtpRow[]) {
 function createService(database: ReturnType<typeof otpDatabase>['service']) {
   const delivery = { send: vi.fn().mockResolvedValue(undefined) };
   const config = {
-    otpExpirySeconds: 300,
+    otpExpirySeconds: 120,
     otpResendCooldownSeconds: 60,
     otpMaxAttempts: 2,
     adminChallengeTtlSeconds: 120,
@@ -169,6 +169,64 @@ describe('OTP concurrency', () => {
     await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toThrow('Invalid');
     expect(bruteDb.rows[0].attemptCount).toBe(2);
     expect(bruteDb.rows[0].invalidatedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe('OTP expiry window', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    ['119 seconds after issuance', 119_000, true],
+    ['exactly at the 120-second boundary', 120_000, false],
+    ['after the 120-second boundary', 120_001, false],
+  ] as const)('%s: valid=%s', async (_label, elapsed, shouldSucceed) => {
+    vi.useFakeTimers();
+    const issuedAt = Date.now();
+    vi.setSystemTime(new Date(issuedAt));
+    const hash = await argon2.hash('123456');
+    const database = otpDatabase([row(hash, new Date(issuedAt + 120_000))]);
+    const { auth } = createService(database.service);
+
+    vi.setSystemTime(new Date(issuedAt + elapsed));
+    const promise = auth.verifyOtp('09120000000', 'AUTH_PARENT', '123456');
+    if (shouldSucceed) {
+      await expect(promise).resolves.toBeDefined();
+    } else {
+      await expect(promise).rejects.toThrow('expired');
+    }
+    vi.useRealTimers();
+  });
+});
+
+describe('OTP resend', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('supersedes an existing unverified code once the cooldown has passed', async () => {
+    vi.useFakeTimers();
+    const base = Date.now();
+    vi.setSystemTime(new Date(base));
+    const database = otpDatabase();
+    const { auth, delivery } = createService(database.service);
+
+    await auth.sendOtp('09120000000', 'AUTH_PARENT');
+    const firstCode = delivery.send.mock.calls[0][0].code;
+    expect(database.rows).toHaveLength(1);
+
+    vi.setSystemTime(new Date(base + 61_000));
+    await auth.sendOtp('09120000000', 'AUTH_PARENT');
+    const secondCode = delivery.send.mock.calls[1][0].code;
+    expect(database.rows).toHaveLength(2);
+    expect(database.rows[0].invalidatedAt).toBeInstanceOf(Date);
+
+    await expect(
+      auth.verifyOtp('09120000000', 'AUTH_PARENT', firstCode),
+    ).rejects.toThrow();
+    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', secondCode)).resolves.toBeDefined();
+    expect(database.rows[1].verifiedAt).toBeInstanceOf(Date);
   });
 });
 

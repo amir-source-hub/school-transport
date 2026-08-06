@@ -94,6 +94,7 @@ export const authSessions = pgTable(
     deviceName: varchar('device_name', { length: 255 }),
     ipAddress: varchar('ip_address', { length: 64 }),
     userAgent: varchar('user_agent', { length: 500 }),
+    remembered: boolean('remembered').notNull().default(false),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),

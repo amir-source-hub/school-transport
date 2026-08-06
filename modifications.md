@@ -14,7 +14,7 @@
 
 ## Product decisions required before final implementation
 
-- [ ] Decide the exact lifetime of normal and “remember me” sessions. Suggested starting point: a short normal session and a maximum seven-day remembered session using rotating refresh tokens.
+- [x] Decide the exact lifetime of normal and “remember me” sessions. Suggested starting point: a short normal session and a maximum seven-day remembered session using rotating refresh tokens. **APPROVED: normal refresh session 24h (86,400s), remembered refresh session 7 days (604,800s); both roles; access tokens remain 1h.**
 - [ ] Clarify “remove an unsuccessful enrollment.” The safer design is an expiring incomplete draft with scheduled cleanup, not immediate hard deletion, so auditing and abuse prevention remain possible.
 - [ ] Define the exact lifecycle mapping for the four requested admin registration filters: `همه`، `پیش ثبت نام انجام شده`، `تسویه کامل`، `در حال سرویس دهی`.
 - [ ] Choose the new student-panel route, such as `/student`, and define redirects from existing `/parent/*` URLs.
@@ -459,23 +459,23 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Required changes
 
-- [ ] Change the configuration default and every example environment file to `OTP_EXPIRY_SECONDS=120`.
-- [ ] Search deployment files and documentation for overrides of 300 seconds and update them.
-- [ ] Do not hard-code 120 in verification logic. Continue using the stored backend expiry generated from configuration.
-- [ ] In the OTP UI, calculate remaining time from the server-provided `expiresAt`, not from “two minutes after render.”
-- [ ] Display Persian expired state, such as `زمان اعتبار کد به پایان رسیده است.` and disable verification until a new code is requested.
-- [ ] Add resend behavior using `cooldownSeconds`; avoid parallel resend requests and reset the OTP input after a successful resend.
-- [ ] Add remember-me to the initial normal-user login and the admin login only after the session duration decision is approved.
-- [ ] Pass a boolean such as `rememberMe` at session creation. The backend, not the browser, selects the refresh-session expiry.
-- [ ] Keep access tokens short-lived in both cases. Only the refresh session should be extended.
-- [ ] Ensure cookie creation in the auth controller uses `HttpOnly`, production `Secure`, and the agreed `SameSite`, path, and maximum age.
-- [ ] Logout must revoke the current server session and clear cookies for both remembered and normal sessions.
+- [x] Change the configuration default and every example environment file to `OTP_EXPIRY_SECONDS=120`.
+- [x] Search deployment files and documentation for overrides of 300 seconds and update them.
+- [x] Do not hard-code 120 in verification logic. Continue using the stored backend expiry generated from configuration.
+- [x] In the OTP UI, calculate remaining time from the server-provided `expiresAt`, not from “two minutes after render.”
+- [x] Display Persian expired state, such as `زمان اعتبار کد به پایان رسیده است.` and disable verification until a new code is requested.
+- [x] Add resend behavior using `cooldownSeconds`; avoid parallel resend requests and reset the OTP input after a successful resend.
+- [x] Add remember-me to the initial normal-user login and the admin login only after the session duration decision is approved.
+- [x] Pass a boolean such as `rememberMe` at session creation. The backend, not the browser, selects the refresh-session expiry.
+- [x] Keep access tokens short-lived in both cases. Only the refresh session should be extended.
+- [x] Ensure cookie creation in the auth controller uses `HttpOnly`, production `Secure`, and the agreed `SameSite`, path, and maximum age.
+- [x] Logout must revoke the current server session and clear cookies for both remembered and normal sessions.
 
 #### Tests
 
-- [ ] Add time-controlled tests for valid at 119 seconds, invalid at 120 seconds, and invalid after 120 seconds according to the exact comparison semantics selected.
-- [ ] Test resend invalidates or supersedes old OTPs as intended.
-- [ ] Test remembered and normal session expiries, refresh rotation, logout, disabled accounts, and refresh-token reuse.
+- [x] Add time-controlled tests for valid at 119 seconds, invalid at 120 seconds, and invalid after 120 seconds according to the exact comparison semantics selected.
+- [x] Test resend invalidates or supersedes old OTPs as intended.
+- [x] Test remembered and normal session expiries, refresh rotation, logout, disabled accounts, and refresh-token reuse.
 
 ### Work package E — user-role selector and first-time onboarding
 

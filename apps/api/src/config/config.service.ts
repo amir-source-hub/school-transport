@@ -32,10 +32,12 @@ const envSchema = z.object({
   READINESS_TIMEOUT_MS: z.coerce.number().int().min(100).max(10000).default(2000),
   JWT_SECRET: z.string().min(16),
   JWT_ACCESS_TOKEN_TTL: z.coerce.number().default(3600),
-  JWT_REFRESH_TOKEN_TTL: z.coerce.number().default(2592000),
+  JWT_REFRESH_TOKEN_TTL: z.coerce.number().default(86400),
+  JWT_REMEMBER_REFRESH_TOKEN_TTL: z.coerce.number().default(604800),
   ADMIN_JWT_ACCESS_TOKEN_TTL: z.coerce.number().default(3600),
-  ADMIN_JWT_REFRESH_TOKEN_TTL: z.coerce.number().default(604800),
-  OTP_EXPIRY_SECONDS: z.coerce.number().default(300),
+  ADMIN_JWT_REFRESH_TOKEN_TTL: z.coerce.number().default(86400),
+  ADMIN_JWT_REMEMBER_REFRESH_TOKEN_TTL: z.coerce.number().default(604800),
+  OTP_EXPIRY_SECONDS: z.coerce.number().default(120),
   OTP_MAX_ATTEMPTS: z.coerce.number().default(5),
   OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().default(60),
   ADMIN_CHALLENGE_TTL_SECONDS: z.coerce.number().default(120),
@@ -132,11 +134,17 @@ export class ConfigService implements OnApplicationShutdown {
   get jwtRefreshTokenTtl(): number {
     return this.env.JWT_REFRESH_TOKEN_TTL;
   }
+  get jwtRememberRefreshTokenTtl(): number {
+    return this.env.JWT_REMEMBER_REFRESH_TOKEN_TTL;
+  }
   get adminJwtAccessTokenTtl(): number {
     return this.env.ADMIN_JWT_ACCESS_TOKEN_TTL;
   }
   get adminJwtRefreshTokenTtl(): number {
     return this.env.ADMIN_JWT_REFRESH_TOKEN_TTL;
+  }
+  get adminJwtRememberRefreshTokenTtl(): number {
+    return this.env.ADMIN_JWT_REMEMBER_REFRESH_TOKEN_TTL;
   }
   get otpExpirySeconds(): number {
     return this.env.OTP_EXPIRY_SECONDS;

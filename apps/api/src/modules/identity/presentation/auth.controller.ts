@@ -30,6 +30,7 @@ import { AuthenticatedRequest } from '../../../common/http-request';
 
 const trimmed = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value;
 const digits = ({ value }: { value: unknown }) => typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
+const toBoolean = ({ value }: { value: unknown }) => value === true || value === 'true';
 
 export class CreateAdminDto {
   @Transform(trimmed)
@@ -112,6 +113,10 @@ export class AdminOtpVerificationDto {
   @IsString()
   @Matches(/^\d{6}$/)
   code!: string;
+
+  @IsOptional()
+  @Transform(toBoolean)
+  rememberMe?: boolean;
 }
 
 export class RequestOtpDto {
@@ -189,6 +194,10 @@ export class VerifyAuthOtpDto extends RequestOtpDto {
   @IsString()
   @Matches(/^\d{6}$/)
   code!: string;
+
+  @IsOptional()
+  @Transform(toBoolean)
+  rememberMe?: boolean;
 }
 
 type CookieRequest = FastifyRequest & {
@@ -244,8 +253,13 @@ export class AuthController {
       userAgent: req.headers['user-agent'],
       deviceName: req.headers['user-agent']?.slice(0, 255),
     };
-    const result = await this.authService.verifyAdminOtp(dto.challengeId, dto.code, context);
-    this.setRefreshCookie(reply, result.refreshToken, true);
+    const result = await this.authService.verifyAdminOtp(
+      dto.challengeId,
+      dto.code,
+      context,
+      dto.rememberMe ?? false,
+    );
+    this.setRefreshCookie(reply, result.refreshToken, true, dto.rememberMe ?? false);
     this.setAccessCookie(reply, result.accessToken, true);
     return successResponse({
       user: result.user,
@@ -272,8 +286,9 @@ export class AuthController {
       dto.code,
       dto.role,
       context,
+      dto.rememberMe ?? false,
     );
-    this.setRefreshCookie(reply, result.refreshToken, result.user.role === 'ADMIN');
+    this.setRefreshCookie(reply, result.refreshToken, result.user.role === 'ADMIN', dto.rememberMe ?? false);
     this.setAccessCookie(reply, result.accessToken, result.user.role === 'ADMIN');
     return successResponse({
       user: result.user,
@@ -291,7 +306,7 @@ export class AuthController {
       throw new ValidationError('A refresh token is required.');
     }
     const tokens = await this.authService.refreshTokens(refreshToken);
-    this.setRefreshCookie(reply, tokens.refreshToken, tokens.role === 'ADMIN');
+    this.setRefreshCookie(reply, tokens.refreshToken, tokens.role === 'ADMIN', tokens.remembered);
     this.setAccessCookie(reply, tokens.accessToken, tokens.role === 'ADMIN');
     return successResponse({ accessToken: tokens.accessToken });
   }
@@ -315,8 +330,14 @@ export class AuthController {
     return successResponse({ user: req.user });
   }
 
-  private setRefreshCookie(reply: CookieReply, token: string, isAdmin = false) {
-    const maxAge = isAdmin ? this.config.adminJwtRefreshTokenTtl : this.config.jwtRefreshTokenTtl;
+  private setRefreshCookie(reply: CookieReply, token: string, isAdmin = false, rememberMe = false) {
+    const maxAge = rememberMe
+      ? isAdmin
+        ? this.config.adminJwtRememberRefreshTokenTtl
+        : this.config.jwtRememberRefreshTokenTtl
+      : isAdmin
+        ? this.config.adminJwtRefreshTokenTtl
+        : this.config.jwtRefreshTokenTtl;
     reply.setCookie('refresh_token', token, {
       httpOnly: true,
       secure: this.config.nodeEnv === 'production',

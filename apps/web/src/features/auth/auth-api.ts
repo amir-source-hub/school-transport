@@ -27,10 +27,10 @@ export function requestParentOtp(phoneNumber: string) {
   });
 }
 
-export function verifyParentOtp(phoneNumber: string, code: string) {
+export function verifyParentOtp(phoneNumber: string, code: string, rememberMe = false) {
   return apiRequest<LoginResponse>('/auth/verify-otp', {
     method: 'POST',
-    body: { phoneNumber, code, role: 'PARENT' },
+    body: { phoneNumber, code, role: 'PARENT', rememberMe },
     timeoutMs: 10_000,
   });
 }
@@ -50,10 +50,10 @@ export function requestAdminPasswordChallenge(username: string, password: string
   });
 }
 
-export function verifyAdminOtp(challengeId: string, code: string) {
+export function verifyAdminOtp(challengeId: string, code: string, rememberMe = false) {
   return apiRequest<LoginResponse>('/auth/admin/verify-otp', {
     method: 'POST',
-    body: { challengeId, code },
+    body: { challengeId, code, rememberMe },
     timeoutMs: 10_000,
   });
 }

@@ -269,6 +269,7 @@ export class AuthService {
     code: string,
     role: 'PARENT' = 'PARENT',
     context?: SessionContext,
+    rememberMe = false,
   ): Promise<LoginResult> {
     if (role !== 'PARENT') {
       throw new ValidationError('Administrators must sign in through the two-step admin login.');
@@ -329,7 +330,7 @@ export class AuthService {
       });
     }
     await this.db.db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, account.id));
-    const tokens = await this.generateTokens(account.id, 'PARENT', context);
+    const tokens = await this.generateTokens(account.id, 'PARENT', context, undefined, rememberMe);
     this.logger.log('PARENT logged in with OTP.');
     return {
       user: { id: account.id, username: account.username, phoneNumber, role: 'PARENT' },
@@ -386,6 +387,7 @@ export class AuthService {
     challengeId: string,
     code: string,
     context?: SessionContext,
+    rememberMe = false,
   ): Promise<LoginResult> {
     const genericError = () =>
       new AuthenticationError('The username or password is incorrect.');
@@ -464,12 +466,16 @@ export class AuthService {
       .update(adminUsers)
       .set({ lastLoginAt: new Date() })
       .where(eq(adminUsers.id, admin.id));
-    const tokens = await this.generateTokens(admin.id, 'ADMIN', context);
+    const tokens = await this.generateTokens(admin.id, 'ADMIN', context, undefined, rememberMe);
     this.logger.log('Admin logged in after two-factor verification.');
     return { user: { ...admin, role: 'ADMIN' }, ...tokens };
   }
 
-  async refreshTokens(refreshToken: string): Promise<AuthTokens & { role: 'PARENT' | 'ADMIN' }> {
+  async refreshTokens(
+    refreshToken: string,
+  ): Promise<
+    AuthTokens & { role: 'PARENT' | 'ADMIN'; remembered: boolean }
+  > {
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
         secret: this.config.jwtSecret,
@@ -510,8 +516,14 @@ export class AuthService {
         throw new AuthenticationError('Invalid or expired refresh token.');
       }
 
-      const tokens = await this.generateTokens(payload.sub, payload.role, undefined, current.id);
-      return { ...tokens, role: payload.role };
+      const tokens = await this.generateTokens(
+        payload.sub,
+        payload.role,
+        undefined,
+        current.id,
+        current.remembered,
+      );
+      return { ...tokens, role: payload.role, remembered: current.remembered };
     } catch (err: any) {
       if (err instanceof AuthenticationError) throw err;
       throw new AuthenticationError('Invalid or expired refresh token.');
@@ -667,7 +679,7 @@ export class AuthService {
     if (request.attemptCount >= request.maxAttempts) {
       return 'TOO_MANY_ATTEMPTS' as const;
     }
-    if (isPast(new Date(request.expiresAt))) {
+    if (new Date(request.expiresAt).getTime() <= Date.now()) {
       await txn
         .update(otpRequests)
         .set({ invalidatedAt: new Date() })
@@ -739,11 +751,17 @@ export class AuthService {
     role: 'PARENT' | 'ADMIN',
     context?: SessionContext,
     replacedSessionId?: string,
+    rememberMe = false,
   ): Promise<AuthTokens> {
     const accessTtl =
       role === 'ADMIN' ? this.config.adminJwtAccessTokenTtl : this.config.jwtAccessTokenTtl;
-    const refreshTtl =
-      role === 'ADMIN' ? this.config.adminJwtRefreshTokenTtl : this.config.jwtRefreshTokenTtl;
+    const refreshTtl = rememberMe
+      ? role === 'ADMIN'
+        ? this.config.adminJwtRememberRefreshTokenTtl
+        : this.config.jwtRememberRefreshTokenTtl
+      : role === 'ADMIN'
+        ? this.config.adminJwtRefreshTokenTtl
+        : this.config.jwtRefreshTokenTtl;
 
     const sessionId = generateId();
     const accessPayload: JwtPayload = { sub: userId, role, type: 'access', sid: sessionId };
@@ -782,6 +800,7 @@ export class AuthService {
         deviceName: context?.deviceName || null,
         ipAddress: context?.ipAddress || null,
         userAgent: context?.userAgent || null,
+        remembered: rememberMe,
         expiresAt: addSeconds(new Date(), refreshTtl),
       });
     });

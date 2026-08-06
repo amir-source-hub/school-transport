@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import { Alert } from '@/components/feedback/alert';
 import { Field } from '@/components/forms/field';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
@@ -48,32 +49,91 @@ function FormError({ error }: { error: unknown }) {
   );
 }
 
+function useNow() {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return now;
+}
+
+function remainingFrom(expiresAt: string, now: number) {
+  if (!expiresAt) return 0;
+  return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - now) / 1000));
+}
+
+function ResendButton({
+  onClick,
+  disabled,
+  resendIn,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  resendIn: number;
+}) {
+  const label = resendIn > 0 ? `ارسال مجدد کد تا ${resendIn} ثانیه دیگر` : 'دریافت کد جدید';
+  return (
+    <Button type="button" variant="ghost" className="w-full" disabled={disabled || resendIn > 0} onClick={onClick}>
+      {label}
+    </Button>
+  );
+}
+
 function OtpAuthForm() {
   const router = useRouter();
   const [error, setError] = useState<unknown>();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [developmentCode, setDevelopmentCode] = useState<string>();
   const [otpSent, setOtpSent] = useState(false);
+  const [expiresAt, setExpiresAt] = useState('');
+  const [resendNonce, setResendNonce] = useState(0);
+  const [resending, setResending] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const phoneForm = useForm<Phone>({ resolver: zodResolver(phoneSchema) });
   const codeForm = useForm<Code>({ resolver: zodResolver(codeSchema) });
 
-  const sendCode = phoneForm.handleSubmit(async ({ phoneNumber: value }) => {
+  const now = useNow();
+  const [resendReadyAt, setResendReadyAt] = useState(0);
+  const remainingSeconds = remainingFrom(expiresAt, now);
+  const resendIn = resendNonce === 0 ? 0 : Math.max(0, Math.ceil((resendReadyAt - now) / 1000));
+  const expired = otpSent && remainingSeconds === 0;
+
+  const sendCode = async (value: string) => {
     setError(undefined);
     try {
       const response = await requestParentOtp(value);
       setPhoneNumber(value);
       setDevelopmentCode(response.data.developmentCode);
+      setExpiresAt(response.data.expiresAt);
+      setResendReadyAt(now + response.data.cooldownSeconds * 1000);
+      setResendNonce((nonce) => nonce + 1);
       codeForm.reset({ code: '' });
       setOtpSent(true);
     } catch (caught) {
       setError(caught);
     }
+  };
+
+  const resendCode = async () => {
+    if (resending || resendIn > 0 || !phoneNumber) return;
+    setResending(true);
+    try {
+      await sendCode(phoneNumber);
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const submitPhone = phoneForm.handleSubmit(async ({ phoneNumber: value }) => {
+    await sendCode(value);
   });
 
   const verifyCode = codeForm.handleSubmit(async ({ code }) => {
+    if (expired) return;
     setError(undefined);
     try {
-      const response = await verifyParentOtp(phoneNumber, code);
+      const response = await verifyParentOtp(phoneNumber, code, rememberMe);
       setAuthSession(response.data.accessToken, response.data.user.role);
       router.replace('/parent/dashboard');
     } catch (caught) {
@@ -85,13 +145,25 @@ function OtpAuthForm() {
     return (
       <form className="space-y-5" onSubmit={verifyCode} noValidate>
         <FormError error={error} />
-        <Alert title="کد تأیید ارسال شد">کد ۶ رقمی ارسال‌شده به {phoneNumber} را وارد کنید.</Alert>
+        <Alert title="کد تأیید ارسال شد">
+          کد ۶ رقمی ارسال‌شده به {phoneNumber} را وارد کنید.
+          {remainingSeconds > 0 && (
+            <span className="mt-1 block text-xs text-muted">
+              کد تا {remainingSeconds} ثانیه دیگر معتبر است.
+            </span>
+          )}
+        </Alert>
         {developmentCode && (
           <Alert title="کد آزمایشی">
             تا پیش از اتصال سرویس پیامک، کد ورود شما:
             <strong className="mt-2 block text-center text-2xl tracking-[0.35em]" dir="ltr">
               {developmentCode}
             </strong>
+          </Alert>
+        )}
+        {expired && (
+          <Alert tone="danger" title="مهلت کد به پایان رسیده است">
+            زمان اعتبار کد به پایان رسیده است. برای دریافت کد تازه، دکمه «دریافت کد جدید» را بزنید.
           </Alert>
         )}
         <Field
@@ -108,12 +180,23 @@ function OtpAuthForm() {
             autoComplete="one-time-code"
             maxLength={6}
             autoFocus
+            disabled={expired}
             {...codeForm.register('code')}
           />
         </Field>
-        <Button className="w-full" type="submit" disabled={codeForm.formState.isSubmitting}>
+        <Checkbox
+          checked={rememberMe}
+          onChange={(event) => setRememberMe(event.target.checked)}
+          label="در این دستگاه به خاطر بسپار (۷ روز)"
+        />
+        <Button
+          className="w-full"
+          type="submit"
+          disabled={codeForm.formState.isSubmitting || expired}
+        >
           {codeForm.formState.isSubmitting ? 'در حال بررسی…' : 'تأیید و ادامه'}
         </Button>
+        <ResendButton onClick={resendCode} disabled={resending} resendIn={resendIn} />
         <Button
           type="button"
           variant="ghost"
@@ -121,6 +204,8 @@ function OtpAuthForm() {
           onClick={() => {
             setOtpSent(false);
             setDevelopmentCode(undefined);
+            setExpiresAt('');
+            setResendNonce(0);
             codeForm.reset();
             setError(undefined);
           }}
@@ -132,7 +217,7 @@ function OtpAuthForm() {
   }
 
   return (
-    <form className="space-y-5" onSubmit={sendCode} noValidate>
+    <form className="space-y-5" onSubmit={submitPhone} noValidate>
       <FormError error={error} />
       <Field
         label="شماره همراه"
@@ -162,50 +247,67 @@ function OtpAuthForm() {
   );
 }
 
-function countdownSeconds(expiresAt: string) {
-  return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
-}
-
-function useOtpCountdown(expiresAt: string) {
-  const [remainingSeconds, setRemainingSeconds] = useState(() => countdownSeconds(expiresAt));
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setRemainingSeconds(countdownSeconds(expiresAt));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [expiresAt]);
-  return remainingSeconds;
-}
-
 function AdminLoginFormInner() {
   const router = useRouter();
   const [error, setError] = useState<unknown>();
   const [challenge, setChallenge] = useState<AdminChallengeResponse>();
   const [developmentCode, setDevelopmentCode] = useState<string>();
+  const [resendNonce, setResendNonce] = useState(0);
+  const [resending, setResending] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [credentials, setCredentials] = useState<AdminCredentials>();
   const credentialsForm = useForm<AdminCredentials>({
     resolver: zodResolver(adminCredentialsSchema),
   });
   const codeForm = useForm<Code>({ resolver: zodResolver(codeSchema) });
-  const remainingSeconds = useOtpCountdown(challenge?.expiresAt ?? '');
+  const now = useNow();
+  const [resendReadyAt, setResendReadyAt] = useState(0);
+  const remainingSeconds = remainingFrom(challenge?.expiresAt ?? '', now);
+  const resendIn = resendNonce === 0 ? 0 : Math.max(0, Math.ceil((resendReadyAt - now) / 1000));
   const expired = Boolean(challenge && remainingSeconds === 0);
 
   const startChallenge = credentialsForm.handleSubmit(async (values) => {
     setError(undefined);
     try {
       const response = await requestAdminPasswordChallenge(values.username, values.password);
+      setCredentials(values);
       setChallenge(response.data);
       setDevelopmentCode(response.data.developmentCode);
+      setResendReadyAt(now + response.data.cooldownSeconds * 1000);
+      setResendNonce((nonce) => nonce + 1);
       codeForm.reset({ code: '' });
     } catch (caught) {
       setError(caught);
     }
   });
 
+  const resendCode = async () => {
+    if (resending || resendIn > 0 || !credentials) return;
+    setResending(true);
+    setError(undefined);
+    try {
+      const response = await requestAdminPasswordChallenge(
+        credentials.username,
+        credentials.password,
+      );
+      setChallenge(response.data);
+      setDevelopmentCode(response.data.developmentCode);
+      setResendReadyAt(now + response.data.cooldownSeconds * 1000);
+      setResendNonce((nonce) => nonce + 1);
+      codeForm.reset({ code: '' });
+    } catch (caught) {
+      setError(caught);
+    } finally {
+      setResending(false);
+    }
+  };
+
   const verifyCode = codeForm.handleSubmit(async ({ code }) => {
     if (!challenge || expired) return;
     setError(undefined);
     try {
-      const response = await verifyAdminOtp(challenge.challengeId, code);
+      const response = await verifyAdminOtp(challenge.challengeId, code, rememberMe);
+      setCredentials(undefined);
       setAuthSession(response.data.accessToken, response.data.user.role);
       router.replace('/admin/dashboard');
     } catch (caught) {
@@ -221,7 +323,7 @@ function AdminLoginFormInner() {
           نخستین مرحله بررسی انجام شد. کد ۶ رقمی ارسال‌شده به شماره همراه شما را وارد کنید.
           {remainingSeconds > 0 && (
             <span className="mt-1 block text-xs text-muted">
-              {expired ? '' : `کد تا ${remainingSeconds} ثانیه دیگر معتبر است.`}
+              کد تا {remainingSeconds} ثانیه دیگر معتبر است.
             </span>
           )}
         </Alert>
@@ -231,6 +333,11 @@ function AdminLoginFormInner() {
             <strong className="mt-2 block text-center text-2xl tracking-[0.35em]" dir="ltr">
               {developmentCode}
             </strong>
+          </Alert>
+        )}
+        {expired && (
+          <Alert tone="danger" title="مهلت کد به پایان رسیده است">
+            زمان اعتبار کد به پایان رسیده است. برای دریافت کد تازه، دکمه «دریافت کد جدید» را بزنید.
           </Alert>
         )}
         <Field
@@ -251,11 +358,11 @@ function AdminLoginFormInner() {
             {...codeForm.register('code')}
           />
         </Field>
-        {expired && (
-          <Alert tone="danger" title="مهلت کد به پایان رسیده است">
-            زمان اعتبار کد به پایان رسیده است. برای دریافت کد تازه، مراحل ورود را دوباره آغاز کنید.
-          </Alert>
-        )}
+        <Checkbox
+          checked={rememberMe}
+          onChange={(event) => setRememberMe(event.target.checked)}
+          label="در این دستگاه به خاطر بسپار (۷ روز)"
+        />
         <Button
           className="w-full"
           type="submit"
@@ -263,6 +370,7 @@ function AdminLoginFormInner() {
         >
           {codeForm.formState.isSubmitting ? 'در حال بررسی…' : 'تأیید و ورود'}
         </Button>
+        <ResendButton onClick={resendCode} disabled={resending} resendIn={resendIn} />
         <Button
           type="button"
           variant="ghost"
@@ -270,6 +378,8 @@ function AdminLoginFormInner() {
           onClick={() => {
             setChallenge(undefined);
             setDevelopmentCode(undefined);
+            setResendNonce(0);
+            setCredentials(undefined);
             codeForm.reset();
             setError(undefined);
           }}
