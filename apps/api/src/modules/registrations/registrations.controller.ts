@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
 import { RegistrationsService } from './registrations.service';
 import { AuthGuard } from '../access-control/auth.guard';
+import { OnboardingGuard } from '../access-control/onboarding.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { successResponse } from '../../common/response';
@@ -47,6 +48,31 @@ export class RegistrationsController {
   @Post(':id/cancel')
   async cancel(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
     const reg = await this.registrationsService.cancel(id, req.user.id);
+    return successResponse(reg);
+  }
+}
+
+@UseGuards(OnboardingGuard)
+@Controller('onboarding/enrollments')
+export class OnboardingRegistrationsController {
+  constructor(private readonly registrationsService: RegistrationsService) {}
+
+  @Get()
+  async getAll(@Req() req: AuthenticatedRequest) {
+    const list = await this.registrationsService.getByFamily(req.user.id);
+    return successResponse(list);
+  }
+
+  @Post('guided')
+  async createGuided(@Req() req: AuthenticatedRequest, @Body() dto: GuidedEnrollmentDto) {
+    return successResponse(
+      await this.registrationsService.createGuidedEnrollment(req.user.id, dto),
+    );
+  }
+
+  @Get(':id')
+  async getById(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
+    const reg = await this.registrationsService.getById(id, req.user.id);
     return successResponse(reg);
   }
 }

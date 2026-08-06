@@ -4,8 +4,8 @@ import IORedis from 'ioredis';
 import { ConfigService } from '../../config/config.service';
 import { AppLogger } from '../../common/logger';
 import { DatabaseService } from '../../database/database.service';
-import { authSessions, otpRequests } from '../../database/schemas';
-import { lt } from 'drizzle-orm';
+import { authSessions, otpRequests, onboardingSessions } from '../../database/schemas';
+import { lt, and, eq } from 'drizzle-orm';
 import { InAppNotificationService } from '../notifications/in-app-notification.service';
 
 export const QUEUE_NAMES = {
@@ -154,6 +154,15 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       const cutoff = retentionCutoff(new Date(), this.config.authSessionRetentionDays);
       await this.database.db.delete(authSessions).where(lt(authSessions.expiresAt, cutoff));
       await this.database.db.delete(otpRequests).where(lt(otpRequests.expiresAt, cutoff));
+      await this.database.db
+        .update(onboardingSessions)
+        .set({ status: 'EXPIRED', updatedAt: new Date() })
+        .where(
+          and(
+            eq(onboardingSessions.status, 'PENDING'),
+            lt(onboardingSessions.expiresAt, new Date()),
+          ),
+        );
       this.logger.log('Purged expired authentication data according to retention policy.');
       return;
     }

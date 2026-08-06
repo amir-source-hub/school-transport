@@ -112,3 +112,50 @@ describe('OTP code entry', () => {
     expect(authApi.verifyParentOtp).not.toHaveBeenCalled();
   });
 });
+
+describe('role selector and first-time onboarding', () => {
+  it('defaults to the student role and shows the guardian phone label', () => {
+    render(<LoginForm />);
+
+    expect(screen.getByRole('option', { name: /دانش.*آموز/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByLabelText(/شماره همراه سرپرست دانش‌آموز/)).toBeInTheDocument();
+  });
+
+  it('shows the coming-soon notice and does not submit for a non-student role', async () => {
+    const user = setup();
+
+    await user.click(screen.getByRole('option', { name: /مدیر مدارس/ }));
+
+    expect(screen.getByText('این بخش به‌زودی فعال می‌شود')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'دریافت کد تأیید' })).toBeDisabled();
+
+    await user.type(screen.getByLabelText(/شماره همراه/), '09123456789');
+    await user.click(screen.getByRole('button', { name: 'دریافت کد تأیید' }));
+
+    expect(authApi.requestParentOtp).not.toHaveBeenCalled();
+  });
+
+  it('redirects a new phone into enrollment instead of opening the panel', async () => {
+    authApi.verifyParentOtp.mockReset().mockResolvedValue({
+      data: {
+        user: null,
+        onboarding: {
+          sessionId: 'ob-1',
+          expiresAt: new Date(Date.now() + 100_000).toISOString(),
+          currentStep: null,
+        },
+      },
+    });
+    const user = setup();
+    await sendCode(user);
+    await user.type(screen.getByLabelText(/کد تأیید/), '123456');
+    await user.click(screen.getByRole('button', { name: 'تأیید و ادامه' }));
+
+    expect(authApi.verifyParentOtp).toHaveBeenCalledWith('09123456789', '123456', false);
+    expect(navigation.replace).toHaveBeenCalledWith('/onboarding/enrollments');
+    expect(navigation.replace).not.toHaveBeenCalledWith('/parent/dashboard');
+  });
+});

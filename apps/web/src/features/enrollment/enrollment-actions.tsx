@@ -33,7 +33,9 @@ import {
   acceptGuidedContract,
   cancelEnrollment,
   createGuidedEnrollment,
+  finalizeOnboarding,
   payGuidedPrepayment,
+  type EnrollmentMode,
   type GuidedEnrollmentResult,
 } from './enrollments-api';
 import {
@@ -77,11 +79,13 @@ export function CreateEnrollmentForm({
   savedParents,
   existingStudents,
   defaults,
+  mode = 'panel',
 }: {
   schools: SchoolOption[];
   savedParents: SavedParents;
   existingStudents: ExistingStudent[];
   defaults: EnrollmentDefaults;
+  mode?: EnrollmentMode;
 }) {
   const router = useRouter();
   const firstSchool = schools[0];
@@ -340,54 +344,57 @@ export function CreateEnrollmentForm({
     setError(undefined);
     try {
       setResult(
-        await createGuidedEnrollment({
-          student: {
-            id: form.existingStudentId || undefined,
-            firstName: form.studentFirst,
-            lastName: form.studentLast,
-            nationalId: normalizeDigits(form.studentNationalId),
-            birthDate: form.birthDate || undefined,
-            gender: form.gender || undefined,
+        await createGuidedEnrollment(
+          {
+            student: {
+              id: form.existingStudentId || undefined,
+              firstName: form.studentFirst,
+              lastName: form.studentLast,
+              nationalId: normalizeDigits(form.studentNationalId),
+              birthDate: form.birthDate || undefined,
+              gender: form.gender || undefined,
+            },
+            father: {
+              firstName: form.fatherFirst,
+              lastName: form.fatherLast,
+              nationalId: normalizeDigits(form.fatherNationalId),
+              phoneNumber: normalizeDigits(form.fatherPhone),
+            },
+            mother: {
+              firstName: form.motherFirst,
+              lastName: form.motherLast,
+              nationalId: normalizeDigits(form.motherNationalId),
+              phoneNumber: normalizeDigits(form.motherPhone),
+            },
+            emergencyContact: {
+              firstName: form.emergencyFirst,
+              lastName: form.emergencyLast,
+              relationship: form.emergencyRelationship,
+              phoneNumber: normalizeDigits(form.emergencyPhone),
+            },
+            address: {
+              title: form.addressTitle,
+              province: form.province,
+              city: form.city,
+              district: form.district || undefined,
+              streetAddress: form.streetAddress,
+              postalCode: normalizeDigits(form.postalCode),
+              latitude: form.latitude,
+              longitude: form.longitude,
+            },
+            school: {
+              schoolId: form.schoolId,
+              educationLevel: form.educationLevel,
+              grade: form.grade,
+            },
+            service: {
+              serviceType: form.serviceType,
+              paymentPlanType: form.paymentPlanType as 'FULL' | 'INSTALLMENTS',
+              parentNotes: form.parentNotes || undefined,
+            },
           },
-          father: {
-            firstName: form.fatherFirst,
-            lastName: form.fatherLast,
-            nationalId: normalizeDigits(form.fatherNationalId),
-            phoneNumber: normalizeDigits(form.fatherPhone),
-          },
-          mother: {
-            firstName: form.motherFirst,
-            lastName: form.motherLast,
-            nationalId: normalizeDigits(form.motherNationalId),
-            phoneNumber: normalizeDigits(form.motherPhone),
-          },
-          emergencyContact: {
-            firstName: form.emergencyFirst,
-            lastName: form.emergencyLast,
-            relationship: form.emergencyRelationship,
-            phoneNumber: normalizeDigits(form.emergencyPhone),
-          },
-          address: {
-            title: form.addressTitle,
-            province: form.province,
-            city: form.city,
-            district: form.district || undefined,
-            streetAddress: form.streetAddress,
-            postalCode: normalizeDigits(form.postalCode),
-            latitude: form.latitude,
-            longitude: form.longitude,
-          },
-          school: {
-            schoolId: form.schoolId,
-            educationLevel: form.educationLevel,
-            grade: form.grade,
-          },
-          service: {
-            serviceType: form.serviceType,
-            paymentPlanType: form.paymentPlanType as 'FULL' | 'INSTALLMENTS',
-            parentNotes: form.parentNotes || undefined,
-          },
-        }),
+          mode,
+        ),
       );
     } catch (caught) {
       setError(getApiErrorFeedback(caught).message);
@@ -823,7 +830,7 @@ export function CreateEnrollmentForm({
                 setPending(true);
                 setError(undefined);
                 try {
-                  await acceptGuidedContract(result.contractId);
+                  await acceptGuidedContract(result.contractId, mode);
                   setAccepted(true);
                 } catch (caught) {
                   setError(getApiErrorFeedback(caught).message);
@@ -863,7 +870,12 @@ export function CreateEnrollmentForm({
                 setPending(true);
                 setError(undefined);
                 try {
-                  await payGuidedPrepayment(result.scheduleItemId);
+                  await payGuidedPrepayment(result.scheduleItemId, mode);
+                  if (mode === 'onboarding') {
+                    await finalizeOnboarding();
+                    router.replace('/parent/dashboard');
+                    return;
+                  }
                   setPaid(true);
                   router.refresh();
                 } catch (caught) {

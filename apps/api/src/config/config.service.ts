@@ -41,6 +41,7 @@ const envSchema = z.object({
   OTP_MAX_ATTEMPTS: z.coerce.number().default(5),
   OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().default(60),
   ADMIN_CHALLENGE_TTL_SECONDS: z.coerce.number().default(120),
+  ONBOARDING_SESSION_TTL_SECONDS: z.coerce.number().default(604800),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
   TRUSTED_PROXY_CIDRS: z.string().default('').transform((value, context) => {
     try {
@@ -157,6 +158,9 @@ export class ConfigService implements OnApplicationShutdown {
   }
   get adminChallengeTtlSeconds(): number {
     return this.env.ADMIN_CHALLENGE_TTL_SECONDS;
+  }
+  get onboardingSessionTtlSeconds(): number {
+    return this.env.ONBOARDING_SESSION_TTL_SECONDS;
   }
   get corsOrigins(): string[] {
     return this.env.CORS_ORIGINS.split(',').map((s) => s.trim());

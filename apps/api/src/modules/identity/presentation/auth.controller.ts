@@ -17,6 +17,7 @@ import type { CookieSerializeOptions } from '@fastify/cookie';
 import { AuthService } from '../application/auth.service';
 import { Public } from '../../../common/decorators';
 import { AuthGuard } from '../../access-control/auth.guard';
+import { OnboardingGuard } from '../../access-control/onboarding.guard';
 import { successResponse } from '../../../common/response';
 import { ConfigService } from '../../../config/config.service';
 import { ValidationError } from '../../../common/errors';
@@ -26,7 +27,7 @@ import { Roles } from '../../../common/decorators';
 import { IsEmail, IsIn, IsOptional, IsString, Length, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { normalizeIranianDigits } from '../../../common/iranian-national-id';
-import { AuthenticatedRequest } from '../../../common/http-request';
+import { AuthenticatedRequest, OnboardingRequest } from '../../../common/http-request';
 
 const trimmed = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value;
 const digits = ({ value }: { value: unknown }) => typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
@@ -200,6 +201,12 @@ export class VerifyAuthOtpDto extends RequestOtpDto {
   rememberMe?: boolean;
 }
 
+export class FinalizeOnboardingDto {
+  @IsOptional()
+  @Transform(toBoolean)
+  rememberMe?: boolean;
+}
+
 type CookieRequest = FastifyRequest & {
   cookies: Record<string, string | undefined>;
 };
@@ -288,8 +295,62 @@ export class AuthController {
       context,
       dto.rememberMe ?? false,
     );
+    if (result.user === null) {
+      this.setOnboardingCookie(reply, result.onboarding.token, result.onboarding.expiresAt);
+      return successResponse({
+        user: null,
+        onboarding: {
+          sessionId: result.onboarding.sessionId,
+          expiresAt: result.onboarding.expiresAt,
+          currentStep: result.onboarding.currentStep,
+        },
+      });
+    }
     this.setRefreshCookie(reply, result.refreshToken, result.user.role === 'ADMIN', dto.rememberMe ?? false);
     this.setAccessCookie(reply, result.accessToken, result.user.role === 'ADMIN');
+    return successResponse({
+      user: result.user,
+      accessToken: result.accessToken,
+    });
+  }
+
+  @UseGuards(OnboardingGuard)
+  @Get('onboarding/me')
+  async onboardingMe(@Req() req: OnboardingRequest) {
+    return successResponse({
+      accountId: req.onboarding.userId,
+      phoneNumber: req.onboarding.phoneNumber,
+      status: 'PENDING',
+      expiresAt: req.onboarding.expiresAt,
+      currentStep: req.onboarding.currentStep,
+    });
+  }
+
+  @UseGuards(OnboardingGuard, TrustedOriginGuard)
+  @Post('onboarding/finalize')
+  @HttpCode(HttpStatus.OK)
+  async finalizeOnboarding(
+    @Req() req: OnboardingRequest,
+    @Body() dto: FinalizeOnboardingDto,
+    @Res({ passthrough: true }) reply: CookieReply,
+  ) {
+    const context = {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      deviceName: req.headers['user-agent']?.slice(0, 255),
+    };
+    const token =
+      req.headers.authorization?.split(' ')[1] ??
+      (req as FastifyRequest & { cookies?: Record<string, string> }).cookies?.onboarding_token;
+    if (!token) throw new ValidationError('An onboarding session is required.');
+    const result = await this.authService.finalizeOnboarding(
+      token,
+      context,
+      dto.rememberMe ?? false,
+    );
+    this.setRefreshCookie(reply, result.refreshToken, false, dto.rememberMe ?? false);
+    this.setAccessCookie(reply, result.accessToken, false);
+    reply.clearCookie('onboarding_token', { path: '/' });
     return successResponse({
       user: result.user,
       accessToken: result.accessToken,
@@ -321,6 +382,7 @@ export class AuthController {
     }
     reply.clearCookie('refresh_token', { path: '/api/v1/auth' });
     reply.clearCookie('access_token', { path: '/' });
+    reply.clearCookie('onboarding_token', { path: '/' });
     return successResponse({ loggedOut: true });
   }
 
@@ -350,6 +412,20 @@ export class AuthController {
   private setAccessCookie(reply: CookieReply, token: string, isAdmin = false) {
     const maxAge = isAdmin ? this.config.adminJwtAccessTokenTtl : this.config.jwtAccessTokenTtl;
     reply.setCookie('access_token', token, {
+      httpOnly: true,
+      secure: this.config.nodeEnv === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge,
+    });
+  }
+
+  private setOnboardingCookie(reply: CookieReply, token: string, expiresAt: Date) {
+    const maxAge = Math.max(
+      1,
+      Math.round((expiresAt.getTime() - Date.now()) / 1000),
+    );
+    reply.setCookie('onboarding_token', token, {
       httpOnly: true,
       secure: this.config.nodeEnv === 'production',
       sameSite: 'lax',

@@ -18,8 +18,10 @@ import {
   verifyAdminOtp,
   verifyParentOtp,
   type AdminChallengeResponse,
+  type UiRoleIdentifier,
 } from './auth-api';
 import { setAuthSession } from './auth-session';
+import { setOnboardingState } from './onboarding-session';
 
 const phoneSchema = z.object({
   phoneNumber: z.string().regex(/^09\d{9}$/, 'شماره همراه را با قالب 09xxxxxxxxx وارد کنید.'),
@@ -83,6 +85,8 @@ function ResendButton({
 function OtpAuthForm() {
   const router = useRouter();
   const [error, setError] = useState<unknown>();
+  const [role, setRole] = useState<UiRoleIdentifier>('STUDENT_PORTAL');
+  const [comingSoonRole, setComingSoonRole] = useState<UiRoleIdentifier | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [developmentCode, setDevelopmentCode] = useState<string>();
   const [otpSent, setOtpSent] = useState(false);
@@ -126,6 +130,10 @@ function OtpAuthForm() {
   };
 
   const submitPhone = phoneForm.handleSubmit(async ({ phoneNumber: value }) => {
+    if (role !== 'STUDENT_PORTAL') {
+      setComingSoonRole(role);
+      return;
+    }
     await sendCode(value);
   });
 
@@ -134,6 +142,15 @@ function OtpAuthForm() {
     setError(undefined);
     try {
       const response = await verifyParentOtp(phoneNumber, code, rememberMe);
+      if (response.data.user === null) {
+        setOnboardingState({
+          sessionId: response.data.onboarding.sessionId,
+          expiresAt: response.data.onboarding.expiresAt,
+          currentStep: response.data.onboarding.currentStep,
+        });
+        router.replace('/onboarding/enrollments');
+        return;
+      }
       setAuthSession(response.data.accessToken, response.data.user.role);
       router.replace('/parent/dashboard');
     } catch (caught) {
@@ -208,6 +225,7 @@ function OtpAuthForm() {
             setResendNonce(0);
             codeForm.reset();
             setError(undefined);
+            setComingSoonRole(null);
           }}
         >
           تغییر شماره همراه
@@ -218,9 +236,73 @@ function OtpAuthForm() {
 
   return (
     <form className="space-y-5" onSubmit={submitPhone} noValidate>
+      <fieldset>
+        <legend className="text-sm font-bold">نقش شما</legend>
+        <div className="mt-3 grid grid-cols-3 gap-2.5" role="listbox" aria-label="نقش">
+          {([
+            {
+              id: 'STUDENT_PORTAL',
+              title: 'دانش‌آموز',
+              description: 'ورود و ثبت‌نام سرویس مدرسه',
+              active: true,
+            },
+            {
+              id: 'SCHOOL_MANAGER_COMING_SOON',
+              title: 'مدیر مدارس',
+              description: 'پنل مدیریت مدرسه',
+              active: false,
+            },
+            {
+              id: 'DRIVER_COMING_SOON',
+              title: 'راننده',
+              description: 'پنل راننده سرویس',
+              active: false,
+            },
+          ] as const satisfies ReadonlyArray<{
+            id: UiRoleIdentifier;
+            title: string;
+            description: string;
+            active: boolean;
+          }>).map(({ id, title, description, active }) => (
+            <button
+              key={id}
+              type="button"
+              role="option"
+              aria-selected={role === id}
+              data-testid={`role-${id}`}
+              onClick={() => {
+                setRole(id);
+                setComingSoonRole(active ? null : id);
+                setError(undefined);
+              }}
+              className={`rounded-xl border-2 p-3 text-right transition ${
+                role === id ? 'border-primary bg-primary-soft' : 'border-slate-200 bg-white'
+              }`}
+            >
+              <span
+                className={`mb-2 inline-flex rounded-lg px-2 py-0.5 text-[10px] font-black ${
+                  active ? 'bg-primary text-white' : 'bg-slate-100 text-muted'
+                }`}
+              >
+                {active ? 'فعال' : 'به‌زودی'}
+              </span>
+              <span className="block text-sm font-black">{title}</span>
+              <span className="mt-1 block text-[10px] leading-4 text-muted">{description}</span>
+            </button>
+          ))}
+        </div>
+        {comingSoonRole && role !== 'STUDENT_PORTAL' && (
+          <div className="mt-3" role="status">
+            <Alert tone="info" title="این بخش به‌زودی فعال می‌شود">
+              ورود دانش‌آموز برای همین حالا در دسترس است؛ مدیریت مدارس و رانندگی به‌زودی فعال
+              می‌شود.
+            </Alert>
+          </div>
+        )}
+      </fieldset>
       <FormError error={error} />
       <Field
-        label="شماره همراه"
+        label="شماره همراه سرپرست دانش‌آموز"
         htmlFor="auth-phone"
         required
         error={phoneForm.formState.errors.phoneNumber?.message}
@@ -239,7 +321,7 @@ function OtpAuthForm() {
         className="w-full rounded-xl"
         size="lg"
         type="submit"
-        disabled={phoneForm.formState.isSubmitting}
+        disabled={phoneForm.formState.isSubmitting || role !== 'STUDENT_PORTAL'}
       >
         {phoneForm.formState.isSubmitting ? 'در حال ارسال…' : 'دریافت کد تأیید'}
       </Button>

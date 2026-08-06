@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const SITE_NAME = 'ثمین گشت مهر ایران';
 export const SITE_URL = new URL('https://samingasht.ir');
 
-export type RouteAudience = 'public' | 'auth' | 'parent' | 'admin';
+export type RouteAudience = 'public' | 'auth' | 'parent' | 'admin' | 'onboarding';
 
 export type RouteDocumentPolicy = {
   path: string;
@@ -109,6 +109,13 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     description: 'ایجاد حساب از مسیر ورود امن سامانه.',
     primaryHeading: 'ورود یا ساخت حساب',
     redirectTo: '/login',
+  },
+  {
+    path: '/onboarding/enrollments',
+    audience: 'onboarding',
+    title: 'تکمیل ثبت‌نام سرویس',
+    description: 'تکمیل مشخصات، مدرسه، قرارداد و پیش‌پرداخت برای فعال شدن حساب دانش‌آموزی.',
+    primaryHeading: 'تکمیل ثبت‌نام سرویس مدرسه',
   },
   {
     path: '/parent',

@@ -2,6 +2,11 @@ import { apiRequest } from '@/lib/api-client';
 
 export type AuthRole = 'PARENT' | 'ADMIN';
 
+export type UiRoleIdentifier =
+  | 'STUDENT_PORTAL'
+  | 'SCHOOL_MANAGER_COMING_SOON'
+  | 'DRIVER_COMING_SOON';
+
 type AuthUser = {
   id: string;
   username: string;
@@ -13,6 +18,17 @@ type LoginResponse = {
   user: AuthUser;
   accessToken: string;
 };
+
+export type OnboardingResponse = {
+  user: null;
+  onboarding: {
+    sessionId: string;
+    expiresAt: string;
+    currentStep: string | null;
+  };
+};
+
+export type VerifyParentOtpResponse = LoginResponse | OnboardingResponse;
 
 export function requestParentOtp(phoneNumber: string) {
   return apiRequest<{
@@ -28,7 +44,7 @@ export function requestParentOtp(phoneNumber: string) {
 }
 
 export function verifyParentOtp(phoneNumber: string, code: string, rememberMe = false) {
-  return apiRequest<LoginResponse>('/auth/verify-otp', {
+  return apiRequest<VerifyParentOtpResponse>('/auth/verify-otp', {
     method: 'POST',
     body: { phoneNumber, code, role: 'PARENT', rememberMe },
     timeoutMs: 10_000,

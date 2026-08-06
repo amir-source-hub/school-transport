@@ -17,4 +17,5 @@ export { contracts } from './contracts.schema';
 export { notifications, notificationOutbox } from './notifications.schema';
 export { otpRequests } from './auth.schema';
 export { authSessions } from './auth.schema';
+export { onboardingSessions } from './auth.schema';
 export { auditLogs } from './audit.schema';

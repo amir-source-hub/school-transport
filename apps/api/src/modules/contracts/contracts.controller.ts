@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Param, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
 import { ContractsService } from './contracts.service';
 import { AuthGuard } from '../access-control/auth.guard';
+import { OnboardingGuard } from '../access-control/onboarding.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { successResponse } from '../../common/response';
@@ -32,6 +33,18 @@ export class ContractsController {
   @Post(':id/reject')
   async reject(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
     const contract = await this.contractsService.reject(id, req.user.id);
+    return successResponse(contract);
+  }
+}
+
+@UseGuards(OnboardingGuard)
+@Controller('onboarding/contracts')
+export class OnboardingContractsController {
+  constructor(private readonly contractsService: ContractsService) {}
+
+  @Post(':id/accept')
+  async accept(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
+    const contract = await this.contractsService.accept(id, req.user.id);
     return successResponse(contract);
   }
 }

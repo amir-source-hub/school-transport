@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { AuthGuard } from '../access-control/auth.guard';
+import { OnboardingGuard } from '../access-control/onboarding.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { successResponse } from '../../common/response';
@@ -57,6 +58,40 @@ export class PaymentsController {
       dto,
     );
     return successResponse({ transactionId: txId });
+  }
+}
+
+@UseGuards(OnboardingGuard)
+@Controller('onboarding/payments')
+export class OnboardingPaymentsController {
+  constructor(private readonly paymentsService: PaymentsService) {}
+
+  @Post(':scheduleItemId/online/start')
+  async startOnline(
+    @Req() req: AuthenticatedRequest,
+    @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string,
+    @IdempotencyKey() idempotencyKey: string,
+  ) {
+    const tx = await this.paymentsService.startOnlinePayment(
+      scheduleItemId,
+      req.user.id,
+      idempotencyKey,
+    );
+    return successResponse(tx);
+  }
+
+  @Post(':txId/online/verify')
+  async verifyOnline(
+    @Req() req: AuthenticatedRequest,
+    @Param('txId', new ParseUUIDPipe()) txId: string,
+    @Body() dto: VerifyOnlinePaymentDto,
+  ) {
+    const tx = await this.paymentsService.verifyOnlinePayment(
+      txId,
+      req.user.id,
+      dto.gatewayTransactionId,
+    );
+    return successResponse(tx);
   }
 }
 

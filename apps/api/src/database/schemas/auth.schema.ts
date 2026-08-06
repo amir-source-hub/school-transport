@@ -8,6 +8,7 @@ import {
   index,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const users = pgTable(
   'users',
@@ -88,24 +89,50 @@ export const authSessions = pgTable(
   'auth_sessions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    subjectId: uuid('subject_id').notNull(),
+    subjectId: uuid('subject_id').notNull().references(() => users.id),
     role: varchar('role', { length: 20 }).notNull(),
-    refreshTokenHash: varchar('refresh_token_hash', { length: 64 }).notNull(),
+    refreshTokenHash: varchar('refresh_token_hash', { length: 64 }).notNull().unique(),
     deviceName: varchar('device_name', { length: 255 }),
-    ipAddress: varchar('ip_address', { length: 64 }),
+    ipAddress: varchar('ip_address', { length: 45 }),
     userAgent: varchar('user_agent', { length: 500 }),
     remembered: boolean('remembered').notNull().default(false),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
-    revocationReason: varchar('revocation_reason', { length: 100 }),
+    revocationReason: varchar('revocation_reason', { length: 30 }),
     replacedBySessionId: uuid('replaced_by_session_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
-    tokenHashIdx: uniqueIndex('idx_auth_sessions_token_hash').on(table.refreshTokenHash),
-    subjectRoleIdx: index('idx_auth_sessions_subject_role').on(table.subjectId, table.role),
-    expiresAtIdx: index('idx_auth_sessions_expires_at').on(table.expiresAt),
-    revokedAtIdx: index('idx_auth_sessions_revoked_at').on(table.revokedAt),
+    refreshTokenHashIdx: uniqueIndex('idx_sessions_refresh_token_hash').on(
+      table.refreshTokenHash,
+    ),
+    subjectRoleIdx: index('idx_sessions_subject_role').on(table.subjectId, table.role),
+    expiresAtIdx: index('idx_sessions_expires_at').on(table.expiresAt),
+    revokedAtIdx: index('idx_sessions_revoked_at').on(table.revokedAt),
+  }),
+);
+
+export const onboardingSessions = pgTable(
+  'onboarding_sessions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    phoneNumber: varchar('phone_number', { length: 20 }).notNull(),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    status: varchar('status', { length: 20 }).notNull().default('PENDING'),
+    onboardingTokenHash: varchar('onboarding_token_hash', { length: 64 }).notNull(),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    currentStep: varchar('current_step', { length: 50 }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    activePerPhoneIdx: uniqueIndex('idx_onboarding_one_active_per_phone').on(
+      table.phoneNumber,
+    ).where(sql`${table.status} = 'PENDING'`),
+    phoneStatusIdx: index('idx_onboarding_phone_status').on(table.phoneNumber, table.status),
+    expiresAtIdx: index('idx_onboarding_expires_at').on(table.expiresAt),
   }),
 );

@@ -488,34 +488,34 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Required design
 
-- [ ] Separate a verified enrollment identity/challenge from an active panel account.
+- [x] Separate a verified enrollment identity/challenge from an active panel account.
   - Recommended: create a short-lived onboarding session or a `registration_leads`/`onboarding_sessions` record after OTP verification.
   - Do not grant normal panel access with that onboarding credential.
   - Scope it only to the guided-enrollment endpoints required for completion.
-- [ ] Decide whether an existing incomplete onboarding resumes its draft or starts a new one. Enforce one active onboarding per normalized guardian phone.
-- [ ] Move `users` creation, welcome notification, and full session issuance to the successful finalization transaction after contract acceptance and verified prepayment.
-- [ ] Add explicit onboarding state and expiry fields. Do not infer completion only by checking whether several unrelated rows happen to exist.
+- [x] Decide whether an existing incomplete onboarding resumes its draft or starts a new one. Enforce one active onboarding per normalized guardian phone.
+- [x] Move `users` creation, welcome notification, and full session issuance to the successful finalization transaction after contract acceptance and verified prepayment.
+- [x] Add explicit onboarding state and expiry fields. Do not infer completion only by checking whether several unrelated rows happen to exist.
 
 #### Frontend steps
 
-- [ ] Replace the two-option account fieldset with three cards:
+- [x] Replace the two-option account fieldset with three cards:
   - `دانش آموزان`: active and selected by default.
   - `مدیران مدارس`: selectable but shows `این بخش به‌زودی فعال می‌شود` and does not submit.
   - `رانندگان`: same temporary behavior.
-- [ ] Use the label `شماره همراه سرپرست دانش آموز` for student login.
-- [ ] Keep UI-only role identifiers separate from backend auth roles, for example `STUDENT_PORTAL`, `SCHOOL_MANAGER_COMING_SOON`, and `DRIVER_COMING_SOON`, so unavailable choices cannot be sent as valid API roles.
-- [ ] After OTP verification, inspect the typed backend result:
+- [x] Use the label `شماره همراه سرپرست دانش آموز` for student login.
+- [x] Keep UI-only role identifiers separate from backend auth roles, for example `STUDENT_PORTAL`, `SCHOOL_MANAGER_COMING_SOON`, and `DRIVER_COMING_SOON`, so unavailable choices cannot be sent as valid API roles.
+- [x] After OTP verification, inspect the typed backend result:
   - Existing active account → create the normal session and redirect to the student dashboard.
   - New/incomplete phone → store the restricted onboarding state and redirect to the enrollment route.
-- [ ] Update `portal-session-guard.tsx` so onboarding credentials cannot access the regular panel.
+- [x] Update `portal-session-guard.tsx` so onboarding credentials cannot access the regular panel.
 
 #### Backend and data steps
 
-- [ ] Add an onboarding table or extend the registration schema with phone, verified time, expiry, current step, status, and draft ownership.
-- [ ] Hash any bearer onboarding token and rotate or invalidate it after successful completion.
-- [ ] Make finalization one transaction where possible: create user/guardian ownership, activate student access, associate enrollment/contract/payment, mark onboarding completed, and enqueue welcome notification.
-- [ ] If external payment prevents one database transaction across the whole process, use explicit durable states and idempotent compensating actions.
-- [ ] Add cleanup for expired onboarding records without deleting completed financial or contract history.
+- [x] Add an onboarding table or extend the registration schema with phone, verified time, expiry, current step, status, and draft ownership.
+- [x] Hash any bearer onboarding token and rotate or invalidate it after successful completion.
+- [x] Make finalization one transaction where possible: create user/guardian ownership, activate student access, associate enrollment/contract/payment, mark onboarding completed, and enqueue welcome notification.
+- [x] If external payment prevents one database transaction across the whole process, use explicit durable states and idempotent compensating actions.
+- [x] Add cleanup for expired onboarding records without deleting completed financial or contract history.
 
 ### Work package F — rebuild enrollment validation around a shared contract
 

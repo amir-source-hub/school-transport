@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { addSeconds, isPast } from 'date-fns';
@@ -17,11 +17,17 @@ import {
 import { AuthenticationError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
-import { AuthTokens, LoginResult, OtpResult } from '../domain/auth.types';
+import {
+  AuthTokens,
+  LoginResult,
+  OtpResult,
+  VerifyAuthOtpResult,
+} from '../domain/auth.types';
 import { JwtPayload } from '../../../common/authentication.types';
 import { OTP_DELIVERY, OtpDelivery } from './otp-delivery.port';
 import { AUDIT_PORT, AuditPort } from '../../../common/audit.port';
 import { InAppNotificationService } from '../../../infrastructure/notifications/in-app-notification.service';
+import { OnboardingService } from './onboarding.service';
 
 export interface AdminChallengeResult {
   challengeId: string;
@@ -40,6 +46,7 @@ export class AuthService {
     @Inject(OTP_DELIVERY) private readonly otpDelivery: OtpDelivery,
     private readonly notifications: InAppNotificationService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Optional() private readonly onboarding?: OnboardingService,
   ) {}
 
   async getAdmins() {
@@ -270,34 +277,42 @@ export class AuthService {
     role: 'PARENT' = 'PARENT',
     context?: SessionContext,
     rememberMe = false,
-  ): Promise<LoginResult> {
+  ): Promise<VerifyAuthOtpResult> {
     if (role !== 'PARENT') {
       throw new ValidationError('Administrators must sign in through the two-step admin login.');
     }
-    let account = await this.findAccountByPhone(phoneNumber, 'PARENT');
+    const account = await this.findAccountByPhone(phoneNumber, 'PARENT');
     await this.verifyOtp(phoneNumber, 'AUTH_PARENT', code);
 
-    if (!account) {
-      const userId = generateId();
-      await this.db.db.transaction(async (txn) => {
-        await txn.insert(users).values({
+    const needsOnboarding =
+      !account || account.status === 'PENDING' || account.status === 'EXPIRED';
+    if (!needsOnboarding && account.status !== 'ACTIVE') {
+      throw new AuthenticationError('Account is disabled or suspended.');
+    }
+
+    if (needsOnboarding) {
+      let userId = account?.id;
+      if (!userId) {
+        userId = generateId();
+        await this.db.db.insert(users).values({
           id: userId,
           username: phoneNumber,
           phoneNumber,
-          accountStatus: 'ACTIVE',
+          accountStatus: 'PENDING',
         });
-        await this.notifications.enqueueInTransaction(txn, {
-          eventId: `ACCOUNT_REGISTERED:${userId}`,
-          userId,
-          notificationType: 'ACCOUNT_REGISTERED',
-          title: 'ثبت‌نام حساب با موفقیت انجام شد',
-          message: 'حساب خانواده ایجاد شد. اکنون اطلاعات خانواده و دانش‌آموز قابل ثبت است.',
-          relatedEntityType: 'USER',
-          relatedEntityId: userId,
-        });
-      });
-      account = { id: userId, username: phoneNumber, status: 'ACTIVE' };
-      this.logger.log('Parent account created after OTP verification.');
+        this.logger.log('Parent onboarding account created after OTP verification.');
+      } else {
+        await this.db.db
+          .update(users)
+          .set({ accountStatus: 'PENDING', phoneNumber, updatedAt: new Date() })
+          .where(eq(users.id, userId));
+      }
+      if (!this.onboarding) {
+        throw new AuthenticationError('Onboarding is not configured.');
+      }
+      const onboardingSession = await this.onboarding.beginOrResume(userId, phoneNumber);
+      this.logger.log('Onboarding session issued for a verified phone.');
+      return { user: null, onboarding: onboardingSession };
     }
 
     if (account.status !== 'ACTIVE') {
@@ -334,6 +349,43 @@ export class AuthService {
     this.logger.log('PARENT logged in with OTP.');
     return {
       user: { id: account.id, username: account.username, phoneNumber, role: 'PARENT' },
+      ...tokens,
+    };
+  }
+
+  async finalizeOnboarding(
+    token: string,
+    context?: SessionContext,
+    rememberMe = false,
+  ): Promise<LoginResult> {
+    if (!this.onboarding) {
+      throw new AuthenticationError('Onboarding is not configured.');
+    }
+    const session = await this.onboarding.resolve(token);
+    if (!session) {
+      throw new AuthenticationError('Invalid or expired onboarding session.');
+    }
+    if (!(await this.onboarding.hasPaidPrepayment(session.userId))) {
+      throw new ValidationError(
+        'Onboarding cannot be completed until the enrollment prepayment is verified.',
+      );
+    }
+    await this.onboarding.completeOnboarding(session.id, session.userId);
+    const tokens = await this.generateTokens(
+      session.userId,
+      'PARENT',
+      context,
+      undefined,
+      rememberMe,
+    );
+    this.logger.log('Onboarding completed; parent account activated.');
+    return {
+      user: {
+        id: session.userId,
+        username: session.phoneNumber,
+        phoneNumber: session.phoneNumber,
+        role: 'PARENT',
+      },
       ...tokens,
     };
   }

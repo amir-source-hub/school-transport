@@ -1,13 +1,19 @@
 import { Module } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { PaymentsController, AdminPaymentsController } from './payments.controller';
+import {
+  OnboardingPaymentsController,
+  PaymentsController,
+  AdminPaymentsController,
+} from './payments.controller';
 import { MockPaymentGateway, PAYMENT_GATEWAY, UnconfiguredPaymentGateway } from './payment-gateway';
 import { ConfigService } from '../../config/config.service';
+import { OnboardingGuard } from '../access-control/onboarding.guard';
 
 @Module({
-  controllers: [PaymentsController, AdminPaymentsController],
+  controllers: [PaymentsController, AdminPaymentsController, OnboardingPaymentsController],
   providers: [
     PaymentsService,
+    OnboardingGuard,
     UnconfiguredPaymentGateway,
     MockPaymentGateway,
     {

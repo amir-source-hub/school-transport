@@ -1,10 +1,19 @@
 import { Module } from '@nestjs/common';
 import { RegistrationsService } from './registrations.service';
-import { RegistrationsController, AdminRegistrationsController } from './registrations.controller';
+import {
+  OnboardingRegistrationsController,
+  RegistrationsController,
+  AdminRegistrationsController,
+} from './registrations.controller';
+import { OnboardingGuard } from '../access-control/onboarding.guard';
 
 @Module({
-  controllers: [RegistrationsController, AdminRegistrationsController],
-  providers: [RegistrationsService],
+  controllers: [
+    RegistrationsController,
+    AdminRegistrationsController,
+    OnboardingRegistrationsController,
+  ],
+  providers: [RegistrationsService, OnboardingGuard],
   exports: [RegistrationsService],
 })
 export class RegistrationsModule {}
