@@ -3,10 +3,11 @@
 import { RouteError } from '@/components/feedback/route-error';
 
 export default function AdminError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <RouteError reset={reset} area="پنل مدیریت" />;
+  return <RouteError error={error} reset={reset} area="پنل مدیریت" />;
 }

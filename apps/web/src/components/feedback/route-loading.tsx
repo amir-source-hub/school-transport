@@ -4,7 +4,8 @@ import { Skeleton } from '@/components/feedback/skeleton';
 export function RouteLoading({ compact = false }: { compact?: boolean }) {
   return (
     <PageContainer className={compact ? 'py-8' : 'py-14'}>
-      <div role="status" aria-label="در حال بارگذاری">
+      <div role="status" aria-live="polite" aria-busy="true" aria-label="در حال بارگذاری">
+        <p className="mb-4 text-sm font-bold text-muted">در حال دریافت اطلاعات…</p>
         <Skeleton className="h-8 w-2/3 max-w-md" />
         <Skeleton className="mt-4 h-4 w-1/2 max-w-sm" />
         <div className="mt-8 grid gap-4 md:grid-cols-3">

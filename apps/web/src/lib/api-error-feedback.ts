@@ -12,6 +12,28 @@ export type ErrorFeedback = {
 };
 
 export function getApiErrorFeedback(error: unknown): ErrorFeedback {
+  if (
+    (error instanceof DOMException && error.name === 'TimeoutError') ||
+    (error instanceof Error && /timeout|timed out/i.test(error.message))
+  ) {
+    return {
+      target: 'page',
+      title: 'پاسخ سرویس طول کشید',
+      message: 'ارتباط با سرویس در زمان مقرر انجام نشد. اتصال را بررسی و دوباره تلاش کنید.',
+      canRetry: true,
+    };
+  }
+
+  if (error instanceof TypeError) {
+    return {
+      target: 'page',
+      title: 'اتصال برقرار نیست',
+      message:
+        'به نظر می‌رسد اینترنت یا سرویس در دسترس نیست. پس از برقراری اتصال دوباره تلاش کنید.',
+      canRetry: true,
+    };
+  }
+
   if (!(error instanceof ApiClientError)) {
     return {
       target: 'page',
@@ -22,6 +44,26 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
   }
 
   const base = { requestId: error.requestId };
+
+  if (['QUEUE_UNAVAILABLE', 'JOB_QUEUE_UNAVAILABLE'].includes(error.code)) {
+    return {
+      ...base,
+      target: 'page',
+      title: 'صف پردازش موقتاً در دسترس نیست',
+      message: 'درخواست شما ارسال نشد. کمی بعد دوباره تلاش کنید؛ ثبت تکراری انجام نمی‌شود.',
+      canRetry: true,
+    };
+  }
+
+  if (['PROVIDER_UNAVAILABLE', 'PAYMENT_PROVIDER_UNAVAILABLE'].includes(error.code)) {
+    return {
+      ...base,
+      target: 'page',
+      title: 'سرویس بیرونی موقتاً در دسترس نیست',
+      message: 'ارائه‌دهنده سرویس پاسخ نمی‌دهد. اطلاعات شما حفظ شده است؛ کمی بعد دوباره تلاش کنید.',
+      canRetry: true,
+    };
+  }
 
   if (error.fieldErrors && Object.keys(error.fieldErrors).length > 0) {
     return {

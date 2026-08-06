@@ -4,7 +4,9 @@ import { Card } from '@/components/ui/card';
 import { ContractActions } from '@/features/finance/contract-actions';
 import { getContract, getPaymentPlan } from '@/features/finance/contracts-api';
 import { formatIrr } from '@/lib/formatters';
+import { metadataFor } from '@/lib/route-metadata';
 
+export const metadata = metadataFor('/parent/contracts/[contractId]');
 export const dynamic = 'force-dynamic';
 
 const contractLabels: Record<string, string> = {
@@ -49,12 +51,12 @@ function parseContractSnapshot(snapshot: string | null) {
     return Object.entries(parsed)
       .filter(([group]) => group !== 'contractText')
       .map(([group, value]) => ({
-      title: groupLabels[group] ?? contractLabels[group] ?? group,
-      fields:
-        value && typeof value === 'object' && !Array.isArray(value)
-          ? Object.entries(value as Record<string, unknown>)
-          : [[group, value] as [string, unknown]],
-    }));
+        title: groupLabels[group] ?? contractLabels[group] ?? group,
+        fields:
+          value && typeof value === 'object' && !Array.isArray(value)
+            ? Object.entries(value as Record<string, unknown>)
+            : [[group, value] as [string, unknown]],
+      }));
   } catch {
     return [{ title: 'متن قرارداد', fields: [['text', snapshot] as [string, unknown]] }];
   }

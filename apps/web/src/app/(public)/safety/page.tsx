@@ -2,8 +2,9 @@ import { BadgeCheck, FileSearch, LifeBuoy, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import { ButtonLink } from '@/components/ui/button';
 import { PageContainer } from '@/components/common/page-container';
+import { metadataFor } from '@/lib/route-metadata';
 
-export const metadata = { title: 'ایمنی و استانداردها' };
+export const metadata = metadataFor('/safety');
 
 export default function SafetyPage() {
   return (
@@ -15,6 +16,8 @@ export default function SafetyPage() {
             alt=""
             fill
             className="object-cover object-center"
+            priority
+            fetchPriority="high"
             sizes="100vw"
           />
           <div className="absolute inset-0 bg-navy/75" />
@@ -43,8 +46,8 @@ export default function SafetyPage() {
               </span>
               <h2 className="mt-5 text-lg font-black">تأیید راننده و خودرو</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                تمام رانندگان و خودروها پیش از شروع خدمت، مراحل تأیید مدارک و بازرسی را
-                طی می‌کنند. اطلاعات تأیید در سامانه قابل مشاهده است.
+                تمام رانندگان و خودروها پیش از شروع خدمت، مراحل تأیید مدارک و بازرسی را طی می‌کنند.
+                اطلاعات تأیید در سامانه قابل مشاهده است.
               </p>
             </div>
             <div className="rounded-[var(--radius-card)] border border-border/60 bg-surface-paper p-6 shadow-[var(--shadow-raised)]">
@@ -53,8 +56,8 @@ export default function SafetyPage() {
               </span>
               <h2 className="mt-5 text-lg font-black">چرخه خدمت شفاف</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                از درخواست اولیه تا قرارداد و پرداخت، هر مرحله از خدمت به صورت
-                شفاف ثبت و قابل پیگیری است.
+                از درخواست اولیه تا قرارداد و پرداخت، هر مرحله از خدمت به صورت شفاف ثبت و قابل
+                پیگیری است.
               </p>
             </div>
             <div className="rounded-[var(--radius-card)] border border-border/60 bg-surface-paper p-6 shadow-[var(--shadow-raised)]">
@@ -63,8 +66,8 @@ export default function SafetyPage() {
               </span>
               <h2 className="mt-5 text-lg font-black">پشتیبانی و گزارش</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                تیم پشتیبانی در تمام مراحل پاسخگوی سؤالات و گزارش‌های شماست.
-                هرگونه مشکل یا ابهام را می‌توانید ثبت کنید.
+                تیم پشتیبانی در تمام مراحل پاسخگوی سؤالات و گزارش‌های شماست. هرگونه مشکل یا ابهام را
+                می‌توانید ثبت کنید.
               </p>
             </div>
           </div>

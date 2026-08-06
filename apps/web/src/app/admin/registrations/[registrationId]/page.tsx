@@ -4,9 +4,19 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ButtonLink } from '@/components/ui/button';
-import { getAdminRegistration, getRegistrationTone } from '@/features/admin-registrations/admin-registrations-api';
-import { ApproveButton, RejectButton, RequestCorrectionButton, StartReviewButton } from '@/features/admin-registrations/enrollment-actions';
+import {
+  getAdminRegistration,
+  getRegistrationTone,
+} from '@/features/admin-registrations/admin-registrations-api';
+import {
+  ApproveButton,
+  RejectButton,
+  RequestCorrectionButton,
+  StartReviewButton,
+} from '@/features/admin-registrations/enrollment-actions';
+import { metadataFor } from '@/lib/route-metadata';
 
+export const metadata = metadataFor('/admin/registrations/[registrationId]');
 export const dynamic = 'force-dynamic';
 
 export default async function RegistrationPage({
@@ -69,11 +79,13 @@ export default async function RegistrationPage({
         <p className="mt-2 text-sm text-muted">
           {canStartReview && 'درخواست هنوز بررسی نشده است. برای شروع فرایند بررسی کلیک کنید.'}
           {canDecide && 'درخواست در حال بررسی است. می‌توانید تأیید، رد یا درخواست اصلاح کنید.'}
-          {needsCorrection && 'از خانواده درخواست اصلاح اطلاعات شده است. پس از اعمال اصلاحات، درخواست دوباره بررسی می‌شود.'}
+          {needsCorrection &&
+            'از خانواده درخواست اصلاح اطلاعات شده است. پس از اعمال اصلاحات، درخواست دوباره بررسی می‌شود.'}
           {isApproved && 'این درخواست تأیید شده است. برای ثبت قیمت به بخش قیمت‌گذاری مراجعه کنید.'}
           {isRejected && 'این درخواست رد شده است.'}
           {awaitingPricing && 'درخواست تأیید شده و در انتظار ثبت قیمت است.'}
-          {prepaid && 'قرارداد پذیرفته و پیش‌پرداخت انجام شده است. برنامه پرداخت باقی‌مانده را در بخش پرداخت‌ها ثبت کنید.'}
+          {prepaid &&
+            'قرارداد پذیرفته و پیش‌پرداخت انجام شده است. برنامه پرداخت باقی‌مانده را در بخش پرداخت‌ها ثبت کنید.'}
           {installmentsInProgress && 'پیش‌پرداخت انجام شده و بخشی از اقساط نیز پرداخت شده است.'}
           {paymentCompleted && 'پیش‌پرداخت و تمام اقساط این دانش‌آموز پرداخت شده‌اند.'}
         </p>
@@ -87,12 +99,14 @@ export default async function RegistrationPage({
             </>
           )}
           {(isApproved || awaitingPricing) && (
-            <ButtonLink href="/admin/payments">
-              مدیریت برنامه پرداخت
-            </ButtonLink>
+            <ButtonLink href="/admin/payments">مدیریت برنامه پرداخت</ButtonLink>
           )}
-          {prepaid && <ButtonLink href="/admin/payments">تنظیم مبلغ و سررسیدهای باقی‌مانده</ButtonLink>}
-          {installmentsInProgress && <ButtonLink href="/admin/payments">مشاهده پرداخت‌ها و اقساط باقی‌مانده</ButtonLink>}
+          {prepaid && (
+            <ButtonLink href="/admin/payments">تنظیم مبلغ و سررسیدهای باقی‌مانده</ButtonLink>
+          )}
+          {installmentsInProgress && (
+            <ButtonLink href="/admin/payments">مشاهده پرداخت‌ها و اقساط باقی‌مانده</ButtonLink>
+          )}
           {paymentCompleted && <ButtonLink href="/admin/payments">مشاهده سوابق پرداخت</ButtonLink>}
         </div>
       </Card>

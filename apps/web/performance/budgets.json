@@ -1,0 +1,35 @@
+{
+  "profiles": {
+    "mobile": {
+      "viewport": "390x844",
+      "largestContentfulPaintMs": 2500,
+      "cumulativeLayoutShift": 0.1,
+      "interactionToNextPaintMs": 200,
+      "imageTransferBytes": 900000,
+      "requestCount": 55,
+      "javascriptTransferBytes": 350000
+    },
+    "laptop": {
+      "viewport": "1440x900",
+      "largestContentfulPaintMs": 2000,
+      "cumulativeLayoutShift": 0.1,
+      "interactionToNextPaintMs": 200,
+      "imageTransferBytes": 1200000,
+      "requestCount": 50,
+      "javascriptTransferBytes": 400000
+    }
+  },
+  "routes": [
+    "/",
+    "/about",
+    "/contact",
+    "/faq",
+    "/pricing",
+    "/registration-guide",
+    "/safety",
+    "/schools",
+    "/services",
+    "/login"
+  ],
+  "sourceImageMaxBytes": 2600000
+}

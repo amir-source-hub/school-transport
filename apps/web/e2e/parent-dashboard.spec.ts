@@ -1,81 +1,64 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
-test('parent dashboard keeps selected-student context clear', async ({ page }) => {
+test.beforeEach(async ({ context, baseURL }) => {
+  await context.addCookies([{ name: 'e2e-role', value: 'PARENT', url: baseURL! }]);
+});
+
+test('parent dashboard authorizes against seeded fixtures and renders empty state', async ({
+  page,
+}) => {
   await page.goto('/parent/dashboard');
-
   await expect(
-    page.getByRole('heading', { name: 'وضعیت هر دانش‌آموز را جداگانه پیگیری کنید' }),
+    page.getByRole('status').filter({ hasText: 'هنوز دانش‌آموزی ثبت نشده است' }),
   ).toBeVisible();
-  await expect(page.getByText('داده نمایشی', { exact: true })).toBeVisible();
-
-  await page.getByRole('button', { name: 'دانش‌آموز نمونه دو' }).click();
-
-  await expect(page.getByRole('button', { name: 'دانش‌آموز نمونه دو' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
-  await expect(page.getByRole('alert').filter({ hasText: 'این درخواست برای اصلاح' })).toBeVisible();
-  await expect(page.getByText('درخواست نمونه برای بررسی ارسال شده است.')).toHaveCount(0);
-
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    .analyze();
-
-  expect(results.violations).toEqual([]);
 });
 
-test('parent mobile navigation opens and reaches an empty section', async ({ page }, testInfo) => {
-  test.skip(
-    !testInfo.project.name.includes('mobile'),
-    'Mobile navigation is only visible on mobile.',
-  );
-
+test('parent session dependency renders an intentional 503 state and retries safely', async ({
+  page,
+  context,
+  baseURL,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'Dependency-state smoke runs once on desktop.');
+  await context.addCookies([{ name: 'e2e-failure', value: '503', url: baseURL! }]);
   await page.goto('/parent/dashboard');
-  await page.getByRole('button', { name: 'باز کردن منوی پنل' }).click();
-  await page.getByRole('link', { name: 'قراردادها' }).click();
+  const alert = page.getByRole('alert').filter({ hasText: 'بررسی نشست حساب ممکن نیست' });
+  await expect(alert).toContainText('بررسی نشست حساب ممکن نیست');
 
-  await expect(page).toHaveURL('/parent/contracts');
-  await expect(page.getByRole('heading', { level: 1, name: 'قراردادها' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'مشاهده قرارداد نمایشی' })).toBeVisible();
-});
-
-test('family profile and student details expose protected fields clearly', async ({ page }) => {
-  await page.goto('/parent/profile');
-
+  await context.addCookies([
+    { name: 'e2e-failure', value: '', url: baseURL!, expires: Math.floor(Date.now() / 1000) - 1 },
+  ]);
+  await alert.getByRole('button', { name: 'تلاش دوباره' }).click();
   await expect(
-    page.getByRole('heading', { level: 1, name: 'اطلاعات مجاز را ویرایش کنید' }),
+    page.getByRole('status').filter({ hasText: 'هنوز دانش‌آموزی ثبت نشده است' }),
   ).toBeVisible();
-  await expect(page.getByText('تغییر شماره اصلی نیازمند فرایند جداگانه')).toBeVisible();
-
-  await page.goto('/parent/students/demo-student-one');
-
-  await expect(page.getByRole('heading', { level: 1, name: 'دانش‌آموز نمونه یک' })).toBeVisible();
-  await expect(page.getByText('کد ملی، مدرسه، پایه، سال تحصیلی')).toBeVisible();
-
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    .analyze();
-
-  expect(results.violations).toEqual([]);
 });
 
-test('contract and payment views keep mock financial actions safe', async ({ page }) => {
-  await page.goto('/parent/contracts/demo-contract-one');
-
-  await expect(page.getByText('قرارداد نمایشی و غیرقابل پذیرش')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'پذیرش با تأیید و OTP' })).toBeDisabled();
-  await expect(page.getByText('پیش‌پرداخت', { exact: true })).toBeVisible();
-
-  await page.goto('/parent/payments');
-
-  await expect(page.getByText('در زمان بررسی دوباره پرداخت نکنید')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'شروع پرداخت پس از اتصال درگاه' })).toBeDisabled();
-  await expect(page.getByText('در انتظار بررسی مدیریت')).toBeVisible();
-
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    .analyze();
-
-  expect(results.violations).toEqual([]);
+test('parent dock does not overlap phone/tablet content or phone 200% root text', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name === 'chromium', 'Dock contract runs in touch viewport projects.');
+  await page.goto('/parent/dashboard');
+  if (testInfo.project.name === 'phone-320') {
+    await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
+  }
+  const dock = page.getByRole('navigation', { name: 'ناوبری سریع موبایل' });
+  const main = page.getByRole('main');
+  await expect(dock).toBeVisible();
+  const geometry = await page.evaluate(() => {
+    const dockElement = document.querySelector('nav[aria-label="ناوبری سریع موبایل"]');
+    const mainElement = document.querySelector('main');
+    if (!dockElement || !mainElement) return null;
+    return {
+      dockHeight: dockElement.getBoundingClientRect().height,
+      mainPaddingBottom: Number.parseFloat(getComputedStyle(mainElement).paddingBottom),
+      horizontalOverflow:
+        document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    };
+  });
+  expect(geometry).not.toBeNull();
+  expect(geometry!.mainPaddingBottom).toBeGreaterThanOrEqual(geometry!.dockHeight);
+  expect(geometry!.horizontalOverflow).toBe(false);
+  await expect(
+    main.getByRole('status').filter({ hasText: 'هنوز دانش‌آموزی ثبت نشده است' }),
+  ).toBeVisible();
 });

@@ -1,8 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiClientError, apiRequest } from '@/lib/api-client';
+import {
+  ApiClientError,
+  apiRequest,
+  resetApiClientTransitionStateForTests,
+} from '@/lib/api-client';
+import { clearAuthSession, setAuthSession } from '@/features/auth/auth-session';
 
 afterEach(() => {
   vi.restoreAllMocks();
+  clearAuthSession();
+  resetApiClientTransitionStateForTests();
 });
 
 describe('API client', () => {
@@ -97,5 +104,36 @@ describe('API client', () => {
       'fetch failed',
     );
     expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it('coalesces concurrent 401 refreshes and retries every request once', async () => {
+    setAuthSession('expired-access', 'PARENT');
+    let protectedCalls = 0;
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith('/auth/refresh')) {
+        return new Response(
+          JSON.stringify({ success: true, data: { accessToken: 'fresh-access' } }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      protectedCalls += 1;
+      if (protectedCalls <= 2) {
+        return new Response(
+          JSON.stringify({ success: false, error: { code: 'SESSION_EXPIRED' } }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(JSON.stringify({ success: true, data: { ok: true } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    await expect(Promise.all([apiRequest('/one'), apiRequest('/two')])).resolves.toHaveLength(2);
+
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/auth/refresh'))).toHaveLength(
+      1,
+    );
   });
 });

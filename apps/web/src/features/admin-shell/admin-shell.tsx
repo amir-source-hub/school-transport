@@ -3,7 +3,6 @@
 import {
   Bell,
   Building2,
-  ChevronDown,
   ClipboardCheck,
   FileText,
   FileSpreadsheet,
@@ -13,7 +12,6 @@ import {
   Search,
   Settings,
   Shield,
-  UserRound,
   UsersRound,
   WalletCards,
 } from 'lucide-react';
@@ -23,11 +21,6 @@ import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { BrandMark } from '@/components/brand/brand-mark';
 import { AutoSubmitForm } from '@/components/forms/auto-submit-form';
@@ -48,52 +41,63 @@ const navigation = [
   { href: '/admin/settings', label: 'تنظیمات', icon: Settings },
 ] as const;
 
+export function isAdminRouteActive(pathname: string, href: string) {
+  const normalizedPath = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  const normalizedHref = href.length > 1 ? href.replace(/\/+$/, '') : href;
+  return normalizedPath === normalizedHref || normalizedPath.startsWith(`${normalizedHref}/`);
+}
+
 function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="ناوبری پنل مدیریت" className="space-y-1">
-      {navigation.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href || pathname.startsWith(`${href}/`);
-        const link = (
-          <Link
-            href={href}
-            aria-current={active ? 'page' : undefined}
-            className={cn(
-              'flex min-h-10 items-center gap-3 rounded-[var(--radius-control)] px-3 text-sm font-bold transition-all duration-[var(--duration-fast)]',
-              mobile
-                ? active
-                  ? 'bg-primary-soft text-primary'
-                  : 'text-muted hover:bg-surface-muted hover:text-foreground'
-                : active
-                  ? 'bg-sun text-navy shadow-lg shadow-sun/10'
-                  : 'text-white/60 hover:bg-white/8 hover:text-white',
-            )}
-          >
-            <Icon
-              aria-hidden="true"
-              className={cn('size-4', active && (mobile ? 'text-primary' : 'text-navy'))}
-            />
-            {label}
-            {active && (
-              <span
-                className={cn(
-                  'mr-auto h-1.5 w-1.5 rounded-full',
-                  mobile ? 'bg-primary' : 'bg-navy',
-                )}
+    <div className="flex min-h-full flex-col">
+      <nav aria-label="ناوبری پنل مدیریت" className="space-y-1">
+        {navigation.map(({ href, label, icon: Icon }) => {
+          const active = isAdminRouteActive(pathname, href);
+          const link = (
+            <Link
+              href={href}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-sm font-bold leading-6 transition-all duration-[var(--duration-fast)]',
+                mobile
+                  ? active
+                    ? 'bg-primary-soft text-primary'
+                    : 'text-muted hover:bg-surface-muted hover:text-foreground'
+                  : active
+                    ? 'bg-sun text-navy shadow-lg shadow-sun/10'
+                    : 'text-white/60 hover:bg-white/8 hover:text-white',
+              )}
+            >
+              <Icon
                 aria-hidden="true"
+                className={cn('size-4', active && (mobile ? 'text-primary' : 'text-navy'))}
               />
-            )}
-          </Link>
-        );
-        return mobile ? (
-          <DrawerClose asChild key={href}>
-            {link}
-          </DrawerClose>
-        ) : (
-          <div key={href}>{link}</div>
-        );
-      })}
-    </nav>
+              {label}
+              {active && (
+                <span
+                  className={cn(
+                    'mr-auto h-1.5 w-1.5 rounded-full',
+                    mobile ? 'bg-primary' : 'bg-navy',
+                  )}
+                  aria-hidden="true"
+                />
+              )}
+            </Link>
+          );
+          return mobile ? (
+            <DrawerClose asChild key={href}>
+              {link}
+            </DrawerClose>
+          ) : (
+            <div key={href}>{link}</div>
+          );
+        })}
+      </nav>
+      <div className={cn('mt-6 border-t pt-4', mobile ? 'border-border' : 'border-white/10')}>
+        <LogoutMenuItem mobile={mobile} />
+      </div>
+    </div>
   );
 }
 
@@ -142,7 +146,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   type="search"
                   name="q"
                   placeholder="جست‌وجوی ثبت‌نام‌ها..."
-                  className="pe-10 h-9 text-sm rounded-[var(--radius-pill)] bg-surface-muted border-0"
+                  className="pe-10 min-h-11 text-sm rounded-[var(--radius-pill)] bg-surface-muted border-0"
                 />
               </span>
             </label>
@@ -150,7 +154,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
           <Link
             href="/admin/notifications"
-            className="relative grid size-9 place-items-center rounded-[var(--radius-control)] text-muted hover:bg-surface-muted hover:text-foreground transition-colors"
+            className="relative grid size-11 shrink-0 place-items-center rounded-[var(--radius-control)] text-muted hover:bg-surface-muted hover:text-foreground transition-colors"
             aria-label="اعلان‌های مدیریت"
           >
             <Bell aria-hidden="true" className="size-4" />
@@ -159,19 +163,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-danger" />
             </span>
           </Link>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="px-2 h-9 text-sm" aria-label="منوی حساب مدیر">
-                <UserRound aria-hidden="true" className="size-4" />
-                <span className="hidden sm:inline">مدیر نمونه</span>
-                <ChevronDown aria-hidden="true" className="size-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <LogoutMenuItem />
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </header>
 

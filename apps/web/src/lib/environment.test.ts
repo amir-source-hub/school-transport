@@ -6,6 +6,7 @@ describe('validateWebEnvironment', () => {
   it('uses the documented local API URL during development', () => {
     expect(validateWebEnvironment({ production: false })).toEqual({
       apiBaseUrl: 'http://localhost:5000/api/v1',
+      deploymentId: undefined,
       production: false,
     });
   });
@@ -20,6 +21,8 @@ describe('validateWebEnvironment', () => {
     expect(() =>
       validateWebEnvironment({
         apiBaseUrl: 'http://api.example.test/api/v1',
+        deploymentId: 'release-123',
+        serverActionsEncryptionKey: 'MDEyMzQ1Njc4OWFiY2RlZg==',
         production: true,
       }),
     ).toThrow('NEXT_PUBLIC_API_BASE_URL must use HTTPS in production.');
@@ -29,10 +32,13 @@ describe('validateWebEnvironment', () => {
     expect(
       validateWebEnvironment({
         apiBaseUrl: 'http://localhost:5000/api/v1',
+        deploymentId: 'release-local',
+        serverActionsEncryptionKey: 'MDEyMzQ1Njc4OWFiY2RlZg==',
         production: true,
       }),
     ).toEqual({
       apiBaseUrl: 'http://localhost:5000/api/v1',
+      deploymentId: 'release-local',
       production: true,
     });
   });
@@ -41,11 +47,32 @@ describe('validateWebEnvironment', () => {
     expect(
       validateWebEnvironment({
         apiBaseUrl: 'https://api.example.test/api/v1/',
+        deploymentId: 'release-123',
+        serverActionsEncryptionKey: 'MDEyMzQ1Njc4OWFiY2RlZg==',
         production: true,
       }),
     ).toEqual({
       apiBaseUrl: 'https://api.example.test/api/v1',
+      deploymentId: 'release-123',
       production: true,
     });
+  });
+
+  it('requires an immutable deployment ID and valid shared Server Action key in production', () => {
+    expect(() =>
+      validateWebEnvironment({
+        apiBaseUrl: 'https://api.example.test/api/v1',
+        production: true,
+      }),
+    ).toThrow('NEXT_DEPLOYMENT_ID is required');
+
+    expect(() =>
+      validateWebEnvironment({
+        apiBaseUrl: 'https://api.example.test/api/v1',
+        deploymentId: 'release-123',
+        serverActionsEncryptionKey: 'not-base64',
+        production: true,
+      }),
+    ).toThrow('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY');
   });
 });

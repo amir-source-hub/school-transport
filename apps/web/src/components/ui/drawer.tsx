@@ -28,7 +28,7 @@ export function DrawerContent({
       <DialogPrimitive.Content
         dir="rtl"
         className={cn(
-          'fixed inset-y-0 z-50 flex w-[min(22rem,90vw)] flex-col overflow-y-auto border-border bg-surface p-5 shadow-[var(--shadow-md)]',
+          'fixed inset-y-0 z-50 flex max-h-[100dvh] w-[min(22rem,calc(100vw-1rem))] flex-col overflow-hidden border-border bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-md)]',
           side === 'right' ? 'right-0 border-l' : 'left-0 border-r',
           className,
         )}
@@ -41,7 +41,7 @@ export function DrawerContent({
             </DialogPrimitive.Description>
           )}
         </div>
-        <div className="mt-6 flex-1">{children}</div>
+        <div className="mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain pe-1">{children}</div>
         <DialogPrimitive.Close
           aria-label="بستن"
           className="absolute end-3 top-3 grid size-11 place-items-center rounded-lg text-muted hover:bg-surface-muted hover:text-foreground"

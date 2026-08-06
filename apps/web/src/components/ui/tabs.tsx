@@ -24,7 +24,7 @@ export function Tabs({
           <TabsPrimitive.Trigger
             key={item.value}
             value={item.value}
-            className="min-h-10 shrink-0 rounded-lg px-4 text-sm font-bold text-muted transition-colors hover:text-foreground data-[state=active]:bg-surface data-[state=active]:text-primary data-[state=active]:shadow-[var(--shadow-sm)]"
+            className="min-h-11 shrink-0 rounded-lg px-4 py-2 text-sm font-bold leading-6 text-muted transition-colors hover:text-foreground data-[state=active]:bg-surface data-[state=active]:text-primary data-[state=active]:shadow-[var(--shadow-sm)]"
           >
             {item.label}
           </TabsPrimitive.Trigger>

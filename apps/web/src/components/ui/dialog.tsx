@@ -40,7 +40,7 @@ export function DialogContent({
         <div className="mt-6">{children}</div>
         <DialogPrimitive.Close
           aria-label="بستن"
-          className="absolute end-4 top-4 grid size-10 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+          className="absolute end-4 top-4 grid size-11 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
         >
           <X aria-hidden="true" className="size-5" />
         </DialogPrimitive.Close>

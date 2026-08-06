@@ -6,7 +6,11 @@ import { Card } from '@/components/ui/card';
 import { getAdminFamily } from '@/features/admin-families/admin-families-api';
 import { formatJalaliDate } from '@/lib/formatters';
 import { DeleteParentButton, ParentEditor } from '@/features/admin-families/parent-actions';
+import { AdminFamilyEnrollmentForm } from '@/features/admin-families/admin-family-enrollment-form';
+import { getSchools } from '@/features/schools/schools-api';
+import { metadataFor } from '@/lib/route-metadata';
 
+export const metadata = metadataFor('/admin/families/[familyId]');
 export const dynamic = 'force-dynamic';
 
 export default async function FamilyDetailPage({
@@ -15,7 +19,7 @@ export default async function FamilyDetailPage({
   params: Promise<{ familyId: string }>;
 }) {
   const { familyId } = await params;
-  const { family } = await getAdminFamily(familyId);
+  const [{ family }, { schools }] = await Promise.all([getAdminFamily(familyId), getSchools()]);
   if (!family) notFound();
 
   return (
@@ -45,10 +49,20 @@ export default async function FamilyDetailPage({
           ].map(([label, value]) => (
             <div key={label} className="grid gap-1 py-3 sm:grid-cols-[10rem_1fr]">
               <dt className="text-muted">{label}</dt>
-              <dd className="font-bold" dir={label === 'شماره تماس' ? 'ltr' : undefined}>{value}</dd>
+              <dd className="font-bold" dir={label === 'شماره تماس' ? 'ltr' : undefined}>
+                {value}
+              </dd>
             </div>
           ))}
         </dl>
+      </Card>
+      <Card>
+        <h2 className="text-lg font-black">افزودن دانش‌آموز و ایجاد ثبت‌نام کامل</h2>
+        <p className="mb-5 mt-2 text-sm text-muted">
+          تمام اطلاعات موردنیاز ثبت‌نام والد را وارد کنید. قرارداد و پیش‌پرداخت برای اقدام والد باقی
+          می‌ماند.
+        </p>
+        <AdminFamilyEnrollmentForm family={family} schools={schools} />
       </Card>
       <Card>
         <div className="flex items-center justify-between gap-3">
@@ -60,13 +74,21 @@ export default async function FamilyDetailPage({
             <section key={parent.id} className="rounded-xl border border-border p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-black">{parent.firstName} {parent.lastName}</p>
-                  <p className="mt-1 text-sm text-muted">{parent.parentType === 'FATHER' ? 'پدر' : 'مادر'}</p>
+                  <p className="font-black">
+                    {parent.firstName} {parent.lastName}
+                  </p>
+                  <p className="mt-1 text-sm text-muted">
+                    {parent.parentType === 'FATHER' ? 'پدر' : 'مادر'}
+                  </p>
                 </div>
                 {parent.isPrimaryContact && <Badge tone="success">تماس اصلی</Badge>}
               </div>
-              <p className="mt-3 text-sm" dir="ltr">{parent.phoneNumber}</p>
-              <p className="mt-1 text-sm" dir="ltr">{parent.nationalId}</p>
+              <p className="mt-3 text-sm" dir="ltr">
+                {parent.phoneNumber}
+              </p>
+              <p className="mt-1 text-sm" dir="ltr">
+                {parent.nationalId}
+              </p>
               <div className="mt-4 flex gap-2 border-t border-border pt-4">
                 <ParentEditor familyId={family.id} parent={parent} />
                 <DeleteParentButton familyId={family.id} parentId={parent.id} />
@@ -80,10 +102,17 @@ export default async function FamilyDetailPage({
           <h2 className="text-lg font-black">دانش‌آموزان خانواده</h2>
           <div className="mt-4 divide-y divide-border">
             {family.students.map((student) => (
-              <div key={student.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+              <div
+                key={student.id}
+                className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+              >
                 <div>
-                  <p className="font-bold">{student.firstName} {student.lastName}</p>
-                  <p className="text-sm text-muted">{student.schoolName ?? '—'}، {student.grade ?? '—'}</p>
+                  <p className="font-bold">
+                    {student.firstName} {student.lastName}
+                  </p>
+                  <p className="text-sm text-muted">
+                    {student.schoolName ?? '—'}، {student.grade ?? '—'}
+                  </p>
                 </div>
                 <Badge tone="success">{student.status}</Badge>
               </div>

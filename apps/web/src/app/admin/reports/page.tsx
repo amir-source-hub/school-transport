@@ -2,6 +2,7 @@ import { FileSpreadsheet } from 'lucide-react';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Card } from '@/components/ui/card';
 import { ExportReportButton } from '@/features/admin-reports/export-report-button';
+import { ReportPreviewPanel } from '@/features/admin-reports/report-preview';
 
 export const metadata = { title: 'گزارش‌ها' };
 
@@ -44,6 +45,10 @@ export default function AdminReportsPage() {
           <ExportReportButton />
         </div>
       </Card>
+      <div>
+        <h2 className="mb-3 text-xl font-black">پیش‌نمایش داده‌های گزارش</h2>
+        <ReportPreviewPanel />
+      </div>
     </div>
   );
 }

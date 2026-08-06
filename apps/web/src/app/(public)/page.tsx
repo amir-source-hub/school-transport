@@ -5,6 +5,9 @@ import { FinalRegistrationCta } from '@/features/public-home/final-registration-
 import { JourneyStory } from '@/features/public-home/journey-story';
 import { PublicHero } from '@/features/public-home/public-hero';
 import { SafetyStory } from '@/features/public-home/safety-story';
+import { metadataFor } from '@/lib/route-metadata';
+
+export const metadata = metadataFor('/');
 
 export default function HomePage() {
   return (

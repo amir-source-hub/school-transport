@@ -52,7 +52,7 @@ export function BannerCarousel() {
                     alt=""
                     fill
                     className="object-cover"
-                    priority={current === 0}
+                    loading="lazy"
                     sizes="100vw"
                   />
                 </motion.div>

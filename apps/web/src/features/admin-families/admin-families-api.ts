@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiRequest } from '@/lib/api-client';
+import type { GuidedEnrollmentInput } from '@/features/enrollment/enrollments-api';
 
 export const familySchema = z.object({
   id: z.string(),
@@ -25,6 +26,15 @@ export const familyDetailSchema = z.object({
     nationalId: z.string(),
     phoneNumber: z.string(),
     isPrimaryContact: z.boolean(),
+  })),
+  addresses: z.array(z.object({
+    id: z.string(), title: z.string(), province: z.string(), city: z.string(),
+    district: z.string().nullable(), streetAddress: z.string(), postalCode: z.string().nullable(),
+    latitude: z.number().nullable(), longitude: z.number().nullable(), isActive: z.boolean(),
+  })),
+  emergencyContacts: z.array(z.object({
+    id: z.string(), firstName: z.string(), lastName: z.string(), relationship: z.string(),
+    phoneNumber: z.string(), isActive: z.boolean(),
   })),
   students: z.array(z.object({
     id: z.string(),
@@ -78,4 +88,16 @@ export async function getAdminFamily(id: string): Promise<{ family: FamilyDetail
     timeoutMs: 8_000,
   });
   return { family: familyDetailSchema.parse(response.data) };
+}
+
+export async function createAdminFamilyEnrollment(
+  familyId: string,
+  input: GuidedEnrollmentInput,
+) {
+  return apiRequest<{
+    registrationId: string;
+    studentId: string;
+    status: 'CONTRACT_READY';
+    parentActionRequired: true;
+  }>(`/admin/enrollments/families/${familyId}/guided`, { method: 'POST', body: input });
 }

@@ -1,6 +1,13 @@
 'use client';
 
-import { ArrowLeft, CheckCircle2, ClipboardCheck, FileText, GraduationCap, UserRound } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ClipboardCheck,
+  FileText,
+  GraduationCap,
+  UserRound,
+} from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 import { motion } from 'motion/react';
@@ -56,14 +63,28 @@ export default function RegistrationGuidePage() {
     <>
       <section className="relative overflow-hidden surface-dark pb-20 pt-32 sm:pt-36">
         <div className="absolute inset-0" aria-hidden="true">
-          <Image src="/images/about-illustration-school-transport-ecosystem.png" alt="" fill className="object-cover object-center" sizes="100vw" />
+          <Image
+            src="/images/about-illustration-school-transport-ecosystem.png"
+            alt=""
+            fill
+            className="object-cover object-center"
+            priority
+            fetchPriority="high"
+            sizes="100vw"
+          />
           <div className="absolute inset-0 bg-gradient-to-l from-navy/60 via-navy/50 to-navy/80" />
         </div>
         <PageContainer className="relative z-10">
           <div className="mx-auto max-w-3xl text-center">
-            <Badge tone="info" className="mb-4 border-sun/30 bg-sun/15 text-sun backdrop-blur-sm">راهنمای ثبت‌نام</Badge>
-            <h1 className="text-balance text-3xl font-black text-white sm:text-4xl">مراحل ثبت‌نام را قدم به قدم بشناسید</h1>
-            <p className="mt-4 text-lg text-white/60">از ایجاد حساب تا شروع خدمت، همه مراحل را با راهنمایی دقیق دنبال کنید.</p>
+            <Badge tone="info" className="mb-4 border-sun/30 bg-sun/15 text-sun backdrop-blur-sm">
+              راهنمای ثبت‌نام
+            </Badge>
+            <h1 className="text-balance text-3xl font-black text-white sm:text-4xl">
+              مراحل ثبت‌نام را قدم به قدم بشناسید
+            </h1>
+            <p className="mt-4 text-lg text-white/60">
+              از ایجاد حساب تا شروع خدمت، همه مراحل را با راهنمایی دقیق دنبال کنید.
+            </p>
           </div>
         </PageContainer>
       </section>
@@ -90,13 +111,17 @@ export default function RegistrationGuidePage() {
                   onClick={() => setActiveStep(i)}
                   className={cn(
                     'flex items-center gap-2 rounded-[var(--radius-pill)] px-4 py-2 text-sm font-bold transition-all',
-                    activeStep === i ? 'bg-navy text-white shadow-md' : 'bg-surface-paper text-muted hover:text-foreground border border-border/60',
+                    activeStep === i
+                      ? 'bg-navy text-white shadow-md'
+                      : 'bg-surface-paper text-muted hover:text-foreground border border-border/60',
                   )}
                 >
-                  <span className={cn(
-                    'flex size-6 items-center justify-center rounded-full text-[10px]',
-                    activeStep === i ? 'bg-white/20' : 'bg-primary-soft text-primary',
-                  )}>
+                  <span
+                    className={cn(
+                      'flex size-6 items-center justify-center rounded-full text-[10px]',
+                      activeStep === i ? 'bg-white/20' : 'bg-primary-soft text-primary',
+                    )}
+                  >
                     {i + 1}
                   </span>
                   {step.title}
@@ -114,16 +139,21 @@ export default function RegistrationGuidePage() {
               <div className={`order-2 ${activeStep % 2 === 0 ? 'lg:order-1' : 'lg:order-2'}`}>
                 <div className="flex items-center gap-3 mb-4">
                   <span className="flex size-12 items-center justify-center rounded-2xl bg-primary text-white shadow-md shadow-primary/20">
-                    {(() => { const StepIcon = steps[activeStep].icon; return <StepIcon aria-hidden="true" className="size-5" />; })()}
+                    {(() => {
+                      const StepIcon = steps[activeStep].icon;
+                      return <StepIcon aria-hidden="true" className="size-5" />;
+                    })()}
                   </span>
                   <div>
-                    <p className="text-xs text-muted">مرحله {activeStep + 1} از {totalSteps}</p>
+                    <p className="text-xs text-muted">
+                      مرحله {activeStep + 1} از {totalSteps}
+                    </p>
                     <h2 className="text-xl font-black">{steps[activeStep].title}</h2>
                   </div>
                 </div>
                 <p className="text-muted leading-relaxed">{steps[activeStep].description}</p>
                 <ul className="mt-5 space-y-2">
-                  {steps[activeStep].details.map(d => (
+                  {steps[activeStep].details.map((d) => (
                     <li key={d} className="flex items-center gap-2 text-sm">
                       <CheckCircle2 aria-hidden="true" className="size-4 text-primary shrink-0" />
                       {d}
@@ -154,12 +184,22 @@ export default function RegistrationGuidePage() {
                   )}
                 </div>
               </div>
-              <div className={`order-1 mb-6 lg:mb-0 ${activeStep % 2 === 0 ? 'lg:order-2' : 'lg:order-1'}`}>
+              <div
+                className={`order-1 mb-6 lg:mb-0 ${activeStep % 2 === 0 ? 'lg:order-2' : 'lg:order-1'}`}
+              >
                 <div className="relative overflow-hidden rounded-[var(--radius-canvas)] aspect-[4/3]">
-                  <Image src={steps[activeStep].image} alt="" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
+                  <Image
+                    src={steps[activeStep].image}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-navy/20 to-transparent" />
                   <div className="absolute bottom-4 right-4">
-                    <Badge tone="info" className="bg-white/90 text-navy backdrop-blur-sm border-0">مرحله {activeStep + 1}</Badge>
+                    <Badge tone="info" className="bg-white/90 text-navy backdrop-blur-sm border-0">
+                      مرحله {activeStep + 1}
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -174,11 +214,17 @@ export default function RegistrationGuidePage() {
             <h2 className="text-2xl font-black">آماده شروع هستید؟</h2>
             <p className="mt-2 text-muted">فرایند ثبت‌نام را آغاز کنید.</p>
             <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <ButtonLink href="/login" size="lg" className="bg-navy text-white hover:bg-navy/90 shadow-md">
+              <ButtonLink
+                href="/login"
+                size="lg"
+                className="bg-navy text-white hover:bg-navy/90 shadow-md"
+              >
                 شروع ثبت‌نام
                 <ArrowLeft aria-hidden="true" className="size-4" />
               </ButtonLink>
-              <ButtonLink href="/faq" variant="secondary" size="lg">سوالات متداول</ButtonLink>
+              <ButtonLink href="/faq" variant="secondary" size="lg">
+                سوالات متداول
+              </ButtonLink>
             </div>
           </div>
         </PageContainer>

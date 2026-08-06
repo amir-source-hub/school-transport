@@ -48,7 +48,7 @@ export function DropdownMenuItem({
       disabled={disabled}
       onSelect={onSelect}
       className={cn(
-        'flex min-h-10 cursor-pointer select-none items-center rounded-md px-3 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-45 data-[highlighted]:bg-primary-soft data-[highlighted]:text-primary-hover',
+        'flex min-h-11 cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm leading-6 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-45 data-[highlighted]:bg-primary-soft data-[highlighted]:text-primary-hover',
         danger && 'text-danger data-[highlighted]:bg-danger-soft data-[highlighted]:text-danger',
       )}
     >

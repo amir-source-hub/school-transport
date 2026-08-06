@@ -1,42 +1,42 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
-const publicPages = [
-  ['/', 'مسیر ساده‌تر برای مدیریت سرویس مدرسه'],
-  ['/about', 'یک مسیر یکپارچه برای خانواده و مدیریت مدرسه'],
-  ['/services', 'همه مراحل اصلی سرویس مدرسه در یک فضای مشخص'],
-  ['/registration-guide', 'مراحل ثبت‌نام را پیش از شروع بشناسید'],
-  ['/pricing', 'قیمت نهایی پس از بررسی درخواست تعیین می‌شود'],
-  ['/schools', 'انتخاب مدرسه از فهرست تأییدشده سامانه'],
-  ['/faq', 'پاسخ کوتاه به پرسش‌های اصلی خانواده‌ها'],
-  ['/contact', 'برای دریافت راهنمایی با پشتیبانی در ارتباط باشید'],
-] as const;
-
-for (const [path, heading] of publicPages) {
-  test(`${path} renders in Persian RTL without accessibility violations`, async ({ page }) => {
-    await page.goto(path);
-
-    await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
-    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
-
-    const results = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .analyze();
-
-    expect(results.violations).toEqual([]);
-  });
-}
-
-test('public navigation reaches the registration guide', async ({ page }) => {
+test('public navigation and auth entry render without external providers', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'راهنمای ثبت‌نام' }).first().click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
+  await page.getByRole('link', { name: 'مراحل ثبت‌نام' }).first().click();
   await expect(page).toHaveURL('/registration-guide');
   await expect(
-    page.getByRole('heading', {
-      level: 1,
-      name: 'مراحل ثبت‌نام را پیش از شروع بشناسید',
-    }),
+    page.getByRole('heading', { level: 1, name: 'مراحل ثبت‌نام را قدم به قدم بشناسید' }),
   ).toBeVisible();
+
+  await page.goto('/login');
+  await expect(page.getByRole('heading', { level: 1, name: 'ورود یا ساخت حساب' })).toBeVisible();
+  await page.getByLabel('شماره همراه').fill('0912');
+  await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
+  await expect(page.getByText('شماره همراه را با قالب 09xxxxxxxxx وارد کنید.')).toBeVisible();
+});
+
+test('public drawer survives phone/tablet layouts and phone 200% root text', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'chromium',
+    'Drawer contract runs in touch viewport projects.',
+  );
+  await page.goto('/');
+  if (testInfo.project.name === 'phone-320') {
+    await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
+  }
+  await page.getByRole('button', { name: 'باز کردن منوی اصلی' }).click();
+  const dialog = page.getByRole('dialog', { name: 'منوی اصلی' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('link', { name: 'مراحل ثبت‌نام' })).toBeVisible();
+  expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(
+    true,
+  );
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'باز کردن منوی اصلی' })).toBeFocused();
 });

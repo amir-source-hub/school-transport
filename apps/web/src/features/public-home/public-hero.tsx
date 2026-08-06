@@ -55,6 +55,7 @@ export function PublicHero() {
         fill
         className="object-cover object-[62%_30%]"
         priority
+        fetchPriority="high"
         sizes="100vw"
       />
       <div

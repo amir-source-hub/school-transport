@@ -15,7 +15,9 @@ export default async function SchoolsPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs items={[{ label: 'پنل مدیریت', href: '/admin/dashboard' }, { label: 'مدارس' }]} />
+      <Breadcrumbs
+        items={[{ label: 'پنل مدیریت', href: '/admin/dashboard' }, { label: 'مدارس' }]}
+      />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-bold text-primary">مدیریت مدارس</p>
@@ -32,10 +34,18 @@ export default async function SchoolsPage() {
                 <Badge tone="success">{school.status}</Badge>
               </div>
             </div>
-            <p className="mt-2 text-sm text-muted">{school.city}، {school.district ?? school.province}</p>
-            <p className="text-sm text-muted">{school.schoolType} — {school.genderType}</p>
+            <p className="mt-2 text-sm text-muted">
+              {school.city}، {school.district ?? school.province}
+            </p>
+            <p className="text-sm text-muted">
+              {school.schoolType} — {school.genderType}
+            </p>
             <p className="mt-3 text-sm">{school.address}</p>
-            {school.phoneNumber && <p className="mt-1 text-sm" dir="ltr">{school.phoneNumber}</p>}
+            {school.phoneNumber && (
+              <p className="mt-1 text-sm" dir="ltr">
+                {school.phoneNumber}
+              </p>
+            )}
             <div className="mt-4 flex gap-2 border-t border-border pt-4">
               <SchoolFormDialog mode="edit" school={school} />
               <ArchiveSchoolDialog schoolId={school.id} schoolName={school.name} />
@@ -53,8 +63,12 @@ export default async function SchoolsPage() {
                   <p className="font-black text-muted">{school.name}</p>
                   <Badge tone="neutral">{school.status}</Badge>
                 </div>
-                <p className="mt-2 text-sm text-muted">{school.city}، {school.district ?? school.province}</p>
-                <div className="mt-4"><ArchiveSchoolDialog archived schoolId={school.id} schoolName={school.name} /></div>
+                <p className="mt-2 text-sm text-muted">
+                  {school.city}، {school.district ?? school.province}
+                </p>
+                <div className="mt-4">
+                  <ArchiveSchoolDialog archived schoolId={school.id} schoolName={school.name} />
+                </div>
               </Card>
             ))}
           </div>

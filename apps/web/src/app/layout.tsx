@@ -1,12 +1,14 @@
 import type { Metadata, Viewport } from 'next';
 import { AppProviders } from '@/providers/app-providers';
+import { SITE_NAME, SITE_URL } from '@/lib/route-metadata';
 import '@fontsource-variable/vazirmatn/wght.css';
 import './globals.css';
 
 export const metadata: Metadata = {
+  metadataBase: SITE_URL,
   title: {
-    default: 'سامانه سرویس مدرسه',
-    template: '%s | سامانه سرویس مدرسه',
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
   description: 'ثبت‌نام و مدیریت خدمات سرویس مدرسه برای خانواده‌ها',
 };

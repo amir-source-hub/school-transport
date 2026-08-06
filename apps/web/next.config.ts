@@ -5,11 +5,14 @@ import { createSecurityHeaders } from './src/lib/security-headers';
 
 const environment = validateWebEnvironment({
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+  deploymentId: process.env.NEXT_DEPLOYMENT_ID,
+  serverActionsEncryptionKey: process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY,
   production: process.env.NODE_ENV === 'production',
 });
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  deploymentId: environment.deploymentId,
   async headers() {
     return [
       {

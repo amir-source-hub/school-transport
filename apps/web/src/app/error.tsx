@@ -16,7 +16,7 @@ export default function ErrorPage({
         className="mx-auto max-w-xl rounded-[var(--radius-lg)] border border-danger/20 bg-danger-soft p-8 text-center"
       >
         <h1 className="text-2xl font-black">مشکلی پیش آمد</h1>
-        <p className="mt-3 text-muted">نمایش این بخش با مشکل روبه‌رو شد. لطفاً دوباره تلاش کنید.</p>
+        <p className="mt-3 text-muted">نمایش سامانه با یک خطای غیرمنتظره روبه‌رو شد.</p>
         <Button className="mt-6" onClick={reset}>
           تلاش دوباره
         </Button>

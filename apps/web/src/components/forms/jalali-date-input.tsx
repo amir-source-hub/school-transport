@@ -1,8 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { isoToJalaliDate, jalaliToIsoDate } from '@/lib/jalali-date';
+
+export function formatJalaliDateInput(value: string) {
+  const digits = value
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/\D/g, '')
+    .slice(0, 8);
+
+  return [digits.slice(0, 4), digits.slice(4, 6), digits.slice(6, 8)]
+    .filter(Boolean)
+    .join('/');
+}
 
 export function JalaliDateInput({
   value,
@@ -18,12 +30,15 @@ export function JalaliDateInput({
   disabled?: boolean;
 }) {
   const [display, setDisplay] = useState(() => isoToJalaliDate(value));
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+  const errorId = `${inputId}-error`;
   const valid = !display || jalaliToIsoDate(display) !== null;
 
   return (
     <div>
       <Input
-        id={id}
+        id={inputId}
         dir="ltr"
         inputMode="numeric"
         required={required}
@@ -31,15 +46,18 @@ export function JalaliDateInput({
         placeholder="۱۴۰۵/۰۱/۰۱"
         value={display}
         aria-invalid={!valid}
+        aria-describedby={!valid ? errorId : undefined}
         onChange={(event) => {
-          const next = event.target.value;
+          const next = formatJalaliDateInput(event.target.value);
           setDisplay(next);
           const iso = jalaliToIsoDate(next);
           onChange(iso ?? '');
         }}
       />
       {!valid && (
-        <p className="mt-1 text-xs text-danger">تاریخ شمسی را به شکل ۱۴۰۵/۰۱/۰۱ وارد کنید.</p>
+        <p id={errorId} className="mt-1 text-xs text-danger">
+          تاریخ شمسی را به شکل ۱۴۰۵/۰۱/۰۱ وارد کنید.
+        </p>
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { ButtonLink } from '@/components/ui/button';
+import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { PageContainer } from '@/components/common/page-container';
 import { BrandMark } from '@/components/brand/brand-mark';
 import { cn } from '@/lib/cn';
@@ -21,6 +22,12 @@ const links = [
   ['تماس', '/contact'],
 ] as const;
 
+export function isPublicRouteActive(pathname: string, href: string) {
+  const normalizedPath = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  const normalizedHref = href.length > 1 ? href.replace(/\/+$/, '') : href;
+  return normalizedPath === normalizedHref || normalizedPath.startsWith(`${normalizedHref}/`);
+}
+
 function PublicNavLinks({
   onNavigate,
   mobile = false,
@@ -34,15 +41,17 @@ function PublicNavLinks({
   return (
     <>
       {links.map(([label, href]) => {
-        const isActive = pathname.startsWith(href);
+        const isActive = isPublicRouteActive(pathname, href);
         return (
           <Link
             key={href}
             href={href}
+            aria-current={isActive ? 'page' : undefined}
             onClick={onNavigate}
             style={!mobile ? { color: isActive ? '#ffffff' : 'rgba(255,255,255,.72)' } : undefined}
             className={cn(
-              'relative rounded-[var(--radius-pill)] px-3.5 py-1.5 text-sm font-medium transition-colors whitespace-nowrap',
+              'relative flex min-h-11 items-center rounded-[var(--radius-pill)] px-3.5 py-2 text-sm font-medium leading-6 transition-colors',
+              mobile ? 'whitespace-normal break-words' : 'whitespace-nowrap',
               mobile
                 ? isActive
                   ? 'bg-primary-soft text-primary'
@@ -107,37 +116,37 @@ export function PublicHeader() {
             </ButtonLink>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="flex min-h-10 items-center gap-2 rounded-[var(--radius-pill)] border border-white/20 px-3 text-sm font-bold text-white hover:bg-white/10 lg:hidden transition-colors"
-            style={{ color: '#ffffff' }}
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-menu"
-          >
-            {mobileOpen ? 'بستن' : 'منو'}
-          </button>
-        </div>
-
-        {mobileOpen && (
-          <div
-            id="mobile-menu"
-            className="absolute left-4 right-4 top-full z-50 mt-2 rounded-xl border border-border/60 bg-white p-3 shadow-[var(--shadow-floating)] lg:hidden"
-          >
-            <nav aria-label="ناوبری موبایل" className="flex flex-col gap-1">
-              <PublicNavLinks mobile onNavigate={() => setMobileOpen(false)} />
-            </nav>
-            <div className="mt-3 border-t border-border/60 pt-3">
-              <ButtonLink
-                href="/login"
-                size="sm"
-                className="w-full bg-navy text-white hover:bg-navy/90"
+          <Drawer open={mobileOpen} onOpenChange={setMobileOpen}>
+            <DrawerTrigger asChild>
+              <button
+                type="button"
+                className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-white/20 px-3 text-sm font-bold text-white hover:bg-white/10 lg:hidden transition-colors"
+                style={{ color: '#ffffff' }}
+                aria-label="باز کردن منوی اصلی"
               >
-                ثبت‌نام / ورود
-              </ButtonLink>
-            </div>
-          </div>
-        )}
+                منو
+              </button>
+            </DrawerTrigger>
+            <DrawerContent
+              title="منوی اصلی"
+              description="دسترسی به بخش‌های عمومی سامانه"
+              className="lg:hidden"
+            >
+              <nav aria-label="ناوبری موبایل" className="flex flex-col gap-1">
+                <PublicNavLinks mobile onNavigate={() => setMobileOpen(false)} />
+              </nav>
+              <div className="mt-3 border-t border-border/60 pt-3">
+                <ButtonLink
+                  href="/login"
+                  size="sm"
+                  className="w-full whitespace-normal bg-navy text-center leading-6 text-white hover:bg-navy/90"
+                >
+                  ثبت‌نام / ورود
+                </ButtonLink>
+              </div>
+            </DrawerContent>
+          </Drawer>
+        </div>
       </PageContainer>
     </header>
   );

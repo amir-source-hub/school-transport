@@ -42,4 +42,18 @@ describe('API error feedback', () => {
     expect(feedback.message).toContain('شماره ورود');
     expect(feedback.canRetry).toBe(false);
   });
+
+  it.each([
+    [new TypeError('fetch failed'), 'اتصال برقرار نیست'],
+    [new DOMException('timed out', 'TimeoutError'), 'پاسخ سرویس طول کشید'],
+    [new ApiClientError(503, 'QUEUE_UNAVAILABLE', 'technical'), 'صف پردازش موقتاً در دسترس نیست'],
+    [
+      new ApiClientError(503, 'PROVIDER_UNAVAILABLE', 'technical'),
+      'سرویس بیرونی موقتاً در دسترس نیست',
+    ],
+  ])('maps recoverable dependency failures to intentional Persian feedback', (error, title) => {
+    const feedback = getApiErrorFeedback(error);
+    expect(feedback.title).toBe(title);
+    expect(feedback.canRetry).toBe(true);
+  });
 });

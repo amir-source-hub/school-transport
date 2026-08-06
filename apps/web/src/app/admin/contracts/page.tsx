@@ -121,24 +121,43 @@ export default async function ContractsPage({
         <Card id="contract-details" className="scroll-mt-24 ring-2 ring-primary/20">
           <h2 className="text-xl font-black">جزئیات قرارداد {selectedContract.contractNumber}</h2>
           <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-            <div><dt className="text-muted">دانش‌آموز</dt><dd className="mt-1 font-bold">{selectedContract.studentName}</dd></div>
-            <div><dt className="text-muted">سال تحصیلی</dt><dd className="mt-1 font-bold">{selectedContract.academicYear ?? '—'}</dd></div>
-            <div><dt className="text-muted">مبلغ ثبت‌شده</dt><dd className="mt-1 font-bold">{selectedContract.price === null ? '—' : formatIrr(selectedContract.price)}</dd></div>
-            <div><dt className="text-muted">وضعیت</dt><dd className="mt-1 font-bold">{selectedContract.status}</dd></div>
+            <div>
+              <dt className="text-muted">دانش‌آموز</dt>
+              <dd className="mt-1 font-bold">{selectedContract.studentName}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">سال تحصیلی</dt>
+              <dd className="mt-1 font-bold">{selectedContract.academicYear ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">مبلغ ثبت‌شده</dt>
+              <dd className="mt-1 font-bold">
+                {selectedContract.price === null ? '—' : formatIrr(selectedContract.price)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted">وضعیت</dt>
+              <dd className="mt-1 font-bold">{selectedContract.status}</dd>
+            </div>
           </dl>
           {selectedSnapshot && (
             <div className="mt-6 space-y-4">
               {Object.entries(selectedSnapshot)
                 .filter(([key]) => key !== 'contractText')
                 .map(([key, value]) => (
-                  <section key={key} className="rounded-xl border border-border bg-surface-muted/40 p-4">
+                  <section
+                    key={key}
+                    className="rounded-xl border border-border bg-surface-muted/40 p-4"
+                  >
                     <h3 className="font-black">{detailLabels[key] ?? key}</h3>
                     {value && typeof value === 'object' && !Array.isArray(value) ? (
                       <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
                         {Object.entries(value).map(([field, fieldValue]) => (
                           <div key={field}>
                             <dt className="text-muted">{detailLabels[field] ?? field}</dt>
-                            <dd className="mt-1 break-words font-bold">{formatDetailValue(field, fieldValue)}</dd>
+                            <dd className="mt-1 break-words font-bold">
+                              {formatDetailValue(field, fieldValue)}
+                            </dd>
                           </div>
                         ))}
                       </dl>
@@ -161,20 +180,47 @@ export default async function ContractsPage({
                 <p className="mt-1 text-sm text-muted">پیش‌پرداخت و اقساط مرتبط با همین قرارداد</p>
               </div>
               {selectedContract.paymentPlan && (
-                <Badge tone={selectedContract.paymentPlan.planStatus === 'COMPLETED' ? 'success' : 'warning'}>
-                  {statusLabels[selectedContract.paymentPlan.planStatus] ?? selectedContract.paymentPlan.planStatus}
+                <Badge
+                  tone={
+                    selectedContract.paymentPlan.planStatus === 'COMPLETED' ? 'success' : 'warning'
+                  }
+                >
+                  {statusLabels[selectedContract.paymentPlan.planStatus] ??
+                    selectedContract.paymentPlan.planStatus}
                 </Badge>
               )}
             </div>
             {!selectedContract.paymentPlan ? (
-              <p className="mt-4 rounded-xl bg-surface-muted p-4 text-sm text-muted">هنوز برنامه پرداختی برای این قرارداد ایجاد نشده است.</p>
+              <p className="mt-4 rounded-xl bg-surface-muted p-4 text-sm text-muted">
+                هنوز برنامه پرداختی برای این قرارداد ایجاد نشده است.
+              </p>
             ) : (
               <>
                 <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                  <div><dt className="text-muted">مبلغ کل</dt><dd className="mt-1 font-bold">{formatIrr(selectedContract.paymentPlan.totalAmount)}</dd></div>
-                  <div><dt className="text-muted">پیش‌پرداخت</dt><dd className="mt-1 font-bold">{formatIrr(selectedContract.paymentPlan.prepaymentAmount)}</dd></div>
-                  <div><dt className="text-muted">مانده اقساط</dt><dd className="mt-1 font-bold">{formatIrr(selectedContract.paymentPlan.remainingInstallmentAmount)}</dd></div>
-                  <div><dt className="text-muted">تعداد اقساط</dt><dd className="mt-1 font-bold">{selectedContract.paymentPlan.installmentCount}</dd></div>
+                  <div>
+                    <dt className="text-muted">مبلغ کل</dt>
+                    <dd className="mt-1 font-bold">
+                      {formatIrr(selectedContract.paymentPlan.totalAmount)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">پیش‌پرداخت</dt>
+                    <dd className="mt-1 font-bold">
+                      {formatIrr(selectedContract.paymentPlan.prepaymentAmount)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">مانده اقساط</dt>
+                    <dd className="mt-1 font-bold">
+                      {formatIrr(selectedContract.paymentPlan.remainingInstallmentAmount)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">تعداد اقساط</dt>
+                    <dd className="mt-1 font-bold">
+                      {selectedContract.paymentPlan.installmentCount}
+                    </dd>
+                  </div>
                 </dl>
                 <div className="mt-5 space-y-3">
                   {selectedContract.paymentPlan.items.map((item) => {
@@ -184,16 +230,35 @@ export default async function ContractsPage({
                       <div key={item.id} className="rounded-xl border border-border p-4">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <p className="font-black">{item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : `قسط ${item.sequenceNumber}`}</p>
-                            <p className="mt-1 text-sm text-muted">{formatIrr(item.amount)}{item.dueDate ? ` — سررسید ${formatJalaliDate(item.dueDate)}` : ''}</p>
+                            <p className="font-black">
+                              {item.itemType === 'PREPAYMENT'
+                                ? 'پیش‌پرداخت'
+                                : `قسط ${item.sequenceNumber}`}
+                            </p>
+                            <p className="mt-1 text-sm text-muted">
+                              {formatIrr(item.amount)}
+                              {item.dueDate ? ` — سررسید ${formatJalaliDate(item.dueDate)}` : ''}
+                            </p>
                           </div>
-                          <Badge tone={paid ? 'success' : 'neutral'}>{paid ? 'پرداخت شده' : 'پرداخت نشده'}</Badge>
+                          <Badge tone={paid ? 'success' : 'neutral'}>
+                            {paid ? 'پرداخت شده' : 'پرداخت نشده'}
+                          </Badge>
                         </div>
-                        {paid && item.paidAt && <p className="mt-3 text-sm">پرداخت: {formatJalaliDateTime(item.paidAt)} — {formatIrr(item.paidAmount)}</p>}
+                        {paid && item.paidAt && (
+                          <p className="mt-3 text-sm">
+                            پرداخت: {formatJalaliDateTime(item.paidAt)} —{' '}
+                            {formatIrr(item.paidAmount)}
+                          </p>
+                        )}
                         {latestTransaction && (
                           <p className="mt-2 text-xs text-muted">
-                            آخرین تراکنش: {statusLabels[latestTransaction.transactionStatus] ?? latestTransaction.transactionStatus}
-                            {' — '}{formatJalaliDateTime(latestTransaction.verifiedAt ?? latestTransaction.createdAt)}
+                            آخرین تراکنش:{' '}
+                            {statusLabels[latestTransaction.transactionStatus] ??
+                              latestTransaction.transactionStatus}
+                            {' — '}
+                            {formatJalaliDateTime(
+                              latestTransaction.verifiedAt ?? latestTransaction.createdAt,
+                            )}
                           </p>
                         )}
                       </div>

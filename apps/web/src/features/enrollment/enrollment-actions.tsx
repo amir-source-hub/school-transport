@@ -15,7 +15,7 @@ import {
   WalletCards,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const LocationPicker = dynamic(
   () => import('@/components/common/location-picker').then((m) => ({ default: m.LocationPicker })),
@@ -98,8 +98,94 @@ export function CreateEnrollmentForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const [locationError, setLocationError] = useState<string>();
-  const set = (key: keyof typeof form, value: string | number) =>
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  const submissionLockRef = useRef(false);
+
+  useEffect(() => {
+    stepHeadingRef.current?.focus();
+  }, [step]);
+
+  function validateField(key: keyof typeof form, value: string | number): string | undefined {
+    const text = String(value).trim();
+    const requiredFields: (keyof typeof form)[] = [
+      'studentFirst',
+      'studentLast',
+      'studentNationalId',
+      'fatherFirst',
+      'fatherLast',
+      'fatherNationalId',
+      'fatherPhone',
+      'motherFirst',
+      'motherLast',
+      'motherNationalId',
+      'motherPhone',
+      'emergencyFirst',
+      'emergencyLast',
+      'emergencyRelationship',
+      'emergencyPhone',
+      'addressTitle',
+      'province',
+      'city',
+      'streetAddress',
+      'postalCode',
+    ];
+    if (requiredFields.includes(key) && !text) return 'این فیلد الزامی است.';
+    if (['studentNationalId', 'fatherNationalId', 'motherNationalId'].includes(key)) {
+      return isValidIranianNationalId(text)
+        ? undefined
+        : 'کد ملی نامعتبر است. فقط عدد و حداکثر ۲۰ رقم وارد کنید.';
+    }
+    if (['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)) {
+      return /^09\d{9}$/.test(normalizeDigits(text))
+        ? undefined
+        : 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.';
+    }
+    if (key === 'postalCode') {
+      return /^\d{10}$/.test(normalizeDigits(text)) ? undefined : 'کد پستی باید ۱۰ رقم باشد.';
+    }
+    return undefined;
+  }
+
+  function set(key: keyof typeof form, value: string | number) {
     setForm((current) => ({ ...current, [key]: value }));
+    setFieldErrors((current) => ({ ...current, [key]: validateField(key, value) }));
+  }
+
+  function validateVisibleFields(currentStep: number) {
+    const keys: (keyof typeof form)[] =
+      currentStep === 1
+        ? [
+            'studentFirst',
+            'studentLast',
+            'studentNationalId',
+            'fatherFirst',
+            'fatherLast',
+            'fatherNationalId',
+            'fatherPhone',
+            'motherFirst',
+            'motherLast',
+            'motherNationalId',
+            'motherPhone',
+            'emergencyFirst',
+            'emergencyLast',
+            'emergencyRelationship',
+            'emergencyPhone',
+          ]
+        : currentStep === 2
+          ? ['addressTitle', 'province', 'city', 'streetAddress', 'postalCode']
+          : [];
+    const nextErrors = Object.fromEntries(
+      keys.map((key) => [key, validateField(key, form[key])]).filter(([, message]) => message),
+    );
+    setFieldErrors((current) => ({ ...current, ...nextErrors }));
+    const firstInvalid = Object.keys(nextErrors)[0];
+    if (firstInvalid) {
+      requestAnimationFrame(() => document.getElementById(`enrollment-${firstInvalid}`)?.focus());
+      return false;
+    }
+    return true;
+  }
   const selectedSchool = useMemo(
     () => schools.find((school) => school.id === form.schoolId),
     [form.schoolId, schools],
@@ -184,7 +270,9 @@ export function CreateEnrollmentForm({
 
   function next(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     setError(undefined);
+    if (!validateVisibleFields(step)) return;
     const validationError = validateStep(step);
     if (validationError) {
       setError(validationError);
@@ -241,11 +329,13 @@ export function CreateEnrollmentForm({
 
   async function prepareContract(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending || submissionLockRef.current) return;
     const validationError = validateStep(4);
     if (validationError) {
       setError(validationError);
       return;
     }
+    submissionLockRef.current = true;
     setPending(true);
     setError(undefined);
     try {
@@ -302,6 +392,7 @@ export function CreateEnrollmentForm({
     } catch (caught) {
       setError(getApiErrorFeedback(caught).message);
     } finally {
+      submissionLockRef.current = false;
       setPending(false);
     }
   }
@@ -320,29 +411,67 @@ export function CreateEnrollmentForm({
     lockedParentFields.add('studentNationalId');
   }
   const field = (key: keyof typeof form, label: string, type = 'text') => (
-    <label className="text-sm font-bold text-foreground">
-      {label}
+    <div>
+      <label htmlFor={`enrollment-${key}`} className="text-sm font-bold text-foreground">
+        {label}
+      </label>
       <Input
+        id={`enrollment-${key}`}
         required={key !== 'birthDate'}
         type={type}
         value={String(form[key])}
         dir={['tel', 'number'].includes(type) ? 'ltr' : undefined}
         disabled={lockedParentFields.has(key)}
         onChange={(event) => set(key, event.target.value)}
+        onBlur={(event) =>
+          setFieldErrors((current) => ({
+            ...current,
+            [key]: validateField(key, event.target.value),
+          }))
+        }
+        aria-invalid={Boolean(fieldErrors[key])}
+        aria-describedby={fieldErrors[key] ? `enrollment-${key}-error` : undefined}
         className="mt-2 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
       />
-    </label>
+      {fieldErrors[key] && (
+        <p id={`enrollment-${key}-error`} className="mt-1 text-xs text-danger">
+          {fieldErrors[key]}
+        </p>
+      )}
+    </div>
+  );
+  const fieldLabels: Partial<Record<keyof typeof form, string>> = {
+    studentFirst: 'نام دانش‌آموز', studentLast: 'نام خانوادگی دانش‌آموز', studentNationalId: 'کد ملی دانش‌آموز',
+    fatherFirst: 'نام پدر', fatherLast: 'نام خانوادگی پدر', fatherNationalId: 'کد ملی پدر', fatherPhone: 'شماره همراه پدر',
+    motherFirst: 'نام مادر', motherLast: 'نام خانوادگی مادر', motherNationalId: 'کد ملی مادر', motherPhone: 'شماره همراه مادر',
+    emergencyFirst: 'نام تماس اضطراری', emergencyLast: 'نام خانوادگی تماس اضطراری', emergencyRelationship: 'نسبت تماس اضطراری', emergencyPhone: 'شماره همراه تماس اضطراری',
+    addressTitle: 'عنوان نشانی', province: 'استان', city: 'شهر', streetAddress: 'نشانی کامل', postalCode: 'کد پستی',
+  };
+  const visibleErrorEntries = Object.entries(fieldErrors).filter(([, message]) => message);
+  const validationSummary = visibleErrorEntries.length > 0 && (
+    <div role="alert" className="rounded-xl border border-danger/20 bg-danger/5 p-4 text-sm">
+      <p className="font-black text-danger">لطفاً خطاهای زیر را اصلاح کنید:</p>
+      <ul className="mt-2 space-y-1">
+        {visibleErrorEntries.map(([key, message]) => (
+          <li key={key}>
+            <a className="font-bold text-danger underline underline-offset-4" href={`#enrollment-${key}`}>
+              {fieldLabels[key as keyof typeof form] ?? key}: {message}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 
   return (
     <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_25px_70px_-45px_rgba(15,23,42,.45)]">
-      <div className="border-b border-slate-100 bg-slate-50/80 px-5 py-6 sm:px-8">
-        <div className="grid grid-cols-4 gap-2">
+      <div className="border-b border-slate-100 bg-slate-50/80 px-3 py-4 sm:px-8 sm:py-6">
+        <ol aria-label="مراحل ثبت‌نام" className="grid grid-cols-4 gap-1 sm:gap-2">
           {stages.map((label, index) => {
             const number = index + 1;
             const done = number < step || Boolean(result);
             return (
-              <div key={label} className="relative text-center">
+              <li key={label} aria-current={number === step ? 'step' : undefined} className="relative min-w-0 text-center">
                 {index > 0 && (
                   <span
                     className={`absolute left-1/2 right-[-50%] top-5 h-px ${number <= step ? 'bg-primary' : 'bg-slate-200'}`}
@@ -354,18 +483,19 @@ export function CreateEnrollmentForm({
                   {done ? <Check className="size-4" /> : number.toLocaleString('fa-IR')}
                 </span>
                 <span
-                  className={`mt-2 block text-[11px] font-bold sm:text-sm ${number <= step ? 'text-foreground' : 'text-muted'}`}
+                  className={`mt-2 block truncate text-[10px] font-bold min-[360px]:text-[11px] sm:text-sm ${number <= step ? 'text-foreground' : 'text-muted'}`}
                 >
                   {label}
                 </span>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ol>
       </div>
-      <div className="p-5 sm:p-8">
+      <div className="p-4 sm:p-8">
+        <h2 ref={stepHeadingRef} tabIndex={-1} className="sr-only">مرحله {step.toLocaleString('fa-IR')} از ۴: {stages[step - 1]}</h2>
         {step === 1 && (
-          <form onSubmit={next} className="space-y-7">
+          <form noValidate onSubmit={next} className="space-y-7">
             {existingStudents.length > 0 && (
               <Section title="ادامه ثبت‌نام دانش‌آموز موجود">
                 <label className="text-sm font-bold">
@@ -451,12 +581,13 @@ export function CreateEnrollmentForm({
                 {field('emergencyPhone', 'شماره همراه', 'tel')}
               </div>
             </Section>
-            {error && <p className="text-sm text-danger">{error}</p>}
-            <WizardFooter />
+            {validationSummary}
+            {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+            <WizardFooter pending={pending} />
           </form>
         )}
         {step === 2 && (
-          <form onSubmit={next} className="space-y-6">
+          <form noValidate onSubmit={next} className="space-y-6">
             <Section title="نشانی محل سوار شدن">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {field('addressTitle', 'عنوان نشانی')}
@@ -498,14 +629,20 @@ export function CreateEnrollmentForm({
                   setForm((prev) => ({ ...prev, latitude: lat, longitude: lng }))
                 }
               />
+              <div className="mt-3 grid gap-3 sm:grid-cols-2" aria-label="ورود دستی مختصات">
+                <label className="text-sm font-bold">عرض جغرافیایی<Input type="number" inputMode="decimal" dir="ltr" step="any" className="mt-1" value={form.latitude} onChange={(event) => set('latitude', Number(event.target.value))} /></label>
+                <label className="text-sm font-bold">طول جغرافیایی<Input type="number" inputMode="decimal" dir="ltr" step="any" className="mt-1" value={form.longitude} onChange={(event) => set('longitude', Number(event.target.value))} /></label>
+              </div>
+              <p className="mt-2 text-xs leading-6 text-muted">اگر نقشه با لمس، ماوس یا صفحه‌کلید در دسترس نیست، نشانی و مختصات را دستی وارد کنید.</p>
               {locationError && <p className="mt-2 text-sm text-danger">{locationError}</p>}
             </div>
-            {error && <p className="text-sm text-danger">{error}</p>}
-            <WizardFooter onBack={() => setStep(1)} />
+            {validationSummary}
+            {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+            <WizardFooter onBack={() => setStep(1)} pending={pending} />
           </form>
         )}
         {step === 3 && (
-          <form onSubmit={next} className="space-y-7">
+          <form noValidate onSubmit={next} className="space-y-7">
             <Section title="انتخاب مدرسه">
               <div className="grid gap-5 sm:grid-cols-3">
                 <label className="text-sm font-bold">
@@ -556,11 +693,11 @@ export function CreateEnrollmentForm({
               </div>
             )}
             {error && <p className="text-sm text-danger">{error}</p>}
-            <WizardFooter onBack={() => setStep(2)} />
+            <WizardFooter onBack={() => setStep(2)} pending={pending} />
           </form>
         )}
         {step === 4 && !result && (
-          <form onSubmit={prepareContract} className="space-y-7">
+          <form noValidate onSubmit={prepareContract} className="space-y-7">
             <Section title="نوع وسیله نقلیه">
               <div className="grid gap-4 sm:grid-cols-2">
                 {vehicleOptions.map(({ value, label, description, icon: Icon }) => (
@@ -678,9 +815,11 @@ export function CreateEnrollmentForm({
               </span>
             </label>
             <Button
-              disabled={!contractRead || !contractChecked}
+              disabled={pending || !contractRead || !contractChecked}
               loading={pending}
               onClick={async () => {
+                if (submissionLockRef.current) return;
+                submissionLockRef.current = true;
                 setPending(true);
                 setError(undefined);
                 try {
@@ -689,6 +828,7 @@ export function CreateEnrollmentForm({
                 } catch (caught) {
                   setError(getApiErrorFeedback(caught).message);
                 } finally {
+                  submissionLockRef.current = false;
                   setPending(false);
                 }
               }}
@@ -718,6 +858,8 @@ export function CreateEnrollmentForm({
               size="lg"
               loading={pending}
               onClick={async () => {
+                if (submissionLockRef.current) return;
+                submissionLockRef.current = true;
                 setPending(true);
                 setError(undefined);
                 try {
@@ -727,6 +869,7 @@ export function CreateEnrollmentForm({
                 } catch (caught) {
                   setError(getApiErrorFeedback(caught).message);
                 } finally {
+                  submissionLockRef.current = false;
                   setPending(false);
                 }
               }}
@@ -773,7 +916,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function WizardFooter({
+export function WizardFooter({
   onBack,
   submitLabel = 'مرحله بعد',
   pending,
@@ -783,16 +926,16 @@ function WizardFooter({
   pending?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between border-t border-slate-100 pt-6">
+    <div className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-20 -mx-4 flex flex-col-reverse gap-2 border-t border-slate-100 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_-24px_rgba(15,23,42,.5)] backdrop-blur sm:mx-0 sm:flex-row sm:items-center sm:justify-between sm:px-0 lg:bottom-0">
       {onBack ? (
-        <Button type="button" variant="ghost" onClick={onBack}>
+        <Button className="w-full sm:w-auto" type="button" variant="ghost" onClick={onBack} disabled={pending}>
           <ChevronRight className="size-4" />
           مرحله قبل
         </Button>
       ) : (
         <span />
       )}
-      <Button type="submit" loading={pending}>
+      <Button className="w-full sm:w-auto" type="submit" loading={pending} disabled={pending}>
         {submitLabel}
         <ChevronLeft className="size-4" />
       </Button>

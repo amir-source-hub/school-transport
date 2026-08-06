@@ -13,7 +13,9 @@ export default async function FamiliesPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs items={[{ label: 'پنل مدیریت', href: '/admin/dashboard' }, { label: 'خانواده‌ها' }]} />
+      <Breadcrumbs
+        items={[{ label: 'پنل مدیریت', href: '/admin/dashboard' }, { label: 'خانواده‌ها' }]}
+      />
       <div>
         <p className="text-sm font-bold text-primary">حساب‌های خانواده</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">خانواده‌ها</h1>
@@ -33,9 +35,15 @@ export default async function FamiliesPage() {
             {families.map((family) => (
               <tr key={family.id} className="border-b border-border last:border-0">
                 <td className="px-3 py-3 font-bold">{family.username}</td>
-                <td className="px-3 py-3" dir="ltr">{family.primaryPhone ?? '—'}</td>
+                <td className="px-3 py-3" dir="ltr">
+                  {family.primaryPhone ?? '—'}
+                </td>
                 <td className="px-3 py-3">{family.studentCount}</td>
-                <td className="px-3 py-3"><Badge tone={family.status === 'فعال' ? 'success' : 'neutral'}>{family.status}</Badge></td>
+                <td className="px-3 py-3">
+                  <Badge tone={family.status === 'فعال' ? 'success' : 'neutral'}>
+                    {family.status}
+                  </Badge>
+                </td>
                 <td className="px-3 py-3">
                   <ButtonLink href={`/admin/families/${family.id}`} variant="secondary" size="sm">
                     مشاهده

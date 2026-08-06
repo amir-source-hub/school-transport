@@ -2,22 +2,50 @@ const LOCAL_API_BASE_URL = 'http://localhost:5000/api/v1';
 
 type WebEnvironmentInput = {
   apiBaseUrl?: string;
+  deploymentId?: string;
+  serverActionsEncryptionKey?: string;
   production: boolean;
 };
 
 type WebEnvironment = {
   apiBaseUrl: string;
+  deploymentId?: string;
   production: boolean;
 };
 
 export const validateWebEnvironment = ({
   apiBaseUrl,
+  deploymentId,
+  serverActionsEncryptionKey,
   production,
 }: WebEnvironmentInput): WebEnvironment => {
   const value = apiBaseUrl?.trim();
 
   if (production && !value) {
     throw new Error('NEXT_PUBLIC_API_BASE_URL is required for production builds.');
+  }
+
+  const normalizedDeploymentId = deploymentId?.trim();
+  if (production && !normalizedDeploymentId) {
+    throw new Error('NEXT_DEPLOYMENT_ID is required for production builds.');
+  }
+  if (normalizedDeploymentId && !/^[A-Za-z0-9._-]{7,128}$/.test(normalizedDeploymentId)) {
+    throw new Error('NEXT_DEPLOYMENT_ID must be a 7-128 character immutable release identifier.');
+  }
+
+  if (production) {
+    const key = serverActionsEncryptionKey?.trim();
+    let decodedLength = 0;
+    try {
+      decodedLength = key ? Buffer.from(key, 'base64').length : 0;
+    } catch {
+      decodedLength = 0;
+    }
+    if (!key || !/^[A-Za-z0-9+/]+={0,2}$/.test(key) || ![16, 24, 32].includes(decodedLength)) {
+      throw new Error(
+        'NEXT_SERVER_ACTIONS_ENCRYPTION_KEY must be a base64-encoded 16, 24, or 32 byte key for production builds.',
+      );
+    }
   }
 
   const resolvedApiBaseUrl = value || LOCAL_API_BASE_URL;
@@ -36,6 +64,7 @@ export const validateWebEnvironment = ({
 
   return {
     apiBaseUrl: resolvedApiBaseUrl.replace(/\/$/, ''),
+    deploymentId: normalizedDeploymentId,
     production,
   };
 };

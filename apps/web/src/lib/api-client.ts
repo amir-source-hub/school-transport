@@ -1,10 +1,19 @@
-import { clearAuthSession, getAuthSession, setAuthSession } from '@/features/auth/auth-session';
+import {
+  clearAuthSession,
+  getAuthSession,
+  getAuthSessionVersion,
+  setAuthAccessToken,
+} from '@/features/auth/auth-session';
 import type { ApiEnvelope, ApiFailure, ApiSuccess } from '@/types/api';
 
 type ApiRequestOptions = Omit<RequestInit, 'body' | 'credentials'> & {
   body?: unknown;
   timeoutMs?: number;
+  redirectOnAuthFailure?: boolean;
 };
+
+let browserRefreshPromise: Promise<boolean> | null = null;
+let loginRedirectStarted = false;
 
 export class ApiClientError extends Error {
   constructor(
@@ -54,7 +63,13 @@ async function performApiRequest<T>(
   options: ApiRequestOptions,
   allowRefresh: boolean,
 ): Promise<ApiSuccess<T>> {
-  const { body, timeoutMs, signal: requestedSignal, ...requestInit } = options;
+  const {
+    body,
+    timeoutMs,
+    redirectOnAuthFailure = true,
+    signal: requestedSignal,
+    ...requestInit
+  } = options;
   const url = buildApiUrl(path);
   const headers = new Headers(options.headers);
   const correlationId = crypto.randomUUID();
@@ -81,11 +96,11 @@ async function performApiRequest<T>(
     response.status === 401 &&
     allowRefresh &&
     typeof window !== 'undefined' &&
-    !path.startsWith('/auth/')
+    (path === '/auth/me' || !path.startsWith('/auth/'))
   ) {
     const refreshed = await refreshBrowserSession();
     if (refreshed) return performApiRequest<T>(path, options, false);
-    redirectToLogin();
+    if (redirectOnAuthFailure) redirectToLogin();
   }
 
   if (response.status === 204) {
@@ -138,28 +153,46 @@ async function forwardServerCookies(headers: Headers) {
 }
 
 async function refreshBrowserSession() {
-  try {
-    const response = await fetch(buildApiUrl('/auth/refresh'), {
-      method: 'POST',
-      credentials: 'include',
-      headers: { Accept: 'application/json', 'X-Correlation-Id': crypto.randomUUID() },
+  if (!browserRefreshPromise) {
+    const version = getAuthSessionVersion();
+    browserRefreshPromise = (async () => {
+      try {
+        const response = await fetch(buildApiUrl('/auth/refresh'), {
+          method: 'POST',
+          credentials: 'include',
+          headers: { Accept: 'application/json', 'X-Correlation-Id': crypto.randomUUID() },
+        });
+        if (!response.ok) return false;
+        const payload = (await response.json()) as ApiSuccess<{ accessToken: string }>;
+        if (
+          payload.success &&
+          payload.data.accessToken &&
+          version === getAuthSessionVersion()
+        ) {
+          setAuthAccessToken(payload.data.accessToken);
+        }
+        return payload.success && version === getAuthSessionVersion();
+      } catch {
+        return false;
+      }
+    })().finally(() => {
+      browserRefreshPromise = null;
     });
-    if (!response.ok) return false;
-    const payload = (await response.json()) as ApiSuccess<{ accessToken: string }>;
-    const role = getAuthSession().role;
-    if (payload.success && payload.data.accessToken && role) {
-      setAuthSession(payload.data.accessToken, role);
-    }
-    return payload.success;
-  } catch {
-    return false;
   }
+  return browserRefreshPromise;
 }
 
 function redirectToLogin() {
   clearAuthSession();
+  if (loginRedirectStarted || typeof window === 'undefined') return;
+  loginRedirectStarted = true;
   const next = `${window.location.pathname}${window.location.search}`;
   window.location.assign(`/login?next=${encodeURIComponent(next)}`);
+}
+
+export function resetApiClientTransitionStateForTests() {
+  browserRefreshPromise = null;
+  loginRedirectStarted = false;
 }
 
 async function parseEnvelope<T>(response: Response, requestId: string): Promise<ApiEnvelope<T>> {

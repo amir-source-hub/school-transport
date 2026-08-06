@@ -2,7 +2,6 @@
 
 import {
   Bell,
-  ChevronDown,
   ClipboardList,
   FileText,
   GraduationCap,
@@ -15,15 +14,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { BrandMark } from '@/components/brand/brand-mark';
 import { LogoutMenuItem } from '@/features/auth/logout-menu-item';
 import { cn } from '@/lib/cn';
@@ -60,6 +54,43 @@ const mobileDock = [
   { href: '/parent/payments', label: 'پرداخت‌ها', icon: WalletCards },
 ] as const;
 
+export function isParentRouteActive(pathname: string, href: string) {
+  const normalizedPath = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  const normalizedHref = href.length > 1 ? href.replace(/\/+$/, '') : href;
+  return normalizedPath === normalizedHref || normalizedPath.startsWith(`${normalizedHref}/`);
+}
+
+function useVirtualKeyboardOpen() {
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const update = () => {
+      const focused = document.activeElement;
+      const editing =
+        focused instanceof HTMLInputElement ||
+        focused instanceof HTMLTextAreaElement ||
+        focused instanceof HTMLSelectElement ||
+        (focused instanceof HTMLElement && focused.isContentEditable);
+      setKeyboardOpen(editing && viewport.height < window.innerHeight * 0.75);
+    };
+
+    viewport.addEventListener('resize', update);
+    document.addEventListener('focusin', update);
+    document.addEventListener('focusout', update);
+    update();
+    return () => {
+      viewport.removeEventListener('resize', update);
+      document.removeEventListener('focusin', update);
+      document.removeEventListener('focusout', update);
+    };
+  }, []);
+
+  return keyboardOpen;
+}
+
 function ParentNavigation({ mobile = false }: { mobile?: boolean }) {
   const pathname = usePathname();
 
@@ -67,7 +98,7 @@ function ParentNavigation({ mobile = false }: { mobile?: boolean }) {
     <div key={group} className="space-y-1">
       <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-white/40">{group}</p>
       {items.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href || pathname.startsWith(`${href}/`);
+        const active = isParentRouteActive(pathname, href);
         const link = (
           <Link
             href={href}
@@ -99,12 +130,22 @@ function ParentNavigation({ mobile = false }: { mobile?: boolean }) {
     </div>
   ));
 
-  return <div className="space-y-6">{content}</div>;
+  return (
+    <div className="flex min-h-full flex-col">
+      <div className="space-y-6">{content}</div>
+      <div className={cn('mt-6 border-t pt-4', mobile ? 'border-border' : 'border-white/10')}>
+        <LogoutMenuItem mobile={mobile} />
+      </div>
+    </div>
+  );
 }
 
 export function ParentShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const keyboardOpen = useVirtualKeyboardOpen();
+
   return (
-    <div className="min-h-screen overflow-x-clip bg-[var(--paper)]">
+    <div className="min-h-screen overflow-x-clip bg-[var(--paper)] [--parent-mobile-dock-height:4rem]">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-white/90 backdrop-blur-lg">
         <div className="mx-auto flex min-h-16 max-w-[var(--width-portal)] items-center gap-3 px-4 sm:px-6">
           <Drawer>
@@ -147,23 +188,6 @@ export function ParentShell({ children }: { children: ReactNode }) {
             >
               <Bell aria-hidden="true" className="size-5" />
             </Link>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="منوی حساب خانواده"
-                  className="sm:w-auto sm:px-4"
-                >
-                  <UserRound aria-hidden="true" className="size-5" />
-                  <span className="hidden sm:inline">حساب خانواده</span>
-                  <ChevronDown aria-hidden="true" className="hidden size-4 sm:block" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <LogoutMenuItem />
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -189,23 +213,36 @@ export function ParentShell({ children }: { children: ReactNode }) {
             </ButtonLink>
           </div>
         </aside>
-        <main className="portal-main min-w-0 flex-1 p-4 sm:p-6 lg:p-8 xl:p-10">{children}</main>
+        <main className="portal-main min-w-0 flex-1 scroll-pb-[calc(var(--parent-mobile-dock-height)+env(safe-area-inset-bottom)+1rem)] p-4 pb-[calc(var(--parent-mobile-dock-height)+env(safe-area-inset-bottom)+1rem)] sm:p-6 sm:pb-[calc(var(--parent-mobile-dock-height)+env(safe-area-inset-bottom)+1.5rem)] lg:p-8 lg:pb-8 xl:p-10 xl:pb-10 [&_:focus]:scroll-mb-[calc(var(--parent-mobile-dock-height)+env(safe-area-inset-bottom)+1rem)]">
+          {children}
+        </main>
       </div>
 
       <nav
         aria-label="ناوبری سریع موبایل"
-        className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-border/60 bg-white px-2 pb-safe lg:hidden"
+        data-keyboard-open={keyboardOpen || undefined}
+        className={cn(
+          'fixed inset-x-0 bottom-0 z-40 flex min-h-[calc(var(--parent-mobile-dock-height)+env(safe-area-inset-bottom))] items-start justify-around border-t border-border/60 bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-20px_rgba(15,23,42,.45)] backdrop-blur-lg lg:hidden',
+          keyboardOpen && 'hidden',
+        )}
       >
-        {mobileDock.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="flex flex-col items-center gap-0.5 px-3 py-2 text-[10px] font-bold text-muted transition-colors hover:text-primary"
-          >
-            <Icon aria-hidden="true" className="size-5" />
-            {label}
-          </Link>
-        ))}
+        {mobileDock.map(({ href, label, icon: Icon }) => {
+          const active = isParentRouteActive(pathname, href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-bold transition-colors focus-visible:outline-offset-[-3px] min-[360px]:text-[11px]',
+                active ? 'text-primary' : 'text-muted hover:text-primary',
+              )}
+            >
+              <Icon aria-hidden="true" className="size-5 shrink-0" />
+              <span className="max-w-full truncate">{label}</span>
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );
