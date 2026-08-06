@@ -2,11 +2,12 @@ import { ArrowRight, Route, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { BrandMark } from '@/components/brand/brand-mark';
+import { SITE_NAME } from '@/lib/route-metadata';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: { default: 'ورود امن', template: '%s | ورود امن' },
-  description: 'ورود امن خانواده و مدیریت به سامانه سرویس مدرسه.',
+  description: 'ورود امن خانواده و مدیریت به ثمین گشت مهر ایران.',
   robots: { index: false, follow: false, noarchive: true, nosnippet: true },
 };
 
@@ -38,7 +39,7 @@ export default function AuthLayout({ children }: Readonly<{ children: React.Reac
               <BrandMark size={24} />
             </span>
             <span>
-              <span className="block">سامانه سرویس مدرسه</span>
+              <span className="block">{SITE_NAME}</span>
               <span className="mt-0.5 block text-[11px] font-medium text-muted">
                 ورود امن خانواده و مدیریت
               </span>

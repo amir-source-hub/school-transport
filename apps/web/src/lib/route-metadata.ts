@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-export const SITE_NAME = 'سامانه سرویس مدرسه';
+export const SITE_NAME = 'ثمین گشت مهر ایران';
 export const SITE_URL = new URL('https://samingasht.ir');
 
 export type RouteAudience = 'public' | 'auth' | 'parent' | 'admin';
@@ -60,7 +60,7 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     path: '/schools',
     audience: 'public',
     title: 'مدارس',
-    description: 'مشاهده و جست‌وجوی مدارس تأییدشده در سامانه سرویس مدرسه.',
+    description: 'مشاهده و جست‌وجوی مدارس تأییدشده در ثمین گشت مهر ایران.',
     primaryHeading: 'مدرسه نزدیک شما،',
     canonical: '/schools',
   },

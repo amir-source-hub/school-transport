@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
-import { metadataFor, routeDocumentPolicies, SITE_URL } from './route-metadata';
+import { metadataFor, routeDocumentPolicies, SITE_NAME, SITE_URL } from './route-metadata';
 
 describe('route document policy', () => {
+  it('uses the approved brand name for the site', () => {
+    expect(SITE_NAME).toBe('ثمین گشت مهر ایران');
+    expect(SITE_NAME).not.toContain('سامانه سرویس مدرسه');
+    expect(SITE_NAME).toMatch(/[\u0600-\u06ff]/);
+  });
+
   it('covers unique routes and resolved titles', () => {
     const paths = routeDocumentPolicies.map(({ path }) => path);
     expect(new Set(paths).size).toBe(paths.length);
 
     const resolvedTitles = routeDocumentPolicies.map(({ audience, title }) =>
-      audience === 'public' ? `${title} | سامانه سرویس مدرسه` : `${title} | ${audience}`,
+      audience === 'public' ? `${title} | ${SITE_NAME}` : `${title} | ${audience}`,
     );
     expect(new Set(resolvedTitles).size).toBe(resolvedTitles.length);
   });

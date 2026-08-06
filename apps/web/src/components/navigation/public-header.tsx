@@ -8,6 +8,7 @@ import { ButtonLink } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { PageContainer } from '@/components/common/page-container';
 import { BrandMark } from '@/components/brand/brand-mark';
+import { SITE_NAME } from '@/lib/route-metadata';
 import { cn } from '@/lib/cn';
 import { layoutSpring } from '@/components/motion/motion-config';
 
@@ -88,14 +89,14 @@ export function PublicHeader() {
             href="/"
             className="flex items-center gap-2.5 font-black text-white"
             style={{ color: '#ffffff' }}
-            aria-label="صفحه اصلی سامانه سرویس مدرسه"
+            aria-label="صفحه اصلی ثمین گشت مهر ایران"
           >
             <BrandMark size={32} style={{ color: '#ffc857' }} />
             <span className="hidden text-sm text-white sm:inline">
-              سامانه سرویس مدرسه
+              {SITE_NAME}
             </span>
             <span className="text-sm text-white sm:hidden">
-              سرویس مدرسه
+              ثمین گشت مهر ایران
             </span>
           </Link>
 

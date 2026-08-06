@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useReducedMotion } from 'motion/react';
 import { PageContainer } from '@/components/common/page-container';
 import { BrandMark } from '@/components/brand/brand-mark';
+import { SITE_NAME } from '@/lib/route-metadata';
 
 const footerLinks = [
   {
@@ -59,7 +60,7 @@ export function PublicFooter() {
             <div className="flex items-center gap-3">
               <BrandMark size={32} className="text-sun" />
               <div>
-                <p className="font-black text-white">سامانه سرویس مدرسه</p>
+                <p className="font-black text-white">{SITE_NAME}</p>
                 <p className="text-xs text-white/40 mt-0.5">مسیر امن، تجربه روشن</p>
               </div>
             </div>
