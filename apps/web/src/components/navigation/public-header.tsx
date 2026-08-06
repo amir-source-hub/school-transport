@@ -113,7 +113,7 @@ export function PublicHeader() {
               size="sm"
               className="min-w-32 bg-sun text-navy hover:bg-sun/90 shadow-lg shadow-sun/20"
             >
-              ثبت‌نام / ورود
+              ثبت‌نام و ورود
             </ButtonLink>
           </div>
 
@@ -142,7 +142,7 @@ export function PublicHeader() {
                   size="sm"
                   className="w-full whitespace-normal bg-navy text-center leading-6 text-white hover:bg-navy/90"
                 >
-                  ثبت‌نام / ورود
+                  ثبت‌نام و ورود
                 </ButtonLink>
               </div>
             </DrawerContent>

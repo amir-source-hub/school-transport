@@ -6,6 +6,10 @@ test('public navigation and auth entry render without external providers', async
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
+  const heroCta = page.getByRole('link', { name: 'ثبت‌نام و ورود' });
+  await expect(heroCta).toBeVisible();
+  await expect(heroCta).toHaveAttribute('href', '/login');
+
   await page.getByRole('link', { name: 'مراحل ثبت‌نام' }).first().click();
   await expect(page).toHaveURL('/registration-guide');
   await expect(

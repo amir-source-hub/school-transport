@@ -50,7 +50,7 @@ export function PublicHero() {
   return (
     <section className="relative min-h-[680px] overflow-hidden md:min-h-[760px] lg:min-h-[860px]">
       <Image
-        src="/images/homepage-hero-parent-students-boarding-school-van.png"
+        src="/images/homepage-hero-parent-students-boarding-school-van.webp"
         alt=""
         fill
         className="object-cover object-[62%_30%]"
@@ -123,7 +123,7 @@ export function PublicHero() {
               size="lg"
               className="min-w-44 bg-sun text-navy hover:bg-sun/90 shadow-lg shadow-sun/20"
             >
-              ثبت‌نام دانش‌آموز
+              ثبت‌نام و ورود
               <ArrowLeft aria-hidden="true" className="size-4" />
             </ButtonLink>
             <ButtonLink

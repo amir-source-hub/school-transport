@@ -15,7 +15,7 @@ export function FinalRegistrationCta() {
     <section className="relative overflow-hidden surface-paper py-16 sm:py-20 lg:py-24">
       <div className="absolute inset-0" aria-hidden="true">
         <Image
-          src="/images/photo-school-bus-city-mountain-road-background.png"
+          src="/images/photo-school-bus-city-mountain-road-background.webp"
           alt=""
           fill
           className="object-cover object-[center_60%]"
@@ -45,7 +45,7 @@ export function FinalRegistrationCta() {
               size="lg"
               className="min-w-48 bg-sun text-navy hover:bg-sun/90 shadow-lg shadow-sun/25"
             >
-              شروع ثبت‌نام
+              ثبت‌نام و ورود
               <ArrowLeft aria-hidden="true" className="size-4" />
             </ButtonLink>
             <ButtonLink

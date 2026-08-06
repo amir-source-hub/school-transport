@@ -39,7 +39,7 @@ Primary files:
   - Keep the brand in one shared constant such as the existing `SITE_NAME` whenever possible.
   - Acceptance: a repository-wide search finds no unintended occurrence of the old name.
 
-- [ ] Change the homepage action `ثبت نام دانش آموز` to `ثبت نام و ورود`.
+- [x] Change the homepage action `ثبت نام دانش آموز` to `ثبت نام و ورود`.
   - Likely locations: `public-hero.tsx`, `final-registration-cta.tsx`, the public header, and homepage banners.
   - Ensure the button opens the new student login/registration flow.
 
@@ -375,19 +375,19 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Required changes
 
-- [ ] Search for `ثبت نام دانش آموز`, related spacing variants, and links to `/register` or `/login`.
-- [ ] Change the visible CTA to `ثبت نام و ورود` in `public-hero.tsx`, `final-registration-cta.tsx`, the public header, and any banner that independently renders the action.
-- [ ] Point all instances to one approved route. Recommended: `/login`, because the new flow determines whether the phone is new or existing.
-- [ ] Add or update E2E assertions in `apps/web/e2e/public-pages.spec.ts` so the CTA label and destination cannot drift.
-- [ ] Inventory every image reference before conversion. Record source path, displayed dimensions, transparency, and whether it contributes to LCP.
-- [ ] Convert each PNG to WebP using one documented quality policy. Keep exact pixel dimensions unless resizing is separately approved.
-- [ ] Update component imports/paths and any CSS `url(...)` values.
-- [ ] Check `next.config.ts` only if image domains or formats need configuration; local WebP files require no remote-domain exception.
+- [x] Search for `ثبت نام دانش آموز`, related spacing variants, and links to `/register` or `/login`.
+- [x] Change the visible CTA to `ثبت نام و ورود` in `public-hero.tsx`, `final-registration-cta.tsx`, the public header, and any banner that independently renders the action.
+- [x] Point all instances to one approved route. Recommended: `/login`, because the new flow determines whether the phone is new or existing.
+- [x] Add or update E2E assertions in `apps/web/e2e/public-pages.spec.ts` so the CTA label and destination cannot drift.
+- [x] Inventory every image reference before conversion. Record source path, displayed dimensions, transparency, and whether it contributes to LCP.
+- [x] Convert each PNG to WebP using one documented quality policy. Keep exact pixel dimensions unless resizing is separately approved.
+- [x] Update component imports/paths and any CSS `url(...)` values.
+- [x] Check `next.config.ts` only if image domains or formats need configuration; local WebP files require no remote-domain exception.
 - [ ] After visual and performance approval, remove only PNGs that have no remaining references. Rebuild or remove `images.zip` deliberately.
 
 #### Verification
 
-- [ ] `rg` finds no code reference to a removed PNG.
+- [x] `rg` finds no code reference to a removed PNG.
 - [ ] Pages do not show broken images at mobile, tablet, or desktop sizes.
 - [ ] Visual quality is acceptable around faces, text, gradients, and transparency.
 - [ ] Run the scripts documented in `apps/web/performance/README.md`; LCP, CLS, and asset budgets must not regress.
