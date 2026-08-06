@@ -69,15 +69,19 @@ Node.js and pnpm are only required for development outside Docker.
 
 ## Run the complete application with Docker
 
+The base Compose file is production-oriented and deliberately refuses placeholder secrets and
+development providers. For local development, first copy `.env.development.example` to
+`.env.development`, then use the explicit override:
+
 From the repository root, build and start the web application, API, background worker,
 PostgreSQL, Redis, database migrations, and seed data with one command:
 
 ```bash
-docker compose up --build
+docker compose --env-file .env.development -f docker-compose.yml -f docker-compose.development.yml up --build
 ```
 
 The first run downloads the base images and installs dependencies, so it can take several minutes.
-The `bootstrap` service waits for PostgreSQL, applies all migrations, seeds the development data,
+With the development override, `bootstrap` waits for PostgreSQL, applies migrations, seeds demo data,
 and exits successfully before the API starts. Seeding is idempotent and is safe to run again.
 
 When the services are ready:
@@ -99,30 +103,30 @@ Seeded development accounts:
 The local stack uses the console OTP provider. To see generated OTP codes and follow startup:
 
 ```bash
-docker compose logs -f api
+docker compose --env-file .env.development -f docker-compose.yml -f docker-compose.development.yml logs -f api
 ```
 
 Useful Docker commands:
 
 ```bash
 # Start an existing stack in the background
-docker compose up -d
+docker compose --env-file .env.development -f docker-compose.yml -f docker-compose.development.yml up -d
 
 # Rebuild after source-code changes
-docker compose up -d --build
+docker compose --env-file .env.development -f docker-compose.yml -f docker-compose.development.yml up -d --build
 
 # Check container and health status
-docker compose ps -a
+docker compose --env-file .env.development -f docker-compose.yml -f docker-compose.development.yml ps -a
 
 # Follow all service logs
-docker compose logs -f
+docker compose --env-file .env.development -f docker-compose.yml -f docker-compose.development.yml logs -f
 
 # Stop containers while preserving database and Redis data
-docker compose down
+docker compose --env-file .env.development -f docker-compose.yml -f docker-compose.development.yml down
 
 # Remove containers and persisted local data, then start from a clean database
-docker compose down --volumes
-docker compose up --build
+docker compose --env-file .env.development -f docker-compose.yml -f docker-compose.development.yml down --volumes
+docker compose --env-file .env.development -f docker-compose.yml -f docker-compose.development.yml up --build
 ```
 
 ## Local development
@@ -136,7 +140,7 @@ pnpm install
 ### 2. Start PostgreSQL and Redis
 
 ```bash
-docker compose up -d postgres redis
+docker compose --env-file .env.development -f docker-compose.yml -f docker-compose.development.yml up -d postgres redis
 ```
 
 The development configuration exposes PostgreSQL on port `5433` and Redis on port `6379`.
@@ -144,13 +148,9 @@ Starting Redis prevents repeated `ECONNREFUSED 127.0.0.1:6379` messages from the
 
 ### 3. Configure environment variables
 
-Copy `apps/api/.env.example` to `apps/api/.env`, then replace the placeholder JWT secret.
-
-Create `apps/web/.env.local` with:
-
-```dotenv
-NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api/v1
-```
+Copy `apps/api/.env.example` to `apps/api/.env` and `apps/web/.env.example` to
+`apps/web/.env.local`, then replace development placeholders as needed. See
+[`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) for ownership, validation, and rebuild behavior.
 
 Never commit `.env` files or real credentials.
 

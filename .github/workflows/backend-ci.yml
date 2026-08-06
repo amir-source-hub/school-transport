@@ -1,5 +1,12 @@
 name: Backend CI
 
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     paths:
@@ -7,7 +14,11 @@ on:
       - 'packages/**'
       - 'infrastructure/**'
       - 'docker-compose.yml'
+      - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.env.example'
       - '.github/workflows/backend-ci.yml'
   push:
     branches: [main]
@@ -42,11 +53,11 @@ jobs:
       OTP_PROVIDER: none
       PAYMENT_GATEWAY_PROVIDER: none
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
         with:
           version: 10.29.2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: pnpm

@@ -1,0 +1,27 @@
+# Explicit local-development override. Never use this file for production deployment.
+services:
+  api:
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://school_transport:school_transport_dev@postgres:5432/school_transport
+      REDIS_URL: redis://:redis_dev_password@redis:6379
+      JWT_SECRET: local-development-secret-change-before-production
+      LOG_LEVEL: debug
+      OTP_PROVIDER: console
+      PAYMENT_GATEWAY_PROVIDER: mock
+      QUEUE_REQUIRED: "false"
+  worker:
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://school_transport:school_transport_dev@postgres:5432/school_transport
+      REDIS_URL: redis://:redis_dev_password@redis:6379
+      JWT_SECRET: local-development-secret-change-before-production
+      LOG_LEVEL: debug
+      OTP_PROVIDER: console
+      PAYMENT_GATEWAY_PROVIDER: mock
+      QUEUE_REQUIRED: "true"
+  bootstrap:
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://school_transport:school_transport_dev@postgres:5432/school_transport
+      SEED_DEMO_DATA: "true"

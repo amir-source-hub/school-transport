@@ -1,0 +1,90 @@
+name: Migration Safety
+
+on:
+  pull_request:
+    paths:
+      - 'apps/api/drizzle/**'
+      - 'apps/api/src/database/**'
+      - 'infrastructure/database/**'
+      - '.github/workflows/migration-safety.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/drizzle/**'
+      - 'apps/api/src/database/**'
+      - 'infrastructure/database/**'
+      - '.github/workflows/migration-safety.yml'
+  schedule:
+    - cron: '43 2 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-safety-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ephemeral-restore:
+    name: Ephemeral migration, encrypted backup, and restore
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: migration_source_test
+          POSTGRES_USER: school_transport
+          POSTGRES_PASSWORD: migration-ci-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U school_transport -d migration_source_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://school_transport:migration-ci-only@localhost:5432/migration_source_test
+      DEPLOY_ENV: test
+      RELEASE_ID: migration-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      BACKUP_OUTPUT_DIR: ${{ runner.temp }}/encrypted-backups
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.29.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install backup encryption utility
+        run: sudo apt-get update && sudo apt-get install --yes age postgresql-client
+      - name: Create ephemeral restore target and encryption identity
+        run: |
+          createdb --maintenance-db="$DATABASE_URL" migration_restore_validation
+          age-keygen --output "${RUNNER_TEMP}/backup-identity.txt"
+          age-keygen -y "${RUNNER_TEMP}/backup-identity.txt" > "${RUNNER_TEMP}/backup-recipient.txt"
+          echo "BACKUP_AGE_IDENTITY_FILE=${RUNNER_TEMP}/backup-identity.txt" >> "$GITHUB_ENV"
+          echo "BACKUP_AGE_RECIPIENT=$(cat "${RUNNER_TEMP}/backup-recipient.txt")" >> "$GITHUB_ENV"
+      - name: Check migration status and dry run
+        run: |
+          bash infrastructure/database/migrate-safe.sh --dry-run
+          bash infrastructure/database/migrate-safe.sh --apply
+          bash infrastructure/database/migrate-safe.sh --status
+      - name: Create encrypted backup
+        id: backup
+        run: |
+          output="$(bash infrastructure/database/backup.sh)"
+          printf '%s\n' "$output"
+          backup_file="$(printf '%s\n' "$output" | sed -n 's/^encrypted_backup=//p')"
+          echo "BACKUP_FILE=$backup_file" >> "$GITHUB_ENV"
+      - name: Restore only into guarded ephemeral database
+        env:
+          DATABASE_URL: postgresql://school_transport:migration-ci-only@localhost:5432/migration_restore_validation
+          ALLOW_DESTRUCTIVE_RESTORE: migration_restore_validation
+        run: bash infrastructure/database/restore.sh
+      - name: Validate restored schema and migration history
+        env:
+          SOURCE_DATABASE_URL: postgresql://school_transport:migration-ci-only@localhost:5432/migration_source_test
+          DATABASE_URL: postgresql://school_transport:migration-ci-only@localhost:5432/migration_restore_validation
+          ALLOW_DESTRUCTIVE_RESTORE: migration_restore_validation
+        run: bash infrastructure/database/validate-restore.sh

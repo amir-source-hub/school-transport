@@ -1,0 +1,29 @@
+# Dependencies and build output
+node_modules/
+.next/
+.turbo/
+dist/
+coverage/
+.cache/
+.runtime/
+
+# Generated test and report output
+playwright-report/
+test-results/
+blob-report/
+
+# Local/private data and binary assets
+uploads/
+storage/
+*.sql
+*.dump
+*.zip
+
+# Environment files may contain secrets; format only the committed example.
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Package manager and generated metadata
+pnpm-lock.yaml

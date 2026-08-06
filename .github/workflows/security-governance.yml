@@ -1,0 +1,176 @@
+name: Security Governance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 1 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+
+concurrency:
+  group: security-governance-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    name: Dependency and license review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enforce immutable workflow action references
+        run: node infrastructure/security/assert-action-pins.mjs
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: high
+          deny-licenses: AGPL-3.0, GPL-3.0, SSPL-1.0
+          comment-summary-in-pr: never
+
+  dependency-audit:
+    name: Locked dependency audit and license inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.29.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Block high and critical package advisories
+        run: pnpm audit --audit-level high
+      - name: Export production dependency licenses
+        run: pnpm licenses list --prod --json > license-inventory.json
+      - name: Retain license inventory
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: production-license-inventory-${{ github.run_attempt }}
+          path: license-inventory.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  codeql:
+    name: CodeQL JavaScript and TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: github/codeql-action/init@47be0dbd5113ab1b79fe2dd3f68bdf7e426cdc87 # v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - uses: github/codeql-action/analyze@47be0dbd5113ab1b79fe2dd3f68bdf7e426cdc87 # v3
+        with:
+          category: /language:javascript-typescript
+
+  repository-scan:
+    name: Vulnerability, secret, and IaC scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Scan repository filesystem
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-repository.sarif
+          exit-code: '1'
+      - name: Upload repository scan findings
+        if: always() && hashFiles('trivy-repository.sarif') != ''
+        uses: github/codeql-action/upload-sarif@47be0dbd5113ab1b79fe2dd3f68bdf7e426cdc87 # v3
+        with:
+          sarif_file: trivy-repository.sarif
+
+  container-scan:
+    name: Production container scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build production images without publishing
+        run: |
+          docker build --target api --tag school-transport-api:scan .
+          docker build --target web --tag school-transport-web:scan \
+            --build-arg NEXT_DEPLOYMENT_ID=security-${{ github.sha }} \
+            --secret id=next_server_actions_encryption_key,env=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY .
+      - id: api-scan
+        name: Scan API image
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          image-ref: school-transport-api:scan
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-api.sarif
+          exit-code: '1'
+      - id: web-scan
+        name: Scan web image
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          image-ref: school-transport-web:scan
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-web.sarif
+          exit-code: '1'
+      - name: Upload API image findings
+        if: always() && hashFiles('trivy-api.sarif') != ''
+        uses: github/codeql-action/upload-sarif@47be0dbd5113ab1b79fe2dd3f68bdf7e426cdc87 # v3
+        with:
+          sarif_file: trivy-api.sarif
+          category: trivy-api-image
+      - name: Upload web image findings
+        if: always() && hashFiles('trivy-web.sarif') != ''
+        uses: github/codeql-action/upload-sarif@47be0dbd5113ab1b79fe2dd3f68bdf7e426cdc87 # v3
+        with:
+          sarif_file: trivy-web.sarif
+          category: trivy-web-image
+      - name: Enforce container severity policy
+        if: steps.api-scan.outcome == 'failure' || steps.web-scan.outcome == 'failure'
+        run: exit 1
+
+  sbom:
+    name: Generate SPDX software bill of materials
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: .
+          format: spdx-json
+          artifact-name: repository-sbom.spdx.json
+          output-file: repository-sbom.spdx.json
+          upload-artifact: true

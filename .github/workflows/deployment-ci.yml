@@ -1,0 +1,64 @@
+name: Deployment CI
+
+on:
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'docker-compose.yml'
+      - 'infrastructure/**'
+      - '.env.example'
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/deployment-ci.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deployment-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-artifacts:
+    name: Docker, Compose, Caddy, and service smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      JWT_SECRET: ci-only-deployment-secret-with-at-least-32-characters
+      NEXT_DEPLOYMENT_ID: ci-${{ github.sha }}
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check environment inventory and examples
+        run: node infrastructure/config/assert-environment-inventory.mjs
+      - name: Validate Compose interpolation and schema
+        run: docker compose config --quiet
+      - name: Validate Caddy configuration
+        run: >-
+          docker run --rm
+          --volume "${{ github.workspace }}/infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
+          caddy:2-alpine
+          caddy validate --config /etc/caddy/Caddyfile
+      - name: Build and start the production web dependency chain
+        run: docker compose up --build --wait --wait-timeout 240 web
+      - name: Smoke-test API and web health endpoints inside containers
+        run: |
+          docker compose exec -T api node -e "fetch('http://127.0.0.1:5000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)})"
+          docker compose exec -T web node -e "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)})"
+      - name: Capture container state and logs after failure
+        if: failure()
+        run: |
+          docker compose ps --all
+          docker compose logs --no-color --timestamps
+      - name: Stop smoke-test services
+        if: always()
+        run: docker compose down --volumes --remove-orphans

@@ -1,19 +1,81 @@
+{
+	admin off
+	servers {
+		protocols h1 h2 h3
+		strict_sni_host on
+		0rtt off
+		timeouts {
+			read_body 15s
+			read_header 10s
+			write 30s
+			idle 2m
+		}
+		keepalive_interval 30s
+		max_header_size 32KB
+	}
+}
+
 samingasht.ir {
 	encode zstd gzip
 
+	tls {
+		protocols tls1.2 tls1.3
+		curves x25519 secp256r1
+	}
+
+	request_body {
+		max_size 1MB
+	}
+
 	@api path /api/*
 	handle @api {
-		reverse_proxy api:5000
+		reverse_proxy api:5000 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+			header_down -Server
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 30s
+				max_response_header 1MB
+				keepalive 30s
+			}
+			fail_duration 30s
+			max_fails 3
+			unhealthy_status 5xx
+		}
 	}
 
 	handle {
-		reverse_proxy web:3000
+		reverse_proxy web:3000 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+			header_down -Server
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 30s
+				max_response_header 1MB
+				keepalive 30s
+			}
+			fail_duration 30s
+			max_fails 3
+			unhealthy_status 5xx
+		}
 	}
 
 	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		-Server
+		Permissions-Policy "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
+		X-Frame-Options "DENY"
+	}
+
+	@sensitive path /api/* /admin* /parent* /login /register /forgot-password
+	header @sensitive {
+		Cache-Control "no-store, max-age=0"
+		Pragma "no-cache"
 	}
 }

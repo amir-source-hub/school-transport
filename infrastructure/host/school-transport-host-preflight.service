@@ -1,0 +1,23 @@
+[Unit]
+Description=School Transport production host preflight
+Documentation=file:/usr/local/share/doc/school-transport/host-preflight.md
+After=systemd-sysctl.service
+Before=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/school-transport/host-preflight.sh
+DynamicUser=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectSystem=strict
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictAddressFamilies=AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

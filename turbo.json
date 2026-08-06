@@ -1,17 +1,41 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": [".env.example", ".prettierrc.json", "pnpm-lock.yaml"],
+  "globalEnv": ["CI", "NODE_ENV"],
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "TEST_DATABASE_URL",
+    "REDIS_URL",
+    "JWT_SECRET",
+    "OTP_*",
+    "PAYMENT_*"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**"]
+      "inputs": ["$TURBO_DEFAULT$"],
+      "env": ["NEXT_PUBLIC_*"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
-    "lint": {},
-    "typecheck": {},
-    "test": {}
+    "lint": {
+      "inputs": ["$TURBO_DEFAULT$"]
+    },
+    "format": {
+      "cache": false
+    },
+    "format:check": {
+      "inputs": ["$TURBO_DEFAULT$", "../../.prettierrc.json", "../../.prettierignore"]
+    },
+    "typecheck": {
+      "inputs": ["$TURBO_DEFAULT$"]
+    },
+    "test": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$"]
+    }
   }
 }

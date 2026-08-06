@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 FROM node:20-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0 AS dependencies
 
 ENV PNPM_HOME=/pnpm
@@ -24,22 +25,41 @@ FROM source AS api-build
 
 RUN pnpm --filter @school-transport/api build
 RUN pnpm --filter @school-transport/api deploy --prod --legacy /deploy/api
+RUN find apps/api/dist -type f \
+  \( -name '*.d.ts' -o -name '*.js.map' -o -name '*.test.js' -o -name '*.test.js.map' -o -name '*.tsbuildinfo' \) \
+  -delete
 
 FROM source AS web-build
 
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api/v1
+ARG NEXT_DEPLOYMENT_ID
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID
 
-RUN pnpm --filter web build
+RUN --mount=type=secret,id=next_server_actions_encryption_key,env=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
+  pnpm --filter web build
 RUN pnpm --filter web deploy --prod --legacy /deploy/web
 
-FROM node:20-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0 AS api
+FROM node:20-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0 AS runtime
 
+RUN apt-get update \
+  && apt-get install --yes --no-install-recommends tini=0.19.0-1+b3 \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV HOME=/tmp
+ENV XDG_CACHE_HOME=/tmp/.cache
 ENV NODE_ENV=production
-ENV HOST=0.0.0.0
-ENV PORT=5000
 
 WORKDIR /app
+
+RUN chown node:node /app
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+FROM runtime AS api
+
+ENV HOST=0.0.0.0
+ENV PORT=5000
 
 COPY --from=api-build --chown=node:node /deploy/api/node_modules ./node_modules
 COPY --from=api-build --chown=node:node /workspace/apps/api/dist ./dist
@@ -55,13 +75,11 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 
 CMD ["node", "dist/main.js"]
 
-FROM node:20-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0 AS web
+FROM runtime AS web
 
-ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
-
-WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=web-build --chown=node:node /deploy/web/node_modules ./node_modules
 COPY --from=web-build --chown=node:node /workspace/apps/web/.next ./.next
