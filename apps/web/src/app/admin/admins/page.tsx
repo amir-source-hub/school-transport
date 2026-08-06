@@ -1,6 +1,9 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
-import { getAdminAccounts } from '@/features/admin-admins/admin-admins-api';
+import {
+  getAdminAccounts,
+  getCurrentAdminAccount,
+} from '@/features/admin-admins/admin-admins-api';
 import { AdminAccountAction } from '@/features/admin-admins/admin-account-action';
 import { AdminAccountForm } from '@/features/admin-admins/admin-account-form';
 import { formatJalaliDateTime } from '@/lib/formatters';
@@ -10,7 +13,7 @@ export const metadata = { title: 'مدیران سامانه' };
 export const dynamic = 'force-dynamic';
 
 export default async function AdminsPage() {
-  const admins = await getAdminAccounts();
+  const [admins, current] = await Promise.all([getAdminAccounts(), getCurrentAdminAccount()]);
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -37,7 +40,14 @@ export default async function AdminsPage() {
           <tbody>
             {admins.map((admin) => (
               <tr key={admin.id} className="border-b border-border last:border-0">
-                <td className="px-3 py-3 font-bold">{admin.username}</td>
+                <td className="px-3 py-3 font-bold">
+                  {admin.username}
+                  {admin.isSuperAdmin && (
+                    <span className="mr-2">
+                      <Badge tone="info">فوق‌مدیر</Badge>
+                    </span>
+                  )}
+                </td>
                 <td className="px-3 py-3">
                   {admin.firstName} {admin.lastName}
                 </td>
@@ -52,7 +62,11 @@ export default async function AdminsPage() {
                 <td className="px-3 py-3">
                   <div className="flex gap-2">
                     <AdminAccountForm admin={admin} />
-                    <AdminAccountAction id={admin.id} active={admin.status === 'ACTIVE'} />
+                    <AdminAccountAction
+                      id={admin.id}
+                      active={admin.status === 'ACTIVE'}
+                      isSelf={admin.id === current.id}
+                    />
                   </div>
                 </td>
               </tr>

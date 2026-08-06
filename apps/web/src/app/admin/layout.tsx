@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
 
-import { AdminShell } from '@/features/admin-shell/admin-shell';
-import { PortalSessionGuard } from '@/features/auth/portal-session-guard';
+import { AdminRouteGuard } from '@/features/auth/admin-route-guard';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,9 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  return (
-    <PortalSessionGuard role="ADMIN">
-      <AdminShell>{children}</AdminShell>
-    </PortalSessionGuard>
-  );
+  return <AdminRouteGuard>{children}</AdminRouteGuard>;
 }

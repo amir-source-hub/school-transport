@@ -206,6 +206,13 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     redirectTo: '/admin/dashboard',
   },
   {
+    path: '/admin/login',
+    audience: 'admin',
+    title: 'ورود مدیران',
+    description: 'ورود دو مرحله‌ای مدیران به پنل مدیریت ثمین گشت مهر ایران.',
+    primaryHeading: 'ورود مدیران سامانه',
+  },
+  {
     path: '/admin/dashboard',
     audience: 'admin',
     title: 'داشبورد مدیریت',

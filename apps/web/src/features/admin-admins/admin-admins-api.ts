@@ -9,6 +9,7 @@ export const adminAccountSchema = z.object({
   phoneNumber: z.string(),
   email: z.string().nullable(),
   status: z.string(),
+  isSuperAdmin: z.boolean().default(false),
   lastLoginAt: z.coerce.date().nullable(),
 });
 
@@ -16,7 +17,7 @@ export type AdminAccount = z.infer<typeof adminAccountSchema>;
 export type AdminAccountInput = Pick<
   AdminAccount,
   'username' | 'firstName' | 'lastName' | 'phoneNumber'
-> & { email?: string };
+> & { email?: string; password?: string };
 
 export async function getAdminAccounts() {
   const response = await apiRequest<unknown>('/admin/admins', { cache: 'no-store' });
@@ -40,8 +41,13 @@ export async function createAdminAccount(input: AdminAccountInput) {
 }
 
 export async function updateAdminAccount(id: string, input: AdminAccountInput) {
-  await apiRequest(`/admin/admins/${id}`, {
-    method: 'PATCH',
-    body: { ...input, email: input.email?.trim() || undefined },
-  });
+  const body: Record<string, unknown> = {
+    username: input.username,
+    firstName: input.firstName,
+    lastName: input.lastName,
+    phoneNumber: input.phoneNumber,
+    email: input.email?.trim() || undefined,
+  };
+  if (input.password && input.password.trim()) body.password = input.password;
+  await apiRequest(`/admin/admins/${id}`, { method: 'PATCH', body });
 }

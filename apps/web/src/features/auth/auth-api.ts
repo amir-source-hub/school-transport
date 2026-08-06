@@ -14,7 +14,7 @@ type LoginResponse = {
   accessToken: string;
 };
 
-export function requestAuthOtp(phoneNumber: string, role: AuthRole) {
+export function requestParentOtp(phoneNumber: string) {
   return apiRequest<{
     expiresAt: string;
     cooldownSeconds: number;
@@ -22,15 +22,38 @@ export function requestAuthOtp(phoneNumber: string, role: AuthRole) {
     accountExists?: boolean;
   }>('/auth/request-otp', {
     method: 'POST',
-    body: { phoneNumber, role },
+    body: { phoneNumber, role: 'PARENT' },
     timeoutMs: 10_000,
   });
 }
 
-export function verifyAuthOtp(phoneNumber: string, code: string, role: AuthRole) {
+export function verifyParentOtp(phoneNumber: string, code: string) {
   return apiRequest<LoginResponse>('/auth/verify-otp', {
     method: 'POST',
-    body: { phoneNumber, code, role },
+    body: { phoneNumber, code, role: 'PARENT' },
+    timeoutMs: 10_000,
+  });
+}
+
+export type AdminChallengeResponse = {
+  challengeId: string;
+  expiresAt: string;
+  cooldownSeconds: number;
+  developmentCode?: string;
+};
+
+export function requestAdminPasswordChallenge(username: string, password: string) {
+  return apiRequest<AdminChallengeResponse>('/auth/admin/password-challenge', {
+    method: 'POST',
+    body: { username, password },
+    timeoutMs: 10_000,
+  });
+}
+
+export function verifyAdminOtp(challengeId: string, code: string) {
+  return apiRequest<LoginResponse>('/auth/admin/verify-otp', {
+    method: 'POST',
+    body: { challengeId, code },
     timeoutMs: 10_000,
   });
 }

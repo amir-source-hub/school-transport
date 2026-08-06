@@ -4,6 +4,7 @@ import {
   varchar,
   timestamp,
   integer,
+  boolean,
   index,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
@@ -33,10 +34,34 @@ export const adminUsers = pgTable('admin_users', {
   email: varchar('email', { length: 255 }),
   phoneNumber: varchar('phone_number', { length: 20 }).notNull().unique(),
   status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
+  passwordHash: varchar('password_hash', { length: 255 }),
+  isSuperAdmin: boolean('is_super_admin').notNull().default(false),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const adminAuthChallenges = pgTable(
+  'admin_auth_challenges',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    adminId: uuid('admin_id')
+      .notNull()
+      .references(() => adminUsers.id),
+    challengeHash: varchar('challenge_hash', { length: 64 }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    maxAttempts: integer('max_attempts').notNull().default(5),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    invalidatedAt: timestamp('invalidated_at', { withTimezone: true }),
+    requestIp: varchar('request_ip', { length: 64 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    adminIdIdx: index('idx_admin_auth_challenges_admin').on(table.adminId),
+    expiresAtIdx: index('idx_admin_auth_challenges_expires').on(table.expiresAt),
+  }),
+);
 
 export const otpRequests = pgTable(
   'otp_requests',

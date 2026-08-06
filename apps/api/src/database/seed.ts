@@ -72,6 +72,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         firstName: 'Demo',
         lastName: 'Admin',
         phoneNumber: SEED_CREDENTIALS.admin.phoneNumber,
+        isSuperAdmin: true,
       })
       .onConflictDoNothing();
     await db

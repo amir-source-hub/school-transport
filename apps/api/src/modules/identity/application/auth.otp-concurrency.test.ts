@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as argon2 from 'argon2';
+import { createHash } from 'node:crypto';
 import { AuthService } from './auth.service';
+import {
+  adminUsers,
+  adminAuthChallenges,
+  otpRequests,
+  authSessions,
+} from '../../../database/schemas';
 
 type OtpRow = {
   id: string;
@@ -98,12 +105,14 @@ function createService(database: ReturnType<typeof otpDatabase>['service']) {
     otpExpirySeconds: 300,
     otpResendCooldownSeconds: 60,
     otpMaxAttempts: 2,
+    adminChallengeTtlSeconds: 120,
     nodeEnv: 'test',
     otpProvider: 'none',
   };
   const logger = { log: vi.fn(), warn: vi.fn() };
+  const audit = { record: vi.fn().mockResolvedValue(undefined), recordInTransaction: vi.fn().mockResolvedValue(undefined) };
   return {
-    auth: new AuthService({} as never, config as never, database as never, logger as never, delivery, {} as never),
+    auth: new AuthService({} as never, config as never, database as never, logger as never, delivery, {} as never, audit as never),
     delivery,
   };
 }
@@ -170,3 +179,204 @@ function row(codeHash: string, expiresAt = new Date(Date.now() + 60_000)): OtpRo
     createdAt: new Date(),
   };
 }
+
+type ChallengeRow = {
+  id: string;
+  adminId: string;
+  challengeHash: string;
+  expiresAt: Date;
+  attemptCount: number;
+  maxAttempts: number;
+  usedAt: Date | null;
+  invalidatedAt: Date | null;
+  requestIp: string | null;
+  createdAt: Date;
+};
+
+function twoFactorDatabase(adminId: string) {
+  const challenges: ChallengeRow[] = [];
+  const otps: Array<Record<string, unknown>> = [];
+  const admins = [
+    {
+      id: adminId,
+      username: 'demo-admin',
+      phoneNumber: '09120000000',
+      status: 'ACTIVE',
+      passwordHash: null as string | null,
+    },
+  ];
+  const sessions: Array<Record<string, unknown>> = [];
+  const tables = new Map<unknown, Array<Record<string, unknown>>>([
+    [adminAuthChallenges, challenges],
+    [otpRequests, otps],
+    [adminUsers, admins],
+    [authSessions, sessions],
+  ]);
+
+  let tail = Promise.resolve();
+  const select = (rows: Array<Record<string, unknown>>) => ({
+    then: (resolve: (value: unknown) => unknown, reject: (reason?: unknown) => unknown) =>
+      Promise.resolve(rows).then(resolve, reject),
+    where: () => select(rows),
+    orderBy: () => select(rows),
+    limit: (n: number) => select(rows.slice(0, n)),
+  });
+  const update = (rows: Array<Record<string, unknown>>) => ({
+    set: (changes: Record<string, unknown>) => ({
+      where: async () => {
+        for (const row of rows) Object.assign(row, changes);
+      },
+      returning: async () => rows.slice(0, 1),
+    }),
+  });
+  const insert = (rows: Array<Record<string, unknown>>) => ({
+    values: async (value: Record<string, unknown>) => rows.push(value),
+  });
+  const transaction = async <T>(work: (txn: any) => Promise<T>): Promise<T> => {
+    const previous = tail;
+    let release!: () => void;
+    tail = new Promise<void>((resolve) => (release = resolve));
+    await previous;
+    const txn = {
+      execute: async () => {},
+      select: () => ({
+        from: (table: unknown) => select(tables.get(table) ?? []),
+      }),
+      update: (table: unknown) => update(tables.get(table) ?? []),
+      insert: (table: unknown) => insert(tables.get(table) ?? []),
+    };
+    try {
+      return await work(txn);
+    } finally {
+      release();
+    }
+  };
+  return {
+    rows: { challenges, otps, admins, sessions },
+    service: {
+      db: {
+        transaction,
+        update: (table: unknown) => update(tables.get(table) ?? []),
+      },
+    },
+  };
+}
+
+function createTwoFactorService(database: ReturnType<typeof twoFactorDatabase>['service']) {
+  const delivery = { send: vi.fn().mockResolvedValue(undefined) };
+  const config = {
+    otpExpirySeconds: 300,
+    otpResendCooldownSeconds: 60,
+    otpMaxAttempts: 2,
+    adminChallengeTtlSeconds: 120,
+    adminJwtAccessTokenTtl: 60,
+    adminJwtRefreshTokenTtl: 120,
+    jwtSecret: 'secret',
+    nodeEnv: 'test',
+    otpProvider: 'none',
+  };
+  const logger = { log: vi.fn(), warn: vi.fn() };
+  const audit = {
+    record: vi.fn().mockResolvedValue(undefined),
+    recordInTransaction: vi.fn().mockResolvedValue(undefined),
+  };
+  const jwt = { signAsync: vi.fn().mockResolvedValue('signed-token') };
+  const auth = new AuthService(
+    jwt as never,
+    config as never,
+    database as never,
+    logger as never,
+    delivery,
+    {} as never,
+    audit as never,
+  );
+  return { auth, jwt };
+}
+
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+describe('admin two-factor challenge', () => {
+  it('consumes a single-use challenge and its OTP only once, even under parallel verification', async () => {
+    const adminId = 'admin-1';
+    const database = twoFactorDatabase(adminId);
+    database.rows.admins[0].passwordHash = await argon2.hash('secret-pass');
+    database.rows.challenges.push({
+      id: 'challenge-1',
+      adminId,
+      challengeHash: hashToken('challenge-token'),
+      expiresAt: new Date(Date.now() + 60_000),
+      attemptCount: 0,
+      maxAttempts: 5,
+      usedAt: null,
+      invalidatedAt: null,
+      requestIp: null,
+      createdAt: new Date(),
+    });
+    database.rows.otps.push({
+      id: 'otp-1',
+      phoneNumber: '09120000000',
+      purpose: 'AUTH_ADMIN',
+      codeHash: await argon2.hash('123456'),
+      expiresAt: new Date(Date.now() + 60_000),
+      attemptCount: 0,
+      maxAttempts: 5,
+      verifiedAt: null,
+      invalidatedAt: null,
+      requestIp: null,
+      createdAt: new Date(),
+    });
+    const { auth, jwt } = createTwoFactorService(database.service);
+
+    const results = await Promise.allSettled([
+      auth.verifyAdminOtp('challenge-token', '123456'),
+      auth.verifyAdminOtp('challenge-token', '123456'),
+    ]);
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(database.rows.challenges[0].usedAt).toBeInstanceOf(Date);
+    expect(database.rows.otps[0].verifiedAt).toBeInstanceOf(Date);
+    expect(jwt.signAsync).toHaveBeenCalledTimes(2);
+    expect(database.rows.sessions).toHaveLength(1);
+  });
+
+  it('rejects a used challenge on a later attempt and counts failed OTP attempts', async () => {
+    const adminId = 'admin-1';
+    const database = twoFactorDatabase(adminId);
+    database.rows.admins[0].passwordHash = await argon2.hash('secret-pass');
+    database.rows.challenges.push({
+      id: 'challenge-1',
+      adminId,
+      challengeHash: hashToken('challenge-token'),
+      expiresAt: new Date(Date.now() + 60_000),
+      attemptCount: 0,
+      maxAttempts: 2,
+      usedAt: null,
+      invalidatedAt: null,
+      requestIp: null,
+      createdAt: new Date(),
+    });
+    database.rows.otps.push({
+      id: 'otp-1',
+      phoneNumber: '09120000000',
+      purpose: 'AUTH_ADMIN',
+      codeHash: await argon2.hash('123456'),
+      expiresAt: new Date(Date.now() + 60_000),
+      attemptCount: 0,
+      maxAttempts: 2,
+      verifiedAt: null,
+      invalidatedAt: null,
+      requestIp: null,
+      createdAt: new Date(),
+    });
+    const { auth } = createTwoFactorService(database.service);
+
+    await expect(auth.verifyAdminOtp('challenge-token', '000000')).rejects.toThrow(
+      'username or password',
+    );
+    expect(database.rows.challenges[0].attemptCount).toBe(1);
+    expect(database.rows.otps[0].attemptCount).toBe(1);
+  });
+});

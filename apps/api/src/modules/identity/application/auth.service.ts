@@ -3,17 +3,32 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { addSeconds, isPast } from 'date-fns';
 import { eq, and, desc, isNull, or, gt, sql } from 'drizzle-orm';
-import { createHash, randomInt } from 'node:crypto';
+import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { ConfigService } from '../../../config/config.service';
 import { DatabaseService } from '../../../database/database.service';
-import { users, adminUsers, otpRequests, parents, authSessions } from '../../../database/schemas';
+import {
+  users,
+  adminUsers,
+  adminAuthChallenges,
+  otpRequests,
+  parents,
+  authSessions,
+} from '../../../database/schemas';
 import { AuthenticationError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
 import { AuthTokens, LoginResult, OtpResult } from '../domain/auth.types';
 import { JwtPayload } from '../../../common/authentication.types';
 import { OTP_DELIVERY, OtpDelivery } from './otp-delivery.port';
+import { AUDIT_PORT, AuditPort } from '../../../common/audit.port';
 import { InAppNotificationService } from '../../../infrastructure/notifications/in-app-notification.service';
+
+export interface AdminChallengeResult {
+  challengeId: string;
+  expiresAt: Date;
+  cooldownSeconds: number;
+  developmentCode?: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -24,6 +39,7 @@ export class AuthService {
     private readonly logger: AppLogger,
     @Inject(OTP_DELIVERY) private readonly otpDelivery: OtpDelivery,
     private readonly notifications: InAppNotificationService,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
   async getAdmins() {
@@ -36,6 +52,7 @@ export class AuthService {
         phoneNumber: adminUsers.phoneNumber,
         email: adminUsers.email,
         status: adminUsers.status,
+        isSuperAdmin: adminUsers.isSuperAdmin,
         lastLoginAt: adminUsers.lastLoginAt,
         createdAt: adminUsers.createdAt,
       })
@@ -53,6 +70,7 @@ export class AuthService {
         phoneNumber: adminUsers.phoneNumber,
         email: adminUsers.email,
         status: adminUsers.status,
+        isSuperAdmin: adminUsers.isSuperAdmin,
         lastLoginAt: adminUsers.lastLoginAt,
         createdAt: adminUsers.createdAt,
       })
@@ -69,11 +87,24 @@ export class AuthService {
     lastName: string;
     phoneNumber: string;
     email?: string;
+    password: string;
   }) {
     await this.ensureAdminIdentityIsUnique(data.username, data.phoneNumber);
+    if (data.password.length < 8) {
+      throw new ValidationError('Password must be at least 8 characters long.');
+    }
     const [admin] = await this.db.db
       .insert(adminUsers)
-      .values({ id: generateId(), ...data, email: data.email || null, status: 'ACTIVE' })
+      .values({
+        id: generateId(),
+        username: data.username,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phoneNumber: data.phoneNumber,
+        email: data.email || null,
+        status: 'ACTIVE',
+        passwordHash: await argon2.hash(data.password),
+      })
       .returning();
     return admin;
   }
@@ -86,7 +117,9 @@ export class AuthService {
       lastName: string;
       phoneNumber: string;
       email: string;
+      password: string;
     }>,
+    actor?: { id: string; ip?: string },
   ) {
     const current = await this.getAdmin(adminId);
     await this.ensureAdminIdentityIsUnique(
@@ -94,20 +127,81 @@ export class AuthService {
       data.phoneNumber ?? current.phoneNumber,
       adminId,
     );
-    const changes = {
+
+    const password = data.password ?? '';
+    if (password.length > 0 && password.length < 8) {
+      throw new ValidationError('Password must be at least 8 characters long.');
+    }
+
+    const changes: Record<string, unknown> = {
       ...data,
+      ...(password.length > 0 ? { passwordHash: await argon2.hash(password) } : {}),
       ...(data.email !== undefined ? { email: data.email || null } : {}),
       updatedAt: new Date(),
     };
+    delete changes.password;
+
+    const sensitiveChanged =
+      (data.username !== undefined && data.username !== current.username) ||
+      (data.phoneNumber !== undefined && data.phoneNumber !== current.phoneNumber) ||
+      password.length > 0;
+
     const [admin] = await this.db.db
       .update(adminUsers)
       .set(changes)
       .where(eq(adminUsers.id, adminId))
       .returning();
+
+    if (sensitiveChanged) {
+      await this.revokeAllSessions(adminId, 'ADMIN', 'CREDENTIALS_CHANGED');
+    }
+    await this.audit.record({
+      actorType: 'ADMIN',
+      actorId: actor?.id ?? adminId,
+      entityType: 'ADMIN',
+      entityId: adminId,
+      action: 'ADMIN_EDIT',
+      previousValues: { status: current.status },
+      newValues: { status: admin.status },
+      ipAddress: actor?.ip,
+    });
     return admin;
   }
 
-  async setAdminStatus(adminId: string, status: 'ACTIVE' | 'INACTIVE') {
+  async setAdminStatus(
+    adminId: string,
+    status: 'ACTIVE' | 'INACTIVE',
+    actor?: { id: string; ip?: string },
+  ) {
+    if (status === 'INACTIVE') {
+      if (actor?.id && actor.id === adminId) {
+        throw new ValidationError('You cannot disable your own administrator account.');
+      }
+      const [target] = await this.db.db
+        .select({
+          id: adminUsers.id,
+          isSuperAdmin: adminUsers.isSuperAdmin,
+          status: adminUsers.status,
+        })
+        .from(adminUsers)
+        .where(eq(adminUsers.id, adminId))
+        .limit(1);
+      if (!target) throw new ValidationError('Administrator was not found.');
+      if (target.isSuperAdmin) {
+        const [activeSuper] = await this.db.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(adminUsers)
+          .where(
+            and(eq(adminUsers.status, 'ACTIVE'), eq(adminUsers.isSuperAdmin, true)),
+          );
+        if (Number(activeSuper?.count ?? 0) <= 1) {
+          throw new ValidationError(
+            'You cannot disable the last active super administrator.',
+          );
+        }
+      }
+    }
+
     const [admin] = await this.db.db.transaction(async (txn) => {
       const updated = await txn
         .update(adminUsers)
@@ -129,6 +223,17 @@ export class AuthService {
       return updated;
     });
     if (!admin) throw new ValidationError('Administrator was not found.');
+
+    await this.audit.record({
+      actorType: 'ADMIN',
+      actorId: actor?.id ?? adminId,
+      entityType: 'ADMIN',
+      entityId: adminId,
+      action: status === 'INACTIVE' ? 'ADMIN_DISABLED' : 'ADMIN_ENABLED',
+      previousValues: { status: status === 'INACTIVE' ? 'ACTIVE' : 'INACTIVE' },
+      newValues: { status },
+      ipAddress: actor?.ip,
+    });
     return admin;
   }
 
@@ -150,35 +255,26 @@ export class AuthService {
 
   async requestAuthOtp(
     phoneNumber: string,
-    role: 'PARENT' | 'ADMIN',
+    role: 'PARENT' = 'PARENT',
     requestIp?: string,
   ): Promise<OtpResult> {
-    const account = await this.findAccountByPhone(phoneNumber, role);
-    // Admin accounts must be provisioned in advance. Keep production responses generic.
-    if (role === 'ADMIN' && !account) {
-      const result: OtpResult = {
-        expiresAt: addSeconds(new Date(), this.config.otpExpirySeconds),
-        cooldownSeconds: this.config.otpResendCooldownSeconds,
-      };
-      if (this.config.nodeEnv !== 'production' && this.config.otpProvider === 'console') {
-        result.accountExists = false;
-      }
-      return result;
+    if (role !== 'PARENT') {
+      throw new ValidationError('Administrators must sign in through the two-step admin login.');
     }
-    return this.sendOtp(phoneNumber, role === 'ADMIN' ? 'AUTH_ADMIN' : 'AUTH_PARENT', requestIp);
+    return this.sendOtp(phoneNumber, 'AUTH_PARENT', requestIp);
   }
 
   async verifyAuthOtp(
     phoneNumber: string,
     code: string,
-    role: 'PARENT' | 'ADMIN',
+    role: 'PARENT' = 'PARENT',
     context?: SessionContext,
   ): Promise<LoginResult> {
-    let account = await this.findAccountByPhone(phoneNumber, role);
-    if (role === 'ADMIN' && !account) {
-      throw new AuthenticationError('Invalid phone number or verification code.');
+    if (role !== 'PARENT') {
+      throw new ValidationError('Administrators must sign in through the two-step admin login.');
     }
-    await this.verifyOtp(phoneNumber, role === 'ADMIN' ? 'AUTH_ADMIN' : 'AUTH_PARENT', code);
+    let account = await this.findAccountByPhone(phoneNumber, 'PARENT');
+    await this.verifyOtp(phoneNumber, 'AUTH_PARENT', code);
 
     if (!account) {
       const userId = generateId();
@@ -206,42 +302,171 @@ export class AuthService {
     if (account.status !== 'ACTIVE') {
       throw new AuthenticationError('Account is disabled or suspended.');
     }
-    if (role === 'PARENT') {
-      const familyParents = await this.db.db
-        .select({ id: parents.id, phoneNumber: parents.phoneNumber })
-        .from(parents)
-        .where(eq(parents.userId, account.id));
-      if (familyParents.length > 0) {
-        const matchingParent = familyParents.find((parent) => parent.phoneNumber === phoneNumber);
-        if (!matchingParent) {
-          throw new AuthenticationError(
-            'The login phone number must belong to one of the registered parents.',
-          );
-        }
-        await this.db.db.transaction(async (txn) => {
-          await txn
-            .update(parents)
-            .set({ isPrimaryContact: false, updatedAt: new Date() })
-            .where(eq(parents.userId, account!.id));
-          await txn
-            .update(parents)
-            .set({ isPrimaryContact: true, phoneVerifiedAt: new Date(), updatedAt: new Date() })
-            .where(eq(parents.id, matchingParent.id));
-          await txn
-            .update(users)
-            .set({ phoneNumber, updatedAt: new Date() })
-            .where(eq(users.id, account!.id));
-        });
+    const familyParents = await this.db.db
+      .select({ id: parents.id, phoneNumber: parents.phoneNumber })
+      .from(parents)
+      .where(eq(parents.userId, account.id));
+    if (familyParents.length > 0) {
+      const matchingParent = familyParents.find((parent) => parent.phoneNumber === phoneNumber);
+      if (!matchingParent) {
+        throw new AuthenticationError(
+          'The login phone number must belong to one of the registered parents.',
+        );
       }
+      await this.db.db.transaction(async (txn) => {
+        await txn
+          .update(parents)
+          .set({ isPrimaryContact: false, updatedAt: new Date() })
+          .where(eq(parents.userId, account!.id));
+        await txn
+          .update(parents)
+          .set({ isPrimaryContact: true, phoneVerifiedAt: new Date(), updatedAt: new Date() })
+          .where(eq(parents.id, matchingParent.id));
+        await txn
+          .update(users)
+          .set({ phoneNumber, updatedAt: new Date() })
+          .where(eq(users.id, account!.id));
+      });
     }
-    const table = role === 'ADMIN' ? adminUsers : users;
-    await this.db.db.update(table).set({ lastLoginAt: new Date() }).where(eq(table.id, account.id));
-    const tokens = await this.generateTokens(account.id, role, context);
-    this.logger.log(`${role} logged in with OTP.`);
+    await this.db.db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, account.id));
+    const tokens = await this.generateTokens(account.id, 'PARENT', context);
+    this.logger.log('PARENT logged in with OTP.');
     return {
-      user: { id: account.id, username: account.username, phoneNumber, role },
+      user: { id: account.id, username: account.username, phoneNumber, role: 'PARENT' },
       ...tokens,
     };
+  }
+
+  async createAdminChallenge(
+    username: string,
+    password: string,
+    requestIp?: string,
+  ): Promise<AdminChallengeResult> {
+    const genericError = () =>
+      new AuthenticationError('The username or password is incorrect.');
+
+    const records = await this.db.db
+      .select({
+        id: adminUsers.id,
+        username: adminUsers.username,
+        phoneNumber: adminUsers.phoneNumber,
+        status: adminUsers.status,
+        passwordHash: adminUsers.passwordHash,
+      })
+      .from(adminUsers)
+      .where(eq(adminUsers.username, username))
+      .limit(1);
+    const record = records[0];
+    if (!record || record.status !== 'ACTIVE' || !record.passwordHash) {
+      throw genericError();
+    }
+    const valid = await argon2.verify(record.passwordHash, password);
+    if (!valid) throw genericError();
+
+    const challengeToken = randomBytes(24).toString('base64url');
+    await this.db.db.insert(adminAuthChallenges).values({
+      id: generateId(),
+      adminId: record.id,
+      challengeHash: this.hashToken(challengeToken),
+      expiresAt: addSeconds(new Date(), this.config.adminChallengeTtlSeconds),
+      requestIp: requestIp || null,
+    });
+    this.logger.log('Admin password factor verified; OTP requested.');
+
+    const otp = await this.sendOtp(record.phoneNumber, 'AUTH_ADMIN', requestIp);
+    return {
+      challengeId: challengeToken,
+      expiresAt: otp.expiresAt,
+      cooldownSeconds: otp.cooldownSeconds,
+      developmentCode: otp.developmentCode,
+    };
+  }
+
+  async verifyAdminOtp(
+    challengeId: string,
+    code: string,
+    context?: SessionContext,
+  ): Promise<LoginResult> {
+    const genericError = () =>
+      new AuthenticationError('The username or password is incorrect.');
+    const challengeHash = this.hashToken(challengeId);
+
+    let admin: { id: string; username: string; phoneNumber: string } | undefined;
+    await this.db.db.transaction(async (txn) => {
+      await txn.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`admin-challenge:${challengeHash}`}))`,
+      );
+      const [challenge] = await txn
+        .select()
+        .from(adminAuthChallenges)
+        .where(eq(adminAuthChallenges.challengeHash, challengeHash))
+        .limit(1);
+      if (!challenge || challenge.usedAt || challenge.invalidatedAt) {
+        throw genericError();
+      }
+      if (isPast(new Date(challenge.expiresAt))) {
+        await txn
+          .update(adminAuthChallenges)
+          .set({ invalidatedAt: new Date() })
+          .where(eq(adminAuthChallenges.id, challenge.id));
+        throw genericError();
+      }
+      if (challenge.attemptCount >= challenge.maxAttempts) {
+        throw genericError();
+      }
+
+      const admins = await txn
+        .select({
+          id: adminUsers.id,
+          username: adminUsers.username,
+          phoneNumber: adminUsers.phoneNumber,
+          status: adminUsers.status,
+        })
+        .from(adminUsers)
+        .where(eq(adminUsers.id, challenge.adminId))
+        .limit(1);
+      const adminRecord = admins[0];
+      if (!adminRecord || adminRecord.status !== 'ACTIVE') {
+        throw genericError();
+      }
+
+      const otpOutcome = await this.consumeOtpInTransaction(
+        txn,
+        adminRecord.phoneNumber,
+        'AUTH_ADMIN',
+        code,
+      );
+      if (otpOutcome !== 'VERIFIED') {
+        const attempts = challenge.attemptCount + 1;
+        await txn
+          .update(adminAuthChallenges)
+          .set({
+            attemptCount: attempts,
+            invalidatedAt: attempts >= challenge.maxAttempts ? new Date() : null,
+          })
+          .where(eq(adminAuthChallenges.id, challenge.id));
+        throw genericError();
+      }
+
+      await txn
+        .update(adminAuthChallenges)
+        .set({ usedAt: new Date() })
+        .where(eq(adminAuthChallenges.id, challenge.id));
+      admin = {
+        id: adminRecord.id,
+        username: adminRecord.username,
+        phoneNumber: adminRecord.phoneNumber,
+      };
+    });
+
+    if (!admin) throw genericError();
+    await this.db.db
+      .update(adminUsers)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(adminUsers.id, admin.id));
+    const tokens = await this.generateTokens(admin.id, 'ADMIN', context);
+    this.logger.log('Admin logged in after two-factor verification.');
+    return { user: { ...admin, role: 'ADMIN' }, ...tokens };
   }
 
   async refreshTokens(refreshToken: string): Promise<AuthTokens & { role: 'PARENT' | 'ADMIN' }> {
@@ -400,50 +625,7 @@ export class AuthService {
       await txn.execute(
         sql`select pg_advisory_xact_lock(hashtext(${`otp:${phoneNumber}:${purpose}`}))`,
       );
-      const [request] = await txn
-        .select()
-        .from(otpRequests)
-        .where(
-          and(
-            eq(otpRequests.phoneNumber, phoneNumber),
-            eq(otpRequests.purpose, purpose),
-            isNull(otpRequests.verifiedAt),
-            isNull(otpRequests.invalidatedAt),
-          ),
-        )
-        .orderBy(desc(otpRequests.createdAt))
-        .limit(1);
-      if (!request) {
-        return 'NOT_FOUND' as const;
-      }
-      if (request.attemptCount >= request.maxAttempts) {
-        return 'TOO_MANY_ATTEMPTS' as const;
-      }
-      if (isPast(new Date(request.expiresAt))) {
-        await txn
-          .update(otpRequests)
-          .set({ invalidatedAt: new Date() })
-          .where(eq(otpRequests.id, request.id));
-        return 'EXPIRED' as const;
-      }
-      const valid = await argon2.verify(request.codeHash, code);
-      const attemptCount = request.attemptCount + 1;
-      if (!valid) {
-        await txn
-          .update(otpRequests)
-          .set({
-            attemptCount,
-            invalidatedAt: attemptCount >= request.maxAttempts ? new Date() : null,
-          })
-          .where(eq(otpRequests.id, request.id));
-        this.logger.warn(`Failed OTP attempt for ${purpose}.`);
-        return 'INVALID' as const;
-      }
-      await txn
-        .update(otpRequests)
-        .set({ verifiedAt: new Date(), attemptCount })
-        .where(and(eq(otpRequests.id, request.id), isNull(otpRequests.verifiedAt)));
-      return 'VERIFIED' as const;
+      return this.consumeOtpInTransaction(txn, phoneNumber, purpose, code);
     });
     if (outcome === 'NOT_FOUND') {
       throw new ValidationError('No valid OTP request found. Please request a new code.');
@@ -460,23 +642,62 @@ export class AuthService {
     return {};
   }
 
+  private async consumeOtpInTransaction(
+    txn: any,
+    phoneNumber: string,
+    purpose: string,
+    code: string,
+  ): Promise<'NOT_FOUND' | 'TOO_MANY_ATTEMPTS' | 'EXPIRED' | 'INVALID' | 'VERIFIED'> {
+    const [request] = await txn
+      .select()
+      .from(otpRequests)
+      .where(
+        and(
+          eq(otpRequests.phoneNumber, phoneNumber),
+          eq(otpRequests.purpose, purpose),
+          isNull(otpRequests.verifiedAt),
+          isNull(otpRequests.invalidatedAt),
+        ),
+      )
+      .orderBy(desc(otpRequests.createdAt))
+      .limit(1);
+    if (!request) {
+      return 'NOT_FOUND' as const;
+    }
+    if (request.attemptCount >= request.maxAttempts) {
+      return 'TOO_MANY_ATTEMPTS' as const;
+    }
+    if (isPast(new Date(request.expiresAt))) {
+      await txn
+        .update(otpRequests)
+        .set({ invalidatedAt: new Date() })
+        .where(eq(otpRequests.id, request.id));
+      return 'EXPIRED' as const;
+    }
+    const valid = await argon2.verify(request.codeHash, code);
+    const attemptCount = request.attemptCount + 1;
+    if (!valid) {
+      await txn
+        .update(otpRequests)
+        .set({
+          attemptCount,
+          invalidatedAt: attemptCount >= request.maxAttempts ? new Date() : null,
+        })
+        .where(eq(otpRequests.id, request.id));
+      this.logger.warn(`Failed OTP attempt for ${purpose}.`);
+      return 'INVALID' as const;
+    }
+    await txn
+      .update(otpRequests)
+      .set({ verifiedAt: new Date(), attemptCount })
+      .where(and(eq(otpRequests.id, request.id), isNull(otpRequests.verifiedAt)));
+    return 'VERIFIED' as const;
+  }
+
   private async findAccountByPhone(
     phoneNumber: string,
-    role: 'PARENT' | 'ADMIN',
+    _role: 'PARENT' = 'PARENT',
   ): Promise<{ id: string; username: string; status: string } | undefined> {
-    if (role === 'ADMIN') {
-      const records = await this.db.db
-        .select({
-          id: adminUsers.id,
-          username: adminUsers.username,
-          status: adminUsers.status,
-        })
-        .from(adminUsers)
-        .where(eq(adminUsers.phoneNumber, phoneNumber))
-        .limit(1);
-      return records[0];
-    }
-
     const direct = await this.db.db
       .select({ id: users.id, username: users.username, status: users.accountStatus })
       .from(users)

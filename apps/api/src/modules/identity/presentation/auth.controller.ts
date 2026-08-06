@@ -23,7 +23,7 @@ import { ValidationError } from '../../../common/errors';
 import { TrustedOriginGuard } from '../../access-control/trusted-origin.guard';
 import { RolesGuard } from '../../access-control/roles.guard';
 import { Roles } from '../../../common/decorators';
-import { IsEmail, IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, Length, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { normalizeIranianDigits } from '../../../common/iranian-national-id';
 import { AuthenticatedRequest } from '../../../common/http-request';
@@ -47,9 +47,14 @@ export class CreateAdminDto {
   @Transform(trimmed)
   lastName!: string;
 
-  @Transform(digits)
+@Transform(digits)
   @Matches(/^09\d{9}$/)
   phoneNumber!: string;
+
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  password!: string;
 
   @IsOptional()
   @IsEmail()
@@ -80,6 +85,33 @@ export class UpdateAdminDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  password?: string;
+}
+
+export class AdminPasswordChallengeDto {
+  @Transform(trimmed)
+  @IsString()
+  @Length(3, 100)
+  username!: string;
+
+  @IsString()
+  @MaxLength(128)
+  password!: string;
+}
+
+export class AdminOtpVerificationDto {
+  @IsString()
+  @Length(16, 256)
+  challengeId!: string;
+
+  @Transform(digits)
+  @IsString()
+  @Matches(/^\d{6}$/)
+  code!: string;
 }
 
 export class RequestOtpDto {
@@ -88,9 +120,9 @@ export class RequestOtpDto {
   @Matches(/^09\d{9}$/)
   phoneNumber!: string;
 
-  @IsString()
-  @IsIn(['PARENT', 'ADMIN'])
-  role!: 'PARENT' | 'ADMIN';
+  @IsOptional()
+  @IsIn(['PARENT'])
+  role?: 'PARENT';
 }
 
 @UseGuards(AuthGuard, RolesGuard)
@@ -109,24 +141,46 @@ export class AdminIdentityController {
     return successResponse(await this.authService.getAdmin(req.user.id));
   }
 
-  @Post()
-  async create(@Body() dto: CreateAdminDto) {
+@Post()
+  async create(@Req() req: AuthenticatedRequest, @Body() dto: CreateAdminDto) {
     return successResponse(await this.authService.createAdmin(dto));
   }
 
   @Patch(':adminId')
-  async update(@Param('adminId', new ParseUUIDPipe()) adminId: string, @Body() dto: UpdateAdminDto) {
-    return successResponse(await this.authService.updateAdmin(adminId, dto));
+  async update(
+    @Req() req: AuthenticatedRequest,
+    @Param('adminId', new ParseUUIDPipe()) adminId: string,
+    @Body() dto: UpdateAdminDto,
+  ) {
+    return successResponse(
+      await this.authService.updateAdmin(adminId, dto, { id: req.user.id, ip: req.ip }),
+    );
   }
 
   @Post(':adminId/archive')
-  async archive(@Param('adminId', new ParseUUIDPipe()) adminId: string) {
-    return successResponse(await this.authService.setAdminStatus(adminId, 'INACTIVE'));
+  async archive(
+    @Req() req: AuthenticatedRequest,
+    @Param('adminId', new ParseUUIDPipe()) adminId: string,
+  ) {
+    return successResponse(
+      await this.authService.setAdminStatus(adminId, 'INACTIVE', {
+        id: req.user.id,
+        ip: req.ip,
+      }),
+    );
   }
 
   @Post(':adminId/unarchive')
-  async unarchive(@Param('adminId', new ParseUUIDPipe()) adminId: string) {
-    return successResponse(await this.authService.setAdminStatus(adminId, 'ACTIVE'));
+  async unarchive(
+    @Req() req: AuthenticatedRequest,
+    @Param('adminId', new ParseUUIDPipe()) adminId: string,
+  ) {
+    return successResponse(
+      await this.authService.setAdminStatus(adminId, 'ACTIVE', {
+        id: req.user.id,
+        ip: req.ip,
+      }),
+    );
   }
 }
 
@@ -159,8 +213,44 @@ export class AuthController {
   @UseGuards(TrustedOriginGuard)
   async requestOtp(@Req() req: FastifyRequest, @Body() dto: RequestOtpDto) {
     return successResponse(
-      await this.authService.requestAuthOtp(dto.phoneNumber, dto.role, req.ip),
+      await this.authService.requestAuthOtp(dto.phoneNumber, dto.role ?? 'PARENT', req.ip),
     );
+  }
+
+  @Public()
+  @Post('admin/password-challenge')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(TrustedOriginGuard)
+  async passwordChallenge(
+    @Req() req: FastifyRequest,
+    @Body() dto: AdminPasswordChallengeDto,
+  ) {
+    return successResponse(
+      await this.authService.createAdminChallenge(dto.username, dto.password, req.ip),
+    );
+  }
+
+  @Public()
+  @Post('admin/verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(TrustedOriginGuard)
+  async verifyAdminOtp(
+    @Req() req: FastifyRequest,
+    @Body() dto: AdminOtpVerificationDto,
+    @Res({ passthrough: true }) reply: CookieReply,
+  ) {
+    const context = {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      deviceName: req.headers['user-agent']?.slice(0, 255),
+    };
+    const result = await this.authService.verifyAdminOtp(dto.challengeId, dto.code, context);
+    this.setRefreshCookie(reply, result.refreshToken, true);
+    this.setAccessCookie(reply, result.accessToken, true);
+    return successResponse({
+      user: result.user,
+      accessToken: result.accessToken,
+    });
   }
 
   @Public()

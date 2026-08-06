@@ -2,17 +2,22 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { ShieldCheck, UsersRound } from 'lucide-react';
 
 import { Alert } from '@/components/feedback/alert';
 import { Field } from '@/components/forms/field';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
-import { requestAuthOtp, verifyAuthOtp, type AuthRole } from './auth-api';
+import {
+  requestAdminPasswordChallenge,
+  requestParentOtp,
+  verifyAdminOtp,
+  verifyParentOtp,
+  type AdminChallengeResponse,
+} from './auth-api';
 import { setAuthSession } from './auth-session';
 
 const phoneSchema = z.object({
@@ -21,9 +26,14 @@ const phoneSchema = z.object({
 const codeSchema = z.object({
   code: z.string().regex(/^\d{6}$/, 'کد تأیید باید ۶ رقم باشد.'),
 });
+const adminCredentialsSchema = z.object({
+  username: z.string().min(3, 'نام کاربری باید حداقل ۳ نویسه باشد.'),
+  password: z.string().min(1, 'رمز عبور را وارد کنید.'),
+});
 
 type Phone = z.infer<typeof phoneSchema>;
 type Code = z.infer<typeof codeSchema>;
+type AdminCredentials = z.infer<typeof adminCredentialsSchema>;
 
 function FormError({ error }: { error: unknown }) {
   if (!error) return null;
@@ -41,23 +51,16 @@ function FormError({ error }: { error: unknown }) {
 function OtpAuthForm() {
   const router = useRouter();
   const [error, setError] = useState<unknown>();
-  const [role, setRole] = useState<AuthRole>('PARENT');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [developmentCode, setDevelopmentCode] = useState<string>();
-  const [unregistered, setUnregistered] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const phoneForm = useForm<Phone>({ resolver: zodResolver(phoneSchema) });
   const codeForm = useForm<Code>({ resolver: zodResolver(codeSchema) });
 
   const sendCode = phoneForm.handleSubmit(async ({ phoneNumber: value }) => {
     setError(undefined);
-    setUnregistered(false);
     try {
-      const response = await requestAuthOtp(value, role);
-      if (response.data.accountExists === false) {
-        setUnregistered(true);
-        return;
-      }
+      const response = await requestParentOtp(value);
       setPhoneNumber(value);
       setDevelopmentCode(response.data.developmentCode);
       codeForm.reset({ code: '' });
@@ -70,9 +73,9 @@ function OtpAuthForm() {
   const verifyCode = codeForm.handleSubmit(async ({ code }) => {
     setError(undefined);
     try {
-      const response = await verifyAuthOtp(phoneNumber, code, role);
+      const response = await verifyParentOtp(phoneNumber, code);
       setAuthSession(response.data.accessToken, response.data.user.role);
-      router.replace(role === 'ADMIN' ? '/admin/dashboard' : '/parent/dashboard');
+      router.replace('/parent/dashboard');
     } catch (caught) {
       setError(caught);
     }
@@ -131,32 +134,6 @@ function OtpAuthForm() {
   return (
     <form className="space-y-5" onSubmit={sendCode} noValidate>
       <FormError error={error} />
-      {unregistered && role === 'ADMIN' && (
-        <Alert tone="danger" title="شماره همراه مدیر ثبت نشده است">
-          این شماره برای حساب مدیر ثبت نشده است. از شماره همراهی استفاده کنید که قبلاً در رکورد مدیر
-          سامانه ذخیره شده است.
-        </Alert>
-      )}
-      <fieldset>
-        <legend className="mb-2 text-sm font-bold">نوع حساب</legend>
-        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1.5">
-          {([
-            ['PARENT', 'خانواده', UsersRound],
-            ['ADMIN', 'مدیر سامانه', ShieldCheck],
-          ] as const).map(([value, label, Icon]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => { setRole(value); setUnregistered(false); }}
-              className={`flex min-h-12 items-center justify-center gap-2 rounded-xl text-sm font-black transition ${role === value ? 'bg-white text-primary shadow-sm' : 'text-muted hover:text-foreground'}`}
-              aria-pressed={role === value}
-            >
-              <Icon className="size-4" />
-              {label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
       <Field
         label="شماره همراه"
         htmlFor="auth-phone"
@@ -173,8 +150,174 @@ function OtpAuthForm() {
           {...phoneForm.register('phoneNumber')}
         />
       </Field>
-      <Button className="w-full rounded-xl" size="lg" type="submit" disabled={phoneForm.formState.isSubmitting}>
+      <Button
+        className="w-full rounded-xl"
+        size="lg"
+        type="submit"
+        disabled={phoneForm.formState.isSubmitting}
+      >
         {phoneForm.formState.isSubmitting ? 'در حال ارسال…' : 'دریافت کد تأیید'}
+      </Button>
+    </form>
+  );
+}
+
+function countdownSeconds(expiresAt: string) {
+  return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+}
+
+function useOtpCountdown(expiresAt: string) {
+  const [remainingSeconds, setRemainingSeconds] = useState(() => countdownSeconds(expiresAt));
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRemainingSeconds(countdownSeconds(expiresAt));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt]);
+  return remainingSeconds;
+}
+
+function AdminLoginFormInner() {
+  const router = useRouter();
+  const [error, setError] = useState<unknown>();
+  const [challenge, setChallenge] = useState<AdminChallengeResponse>();
+  const [developmentCode, setDevelopmentCode] = useState<string>();
+  const credentialsForm = useForm<AdminCredentials>({
+    resolver: zodResolver(adminCredentialsSchema),
+  });
+  const codeForm = useForm<Code>({ resolver: zodResolver(codeSchema) });
+  const remainingSeconds = useOtpCountdown(challenge?.expiresAt ?? '');
+  const expired = Boolean(challenge && remainingSeconds === 0);
+
+  const startChallenge = credentialsForm.handleSubmit(async (values) => {
+    setError(undefined);
+    try {
+      const response = await requestAdminPasswordChallenge(values.username, values.password);
+      setChallenge(response.data);
+      setDevelopmentCode(response.data.developmentCode);
+      codeForm.reset({ code: '' });
+    } catch (caught) {
+      setError(caught);
+    }
+  });
+
+  const verifyCode = codeForm.handleSubmit(async ({ code }) => {
+    if (!challenge || expired) return;
+    setError(undefined);
+    try {
+      const response = await verifyAdminOtp(challenge.challengeId, code);
+      setAuthSession(response.data.accessToken, response.data.user.role);
+      router.replace('/admin/dashboard');
+    } catch (caught) {
+      setError(caught);
+    }
+  });
+
+  if (challenge) {
+    return (
+      <form className="space-y-5" onSubmit={verifyCode} noValidate>
+        <FormError error={error} />
+        <Alert title="کد تأیید ارسال شد">
+          نخستین مرحله بررسی انجام شد. کد ۶ رقمی ارسال‌شده به شماره همراه شما را وارد کنید.
+          {remainingSeconds > 0 && (
+            <span className="mt-1 block text-xs text-muted">
+              {expired ? '' : `کد تا ${remainingSeconds} ثانیه دیگر معتبر است.`}
+            </span>
+          )}
+        </Alert>
+        {developmentCode && (
+          <Alert title="کد آزمایشی">
+            کد ورود شما:
+            <strong className="mt-2 block text-center text-2xl tracking-[0.35em]" dir="ltr">
+              {developmentCode}
+            </strong>
+          </Alert>
+        )}
+        <Field
+          label="کد تأیید"
+          htmlFor="admin-otp-code"
+          required
+          error={codeForm.formState.errors.code?.message}
+        >
+          <Input
+            key="admin-otp-code"
+            id="admin-otp-code"
+            dir="ltr"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            autoFocus
+            disabled={expired}
+            {...codeForm.register('code')}
+          />
+        </Field>
+        {expired && (
+          <Alert tone="danger" title="مهلت کد به پایان رسیده است">
+            زمان اعتبار کد به پایان رسیده است. برای دریافت کد تازه، مراحل ورود را دوباره آغاز کنید.
+          </Alert>
+        )}
+        <Button
+          className="w-full"
+          type="submit"
+          disabled={codeForm.formState.isSubmitting || expired}
+        >
+          {codeForm.formState.isSubmitting ? 'در حال بررسی…' : 'تأیید و ورود'}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full"
+          onClick={() => {
+            setChallenge(undefined);
+            setDevelopmentCode(undefined);
+            codeForm.reset();
+            setError(undefined);
+          }}
+        >
+          تغییر نام کاربری و رمز عبور
+        </Button>
+      </form>
+    );
+  }
+
+  return (
+    <form className="space-y-5" onSubmit={startChallenge} noValidate>
+      <FormError error={error} />
+      <Field
+        label="نام کاربری"
+        htmlFor="admin-username"
+        required
+        error={credentialsForm.formState.errors.username?.message}
+      >
+        <Input
+          id="admin-username"
+          dir="ltr"
+          autoComplete="username"
+          autoFocus
+          {...credentialsForm.register('username')}
+        />
+      </Field>
+      <Field
+        label="رمز عبور"
+        htmlFor="admin-password"
+        required
+        error={credentialsForm.formState.errors.password?.message}
+      >
+        <Input
+          id="admin-password"
+          type="password"
+          dir="ltr"
+          autoComplete="current-password"
+          {...credentialsForm.register('password')}
+        />
+      </Field>
+      <Button
+        className="w-full rounded-xl"
+        size="lg"
+        type="submit"
+        disabled={credentialsForm.formState.isSubmitting}
+      >
+        {credentialsForm.formState.isSubmitting ? 'در حال بررسی…' : 'مرحله بعد'}
       </Button>
     </form>
   );
@@ -186,6 +329,10 @@ export function LoginForm() {
 
 export function RegisterForm() {
   return <OtpAuthForm />;
+}
+
+export function AdminLoginForm() {
+  return <AdminLoginFormInner />;
 }
 
 export function ForgotPasswordForm() {

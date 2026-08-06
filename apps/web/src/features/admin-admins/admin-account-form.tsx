@@ -13,13 +13,29 @@ import {
   type AdminAccountInput,
 } from './admin-admins-api';
 
-const emptyForm: AdminAccountInput = {
-  username: '',
-  firstName: '',
-  lastName: '',
-  phoneNumber: '',
-  email: '',
-};
+type FormState = AdminAccountInput & { passwordConfirmation: string };
+
+function emptyForm(admin?: AdminAccount): FormState {
+  return admin
+    ? {
+        username: admin.username,
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+        phoneNumber: admin.phoneNumber,
+        email: admin.email ?? '',
+        password: '',
+        passwordConfirmation: '',
+      }
+    : {
+        username: '',
+        firstName: '',
+        lastName: '',
+        phoneNumber: '',
+        email: '',
+        password: '',
+        passwordConfirmation: '',
+      };
+}
 
 export function AdminAccountForm({
   admin,
@@ -32,44 +48,58 @@ export function AdminAccountForm({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
-  const [form, setForm] = useState<AdminAccountInput>(
-    admin
-      ? {
-          username: admin.username,
-          firstName: admin.firstName,
-          lastName: admin.lastName,
-          phoneNumber: admin.phoneNumber,
-          email: admin.email ?? '',
-        }
-      : emptyForm,
-  );
-  const set = (key: keyof AdminAccountInput, value: string) =>
+  const [form, setForm] = useState<FormState>(emptyForm(admin));
+  const set = (key: keyof FormState, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
+
+  function validate(): string | undefined {
+    if (!form.firstName.trim() || !form.lastName.trim()) {
+      return 'نام و نام خانوادگی مدیر الزامی است.';
+    }
+    if (form.username.trim().length < 3) {
+      return 'نام کاربری باید حداقل ۳ نویسه باشد.';
+    }
+    if (!/^09\d{9}$/.test(form.phoneNumber)) {
+      return 'شماره همراه باید ۱۱ رقم و با ۰۹ شروع شود.';
+    }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      return 'نشانی ایمیل معتبر نیست.';
+    }
+    const password = form.password ?? '';
+    if (!admin && password.length < 8) {
+      return 'رمز عبور مدیر باید حداقل ۸ نویسه باشد.';
+    }
+    if (admin && password && password.length < 8) {
+      return 'رمز عبور جدید باید حداقل ۸ نویسه باشد.';
+    }
+    if (password !== (form.passwordConfirmation ?? '')) {
+      return 'رمز عبور و تکرار آن یکسان نیستند.';
+    }
+    return undefined;
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(undefined);
-    if (!form.firstName.trim() || !form.lastName.trim()) {
-      setError('نام و نام خانوادگی مدیر الزامی است.');
-      return;
-    }
-    if (form.username.trim().length < 3) {
-      setError('نام کاربری باید حداقل ۳ نویسه باشد.');
-      return;
-    }
-    if (!/^09\d{9}$/.test(form.phoneNumber)) {
-      setError('شماره همراه باید ۱۱ رقم و با ۰۹ شروع شود.');
-      return;
-    }
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      setError('نشانی ایمیل معتبر نیست.');
+    const message = validate();
+    if (message) {
+      setError(message);
       return;
     }
     setPending(true);
     try {
-      if (admin) await updateAdminAccount(admin.id, form);
-      else await createAdminAccount(form);
+      const payload: AdminAccountInput = {
+        username: form.username,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        phoneNumber: form.phoneNumber,
+        email: form.email,
+      };
+      if (form.password && form.password.trim()) payload.password = form.password;
+      if (admin) await updateAdminAccount(admin.id, payload);
+      else await createAdminAccount(payload);
       setOpen(false);
+      setForm(emptyForm(admin));
       router.refresh();
     } catch (caught) {
       setError(getApiErrorFeedback(caught).message);
@@ -79,7 +109,16 @@ export function AdminAccountForm({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) {
+          setForm(emptyForm(admin));
+          setError(undefined);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button size="sm" variant={admin ? 'ghost' : 'primary'}>
           {triggerLabel}
@@ -87,7 +126,11 @@ export function AdminAccountForm({
       </DialogTrigger>
       <DialogContent
         title={admin ? 'ویرایش مدیر' : 'افزودن مدیر'}
-        description="اطلاعات حساب مدیریتی را وارد کنید. ورود مدیر با رمز یک‌بارمصرف شماره همراه انجام می‌شود."
+        description={
+          admin
+            ? 'برای رمز عبور فعلی هیچ تغییری نیاز نیست؛ در صورت تمایل رمز تازه وارد کنید.'
+            : 'ورود مدیر با نام کاربری، رمز عبور و کد تأیید پیامکی انجام می‌شود.'
+        }
       >
         <form className="grid gap-4 sm:grid-cols-2" onSubmit={submit}>
           <label className="text-sm font-bold">
@@ -139,6 +182,29 @@ export function AdminAccountForm({
               className="mt-2"
               value={form.email ?? ''}
               onChange={(event) => set('email', event.target.value)}
+            />
+          </label>
+          <label className="text-sm font-bold">
+            رمز عبور
+            <Input
+              type="password"
+              dir="ltr"
+              autoComplete="new-password"
+              className="mt-2"
+              value={form.password ?? ''}
+              onChange={(event) => set('password', event.target.value)}
+              placeholder={admin ? 'برای تغییر ندادن خالی بگذارید' : 'حداقل ۸ نویسه'}
+            />
+          </label>
+          <label className="text-sm font-bold">
+            تکرار رمز عبور
+            <Input
+              type="password"
+              dir="ltr"
+              autoComplete="new-password"
+              className="mt-2"
+              value={form.passwordConfirmation ?? ''}
+              onChange={(event) => set('passwordConfirmation', event.target.value)}
             />
           </label>
           {error && <p className="text-sm text-danger sm:col-span-2">{error}</p>}

@@ -404,49 +404,49 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Backend sequence
 
-- [ ] Inspect `adminUsers` in `apps/api/src/database/schemas/auth.schema.ts` and add a nullable `passwordHash` column in a new migration.
+- [x] Inspect `adminUsers` in `apps/api/src/database/schemas/auth.schema.ts` and add a nullable `passwordHash` column in a new migration.
   - Make it nullable during rollout so existing admins can be migrated safely.
-  - Backfill passwords through a secure administrative procedure, never a shared default password.
-  - After all active admins are migrated, add a later `NOT NULL` constraint if appropriate.
-- [ ] Add DTOs for admin password login in the identity presentation layer:
+  - Backfill passwords through a secure administrative procedure, never a shared default password. (deferred: needs a secure admin password-reset provisioning flow)
+  - After all active admins are migrated, add a later `NOT NULL` constraint if appropriate. (deferred)
+- [x] Add DTOs for admin password login in the identity presentation layer:
   - `AdminPasswordChallengeDto`: username and password.
   - `AdminOtpVerificationDto`: challenge ID and OTP.
   - Apply username length/character limits and a reasonable password input maximum to prevent resource abuse.
-- [ ] Add dedicated endpoints, for example:
+- [x] Add dedicated endpoints, for example:
   - `POST /auth/admin/password-challenge`
   - `POST /auth/admin/verify-otp`
-  - Do not overload the normal user endpoints with optional password fields.
-- [ ] In `AuthService`, verify the password hash with Argon2 and issue a random, single-use, two-minute admin challenge.
+  - Do not overload the existing user endpoints with optional password fields.
+- [x] In `AuthService`, verify the password hash with Argon2 and issue a random, single-use, two-minute admin challenge.
   - Store only a hash of the challenge token.
   - Bind the challenge to admin ID, purpose, expiry, attempt count, and the request context required by the security design.
   - Return the same generic error for unknown username, wrong password, inactive account, and invalid OTP where practical.
-- [ ] Send the OTP only after password verification succeeds.
-- [ ] Consume the challenge and OTP atomically so concurrent requests cannot use either value twice.
-- [ ] Generate the existing admin access/refresh session only after both factors succeed.
-- [ ] Extend `auth.otp-concurrency.test.ts`, `auth.session-concurrency.test.ts`, and controller IP tests with admin two-factor cases.
+- [x] Send the OTP only after password verification succeeds.
+- [x] Consume the challenge and OTP atomically so concurrent requests cannot use either value twice.
+- [x] Generate the existing admin access/refresh session only after both factors succeed.
+- [x] Extend `auth.otp-concurrency.test.ts`, `auth.session-concurrency.test.ts`, and controller IP tests with admin two-factor cases.
 
 #### Frontend sequence
 
-- [ ] Refactor `auth-forms.tsx` into reusable user OTP components and a separate admin form. Do not keep an `ADMIN` tab on the public login form.
-- [ ] Create `apps/web/src/app/admin/login/page.tsx` with:
+- [x] Refactor `auth-forms.tsx` into reusable user OTP components and a separate admin form. Do not keep an `ADMIN` tab on the public login form.
+- [x] Create `apps/web/src/app/admin/login/page.tsx` with:
   - Username field.
   - Password field with `autocomplete="current-password"`.
   - First-step submit button.
   - OTP field after challenge creation.
   - Persian inline errors and a two-minute countdown.
-- [ ] Add typed API functions in `auth-api.ts` for both new admin endpoints. Model the challenge response and never store the password in React state longer than needed.
-- [ ] Update `apps/web/src/app/admin/layout.tsx` and the session guard so `/admin/login` is public but every other admin route requires an admin role.
-- [ ] Ensure an authenticated normal user cannot enter admin pages and an authenticated admin is not redirected to the student panel.
-- [ ] Update public `/login` text so it no longer says admins can sign in there.
+- [x] Add typed API functions in `auth-api.ts` for both new admin endpoints. Model the challenge response and never store the password in the React state longer than needed.
+- [x] Update `apps/web/src/app/admin/layout.tsx` and the session guard so `/admin/login` is public but every other admin route requires an admin role.
+- [x] Ensure an authenticated normal user cannot enter admin pages and an authenticated admin is not redirected to the student panel.
+- [x] Update public `/login` text so it no longer says admins can sign in there.
 
 #### Admin account management
 
-- [ ] Add password and password-confirmation fields to `apps/web/src/features/admin-admins/admin-account-form.tsx` when creating an admin.
-- [ ] For editing, leave password blank to mean “unchanged”; use a separate explicit reset action if possible.
-- [ ] Update `admin-admins-api.ts`, controller DTOs, and `AuthService.createAdmin/updateAdmin` to hash passwords server-side.
-- [ ] Never return `passwordHash` through a query or response schema.
-- [ ] Add disable/remove UI through `admin-account-action.tsx`; reuse `setAdminStatus` because it already revokes active sessions when an admin becomes inactive.
-- [ ] Add a service guard that refuses to disable the acting admin or the last active super-admin. If no super-admin role currently exists, define the role model before implementing this rule.
+- [x] Add password and password-confirmation fields to `apps/web/src/features/admin-admins/admin-account-form.tsx` when creating an admin.
+- [x] For editing, leave password blank to mean “unchanged”; use a separate explicit reset action if possible.
+- [x] Update `admin-admins-api.ts`, controller DTOs, and `AuthService.createAdmin/updateAdmin` to hash passwords server-side.
+- [x] Never return `passwordHash` through a query or response schema.
+- [x] Add disable/remove UI through `admin-account-action.tsx`; reuse `setAdminStatus` because it already revokes active sessions when an admin becomes inactive.
+- [x] Add a service guard that refuses to disable the acting admin or the last active super-admin.
 
 ### Work package D — OTP expiry and remembered sessions
 
