@@ -67,7 +67,7 @@ export default function FaqPage() {
       <section className="relative overflow-hidden surface-dark pb-20 pt-32 sm:pt-36">
         <div className="absolute inset-0" aria-hidden="true">
           <Image
-            src="/images/contact-support-specialist-laptop-desk.png"
+            src="/images/contact-support-specialist-laptop-desk.webp"
             alt=""
             fill
             className="object-cover object-center"

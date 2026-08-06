@@ -15,7 +15,7 @@ export default function AuthLayout({ children }: Readonly<{ children: React.Reac
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
       <Image
-        src="/images/banner-school-campus-vehicle-fleet-wide.png"
+        src="/images/banner-school-campus-vehicle-fleet-wide.webp"
         alt=""
         fill
         className="object-cover object-center"

@@ -62,7 +62,7 @@ export function SafetyStory() {
             <div className="relative overflow-hidden rounded-[var(--radius-canvas)]">
               <div className="relative aspect-[4/3]">
                 <Image
-                  src="/images/illustration-parent-driver-school-bus-pickup.png"
+                  src="/images/illustration-parent-driver-school-bus-pickup.webp"
                   alt="تصویری از خانواده و سرویس مدرسه"
                   fill
                   className="object-cover"

@@ -36,7 +36,7 @@ export default function PricingPage() {
       <section className="relative overflow-hidden surface-dark pb-20 pt-32 sm:pt-36">
         <div className="absolute inset-0" aria-hidden="true">
           <Image
-            src="/images/pricing-hero-school-van-modern-campus.png"
+            src="/images/pricing-hero-school-van-modern-campus.webp"
             alt=""
             fill
             className="object-cover object-center"
@@ -171,7 +171,7 @@ export default function PricingPage() {
             <div className="relative mt-10 lg:mt-0">
               <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-canvas)]">
                 <Image
-                  src="/images/illustration-route-guide-school-bus-wide-left-space.png"
+                  src="/images/illustration-route-guide-school-bus-wide-left-space.webp"
                   alt=""
                   fill
                   className="object-cover"

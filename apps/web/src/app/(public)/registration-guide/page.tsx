@@ -23,35 +23,35 @@ const steps = [
     title: 'ایجاد حساب خانواده',
     description: 'یک حساب خانوادگی ایجاد کنید. این حساب می‌تواند چند دانش‌آموز را مدیریت کند.',
     details: ['ثبت نام و شماره تماس', 'تأیید با رمز یکبارمصرف', 'تنظیم حساب خانواده'],
-    image: '/images/contact-support-specialist-laptop-desk.png',
+    image: '/images/contact-support-specialist-laptop-desk.webp',
   },
   {
     icon: GraduationCap,
     title: 'ثبت اطلاعات دانش‌آموز',
     description: 'اطلاعات لازم هر دانش‌آموز و درخواست خدمت مرتبط با او را وارد کنید.',
     details: ['مشخصات دانش‌آموز', 'انتخاب مدرسه و پایه', 'اطلاعات تماس اضطراری'],
-    image: '/images/schools-hero-students-boarding-school-van.png',
+    image: '/images/schools-hero-students-boarding-school-van.webp',
   },
   {
     icon: ClipboardCheck,
     title: 'ارسال برای بررسی',
     description: 'پس از مرور اطلاعات، درخواست را ارسال کنید تا مدیریت آن را بررسی کند.',
     details: ['مرور اطلاعات ثبت‌شده', 'تأیید نهایی اطلاعات', 'دریافت کد پیگیری'],
-    image: '/images/contact-family-meeting-driver-school-pickup.png',
+    image: '/images/contact-family-meeting-driver-school-pickup.webp',
   },
   {
     icon: FileText,
     title: 'مشاهده قیمت و قرارداد',
     description: 'پس از تأیید و تعیین قیمت، جزئیات قرارداد و گزینه‌های پرداخت نمایش داده می‌شوند.',
     details: ['مشاهده قیمت نهایی', 'بررسی شرایط قرارداد', 'پذیرش یا درخواست تغییر'],
-    image: '/images/services-illustration-home-school-mobile-tracking.png',
+    image: '/images/services-illustration-home-school-mobile-tracking.webp',
   },
   {
     icon: CheckCircle2,
     title: 'پرداخت و شروع خدمت',
     description: 'با انتخاب روش پرداخت، خدمت سرویس مدرسه برای فرزندتان فعال می‌شود.',
     details: ['انتخاب روش پرداخت', 'پرداخت آنلاین یا آفلاین', 'شروع خدمت سرویس مدرسه'],
-    image: '/images/safety-driver-inspecting-school-van.png',
+    image: '/images/safety-driver-inspecting-school-van.webp',
   },
 ];
 
@@ -64,7 +64,7 @@ export default function RegistrationGuidePage() {
       <section className="relative overflow-hidden surface-dark pb-20 pt-32 sm:pt-36">
         <div className="absolute inset-0" aria-hidden="true">
           <Image
-            src="/images/about-illustration-school-transport-ecosystem.png"
+            src="/images/about-illustration-school-transport-ecosystem.webp"
             alt=""
             fill
             className="object-cover object-center"

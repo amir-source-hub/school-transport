@@ -61,7 +61,7 @@ export default function AboutPage() {
       <section className="relative overflow-hidden surface-dark pb-20 pt-32 sm:pt-36">
         <div className="absolute inset-0" aria-hidden="true">
           <Image
-            src="/images/about-hero-transport-team-school-bus.png"
+            src="/images/about-hero-transport-team-school-bus.webp"
             alt=""
             fill
             className="object-cover object-center"
@@ -92,7 +92,7 @@ export default function AboutPage() {
             <div className="relative overflow-hidden rounded-[var(--radius-canvas)] mb-8 lg:mb-0">
               <div className="relative aspect-[4/3]">
                 <Image
-                  src="/images/about-family-mother-student-driver-morning.png"
+                  src="/images/about-family-mother-student-driver-morning.webp"
                   alt="خانواده و راننده سرویس مدرسه"
                   fill
                   className="object-cover object-center"
@@ -186,7 +186,7 @@ export default function AboutPage() {
             <div className="relative mt-10 lg:mt-0">
               <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-canvas)]">
                 <Image
-                  src="/images/about-illustration-school-transport-ecosystem.png"
+                  src="/images/about-illustration-school-transport-ecosystem.webp"
                   alt=""
                   fill
                   className="object-cover object-center"

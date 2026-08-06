@@ -6,12 +6,12 @@ import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 
 const banners = [
-  '/images/homepage-banner-round-trip-school-service.png',
-  '/images/homepage-banner-secure-online-payment.png',
-  '/images/homepage-banner-vehicle-selection-fleet.png',
-  '/images/homepage-banner-fast-online-enrollment.png',
-  '/images/homepage-banner-support-specialists.png',
-  '/images/homepage-banner-child-safety.png',
+  '/images/homepage-banner-round-trip-school-service.webp',
+  '/images/homepage-banner-secure-online-payment.webp',
+  '/images/homepage-banner-vehicle-selection-fleet.webp',
+  '/images/homepage-banner-fast-online-enrollment.webp',
+  '/images/homepage-banner-support-specialists.webp',
+  '/images/homepage-banner-child-safety.webp',
 ];
 
 export function BannerCarousel() {

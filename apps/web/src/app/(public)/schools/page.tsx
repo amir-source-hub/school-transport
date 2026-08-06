@@ -15,7 +15,7 @@ export default async function SchoolsPage() {
       <section className="relative min-h-[620px] overflow-hidden bg-navy pb-20 pt-36 sm:pt-40">
         <div className="absolute inset-0" aria-hidden="true">
           <Image
-            src="/images/schools-hero-students-boarding-school-van.png"
+            src="/images/schools-hero-students-boarding-school-van.webp"
             alt=""
             fill
             className="object-cover object-center"

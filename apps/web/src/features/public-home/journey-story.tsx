@@ -24,7 +24,7 @@ export function JourneyStory() {
             className="relative overflow-hidden rounded-[2rem] bg-navy p-3 shadow-[0_30px_80px_-35px_rgba(15,23,42,.55)]"
           >
             <div className="relative aspect-[5/4] overflow-hidden rounded-[1.45rem]">
-              <Image src="/images/illustration-digital-route-safety-school-transport-ecosystem.png" alt="خانواده، مدرسه و سرویس دانش‌آموزی" fill className="object-cover" sizes="(max-width:1024px) 100vw,45vw" />
+              <Image src="/images/illustration-digital-route-safety-school-transport-ecosystem.webp" alt="خانواده، مدرسه و سرویس دانش‌آموزی" fill className="object-cover" sizes="(max-width:1024px) 100vw,45vw" />
               <div className="absolute inset-0 bg-gradient-to-t from-navy/85 via-transparent to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-7 text-white">
                 <p className="text-sm font-bold text-sun">یک مسیر روشن و قابل پیگیری</p>

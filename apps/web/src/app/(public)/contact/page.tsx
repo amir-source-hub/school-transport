@@ -54,7 +54,7 @@ export default function ContactPage() {
       <section className="relative overflow-hidden surface-dark pb-20 pt-32 sm:pt-36">
         <div className="absolute inset-0" aria-hidden="true">
           <Image
-            src="/images/contact-hero-parent-driver-student-pickup.png"
+            src="/images/contact-hero-parent-driver-student-pickup.webp"
             alt=""
             fill
             className="object-cover object-center"
@@ -158,7 +158,7 @@ export default function ContactPage() {
             <div className="relative mt-10 lg:mt-0">
               <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-canvas)]">
                 <Image
-                  src="/images/contact-family-at-school-transport-service-desk.png"
+                  src="/images/contact-family-at-school-transport-service-desk.webp"
                   alt=""
                   fill
                   className="object-cover object-center"

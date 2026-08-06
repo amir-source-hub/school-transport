@@ -26,7 +26,7 @@ export function EcosystemBento() {
         <div className="mt-12 grid gap-5 lg:grid-cols-12">
           <article className="relative min-h-[430px] overflow-hidden rounded-[2rem] bg-navy p-8 text-white lg:col-span-7">
             <Image
-              src="/images/illustration-parent-students-school-bus-wide-left-space.png"
+              src="/images/illustration-parent-students-school-bus-wide-left-space.webp"
               alt=""
               fill
               className="object-cover object-center opacity-80"
