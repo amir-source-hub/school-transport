@@ -9,108 +9,25 @@ import {
 } from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError } from '../../common/errors';
-import { generateId, calculateInstallmentAmounts } from '../../common/utils';
-import { addMonths } from 'date-fns';
+import { createPaymentPlanInTransaction, PaymentPlanType } from '../../database/payment-plan';
 
 @Injectable()
 export class InstallmentsService {
   constructor(private readonly db: DatabaseService) {}
 
   async createPlan(priceId: string, planType: string): Promise<string> {
-    const existing = await this.db.db
-      .select({ id: paymentPlans.id })
-      .from(paymentPlans)
-      .where(eq(paymentPlans.registrationPriceId, priceId))
-      .limit(1);
-    if (existing[0]) return existing[0].id;
-
-    const price = await this.db.db
-      .select()
-      .from(registrationPrices)
-      .where(eq(registrationPrices.id, priceId))
-      .limit(1);
-
-    if (price.length === 0) throw new NotFoundError('Price');
-
-    if (planType === 'FULL') {
-      return this.createFullPaymentPlan(price[0]);
-    }
-
-    return this.createInstallmentPlan(price[0]);
-  }
-
-  private async createFullPaymentPlan(
-    price: typeof registrationPrices.$inferSelect,
-  ): Promise<string> {
-    const planId = generateId();
-    await this.db.db.insert(paymentPlans).values({
-      id: planId,
-      registrationPriceId: price.id,
-      planType: 'FULL',
-      totalAmount: price.totalAmount,
-      prepaymentAmount: price.totalAmount,
-      remainingInstallmentAmount: 0,
-      installmentCount: 1,
-      planStatus: 'PENDING',
+    const normalizedType: PaymentPlanType =
+      planType === 'FULL' ? 'FULL' : 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS';
+    return this.db.db.transaction(async (txn) => {
+      const [price] = await txn
+        .select()
+        .from(registrationPrices)
+        .where(eq(registrationPrices.id, priceId))
+        .for('update')
+        .limit(1);
+      if (!price) throw new NotFoundError('Price');
+      return createPaymentPlanInTransaction(txn, price, normalizedType);
     });
-
-    await this.db.db.insert(paymentScheduleItems).values({
-      id: generateId(),
-      paymentPlanId: planId,
-      itemType: 'PREPAYMENT',
-      sequenceNumber: 0,
-      amount: price.totalAmount,
-    });
-
-    return planId;
-  }
-
-  private async createInstallmentPlan(
-    price: typeof registrationPrices.$inferSelect,
-  ): Promise<string> {
-    const planId = generateId();
-    const prepayment = price.prepaymentAmount;
-    const installments = calculateInstallmentAmounts(
-      price.totalAmount,
-      prepayment,
-      price.installmentCount,
-    );
-    const remainingTotal = price.totalAmount - prepayment;
-
-    await this.db.db.insert(paymentPlans).values({
-      id: planId,
-      registrationPriceId: price.id,
-      planType: 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
-      totalAmount: price.totalAmount,
-      prepaymentAmount: prepayment,
-      remainingInstallmentAmount: remainingTotal,
-      installmentCount: price.installmentCount,
-      planStatus: 'PENDING',
-    });
-
-    const now = new Date();
-
-    await this.db.db.insert(paymentScheduleItems).values({
-      id: generateId(),
-      paymentPlanId: planId,
-      itemType: 'PREPAYMENT',
-      sequenceNumber: 0,
-      amount: prepayment,
-      dueDate: now,
-    });
-
-    for (let i = 0; i < installments.length; i++) {
-      await this.db.db.insert(paymentScheduleItems).values({
-        id: generateId(),
-        paymentPlanId: planId,
-        itemType: 'INSTALLMENT',
-        sequenceNumber: i + 1,
-        amount: installments[i],
-        dueDate: addMonths(now, i + 1),
-      });
-    }
-
-    return planId;
   }
 
   async getPlanByPriceId(priceId: string) {

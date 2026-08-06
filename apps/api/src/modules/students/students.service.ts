@@ -48,6 +48,7 @@ export class StudentsService {
       grade: string;
       className?: string;
     },
+    notifyAdminAddition = false,
   ) {
     const existing = await this.db.db
       .select({ id: students.id })
@@ -63,17 +64,31 @@ export class StudentsService {
     }
 
     const id = generateId();
-    await this.db.db.insert(students).values({
-      id,
-      userId,
-      schoolId: data.schoolId,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      nationalId: data.nationalId,
-      birthDate: data.birthDate || null,
-      gender: data.gender || null,
-      grade: data.grade || null,
-      className: data.className || null,
+    await this.db.db.transaction(async (txn) => {
+      await txn.insert(students).values({
+        id,
+        userId,
+        schoolId: data.schoolId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        nationalId: data.nationalId,
+        birthDate: data.birthDate || null,
+        gender: data.gender || null,
+        grade: data.grade || null,
+        className: data.className || null,
+      });
+      if (notifyAdminAddition) {
+        await this.notifications.enqueueInTransaction(txn, {
+          eventId: `ADMIN_STUDENT_ADDED:${id}:${userId}`,
+          userId,
+          notificationType: 'ADMIN_STUDENT_ADDED',
+          title: 'دانش‌آموز به حساب خانواده افزوده شد',
+          message:
+            'مدیریت دانش‌آموز جدیدی را به حساب خانواده افزود. برای ادامه فرایند به بخش ثبت‌نام بروید.',
+          relatedEntityType: 'STUDENT',
+          relatedEntityId: id,
+        });
+      }
     });
 
     return this.getById(id);
@@ -108,14 +123,12 @@ export class StudentsService {
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId));
 
-    const parentRows = await this.db.db
-      .select()
-      .from(parents);
+    const parentRows = await this.db.db.select().from(parents);
 
     return rows.map((student) => {
-      const familyParent = parentRows.find(
-        (parent) => parent.userId === student.userId && parent.isPrimaryContact,
-      ) ?? parentRows.find((parent) => parent.userId === student.userId);
+      const familyParent =
+        parentRows.find((parent) => parent.userId === student.userId && parent.isPrimaryContact) ??
+        parentRows.find((parent) => parent.userId === student.userId);
       return {
         ...student,
         familyName: familyParent
@@ -130,26 +143,8 @@ export class StudentsService {
     return this.update(studentId, student.userId, data);
   }
 
-  async createByAdmin(
-    userId: string,
-    data: Parameters<StudentsService['create']>[1],
-  ) {
-    const student = await this.create(userId, data);
-    const familyParents = await this.db.db.select().from(parents).where(eq(parents.userId, userId));
-    const primaryParent =
-      familyParents.find((parent) => parent.isPrimaryContact) ?? familyParents[0];
-    const familyName = primaryParent
-      ? `${primaryParent.firstName} ${primaryParent.lastName}`
-      : 'خانواده';
-    await this.notifications.create({
-      userId,
-      notificationType: 'ADMIN_STUDENT_ADDED',
-      title: 'دانش‌آموز به حساب خانواده افزوده شد',
-      message: `مدیریت دانش‌آموز ${student.firstName} ${student.lastName} را به حساب خانواده ${familyName} و مدرسه ${student.schoolName} افزود. برای انتخاب سرویس، تکمیل نشانی، پذیرش قرارداد و پرداخت پیش‌پرداخت به بخش ثبت‌نام بروید.`,
-      relatedEntityType: 'STUDENT',
-      relatedEntityId: student.id,
-    });
-    return student;
+  async createByAdmin(userId: string, data: Parameters<StudentsService['create']>[1]) {
+    return this.create(userId, data, true);
   }
 
   async setActiveByAdmin(studentId: string, isActive: boolean) {

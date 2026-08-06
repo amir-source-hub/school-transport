@@ -49,10 +49,13 @@ export const otpRequests = pgTable(
     attemptCount: integer('attempt_count').notNull().default(0),
     maxAttempts: integer('max_attempts').notNull().default(5),
     verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    invalidatedAt: timestamp('invalidated_at', { withTimezone: true }),
+    requestIp: varchar('request_ip', { length: 64 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
     phonePurposeIdx: index('idx_otp_phone_purpose').on(table.phoneNumber, table.purpose),
+    requestIpCreatedIdx: index('idx_otp_request_ip_created').on(table.requestIp, table.createdAt),
   }),
 );
 

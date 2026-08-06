@@ -1,19 +1,22 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
 import { PricingService } from './pricing.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { successResponse } from '../../common/response';
+import { AcceptPriceDto, CreatePriceDto } from './pricing.dto';
+import { AuthenticatedRequest } from '../../common/http-request';
 
 @UseGuards(AuthGuard)
 @Controller('enrollments/:enrollmentId/pricing')
 export class ParentPricingController {
-  constructor(
-    private readonly pricingService: PricingService,
-  ) {}
+  constructor(private readonly pricingService: PricingService) {}
 
   @Get()
-  async getPrices(@Req() req: any, @Param('enrollmentId') enrollmentId: string) {
+  async getPrices(
+    @Req() req: AuthenticatedRequest,
+    @Param('enrollmentId', new ParseUUIDPipe()) enrollmentId: string,
+  ) {
     return successResponse(
       await this.pricingService.getByRegistrationForFamily(enrollmentId, req.user.id),
     );
@@ -21,13 +24,13 @@ export class ParentPricingController {
 
   @Post(':priceId/accept')
   async accept(
-    @Req() req: any,
-    @Param('priceId') priceId: string,
-    @Body() dto: { planType?: 'FULL' | 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS' },
+    @Req() req: AuthenticatedRequest,
+    @Param('priceId', new ParseUUIDPipe()) priceId: string,
+    @Body() dto: AcceptPriceDto,
   ) {
-    await this.pricingService.acceptPrice(priceId, req.user.id);
-    const paymentPlanId = await this.pricingService.createPaymentPlan(
+    const paymentPlanId = await this.pricingService.acceptPrice(
       priceId,
+      req.user.id,
       dto.planType ?? 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
     );
     return successResponse({ accepted: true, paymentPlanId });
@@ -41,24 +44,17 @@ export class AdminPricingController {
   constructor(private readonly pricingService: PricingService) {}
 
   @Get()
-  async getPrices(@Param('enrollmentId') enrollmentId: string) {
+  async getPrices(@Param('enrollmentId', new ParseUUIDPipe()) enrollmentId: string) {
     const prices = await this.pricingService.getByRegistration(enrollmentId);
     return successResponse(prices);
   }
 
   @Post()
   async createPrice(
-    @Param('enrollmentId') enrollmentId: string,
-    @Req() req: any,
+    @Param('enrollmentId', new ParseUUIDPipe()) enrollmentId: string,
+    @Req() req: AuthenticatedRequest,
     @Body()
-    dto: {
-      totalAmount: number;
-      currency?: string;
-      fullPaymentAllowed?: boolean;
-      installmentPaymentAllowed?: boolean;
-      prepaymentAmount?: number;
-      installmentCount?: number;
-    },
+    dto: CreatePriceDto,
   ) {
     const prices = await this.pricingService.create(enrollmentId, req.user.id, dto);
     return successResponse(prices);

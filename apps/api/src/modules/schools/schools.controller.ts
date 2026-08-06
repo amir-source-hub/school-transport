@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { SchoolsService } from './schools.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles, Public } from '../../common/decorators';
 import { successResponse } from '../../common/response';
+import { CreateSchoolDto, UpdateSchoolDto } from './school.dto';
 
 @Controller('schools')
 export class SchoolsController {
@@ -18,7 +19,7 @@ export class SchoolsController {
 
   @Public()
   @Get(':id')
-  async getById(@Param('id') id: string) {
+  async getById(@Param('id', new ParseUUIDPipe()) id: string) {
     const school = await this.schoolsService.getById(id);
     return successResponse(school);
   }
@@ -37,25 +38,25 @@ export class AdminSchoolsController {
   }
 
   @Post()
-  async create(@Body() dto: any) {
+  async create(@Body() dto: CreateSchoolDto) {
     const school = await this.schoolsService.create(dto);
     return successResponse(school);
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() dto: any) {
+  async update(@Param('id', new ParseUUIDPipe()) id: string, @Body() dto: UpdateSchoolDto) {
     const school = await this.schoolsService.update(id, dto);
     return successResponse(school);
   }
 
   @Post(':id/archive')
-  async archive(@Param('id') id: string) {
+  async archive(@Param('id', new ParseUUIDPipe()) id: string) {
     const school = await this.schoolsService.archive(id);
     return successResponse(school);
   }
 
   @Post(':id/unarchive')
-  async unarchive(@Param('id') id: string) {
+  async unarchive(@Param('id', new ParseUUIDPipe()) id: string) {
     const school = await this.schoolsService.unarchive(id);
     return successResponse(school);
   }

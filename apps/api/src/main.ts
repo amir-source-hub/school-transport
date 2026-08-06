@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { ConfigService } from './config/config.service';
+import { ConfigService, parseTrustedProxyCidrs } from './config/config.service';
 import { GlobalExceptionFilter } from './common/filters';
 import { registerSecurityHeaders } from './common/security-headers';
 import { AppLogger } from './common/logger';
@@ -15,8 +15,13 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
-      bodyLimit: 10 * 1024 * 1024,
+      bodyLimit: 1024 * 1024,
+      connectionTimeout: 10_000,
+      requestTimeout: 15_000,
+      keepAliveTimeout: 5_000,
+      maxRequestsPerSocket: 100,
       logger: false,
+      trustProxy: parseTrustedProxyCidrs(process.env.TRUSTED_PROXY_CIDRS),
     }),
     { bufferLogs: true },
   );

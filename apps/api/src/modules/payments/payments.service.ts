@@ -14,6 +14,17 @@ import { NotFoundError, ConflictError, ValidationError } from '../../common/erro
 import { generateId } from '../../common/utils';
 import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
+import { createHash } from 'node:crypto';
+
+const onlinePaymentResult = {
+  id: paymentTransactions.id,
+  paymentPlanId: paymentTransactions.paymentPlanId,
+  paymentScheduleItemId: paymentTransactions.paymentScheduleItemId,
+  amount: paymentTransactions.amount,
+  paymentMethod: paymentTransactions.paymentMethod,
+  transactionStatus: paymentTransactions.transactionStatus,
+  requestedAt: paymentTransactions.requestedAt,
+};
 
 @Injectable()
 export class PaymentsService {
@@ -72,8 +83,7 @@ export class PaymentsService {
       .select()
       .from(parents)
       .where(eq(parents.userId, detail.userId));
-    const parent =
-      familyParents.find((item) => item.isPrimaryContact) ?? familyParents[0];
+    const parent = familyParents.find((item) => item.isPrimaryContact) ?? familyParents[0];
     const invoice =
       detail.itemType === 'PREPAYMENT'
         ? 'پیش‌پرداخت'
@@ -93,36 +103,78 @@ export class PaymentsService {
   }
 
   async startOnlinePayment(scheduleItemId: string, userId: string, idempotencyKey: string) {
+    const key = idempotencyKey.trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(key)) {
+      throw new ValidationError(
+        'Idempotency-Key must be 8 to 128 characters using letters, numbers, dot, underscore, colon, or hyphen.',
+      );
+    }
     const item = await this.getOwnedScheduleItem(scheduleItemId, userId);
     if (item.itemStatus === 'PAID') {
       throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'This item has already been paid.');
     }
 
-    const existing = await this.db.db
-      .select()
-      .from(paymentTransactions)
-      .where(eq(paymentTransactions.idempotencyKey, idempotencyKey))
-      .limit(1);
-    if (existing.length > 0) return existing[0];
+    const fingerprint = createHash('sha256')
+      .update(`${userId}\0ONLINE_GATEWAY\0${scheduleItemId}\0${item.amount}`)
+      .digest('hex');
+    return this.db.db.transaction(async (txn) => {
+      const [inserted] = await txn
+        .insert(paymentTransactions)
+        .values({
+          id: generateId(),
+          paymentPlanId: item.paymentPlanId,
+          paymentScheduleItemId: scheduleItemId,
+          userId,
+          amount: item.amount,
+          paymentMethod: 'ONLINE_GATEWAY',
+          idempotencyKey: key,
+          idempotencyFingerprint: fingerprint,
+          transactionStatus: 'CREATED',
+        })
+        .onConflictDoNothing()
+        .returning(onlinePaymentResult);
+      if (inserted) return inserted;
 
-    const txId = generateId();
-    await this.db.db.insert(paymentTransactions).values({
-      id: txId,
-      paymentPlanId: item.paymentPlanId,
-      paymentScheduleItemId: scheduleItemId,
-      userId,
-      amount: item.amount,
-      paymentMethod: 'ONLINE_GATEWAY',
-      idempotencyKey,
-      transactionStatus: 'CREATED',
+      const [existing] = await txn
+        .select({
+          ...onlinePaymentResult,
+          idempotencyFingerprint: paymentTransactions.idempotencyFingerprint,
+        })
+        .from(paymentTransactions)
+        .where(
+          and(
+            eq(paymentTransactions.userId, userId),
+            eq(paymentTransactions.paymentMethod, 'ONLINE_GATEWAY'),
+            eq(paymentTransactions.idempotencyKey, key),
+          ),
+        )
+        .limit(1);
+      if (!existing) {
+        throw new ConflictError(
+          'IDEMPOTENCY_CONFLICT',
+          'The payment request conflicts with an existing operation.',
+        );
+      }
+      const legacyMatch =
+        existing.idempotencyFingerprint === null &&
+        existing.paymentScheduleItemId === scheduleItemId &&
+        existing.amount === item.amount;
+      if (existing.idempotencyFingerprint !== fingerprint && !legacyMatch) {
+        throw new ConflictError(
+          'IDEMPOTENCY_CONFLICT',
+          'This idempotency key was already used for a different payment request.',
+        );
+      }
+      return {
+        id: existing.id,
+        paymentPlanId: existing.paymentPlanId,
+        paymentScheduleItemId: existing.paymentScheduleItemId,
+        amount: existing.amount,
+        paymentMethod: existing.paymentMethod,
+        transactionStatus: existing.transactionStatus,
+        requestedAt: existing.requestedAt,
+      };
     });
-
-    return this.db.db
-      .select()
-      .from(paymentTransactions)
-      .where(eq(paymentTransactions.id, txId))
-      .limit(1)
-      .then((r) => r[0]);
   }
 
   async verifyOnlinePayment(txId: string, userId: string, gatewayAuthority: string) {
@@ -178,9 +230,7 @@ export class PaymentsService {
         .from(paymentScheduleItems)
         .where(eq(paymentScheduleItems.paymentPlanId, tx[0].paymentPlanId));
 
-      const remainingPaymentsConfigured = planItems.some((i) => i.itemType === 'INSTALLMENT');
-      const allPaid =
-        remainingPaymentsConfigured && planItems.every((i) => i.itemStatus === 'PAID');
+      const allPaid = planItems.length > 0 && planItems.every((i) => i.itemStatus === 'PAID');
       const prepaid = planItems.some((i) => i.itemType === 'PREPAYMENT' && i.itemStatus === 'PAID');
 
       if (prepaid) {
@@ -214,23 +264,22 @@ export class PaymentsService {
         }
       }
 
+      await this.notifications.enqueueInTransaction(txn, {
+        eventId: `PAYMENT_SUCCEEDED:${txId}:${userId}`,
+        userId,
+        notificationType: 'PAYMENT_SUCCEEDED',
+        title: 'پرداخت با موفقیت انجام شد',
+        message: `پرداخت ${tx[0].amount.toLocaleString('fa-IR')} ریال با موفقیت ثبت شد.`,
+        relatedEntityType: 'PAYMENT',
+        relatedEntityId: txId,
+      });
+
       return txn
         .select()
         .from(paymentTransactions)
         .where(eq(paymentTransactions.id, txId))
         .limit(1)
         .then((r) => r[0]);
-    });
-    const paymentDetails = await this.getPaymentEventDetails(txId);
-    await this.notifications.create({
-      userId,
-      notificationType: 'PAYMENT_SUCCEEDED',
-      title: 'پرداخت با موفقیت انجام شد',
-      message:
-        paymentDetails?.message ??
-        `پرداخت ${tx[0].amount.toLocaleString('fa-IR')} ریال با موفقیت ثبت شد.`,
-      relatedEntityType: 'PAYMENT',
-      relatedEntityId: txId,
     });
     return result;
   }
@@ -271,17 +320,27 @@ export class PaymentsService {
     }
 
     const txId = generateId();
-    await this.db.db.insert(paymentTransactions).values({
-      id: txId,
-      paymentPlanId: item.paymentPlanId,
-      paymentScheduleItemId: scheduleItemId,
-      userId,
-      amount: item.amount,
-      paymentMethod: 'MANUAL_ADMIN_ENTRY',
-      gatewayTransactionId: _data.referenceNumber.trim(),
-      transactionStatus: 'CREATED',
-      requestedAt: paidAt,
-    });
+    const [created] = await this.db.db
+      .insert(paymentTransactions)
+      .values({
+        id: txId,
+        paymentPlanId: item.paymentPlanId,
+        paymentScheduleItemId: scheduleItemId,
+        userId,
+        amount: item.amount,
+        paymentMethod: 'MANUAL_ADMIN_ENTRY',
+        gatewayTransactionId: _data.referenceNumber.trim(),
+        transactionStatus: 'CREATED',
+        requestedAt: paidAt,
+      })
+      .onConflictDoNothing()
+      .returning({ id: paymentTransactions.id });
+    if (!created) {
+      throw new ConflictError(
+        'OFFLINE_PAYMENT_PENDING',
+        'An offline payment receipt is already awaiting admin review for this installment.',
+      );
+    }
 
     return txId;
   }
@@ -292,11 +351,15 @@ export class PaymentsService {
         .select()
         .from(paymentTransactions)
         .where(eq(paymentTransactions.id, txId))
+        .for('update')
         .limit(1);
       if (tx.length === 0) throw new NotFoundError('Transaction');
 
-      if (tx[0].transactionStatus === 'SUCCEEDED') {
-        throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Already processed.');
+      if (tx[0].paymentMethod !== 'MANUAL_ADMIN_ENTRY' || tx[0].transactionStatus !== 'CREATED') {
+        throw new ConflictError(
+          'OFFLINE_PAYMENT_NOT_PENDING',
+          'Only a pending offline payment can be approved.',
+        );
       }
 
       const item = await txn
@@ -310,14 +373,27 @@ export class PaymentsService {
         throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Schedule item already paid.');
       }
 
-      await txn
+      const [approved] = await txn
         .update(paymentTransactions)
         .set({
           transactionStatus: 'SUCCEEDED',
           recordedByAdminId: adminId,
           verifiedAt: new Date(),
         })
-        .where(eq(paymentTransactions.id, txId));
+        .where(
+          and(
+            eq(paymentTransactions.id, txId),
+            eq(paymentTransactions.paymentMethod, 'MANUAL_ADMIN_ENTRY'),
+            eq(paymentTransactions.transactionStatus, 'CREATED'),
+          ),
+        )
+        .returning({ id: paymentTransactions.id });
+      if (!approved) {
+        throw new ConflictError(
+          'OFFLINE_PAYMENT_NOT_PENDING',
+          'Only a pending offline payment can be approved.',
+        );
+      }
 
       await txn
         .update(paymentScheduleItems)
@@ -336,11 +412,8 @@ export class PaymentsService {
         (scheduleItem) =>
           scheduleItem.itemType === 'PREPAYMENT' && scheduleItem.itemStatus === 'PAID',
       );
-      const remainingPaymentsConfigured = planItems.some(
-        (scheduleItem) => scheduleItem.itemType === 'INSTALLMENT',
-      );
       const allPaid =
-        remainingPaymentsConfigured &&
+        planItems.length > 0 &&
         planItems.every((scheduleItem) => scheduleItem.itemStatus === 'PAID');
 
       if (prepaid) {
@@ -374,52 +447,77 @@ export class PaymentsService {
         }
       }
 
+      if (tx[0].userId) {
+        await this.notifications.enqueueInTransaction(txn, {
+          eventId: `PAYMENT_APPROVED:${txId}:${tx[0].userId}`,
+          userId: tx[0].userId,
+          notificationType: 'PAYMENT_APPROVED',
+          title: 'پرداخت تأیید شد',
+          message: `پرداخت ${tx[0].amount.toLocaleString('fa-IR')} ریال توسط مدیریت تأیید شد.`,
+          relatedEntityType: 'PAYMENT',
+          relatedEntityId: txId,
+        });
+      }
+
       return tx[0];
     });
-    if (result.userId) {
-      const paymentDetails = await this.getPaymentEventDetails(txId);
-      await this.notifications.create({
-        userId: result.userId,
-        notificationType: 'PAYMENT_APPROVED',
-        title: 'پرداخت تأیید شد',
-        message: paymentDetails
-          ? `${paymentDetails.message} این پرداخت توسط مدیریت تأیید شد.`
-          : `پرداخت ${result.amount.toLocaleString('fa-IR')} ریال توسط مدیریت تأیید شد.`,
-        relatedEntityType: 'PAYMENT',
-        relatedEntityId: txId,
-      });
-    }
     return result;
   }
 
   async rejectOfflinePayment(txId: string, adminId: string, reason?: string) {
-    const tx = await this.db.db
-      .select()
-      .from(paymentTransactions)
-      .where(eq(paymentTransactions.id, txId))
-      .limit(1);
-    if (tx.length === 0) throw new NotFoundError('Transaction');
-
-    await this.db.db
-      .update(paymentTransactions)
-      .set({
-        transactionStatus: 'FAILED',
-        failureCode: 'REJECTED',
-        failureMessage: reason || null,
-        recordedByAdminId: adminId,
-      })
-      .where(eq(paymentTransactions.id, txId));
-
-    if (tx[0].userId) {
-      await this.notifications.create({
-        userId: tx[0].userId,
-        notificationType: 'PAYMENT_REJECTED',
-        title: 'پرداخت تأیید نشد',
-        message: reason || 'پرداخت ارسالی توسط مدیریت رد شد. لطفاً اطلاعات پرداخت را بررسی کنید.',
-        relatedEntityType: 'PAYMENT',
-        relatedEntityId: txId,
-      });
-    }
+    await this.db.db.transaction(async (txn) => {
+      const [pending] = await txn
+        .select()
+        .from(paymentTransactions)
+        .where(eq(paymentTransactions.id, txId))
+        .for('update')
+        .limit(1);
+      if (!pending) throw new NotFoundError('Transaction');
+      if (
+        pending.paymentMethod !== 'MANUAL_ADMIN_ENTRY' ||
+        pending.transactionStatus !== 'CREATED'
+      ) {
+        throw new ConflictError(
+          'OFFLINE_PAYMENT_NOT_PENDING',
+          'Only a pending offline payment can be rejected.',
+        );
+      }
+      const [rejected] = await txn
+        .update(paymentTransactions)
+        .set({
+          transactionStatus: 'FAILED',
+          failureCode: 'REJECTED',
+          failureMessage: reason || null,
+          recordedByAdminId: adminId,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(paymentTransactions.id, txId),
+            eq(paymentTransactions.paymentMethod, 'MANUAL_ADMIN_ENTRY'),
+            eq(paymentTransactions.transactionStatus, 'CREATED'),
+          ),
+        )
+        .returning();
+      if (!rejected) {
+        throw new ConflictError(
+          'OFFLINE_PAYMENT_NOT_PENDING',
+          'Only a pending offline payment can be rejected.',
+        );
+      }
+      if (rejected.userId) {
+        await this.notifications.enqueueInTransaction(txn, {
+          eventId: `PAYMENT_REJECTED:${txId}:${rejected.userId}`,
+          userId: rejected.userId,
+          notificationType: 'PAYMENT_REJECTED',
+          title: 'پرداخت تأیید نشد',
+          message: reason || 'پرداخت ارسالی توسط مدیریت رد شد. لطفاً اطلاعات پرداخت را بررسی کنید.',
+          relatedEntityType: 'PAYMENT',
+          relatedEntityId: txId,
+        });
+      }
+      return rejected;
+    });
 
     return { rejected: true };
   }
@@ -544,23 +642,21 @@ export class PaymentsService {
               : null,
           };
         };
-      const parent =
-        parentRows.find((entry) => entry.userId === userId && entry.isPrimaryContact) ??
-        parentRows.find((entry) => entry.userId === userId);
-      return {
-        studentId,
-        planId: plan.id,
-        planType: plan.planType,
-        planStatus: plan.planStatus,
-        planConfigured: plan.planType === 'ADMIN_CONFIGURED',
-        studentName: `${studentFirstName} ${studentLastName}`,
-        familyName: parent ? `${parent.firstName} ${parent.lastName}` : '—',
-        totalAmount: plan.totalAmount,
-        prepayment: mapItem(prepayment),
-        installments: planItems
-          .filter((item) => item.itemType === 'INSTALLMENT')
-          .map(mapItem),
-      };
+        const parent =
+          parentRows.find((entry) => entry.userId === userId && entry.isPrimaryContact) ??
+          parentRows.find((entry) => entry.userId === userId);
+        return {
+          studentId,
+          planId: plan.id,
+          planType: plan.planType,
+          planStatus: plan.planStatus,
+          planConfigured: plan.planType === 'ADMIN_CONFIGURED',
+          studentName: `${studentFirstName} ${studentLastName}`,
+          familyName: parent ? `${parent.firstName} ${parent.lastName}` : '—',
+          totalAmount: plan.totalAmount,
+          prepayment: mapItem(prepayment),
+          installments: planItems.filter((item) => item.itemType === 'INSTALLMENT').map(mapItem),
+        };
       })
       .filter((account) => account !== null && account.prepayment.transaction !== null);
   }
@@ -619,47 +715,30 @@ export class PaymentsService {
           updatedAt: new Date(),
         })
         .where(eq(paymentPlans.id, planId));
+      const [owner] = await txn
+        .select({ userId: students.userId })
+        .from(paymentPlans)
+        .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+        .innerJoin(
+          serviceRegistrations,
+          eq(serviceRegistrations.id, registrationPrices.registrationId),
+        )
+        .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+        .where(eq(paymentPlans.id, planId))
+        .limit(1);
+      if (owner) {
+        await this.notifications.enqueueInTransaction(txn, {
+          eventId: `PAYMENT_PLAN_READY:${planId}:${owner.userId}`,
+          userId: owner.userId,
+          notificationType: 'PAYMENT_PLAN_READY',
+          title: 'برنامه پرداخت آماده است',
+          message: 'برنامه پرداخت جدید ثبت شد. لطفاً مبالغ و تاریخ‌های سررسید را بررسی کنید.',
+          relatedEntityType: 'PAYMENT_PLAN',
+          relatedEntityId: planId,
+        });
+      }
       return { planId, totalAmount: total, installmentCount: items.length };
     });
-    const [owner] = await this.db.db
-      .select({
-        userId: students.userId,
-        studentFirstName: students.firstName,
-        studentLastName: students.lastName,
-      })
-      .from(paymentPlans)
-      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
-      .innerJoin(
-        serviceRegistrations,
-        eq(serviceRegistrations.id, registrationPrices.registrationId),
-      )
-      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
-      .where(eq(paymentPlans.id, planId))
-      .limit(1);
-    if (owner) {
-      const familyParents = await this.db.db
-        .select()
-        .from(parents)
-        .where(eq(parents.userId, owner.userId));
-      const parent =
-        familyParents.find((item) => item.isPrimaryContact) ?? familyParents[0];
-      const parentName = parent ? `${parent.firstName} ${parent.lastName}` : 'خانواده';
-      const studentName = `${owner.studentFirstName} ${owner.studentLastName}`;
-      const schedule = items
-        .map(
-          (item, index) =>
-            `${items.length === 1 ? 'پرداخت باقی‌مانده' : `قسط ${index + 1}`}: ${Math.round(item.amount / 10).toLocaleString('fa-IR')} تومان، سررسید ${new Date(item.dueDate).toLocaleDateString('fa-IR', { dateStyle: 'full' })}`,
-        )
-        .join('؛ ');
-      await this.notifications.create({
-        userId: owner.userId,
-        notificationType: 'PAYMENT_PLAN_READY',
-        title: 'برنامه پرداخت آماده است',
-        message: `مدیریت برنامه پرداخت دانش‌آموز ${studentName} از خانواده ${parentName} را ثبت کرد. ${schedule}`,
-        relatedEntityType: 'PAYMENT_PLAN',
-        relatedEntityId: planId,
-      });
-    }
     return result;
   }
 }

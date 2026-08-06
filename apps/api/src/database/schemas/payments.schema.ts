@@ -31,7 +31,7 @@ export const paymentPlans = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
-    priceIdx: index('idx_plans_price').on(table.registrationPriceId),
+    priceIdx: uniqueIndex('idx_plans_price_unique').on(table.registrationPriceId),
     positiveTotalAmount: check(
       'payment_plans_total_amount_positive',
       sql`${table.totalAmount} > 0`,
@@ -109,7 +109,8 @@ export const paymentTransactions = pgTable(
     gatewayName: varchar('gateway_name', { length: 50 }),
     gatewayAuthority: varchar('gateway_authority', { length: 255 }),
     gatewayTransactionId: varchar('gateway_transaction_id', { length: 255 }),
-    idempotencyKey: varchar('idempotency_key', { length: 255 }).unique(),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }),
+    idempotencyFingerprint: varchar('idempotency_fingerprint', { length: 64 }),
     transactionStatus: varchar('transaction_status', { length: 30 }).notNull().default('CREATED'),
     requestedAt: timestamp('requested_at', { withTimezone: true }).defaultNow().notNull(),
     verifiedAt: timestamp('verified_at', { withTimezone: true }),
@@ -122,13 +123,22 @@ export const paymentTransactions = pgTable(
   (table) => ({
     scheduleItemIdx: index('idx_transactions_schedule_item').on(table.paymentScheduleItemId),
     statusIdx: index('idx_transactions_status').on(table.transactionStatus),
-    idempotencyIdx: uniqueIndex('idx_transactions_idempotency').on(table.idempotencyKey),
+    idempotencyIdx: uniqueIndex('idx_transactions_user_operation_idempotency').on(
+      table.userId,
+      table.paymentMethod,
+      table.idempotencyKey,
+    ),
     gatewayTransactionIdx: uniqueIndex('idx_transactions_gateway_transaction').on(
       table.gatewayTransactionId,
     ),
     oneSuccessfulPaymentIdx: uniqueIndex('idx_transactions_one_success_per_schedule_item')
       .on(table.paymentScheduleItemId)
       .where(sql`${table.transactionStatus} = 'SUCCEEDED'`),
+    onePendingOfflinePaymentIdx: uniqueIndex('idx_transactions_one_pending_offline_per_item')
+      .on(table.paymentScheduleItemId)
+      .where(
+        sql`${table.paymentMethod} = 'MANUAL_ADMIN_ENTRY' AND ${table.transactionStatus} = 'CREATED'`,
+      ),
     positiveAmount: check('payment_transactions_amount_positive', sql`${table.amount} > 0`),
   }),
 );

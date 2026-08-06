@@ -2,11 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { notifications } from '../../database/schemas';
 import { eq, and, desc, inArray } from 'drizzle-orm';
-import { generateId } from '../../common/utils';
+import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly outbox: InAppNotificationService,
+  ) {}
 
   async getByUser(userId: string) {
     let items = await this.db.db
@@ -15,7 +18,8 @@ export class NotificationsService {
       .where(eq(notifications.userId, userId))
       .orderBy(desc(notifications.createdAt));
     if (items.length === 0) {
-      await this.create({
+      await this.outbox.create({
+        eventId: `WELCOME:${userId}`,
         userId,
         notificationType: 'WELCOME',
         title: 'به پنل خانواده خوش آمدید',
@@ -76,25 +80,5 @@ export class NotificationsService {
       .where(
         and(eq(notifications.userId, userId), eq(notifications.notificationStatus, 'PENDING')),
       );
-  }
-
-  async create(data: {
-    userId: string;
-    notificationType: string;
-    title: string;
-    message: string;
-    relatedEntityType?: string;
-    relatedEntityId?: string;
-  }) {
-    await this.db.db.insert(notifications).values({
-      id: generateId(),
-      userId: data.userId,
-      notificationType: data.notificationType,
-      channel: 'IN_APP',
-      title: data.title,
-      message: data.message,
-      relatedEntityType: data.relatedEntityType || null,
-      relatedEntityId: data.relatedEntityId || null,
-    });
   }
 }

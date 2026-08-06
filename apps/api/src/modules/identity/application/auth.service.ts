@@ -2,8 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { addSeconds, isPast } from 'date-fns';
-import { eq, and, desc, isNull, or } from 'drizzle-orm';
-import { createHash } from 'node:crypto';
+import { eq, and, desc, isNull, or, gt, sql } from 'drizzle-orm';
+import { createHash, randomInt } from 'node:crypto';
 import { ConfigService } from '../../../config/config.service';
 import { DatabaseService } from '../../../database/database.service';
 import { users, adminUsers, otpRequests, parents, authSessions } from '../../../database/schemas';
@@ -108,11 +108,26 @@ export class AuthService {
   }
 
   async setAdminStatus(adminId: string, status: 'ACTIVE' | 'INACTIVE') {
-    const [admin] = await this.db.db
-      .update(adminUsers)
-      .set({ status, updatedAt: new Date() })
-      .where(eq(adminUsers.id, adminId))
-      .returning();
+    const [admin] = await this.db.db.transaction(async (txn) => {
+      const updated = await txn
+        .update(adminUsers)
+        .set({ status, updatedAt: new Date() })
+        .where(eq(adminUsers.id, adminId))
+        .returning();
+      if (updated[0] && status === 'INACTIVE') {
+        await txn
+          .update(authSessions)
+          .set({ revokedAt: new Date(), revocationReason: 'ACCOUNT_DISABLED' })
+          .where(
+            and(
+              eq(authSessions.subjectId, adminId),
+              eq(authSessions.role, 'ADMIN'),
+              isNull(authSessions.revokedAt),
+            ),
+          );
+      }
+      return updated;
+    });
     if (!admin) throw new ValidationError('Administrator was not found.');
     return admin;
   }
@@ -133,7 +148,11 @@ export class AuthService {
     }
   }
 
-  async requestAuthOtp(phoneNumber: string, role: 'PARENT' | 'ADMIN'): Promise<OtpResult> {
+  async requestAuthOtp(
+    phoneNumber: string,
+    role: 'PARENT' | 'ADMIN',
+    requestIp?: string,
+  ): Promise<OtpResult> {
     const account = await this.findAccountByPhone(phoneNumber, role);
     // Admin accounts must be provisioned in advance. Keep production responses generic.
     if (role === 'ADMIN' && !account) {
@@ -146,7 +165,7 @@ export class AuthService {
       }
       return result;
     }
-    return this.sendOtp(phoneNumber, role === 'ADMIN' ? 'AUTH_ADMIN' : 'AUTH_PARENT');
+    return this.sendOtp(phoneNumber, role === 'ADMIN' ? 'AUTH_ADMIN' : 'AUTH_PARENT', requestIp);
   }
 
   async verifyAuthOtp(
@@ -163,21 +182,24 @@ export class AuthService {
 
     if (!account) {
       const userId = generateId();
-      await this.db.db.insert(users).values({
-        id: userId,
-        username: phoneNumber,
-        phoneNumber,
-        accountStatus: 'ACTIVE',
+      await this.db.db.transaction(async (txn) => {
+        await txn.insert(users).values({
+          id: userId,
+          username: phoneNumber,
+          phoneNumber,
+          accountStatus: 'ACTIVE',
+        });
+        await this.notifications.enqueueInTransaction(txn, {
+          eventId: `ACCOUNT_REGISTERED:${userId}`,
+          userId,
+          notificationType: 'ACCOUNT_REGISTERED',
+          title: 'ثبت‌نام حساب با موفقیت انجام شد',
+          message: 'حساب خانواده ایجاد شد. اکنون اطلاعات خانواده و دانش‌آموز قابل ثبت است.',
+          relatedEntityType: 'USER',
+          relatedEntityId: userId,
+        });
       });
       account = { id: userId, username: phoneNumber, status: 'ACTIVE' };
-      await this.notifications.create({
-        userId,
-        notificationType: 'ACCOUNT_REGISTERED',
-        title: 'ثبت‌نام حساب با موفقیت انجام شد',
-        message: `حساب خانواده با شماره همراه ${phoneNumber} ایجاد شد. اکنون اطلاعات خانواده و دانش‌آموز قابل ثبت است.`,
-        relatedEntityType: 'USER',
-        relatedEntityId: userId,
-      });
       this.logger.log('Parent account created after OTP verification.');
     }
 
@@ -247,11 +269,19 @@ export class AuthService {
         current.refreshTokenHash !== tokenHash ||
         current.revokedAt
       ) {
-        await this.revokeAllSessions(payload.sub, payload.role, 'REFRESH_TOKEN_REUSE');
+        if (current && !current.revokedAt) {
+          await this.revokeAllSessions(payload.sub, payload.role, 'REFRESH_TOKEN_REUSE');
+        }
         throw new AuthenticationError('Invalid or expired refresh token.');
       }
       if (isPast(new Date(current.expiresAt))) {
         await this.revokeSession(current.id, 'SESSION_EXPIRED');
+        throw new AuthenticationError('Invalid or expired refresh token.');
+      }
+
+      const account = await this.findAccountById(payload.sub, payload.role);
+      if (!account || account.status !== 'ACTIVE') {
+        await this.revokeAllSessions(payload.sub, payload.role, 'ACCOUNT_DISABLED');
         throw new AuthenticationError('Invalid or expired refresh token.');
       }
 
@@ -273,53 +303,90 @@ export class AuthService {
     this.logger.log('User logged out.');
   }
 
-  async sendOtp(phoneNumber: string, purpose: string): Promise<OtpResult> {
-    const recent = await this.db.db
-      .select()
-      .from(otpRequests)
-      .where(
-        and(
-          eq(otpRequests.phoneNumber, phoneNumber),
-          eq(otpRequests.purpose, purpose),
-          isNull(otpRequests.verifiedAt),
-        ),
-      )
-      .orderBy(desc(otpRequests.createdAt))
-      .limit(1);
-
-    if (recent.length > 0) {
-      const lastRequest = recent[0];
-      const elapsed = (Date.now() - new Date(lastRequest.createdAt).getTime()) / 1000;
-      if (elapsed < this.config.otpResendCooldownSeconds) {
-        const waitSeconds = Math.ceil(this.config.otpResendCooldownSeconds - elapsed);
-        throw new ValidationError(
-          `Please wait ${waitSeconds} seconds before requesting a new code.`,
-        );
+  async sendOtp(phoneNumber: string, purpose: string, requestIp?: string): Promise<OtpResult> {
+    const created = await this.db.db.transaction(async (txn) => {
+      await txn.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`otp:${phoneNumber}:${purpose}`}))`,
+      );
+      if (requestIp) {
+        await txn.execute(sql`select pg_advisory_xact_lock(hashtext(${`otp-ip:${requestIp}`}))`);
+        const recentFromIp = await txn
+          .select({ id: otpRequests.id })
+          .from(otpRequests)
+          .where(
+            and(
+              eq(otpRequests.requestIp, requestIp),
+              gt(otpRequests.createdAt, new Date(Date.now() - 60_000)),
+            ),
+          );
+        if (recentFromIp.length >= 10) {
+          throw new ValidationError('Too many verification codes requested. Please try later.');
+        }
       }
-    }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const codeHash = await argon2.hash(code);
-    const expiresAt = addSeconds(new Date(), this.config.otpExpirySeconds);
-
-    await this.db.db.insert(otpRequests).values({
-      id: generateId(),
-      phoneNumber,
-      purpose,
-      codeHash,
-      expiresAt,
-      maxAttempts: this.config.otpMaxAttempts,
+      const recent = await txn
+        .select()
+        .from(otpRequests)
+        .where(
+          and(
+            eq(otpRequests.phoneNumber, phoneNumber),
+            eq(otpRequests.purpose, purpose),
+            isNull(otpRequests.verifiedAt),
+            isNull(otpRequests.invalidatedAt),
+          ),
+        )
+        .orderBy(desc(otpRequests.createdAt))
+        .limit(1);
+      if (recent[0]) {
+        const elapsed = (Date.now() - new Date(recent[0].createdAt).getTime()) / 1000;
+        if (elapsed < this.config.otpResendCooldownSeconds) {
+          throw new ValidationError(
+            `Please wait ${Math.ceil(this.config.otpResendCooldownSeconds - elapsed)} seconds before requesting a new code.`,
+          );
+        }
+      }
+      await txn
+        .update(otpRequests)
+        .set({ invalidatedAt: new Date() })
+        .where(
+          and(
+            eq(otpRequests.phoneNumber, phoneNumber),
+            eq(otpRequests.purpose, purpose),
+            isNull(otpRequests.verifiedAt),
+            isNull(otpRequests.invalidatedAt),
+          ),
+        );
+      const code = randomInt(100000, 1000000).toString();
+      const expiresAt = addSeconds(new Date(), this.config.otpExpirySeconds);
+      const id = generateId();
+      await txn.insert(otpRequests).values({
+        id,
+        phoneNumber,
+        purpose,
+        codeHash: await argon2.hash(code),
+        expiresAt,
+        maxAttempts: this.config.otpMaxAttempts,
+        requestIp: requestIp || null,
+      });
+      return { id, code, expiresAt };
     });
 
-    await this.otpDelivery.send({ phoneNumber, purpose, code });
+    try {
+      await this.otpDelivery.send({ phoneNumber, purpose, code: created.code });
+    } catch (error) {
+      await this.db.db
+        .update(otpRequests)
+        .set({ invalidatedAt: new Date() })
+        .where(eq(otpRequests.id, created.id));
+      throw error;
+    }
     this.logger.log(`OTP sent for ${purpose}.`);
 
     return {
-      expiresAt,
+      expiresAt: created.expiresAt,
       cooldownSeconds: this.config.otpResendCooldownSeconds,
       developmentCode:
         this.config.nodeEnv !== 'production' && this.config.otpProvider === 'console'
-          ? code
+          ? created.code
           : undefined,
     };
   }
@@ -329,47 +396,65 @@ export class AuthService {
     purpose: string,
     code: string,
   ): Promise<{ userId?: string }> {
-    const requests = await this.db.db
-      .select()
-      .from(otpRequests)
-      .where(
-        and(
-          eq(otpRequests.phoneNumber, phoneNumber),
-          eq(otpRequests.purpose, purpose),
-          isNull(otpRequests.verifiedAt),
-        ),
-      )
-      .orderBy(desc(otpRequests.createdAt))
-      .limit(1);
-
-    if (requests.length === 0) {
+    const outcome = await this.db.db.transaction(async (txn) => {
+      await txn.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`otp:${phoneNumber}:${purpose}`}))`,
+      );
+      const [request] = await txn
+        .select()
+        .from(otpRequests)
+        .where(
+          and(
+            eq(otpRequests.phoneNumber, phoneNumber),
+            eq(otpRequests.purpose, purpose),
+            isNull(otpRequests.verifiedAt),
+            isNull(otpRequests.invalidatedAt),
+          ),
+        )
+        .orderBy(desc(otpRequests.createdAt))
+        .limit(1);
+      if (!request) {
+        return 'NOT_FOUND' as const;
+      }
+      if (request.attemptCount >= request.maxAttempts) {
+        return 'TOO_MANY_ATTEMPTS' as const;
+      }
+      if (isPast(new Date(request.expiresAt))) {
+        await txn
+          .update(otpRequests)
+          .set({ invalidatedAt: new Date() })
+          .where(eq(otpRequests.id, request.id));
+        return 'EXPIRED' as const;
+      }
+      const valid = await argon2.verify(request.codeHash, code);
+      const attemptCount = request.attemptCount + 1;
+      if (!valid) {
+        await txn
+          .update(otpRequests)
+          .set({
+            attemptCount,
+            invalidatedAt: attemptCount >= request.maxAttempts ? new Date() : null,
+          })
+          .where(eq(otpRequests.id, request.id));
+        this.logger.warn(`Failed OTP attempt for ${purpose}.`);
+        return 'INVALID' as const;
+      }
+      await txn
+        .update(otpRequests)
+        .set({ verifiedAt: new Date(), attemptCount })
+        .where(and(eq(otpRequests.id, request.id), isNull(otpRequests.verifiedAt)));
+      return 'VERIFIED' as const;
+    });
+    if (outcome === 'NOT_FOUND') {
       throw new ValidationError('No valid OTP request found. Please request a new code.');
     }
-
-    const request = requests[0];
-
-    if (request.attemptCount >= request.maxAttempts) {
+    if (outcome === 'TOO_MANY_ATTEMPTS') {
       throw new ValidationError('Too many failed attempts. Please request a new code.');
     }
-
-    if (isPast(new Date(request.expiresAt))) {
+    if (outcome === 'EXPIRED') {
       throw new ValidationError('OTP code has expired. Please request a new code.');
     }
-
-    const valid = await argon2.verify(request.codeHash, code);
-    if (!valid) {
-      await this.db.db
-        .update(otpRequests)
-        .set({ attemptCount: request.attemptCount + 1 })
-        .where(eq(otpRequests.id, request.id));
-      this.logger.warn(`Failed OTP attempt for ${purpose}.`);
-      throw new ValidationError('Invalid verification code.');
-    }
-
-    await this.db.db
-      .update(otpRequests)
-      .set({ verifiedAt: new Date(), attemptCount: request.attemptCount + 1 })
-      .where(eq(otpRequests.id, request.id));
+    if (outcome === 'INVALID') throw new ValidationError('Invalid verification code.');
 
     this.logger.log(`OTP verified for ${purpose}.`);
     return {};
@@ -409,6 +494,25 @@ export class AuthService {
     return legacy[0];
   }
 
+  private async findAccountById(userId: string, role: 'PARENT' | 'ADMIN') {
+    if (role === 'ADMIN') {
+      return (
+        await this.db.db
+          .select({ status: adminUsers.status })
+          .from(adminUsers)
+          .where(eq(adminUsers.id, userId))
+          .limit(1)
+      )[0];
+    }
+    return (
+      await this.db.db
+        .select({ status: users.accountStatus })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1)
+    )[0];
+  }
+
   private async generateTokens(
     userId: string,
     role: 'PARENT' | 'ADMIN',
@@ -436,6 +540,19 @@ export class AuthService {
     ]);
 
     await this.db.db.transaction(async (txn) => {
+      if (replacedSessionId) {
+        const claimed = await txn
+          .update(authSessions)
+          .set({
+            revokedAt: new Date(),
+            revocationReason: 'ROTATED',
+            replacedBySessionId: sessionId,
+            lastUsedAt: new Date(),
+          })
+          .where(and(eq(authSessions.id, replacedSessionId), isNull(authSessions.revokedAt)))
+          .returning({ id: authSessions.id });
+        if (!claimed[0]) throw new AuthenticationError('Invalid or expired refresh token.');
+      }
       await txn.insert(authSessions).values({
         id: sessionId,
         subjectId: userId,
@@ -446,17 +563,6 @@ export class AuthService {
         userAgent: context?.userAgent || null,
         expiresAt: addSeconds(new Date(), refreshTtl),
       });
-      if (replacedSessionId) {
-        await txn
-          .update(authSessions)
-          .set({
-            revokedAt: new Date(),
-            revocationReason: 'ROTATED',
-            replacedBySessionId: sessionId,
-            lastUsedAt: new Date(),
-          })
-          .where(and(eq(authSessions.id, replacedSessionId), isNull(authSessions.revokedAt)));
-      }
     });
 
     return { accessToken, refreshToken };

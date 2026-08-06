@@ -14,7 +14,7 @@ export { paymentPlans } from './payments.schema';
 export { paymentScheduleItems } from './payments.schema';
 export { paymentTransactions } from './payments.schema';
 export { contracts } from './contracts.schema';
-export { notifications } from './notifications.schema';
+export { notifications, notificationOutbox } from './notifications.schema';
 export { otpRequests } from './auth.schema';
 export { authSessions } from './auth.schema';
 export { auditLogs } from './audit.schema';

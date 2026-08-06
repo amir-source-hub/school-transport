@@ -10,6 +10,7 @@ import {
   Res,
   Param,
   Patch,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import type { CookieSerializeOptions } from '@fastify/cookie';
@@ -23,20 +24,30 @@ import { TrustedOriginGuard } from '../../access-control/trusted-origin.guard';
 import { RolesGuard } from '../../access-control/roles.guard';
 import { Roles } from '../../../common/decorators';
 import { IsEmail, IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { normalizeIranianDigits } from '../../../common/iranian-national-id';
+import { AuthenticatedRequest } from '../../../common/http-request';
 
-class CreateAdminDto {
+const trimmed = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value;
+const digits = ({ value }: { value: unknown }) => typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
+
+export class CreateAdminDto {
+  @Transform(trimmed)
   @IsString()
   @Length(3, 100)
   username!: string;
 
   @IsString()
   @Length(1, 100)
+  @Transform(trimmed)
   firstName!: string;
 
   @IsString()
   @Length(1, 100)
+  @Transform(trimmed)
   lastName!: string;
 
+  @Transform(digits)
   @Matches(/^09\d{9}$/)
   phoneNumber!: string;
 
@@ -45,7 +56,7 @@ class CreateAdminDto {
   email?: string;
 }
 
-class UpdateAdminDto {
+export class UpdateAdminDto {
   @IsOptional()
   @IsString()
   @Length(3, 100)
@@ -63,6 +74,7 @@ class UpdateAdminDto {
 
   @IsOptional()
   @Matches(/^09\d{9}$/)
+  @Transform(digits)
   phoneNumber?: string;
 
   @IsOptional()
@@ -70,7 +82,8 @@ class UpdateAdminDto {
   email?: string;
 }
 
-class RequestOtpDto {
+export class RequestOtpDto {
+  @Transform(digits)
   @IsString()
   @Matches(/^09\d{9}$/)
   phoneNumber!: string;
@@ -92,7 +105,7 @@ export class AdminIdentityController {
   }
 
   @Get('me')
-  async getMe(@Req() req: any) {
+  async getMe(@Req() req: AuthenticatedRequest) {
     return successResponse(await this.authService.getAdmin(req.user.id));
   }
 
@@ -102,22 +115,23 @@ export class AdminIdentityController {
   }
 
   @Patch(':adminId')
-  async update(@Param('adminId') adminId: string, @Body() dto: UpdateAdminDto) {
+  async update(@Param('adminId', new ParseUUIDPipe()) adminId: string, @Body() dto: UpdateAdminDto) {
     return successResponse(await this.authService.updateAdmin(adminId, dto));
   }
 
   @Post(':adminId/archive')
-  async archive(@Param('adminId') adminId: string) {
+  async archive(@Param('adminId', new ParseUUIDPipe()) adminId: string) {
     return successResponse(await this.authService.setAdminStatus(adminId, 'INACTIVE'));
   }
 
   @Post(':adminId/unarchive')
-  async unarchive(@Param('adminId') adminId: string) {
+  async unarchive(@Param('adminId', new ParseUUIDPipe()) adminId: string) {
     return successResponse(await this.authService.setAdminStatus(adminId, 'ACTIVE'));
   }
 }
 
-class VerifyAuthOtpDto extends RequestOtpDto {
+export class VerifyAuthOtpDto extends RequestOtpDto {
+  @Transform(digits)
   @IsString()
   @Matches(/^\d{6}$/)
   code!: string;
@@ -143,8 +157,10 @@ export class AuthController {
   @Post('request-otp')
   @HttpCode(HttpStatus.OK)
   @UseGuards(TrustedOriginGuard)
-  async requestOtp(@Body() dto: RequestOtpDto) {
-    return successResponse(await this.authService.requestAuthOtp(dto.phoneNumber, dto.role));
+  async requestOtp(@Req() req: FastifyRequest, @Body() dto: RequestOtpDto) {
+    return successResponse(
+      await this.authService.requestAuthOtp(dto.phoneNumber, dto.role, req.ip),
+    );
   }
 
   @Public()
@@ -181,7 +197,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: CookieRequest, @Res({ passthrough: true }) reply: CookieReply) {
     const refreshToken = req.cookies?.refresh_token;
-    if (!refreshToken) {
+    if (!refreshToken || refreshToken.length > 4096) {
       throw new ValidationError('A refresh token is required.');
     }
     const tokens = await this.authService.refreshTokens(refreshToken);
@@ -193,7 +209,7 @@ export class AuthController {
   @UseGuards(AuthGuard, TrustedOriginGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout(@Req() req: any, @Res({ passthrough: true }) reply: CookieReply) {
+  async logout(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) reply: CookieReply) {
     const userId = req.user?.id;
     if (userId && req.user?.sessionId) {
       await this.authService.logout(userId, req.user.sessionId);
@@ -205,7 +221,7 @@ export class AuthController {
 
   @UseGuards(AuthGuard)
   @Get('me')
-  async me(@Req() req: any) {
+  async me(@Req() req: AuthenticatedRequest) {
     return successResponse({ user: req.user });
   }
 

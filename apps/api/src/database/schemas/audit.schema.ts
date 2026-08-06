@@ -12,11 +12,13 @@ export const auditLogs = pgTable(
     previousValues: text('previous_values'),
     newValues: text('new_values'),
     ipAddress: varchar('ip_address', { length: 50 }),
+    correlationId: varchar('correlation_id', { length: 100 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
     entityTypeIdx: index('idx_audit_entity_type').on(table.entityType),
     entityIdIdx: index('idx_audit_entity_id').on(table.entityId),
     actorIdx: index('idx_audit_actor').on(table.actorId),
+    correlationIdx: index('idx_audit_correlation').on(table.correlationId),
   }),
 );

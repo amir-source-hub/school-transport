@@ -4,6 +4,8 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
+  Length,
   Validate,
   ValidatorConstraint,
   ValidatorConstraintInterface,
@@ -22,16 +24,17 @@ export class IranianNationalIdConstraint implements ValidatorConstraintInterface
 }
 
 export class CreateStudentDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   schoolId!: string;
 
   @IsString()
   @IsNotEmpty()
+  @Length(1, 100)
   firstName!: string;
 
   @IsString()
   @IsNotEmpty()
+  @Length(1, 100)
   lastName!: string;
 
   @Transform(({ value }) =>
@@ -51,11 +54,13 @@ export class CreateStudentDto {
 
   @IsString()
   @IsNotEmpty()
+  @Length(1, 50)
   grade!: string;
 
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @Length(1, 100)
   className?: string;
 }
 
@@ -63,20 +68,29 @@ export class UpdateStudentDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @Length(1, 100)
   firstName?: string;
 
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @Length(1, 100)
   lastName?: string;
 
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @Length(1, 50)
   grade?: string;
 
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @Length(1, 100)
   className?: string;
+}
+
+export class AdminCreateStudentDto extends CreateStudentDto {
+  @IsUUID()
+  userId!: string;
 }

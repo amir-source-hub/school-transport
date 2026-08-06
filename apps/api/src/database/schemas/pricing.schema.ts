@@ -28,8 +28,7 @@ export const registrationPrices = pgTable(
     prepaymentAmount: integer('prepayment_amount').notNull().default(0),
     installmentCount: integer('installment_count').notNull().default(4),
     priceStatus: varchar('price_status', { length: 20 }).notNull().default('DRAFT'),
-    setByAdminId: uuid('set_by_admin_id')
-      .references(() => adminUsers.id),
+    setByAdminId: uuid('set_by_admin_id').references(() => adminUsers.id),
     setAt: timestamp('set_at', { withTimezone: true }).defaultNow().notNull(),
     parentConfirmedAt: timestamp('parent_confirmed_at', { withTimezone: true }),
     replacedByPriceId: uuid('replaced_by_price_id'),
@@ -39,6 +38,9 @@ export const registrationPrices = pgTable(
   (table) => ({
     registrationIdx: index('idx_prices_registration').on(table.registrationId),
     versionIdx: uniqueIndex('idx_prices_version').on(table.registrationId, table.versionNumber),
+    oneAcceptedPriceIdx: uniqueIndex('idx_prices_one_accepted_per_registration')
+      .on(table.registrationId)
+      .where(sql`${table.priceStatus} = 'ACCEPTED'`),
     positiveTotalAmount: check(
       'registration_prices_total_amount_positive',
       sql`${table.totalAmount} > 0`,

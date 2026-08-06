@@ -70,6 +70,15 @@ describe('guided enrollment policy', () => {
     );
   });
 
+  it('rejects incomplete admin or parent submissions through the shared policy', () => {
+    const input = validEnrollment();
+    input.emergencyContact.phoneNumber = '';
+
+    expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow(
+      'All required enrollment fields must be completed.',
+    );
+  });
+
   it('keeps contract generation independent from persistence', () => {
     expect(guidedContractText('Ali', 'Ahmadi')).toContain('Ali Ahmadi');
   });

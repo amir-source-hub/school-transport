@@ -5,6 +5,9 @@ import { FastifyRequest } from 'fastify';
 import { ConfigService } from '../../config/config.service';
 import { PUBLIC_KEY } from '../../common/decorators';
 import { JwtPayload } from '../../common/authentication.types';
+import { DatabaseService } from '../../database/database.service';
+import { adminUsers, authSessions, users } from '../../database/schemas';
+import { and, eq, isNull, gt } from 'drizzle-orm';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -12,6 +15,7 @@ export class AuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly database: DatabaseService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -36,6 +40,40 @@ export class AuthGuard implements CanActivate {
 
       if (payload.type !== 'access') {
         throw new UnauthorizedException('Invalid token type.');
+      }
+
+      if (!payload.sid || !['PARENT', 'ADMIN'].includes(payload.role)) {
+        throw new UnauthorizedException('Invalid token.');
+      }
+      const [session] = await this.database.db
+        .select({ id: authSessions.id })
+        .from(authSessions)
+        .where(
+          and(
+            eq(authSessions.id, payload.sid),
+            eq(authSessions.subjectId, payload.sub),
+            eq(authSessions.role, payload.role),
+            isNull(authSessions.revokedAt),
+            gt(authSessions.expiresAt, new Date()),
+          ),
+        )
+        .limit(1);
+      if (!session) throw new UnauthorizedException('Invalid session.');
+
+      const [account] =
+        payload.role === 'ADMIN'
+          ? await this.database.db
+              .select({ status: adminUsers.status })
+              .from(adminUsers)
+              .where(eq(adminUsers.id, payload.sub))
+              .limit(1)
+          : await this.database.db
+              .select({ status: users.accountStatus })
+              .from(users)
+              .where(eq(users.id, payload.sub))
+              .limit(1);
+      if (!account || account.status !== 'ACTIVE') {
+        throw new UnauthorizedException('Inactive account.');
       }
 
       (request as any).user = { id: payload.sub, role: payload.role, sessionId: payload.sid };

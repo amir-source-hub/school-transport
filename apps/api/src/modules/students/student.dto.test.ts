@@ -6,7 +6,7 @@ import { CreateStudentDto, UpdateStudentDto } from './student.dto';
 describe('student DTO validation', () => {
   it('normalizes a valid Persian-digit national ID', async () => {
     const dto = plainToInstance(CreateStudentDto, {
-      schoolId: 'school-1',
+      schoolId: '00000000-0000-4000-8000-000000000001',
       firstName: 'Ali',
       lastName: 'Ahmadi',
       nationalId: '۱۲۳۴۵۶۷۸۹۱',
@@ -19,7 +19,7 @@ describe('student DTO validation', () => {
 
   it('rejects an invalid national ID and missing required grade', async () => {
     const dto = plainToInstance(CreateStudentDto, {
-      schoolId: 'school-1',
+      schoolId: '00000000-0000-4000-8000-000000000001',
       firstName: 'Ali',
       lastName: 'Ahmadi',
       nationalId: 'not-a-number',

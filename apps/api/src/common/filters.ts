@@ -3,6 +3,7 @@ import { FastifyReply } from 'fastify';
 import { AppError } from './errors';
 import { AppLogger } from './logger';
 import { RequestContext } from './request-context';
+import { translateDatabaseError } from './database-errors';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -53,6 +54,24 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           message,
           details,
         },
+        meta: { requestId: this.requestContext.requestId },
+      });
+    }
+
+    const databaseError = translateDatabaseError(exception);
+    if (databaseError) {
+      const { error, diagnostics } = databaseError;
+      this.logger.warn(
+        {
+          event: 'database_error',
+          requestId: this.requestContext.requestId,
+          ...diagnostics,
+        },
+        'GlobalExceptionFilter',
+      );
+      return reply.status(error.status).send({
+        success: false,
+        error: { code: error.code, message: error.message },
         meta: { requestId: this.requestContext.requestId },
       });
     }

@@ -6,6 +6,7 @@ import { AppLogger } from '../../common/logger';
 import { DatabaseService } from '../../database/database.service';
 import { authSessions, otpRequests } from '../../database/schemas';
 import { lt } from 'drizzle-orm';
+import { InAppNotificationService } from '../notifications/in-app-notification.service';
 
 export const QUEUE_NAMES = {
   notifications: 'notification-delivery',
@@ -17,16 +18,19 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   private readonly connection: IORedis;
   private readonly queues: Queue[] = [];
   private readonly workers: Worker[] = [];
+  private closePromise?: Promise<void>;
 
   constructor(
     private readonly config: ConfigService,
     private readonly logger: AppLogger,
     private readonly database: DatabaseService,
+    private readonly notificationOutbox: InAppNotificationService,
   ) {
     this.connection = new IORedis(config.redisUrl, {
       maxRetriesPerRequest: null,
       enableReadyCheck: true,
       lazyConnect: true,
+      commandTimeout: config.readinessTimeoutMs,
       retryStrategy: config.queueRequired ? undefined : () => null,
     });
     this.connection.on('error', (error) => {
@@ -73,6 +77,16 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
           removeOnFail: 100,
         },
       );
+      await this.queue(QUEUE_NAMES.maintenance).add(
+        'dispatch-notification-outbox',
+        {},
+        {
+          jobId: 'scheduled-notification-outbox',
+          repeat: { every: 5_000 },
+          removeOnComplete: 30,
+          removeOnFail: 100,
+        },
+      );
     }
   }
 
@@ -104,6 +118,20 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.closePromise ??= this.close();
+    await this.closePromise;
+  }
+
+  async isReady(): Promise<boolean> {
+    if (this.closePromise || this.connection.status !== 'ready') return false;
+    try {
+      return (await this.connection.ping()) === 'PONG';
+    } catch {
+      return false;
+    }
+  }
+
+  private async close(): Promise<void> {
     await Promise.all(this.workers.map((worker) => worker.close()));
     await Promise.all(this.queues.map((queue) => queue.close()));
     if (this.connection.status === 'ready') await this.connection.quit();
@@ -117,7 +145,8 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async processNotification(job: Job): Promise<void> {
-    this.logger.log(`Processed development notification job ${job.name}.`);
+    await this.notificationOutbox.dispatchAvailable();
+    this.logger.log(`Processed notification outbox job ${job.name}.`);
   }
 
   private async processMaintenance(job: Job): Promise<void> {
@@ -126,6 +155,10 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       await this.database.db.delete(authSessions).where(lt(authSessions.expiresAt, cutoff));
       await this.database.db.delete(otpRequests).where(lt(otpRequests.expiresAt, cutoff));
       this.logger.log('Purged expired authentication data according to retention policy.');
+      return;
+    }
+    if (job.name === 'dispatch-notification-outbox') {
+      await this.notificationOutbox.dispatchAvailable();
       return;
     }
     this.logger.log(`Processed maintenance job ${job.name}.`);

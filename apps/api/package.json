@@ -6,6 +6,8 @@
     "dev": "node --env-file=.env ./node_modules/@nestjs/cli/bin/nest.js start --watch",
     "build": "nest build",
     "lint": "eslint \"src/**/*.ts\"",
+    "format": "prettier --write . --ignore-path ../../.prettierignore",
+    "format:check": "prettier --check . --ignore-path ../../.prettierignore",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

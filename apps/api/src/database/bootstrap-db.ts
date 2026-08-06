@@ -1,13 +1,27 @@
 import { migrateDatabase } from './migrate';
 import { seedDatabase } from './seed';
 
-async function bootstrapDatabase() {
-  await migrateDatabase();
-  await seedDatabase();
-  console.log('Database migrated and seeded.');
+export async function bootstrapDatabase(
+  environment = process.env,
+  migrate = migrateDatabase,
+  seed = seedDatabase,
+) {
+  await migrate(environment.DATABASE_URL);
+  const seedRequested = environment.SEED_DEMO_DATA === 'true';
+  if (seedRequested && environment.NODE_ENV === 'production') {
+    throw new Error('Demo seeding is forbidden in production.');
+  }
+  if (seedRequested) {
+    await seed(environment.DATABASE_URL);
+    console.log('Database migrated and development demo data seeded.');
+  } else {
+    console.log('Database migrations applied; demo seeding disabled.');
+  }
 }
 
-bootstrapDatabase().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  bootstrapDatabase().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

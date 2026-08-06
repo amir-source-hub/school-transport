@@ -12,6 +12,7 @@ import { eq, and, ne } from 'drizzle-orm';
 import { NotFoundError, ConflictError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { normalizeIranianDigits } from '../../../common/iranian-national-id';
+import { withParentNationalIdConflict } from '../../../common/parent-national-id-conflict';
 import {
   CreateFamilyDto,
   FamilyProfile,
@@ -75,30 +76,32 @@ export class FamiliesService {
     const motherId = generateId();
     const fatherId = generateId();
 
-    await this.db.db.insert(parents).values([
-      {
-        id: motherId,
-        userId,
-        parentType: 'MOTHER',
-        firstName: dto.mother.firstName,
-        lastName: dto.mother.lastName,
-        nationalId: dto.mother.nationalId,
-        phoneNumber: dto.mother.phoneNumber,
-        isPrimaryContact: primaryParent === 'MOTHER',
-        phoneVerifiedAt: primaryParent === 'MOTHER' ? new Date() : null,
-      },
-      {
-        id: fatherId,
-        userId,
-        parentType: 'FATHER',
-        firstName: dto.father.firstName,
-        lastName: dto.father.lastName,
-        nationalId: dto.father.nationalId,
-        phoneNumber: dto.father.phoneNumber,
-        isPrimaryContact: primaryParent === 'FATHER',
-        phoneVerifiedAt: primaryParent === 'FATHER' ? new Date() : null,
-      },
-    ]);
+    await withParentNationalIdConflict(() =>
+      this.db.db.insert(parents).values([
+        {
+          id: motherId,
+          userId,
+          parentType: 'MOTHER',
+          firstName: dto.mother.firstName,
+          lastName: dto.mother.lastName,
+          nationalId: dto.mother.nationalId,
+          phoneNumber: dto.mother.phoneNumber,
+          isPrimaryContact: primaryParent === 'MOTHER',
+          phoneVerifiedAt: primaryParent === 'MOTHER' ? new Date() : null,
+        },
+        {
+          id: fatherId,
+          userId,
+          parentType: 'FATHER',
+          firstName: dto.father.firstName,
+          lastName: dto.father.lastName,
+          nationalId: dto.father.nationalId,
+          phoneNumber: dto.father.phoneNumber,
+          isPrimaryContact: primaryParent === 'FATHER',
+          phoneVerifiedAt: primaryParent === 'FATHER' ? new Date() : null,
+        },
+      ]),
+    );
 
     const addressId = generateId();
     await this.db.db.insert(familyAddresses).values({
@@ -234,34 +237,37 @@ export class FamiliesService {
         }
       }
 
-      await this.db.db.transaction(async (txn) => {
-        await txn
-          .update(parents)
-          .set({
-            firstName: data.firstName?.trim() || existing[0].firstName,
-            lastName: data.lastName?.trim() || existing[0].lastName,
-            nationalId,
-            phoneNumber,
-            phoneVerifiedAt:
-              phoneNumber === existing[0].phoneNumber ? existing[0].phoneVerifiedAt : null,
-            updatedAt: new Date(),
-          })
-          .where(eq(parents.id, existing[0].id));
-        if (existing[0].isPrimaryContact && phoneNumber !== existing[0].phoneNumber) {
+      await withParentNationalIdConflict(() =>
+        this.db.db.transaction(async (txn) => {
           await txn
-            .update(users)
-            .set({ phoneNumber, updatedAt: new Date() })
-            .where(eq(users.id, userId));
-        }
-      });
-      await this.notifications.create({
-        userId,
-        notificationType: 'PROFILE_UPDATED',
-        title: 'اطلاعات والد به‌روزرسانی شد',
-        message: `اطلاعات ${data.parentType === 'MOTHER' ? 'مادر' : 'پدر'} با موفقیت ذخیره شد.`,
-        relatedEntityType: 'PARENT',
-        relatedEntityId: existing[0].id,
-      });
+            .update(parents)
+            .set({
+              firstName: data.firstName?.trim() || existing[0].firstName,
+              lastName: data.lastName?.trim() || existing[0].lastName,
+              nationalId,
+              phoneNumber,
+              phoneVerifiedAt:
+                phoneNumber === existing[0].phoneNumber ? existing[0].phoneVerifiedAt : null,
+              updatedAt: new Date(),
+            })
+            .where(eq(parents.id, existing[0].id));
+          if (existing[0].isPrimaryContact && phoneNumber !== existing[0].phoneNumber) {
+            await txn
+              .update(users)
+              .set({ phoneNumber, updatedAt: new Date() })
+              .where(eq(users.id, userId));
+          }
+          await this.notifications.enqueueInTransaction(txn, {
+            eventId: `PROFILE_UPDATED:${existing[0].id}:${userId}:${Date.now()}`,
+            userId,
+            notificationType: 'PROFILE_UPDATED',
+            title: 'اطلاعات والد به‌روزرسانی شد',
+            message: `اطلاعات ${data.parentType === 'MOTHER' ? 'مادر' : 'پدر'} با موفقیت ذخیره شد.`,
+            relatedEntityType: 'PARENT',
+            relatedEntityId: existing[0].id,
+          });
+        }),
+      );
     }
   }
 
@@ -306,17 +312,20 @@ export class FamiliesService {
 
     const editableFields = parseEditableAddressFields(data);
 
-    await this.db.db
-      .update(familyAddresses)
-      .set({ ...editableFields, updatedAt: new Date() })
-      .where(eq(familyAddresses.id, addressId));
-    await this.notifications.create({
-      userId,
-      notificationType: 'ADDRESS_UPDATED',
-      title: 'نشانی به‌روزرسانی شد',
-      message: 'نشانی فعال خانواده با موفقیت ذخیره شد.',
-      relatedEntityType: 'ADDRESS',
-      relatedEntityId: addressId,
+    await this.db.db.transaction(async (txn) => {
+      await txn
+        .update(familyAddresses)
+        .set({ ...editableFields, updatedAt: new Date() })
+        .where(eq(familyAddresses.id, addressId));
+      await this.notifications.enqueueInTransaction(txn, {
+        eventId: `ADDRESS_UPDATED:${addressId}:${Date.now()}`,
+        userId,
+        notificationType: 'ADDRESS_UPDATED',
+        title: 'نشانی به‌روزرسانی شد',
+        message: 'نشانی فعال خانواده با موفقیت ذخیره شد.',
+        relatedEntityType: 'ADDRESS',
+        relatedEntityId: addressId,
+      });
     });
   }
 
@@ -375,17 +384,20 @@ export class FamiliesService {
       .where(and(eq(emergencyContacts.id, contactId), eq(emergencyContacts.userId, userId)))
       .limit(1);
     if (!existing[0]) throw new NotFoundError('Emergency contact', contactId);
-    await this.db.db
-      .update(emergencyContacts)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(emergencyContacts.id, contactId));
-    await this.notifications.create({
-      userId,
-      notificationType: 'EMERGENCY_CONTACT_UPDATED',
-      title: 'تماس اضطراری به‌روزرسانی شد',
-      message: 'اطلاعات تماس اضطراری با موفقیت ذخیره شد.',
-      relatedEntityType: 'EMERGENCY_CONTACT',
-      relatedEntityId: contactId,
+    await this.db.db.transaction(async (txn) => {
+      await txn
+        .update(emergencyContacts)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(emergencyContacts.id, contactId));
+      await this.notifications.enqueueInTransaction(txn, {
+        eventId: `EMERGENCY_CONTACT_UPDATED:${contactId}:${Date.now()}`,
+        userId,
+        notificationType: 'EMERGENCY_CONTACT_UPDATED',
+        title: 'تماس اضطراری به‌روزرسانی شد',
+        message: 'اطلاعات تماس اضطراری با موفقیت ذخیره شد.',
+        relatedEntityType: 'EMERGENCY_CONTACT',
+        relatedEntityId: contactId,
+      });
     });
   }
 
@@ -426,10 +438,11 @@ export class FamiliesService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .where(eq(students.userId, userId));
-    const parentRows = await this.db.db
-      .select()
-      .from(parents)
-      .where(eq(parents.userId, userId));
+    const parentRows = await this.db.db.select().from(parents).where(eq(parents.userId, userId));
+    const [addressRows, emergencyRows] = await Promise.all([
+      this.db.db.select().from(familyAddresses).where(eq(familyAddresses.userId, userId)),
+      this.db.db.select().from(emergencyContacts).where(eq(emergencyContacts.userId, userId)),
+    ]);
     return {
       ...family,
       parents: parentRows.map((parent) => ({
@@ -440,6 +453,26 @@ export class FamiliesService {
         nationalId: parent.nationalId,
         phoneNumber: parent.phoneNumber,
         isPrimaryContact: parent.isPrimaryContact,
+      })),
+      addresses: addressRows.map((address) => ({
+        id: address.id,
+        title: address.title,
+        province: address.province,
+        city: address.city,
+        district: address.district,
+        streetAddress: address.streetAddress,
+        postalCode: address.postalCode,
+        latitude: address.latitude,
+        longitude: address.longitude,
+        isActive: address.isActive,
+      })),
+      emergencyContacts: emergencyRows.map((contact) => ({
+        id: contact.id,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        relationship: contact.relationship,
+        phoneNumber: contact.phoneNumber,
+        isActive: contact.isActive,
       })),
       students: studentRows.map((student) => ({
         ...student,
@@ -480,27 +513,32 @@ export class FamiliesService {
       .limit(1);
     if (duplicate) throw new ConflictError('DUPLICATE_NATIONAL_ID', 'Parent already exists.');
     const id = generateId();
-    await this.db.db.transaction(async (txn) => {
-      if (data.isPrimaryContact) {
-        await txn
-          .update(parents)
-          .set({ isPrimaryContact: false, updatedAt: new Date() })
-          .where(eq(parents.userId, userId));
-      }
-      await txn.insert(parents).values({
-        id,
-        userId,
-        parentType: data.parentType,
-        firstName: data.firstName.trim(),
-        lastName: data.lastName.trim(),
-        nationalId,
-        phoneNumber,
-        isPrimaryContact: !!data.isPrimaryContact,
-      });
-      if (data.isPrimaryContact) {
-        await txn.update(users).set({ phoneNumber, updatedAt: new Date() }).where(eq(users.id, userId));
-      }
-    });
+    await withParentNationalIdConflict(() =>
+      this.db.db.transaction(async (txn) => {
+        if (data.isPrimaryContact) {
+          await txn
+            .update(parents)
+            .set({ isPrimaryContact: false, updatedAt: new Date() })
+            .where(eq(parents.userId, userId));
+        }
+        await txn.insert(parents).values({
+          id,
+          userId,
+          parentType: data.parentType,
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          nationalId,
+          phoneNumber,
+          isPrimaryContact: !!data.isPrimaryContact,
+        });
+        if (data.isPrimaryContact) {
+          await txn
+            .update(users)
+            .set({ phoneNumber, updatedAt: new Date() })
+            .where(eq(users.id, userId));
+        }
+      }),
+    );
     return { id };
   }
 
@@ -530,28 +568,33 @@ export class FamiliesService {
     if (!/^\d{1,20}$/.test(nationalId) || !/^09\d{9}$/.test(phoneNumber)) {
       throw new ValidationError('A valid national ID and Iranian mobile number are required.');
     }
-    await this.db.db.transaction(async (txn) => {
-      if (data.isPrimaryContact) {
+    await withParentNationalIdConflict(() =>
+      this.db.db.transaction(async (txn) => {
+        if (data.isPrimaryContact) {
+          await txn
+            .update(parents)
+            .set({ isPrimaryContact: false, updatedAt: new Date() })
+            .where(eq(parents.userId, userId));
+        }
         await txn
           .update(parents)
-          .set({ isPrimaryContact: false, updatedAt: new Date() })
-          .where(eq(parents.userId, userId));
-      }
-      await txn
-        .update(parents)
-        .set({
-          firstName: data.firstName?.trim() ?? existing.firstName,
-          lastName: data.lastName?.trim() ?? existing.lastName,
-          nationalId,
-          phoneNumber,
-          isPrimaryContact: data.isPrimaryContact ?? existing.isPrimaryContact,
-          updatedAt: new Date(),
-        })
-        .where(eq(parents.id, parentId));
-      if (data.isPrimaryContact || existing.isPrimaryContact) {
-        await txn.update(users).set({ phoneNumber, updatedAt: new Date() }).where(eq(users.id, userId));
-      }
-    });
+          .set({
+            firstName: data.firstName?.trim() ?? existing.firstName,
+            lastName: data.lastName?.trim() ?? existing.lastName,
+            nationalId,
+            phoneNumber,
+            isPrimaryContact: data.isPrimaryContact ?? existing.isPrimaryContact,
+            updatedAt: new Date(),
+          })
+          .where(eq(parents.id, parentId));
+        if (data.isPrimaryContact || existing.isPrimaryContact) {
+          await txn
+            .update(users)
+            .set({ phoneNumber, updatedAt: new Date() })
+            .where(eq(users.id, userId));
+        }
+      }),
+    );
     return { updated: true };
   }
 
@@ -569,10 +612,7 @@ export class FamiliesService {
       .where(eq(parents.userId, userId))
       .limit(1);
     if (existing.isPrimaryContact && replacement) {
-      await this.setPrimaryPhone(
-        userId,
-        replacement.parentType as 'MOTHER' | 'FATHER',
-      );
+      await this.setPrimaryPhone(userId, replacement.parentType as 'MOTHER' | 'FATHER');
     }
     return { deleted: true };
   }

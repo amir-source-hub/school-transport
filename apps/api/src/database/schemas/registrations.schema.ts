@@ -7,7 +7,9 @@ import {
   text,
   boolean,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { students } from './students.schema';
 import { adminUsers } from './auth.schema';
 
@@ -38,6 +40,9 @@ export const serviceRegistrations = pgTable(
     studentIdx: index('idx_registrations_student').on(table.studentId),
     statusIdx: index('idx_registrations_status').on(table.registrationStatus),
     academicYearIdx: index('idx_registrations_academic_year').on(table.academicYear),
+    oneActiveEnrollmentIdx: uniqueIndex('idx_registrations_one_active_student_year')
+      .on(table.studentId, table.academicYear)
+      .where(sql`${table.registrationStatus} NOT IN ('REJECTED', 'CANCELLED')`),
   }),
 );
 

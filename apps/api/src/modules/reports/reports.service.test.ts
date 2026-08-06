@@ -1,9 +1,19 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import type { DatabaseService } from '../../database/database.service';
-import { ReportsService } from './reports.service';
+import { neutralizeSpreadsheetFormula, ReportsService } from './reports.service';
+import { schools, students } from '../../database/schemas';
 
 describe('ReportsService', () => {
+  it('neutralizes spreadsheet formula injection without changing typed values', () => {
+    expect(neutralizeSpreadsheetFormula('=HYPERLINK("https://attacker.invalid")')).toBe(
+      "'=HYPERLINK(\"https://attacker.invalid\")",
+    );
+    expect(neutralizeSpreadsheetFormula('  +1+1')).toBe("'  +1+1");
+    expect(neutralizeSpreadsheetFormula('@SUM(A1:A2)')).toBe("'@SUM(A1:A2)");
+    expect(neutralizeSpreadsheetFormula('خانواده احمدی')).toBe('خانواده احمدی');
+    expect(neutralizeSpreadsheetFormula(125_000)).toBe(125_000);
+  });
   it('creates a valid multi-sheet Excel workbook even when no records exist', async () => {
     const database = {
       db: {
@@ -32,5 +42,48 @@ describe('ReportsService', () => {
     expect(workbook.getWorksheet('دانش‌آموزان')?.getCell('A1').value).toBe('شناسه دانش‌آموز');
     expect(workbook.getWorksheet('پرداخت‌ها')?.autoFilter).toBeTruthy();
     expect(report.byteLength).toBeGreaterThan(1_000);
+  });
+
+  it('returns a bounded, ordered preview without sensitive student fields', async () => {
+    const createdAt = new Date('2026-08-02T10:00:00.000Z');
+    const database = {
+      db: {
+        select: () => ({
+          from: async (table: unknown) => {
+            if (table === students) {
+              return [
+                {
+                  id: 'student-1',
+                  firstName: 'سارا',
+                  lastName: 'احمدی',
+                  nationalId: '0012345678',
+                  schoolId: 'school-1',
+                  grade: 'اول',
+                  className: 'ابتدایی',
+                  isActive: true,
+                  createdAt,
+                },
+              ];
+            }
+            if (table === schools) return [{ id: 'school-1', name: 'مدرسه نمونه' }];
+            return [];
+          },
+        }),
+      },
+    } as unknown as DatabaseService;
+
+    const preview = await new ReportsService(database).getComprehensivePreview({
+      section: 'students',
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(preview.pagination).toEqual({ page: 1, pageSize: 10, total: 1, totalPages: 1 });
+    expect(preview.rows[0]).toMatchObject({
+      studentName: 'سارا احمدی',
+      schoolName: 'مدرسه نمونه',
+    });
+    expect(preview.rows[0]).not.toHaveProperty('nationalId');
+    expect(preview.columns.map(({ key }) => key)).not.toContain('nationalId');
   });
 });

@@ -1,0 +1,49 @@
+import { describe, expect, it } from 'vitest';
+import { validateEnvironment } from './config.service';
+
+const production = {
+  NODE_ENV: 'production',
+  DATABASE_URL: 'postgresql://app:strong-password@db:5432/app',
+  REDIS_URL: 'redis://:strong-password@redis:6379',
+  JWT_SECRET: 'a-production-secret-with-more-than-32-characters',
+  OTP_PROVIDER: 'none',
+  PAYMENT_GATEWAY_PROVIDER: 'none',
+  LOG_LEVEL: 'info',
+  SEED_DEMO_DATA: 'false',
+};
+
+describe('production configuration', () => {
+  it('fails production API startup while real providers are absent', () => {
+    const result = validateEnvironment(production);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.flatten().fieldErrors).toMatchObject({
+        OTP_PROVIDER: expect.any(Array),
+        PAYMENT_GATEWAY_PROVIDER: expect.any(Array),
+      });
+    }
+  });
+
+  it('allows a production worker to disable request-time providers', () => {
+    expect(validateEnvironment({ ...production, SERVICE_ROLE: 'worker' }).success).toBe(true);
+  });
+
+  it.each([
+    ['JWT_SECRET', 'demo-only-secret-that-is-long-enough'],
+    ['DATABASE_URL', 'postgresql://db:5432/app'],
+    ['REDIS_URL', 'redis://redis:6379'],
+    ['OTP_PROVIDER', 'console'],
+    ['PAYMENT_GATEWAY_PROVIDER', 'mock'],
+    ['LOG_LEVEL', 'debug'],
+    ['SEED_DEMO_DATA', 'true'],
+  ])('rejects unsafe production %s', (name, value) => {
+    expect(validateEnvironment({ ...production, SERVICE_ROLE: 'worker', [name]: value }).success).toBe(false);
+  });
+
+  it('retains explicit development-only providers outside production', () => {
+    expect(validateEnvironment({
+      ...production, NODE_ENV: 'development', OTP_PROVIDER: 'console',
+      PAYMENT_GATEWAY_PROVIDER: 'mock', LOG_LEVEL: 'debug', SEED_DEMO_DATA: 'true',
+    }).success).toBe(true);
+  });
+});

@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { successResponse } from '../../common/response';
+import { ConfigureInstallmentsDto, IdempotencyKey, OfflinePaymentDto, RejectPaymentDto, VerifyOnlinePaymentDto } from './payment-request.dto';
+import { AuthenticatedRequest } from '../../common/http-request';
 
 @UseGuards(AuthGuard)
 @Controller('payments')
@@ -11,29 +13,29 @@ export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Get()
-  async getAll(@Req() req: any) {
+  async getAll(@Req() req: AuthenticatedRequest) {
     return successResponse(await this.paymentsService.getOverview(req.user.id));
   }
 
   @Post(':scheduleItemId/online/start')
   async startOnline(
-    @Req() req: any,
-    @Param('scheduleItemId') scheduleItemId: string,
-    @Headers('Idempotency-Key') idempotencyKey: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string,
+    @IdempotencyKey() idempotencyKey: string,
   ) {
     const tx = await this.paymentsService.startOnlinePayment(
       scheduleItemId,
       req.user.id,
-      idempotencyKey || '',
+      idempotencyKey,
     );
     return successResponse(tx);
   }
 
   @Post(':txId/online/verify')
   async verifyOnline(
-    @Req() req: any,
-    @Param('txId') txId: string,
-    @Body() dto: { gatewayTransactionId: string },
+    @Req() req: AuthenticatedRequest,
+    @Param('txId', new ParseUUIDPipe()) txId: string,
+    @Body() dto: VerifyOnlinePaymentDto,
   ) {
     const tx = await this.paymentsService.verifyOnlinePayment(
       txId,
@@ -45,9 +47,9 @@ export class PaymentsController {
 
   @Post(':scheduleItemId/offline-submissions')
   async offlineSubmission(
-    @Req() req: any,
-    @Param('scheduleItemId') scheduleItemId: string,
-    @Body() dto: { paidAt: string; referenceNumber: string; description?: string },
+    @Req() req: AuthenticatedRequest,
+    @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string,
+    @Body() dto: OfflinePaymentDto,
   ) {
     const txId = await this.paymentsService.createOfflineSubmission(
       scheduleItemId,
@@ -71,20 +73,20 @@ export class AdminPaymentsController {
 
   @Post('plans/:planId/installments')
   async configureInstallments(
-    @Param('planId') planId: string,
-    @Body() dto: { items: { amount: number; dueDate: string }[] },
+    @Param('planId', new ParseUUIDPipe()) planId: string,
+    @Body() dto: ConfigureInstallmentsDto,
   ) {
     return successResponse(await this.paymentsService.configureInstallments(planId, dto.items));
   }
 
   @Post(':txId/approve')
-  async approve(@Param('txId') txId: string, @Req() req: any) {
+  async approve(@Param('txId', new ParseUUIDPipe()) txId: string, @Req() req: AuthenticatedRequest) {
     const tx = await this.paymentsService.approveOfflinePayment(txId, req.user.id);
     return successResponse(tx);
   }
 
   @Post(':txId/reject')
-  async reject(@Param('txId') txId: string, @Req() req: any, @Body() dto: { reason?: string }) {
+  async reject(@Param('txId', new ParseUUIDPipe()) txId: string, @Req() req: AuthenticatedRequest, @Body() dto: RejectPaymentDto) {
     const result = await this.paymentsService.rejectOfflinePayment(txId, req.user.id, dto.reason);
     return successResponse(result);
   }
