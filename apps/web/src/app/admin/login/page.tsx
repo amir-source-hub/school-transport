@@ -24,7 +24,7 @@ export default function AdminLoginPage() {
     })
       .then(({ data }) => {
         if (active) {
-          router.replace(data.user.role === 'ADMIN' ? '/admin/dashboard' : '/parent/dashboard');
+          router.replace(data.user.role === 'ADMIN' ? '/admin/dashboard' : '/student/dashboard');
         }
       })
       .catch(() => {

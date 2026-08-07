@@ -153,7 +153,7 @@ function OtpAuthForm() {
         return;
       }
       setAuthSession(response.data.accessToken, response.data.user.role);
-      router.replace('/parent/dashboard');
+      router.replace('/student/dashboard');
     } catch (caught) {
       setError(caught);
     }

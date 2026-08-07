@@ -99,7 +99,7 @@ describe('OTP code entry', () => {
     await user.click(screen.getByRole('button', { name: 'تأیید و ادامه' }));
 
     expect(authApi.verifyParentOtp).toHaveBeenCalledWith('09123456789', '123456', true);
-    expect(navigation.replace).toHaveBeenCalledWith('/parent/dashboard');
+    expect(navigation.replace).toHaveBeenCalledWith('/student/dashboard');
   });
 
   it('stays on the phone step and clears the pending OTP when the phone changes', async () => {
@@ -156,6 +156,6 @@ describe('role selector and first-time onboarding', () => {
 
     expect(authApi.verifyParentOtp).toHaveBeenCalledWith('09123456789', '123456', false);
     expect(navigation.replace).toHaveBeenCalledWith('/onboarding/enrollments');
-    expect(navigation.replace).not.toHaveBeenCalledWith('/parent/dashboard');
+    expect(navigation.replace).not.toHaveBeenCalledWith('/student/dashboard');
   });
 });

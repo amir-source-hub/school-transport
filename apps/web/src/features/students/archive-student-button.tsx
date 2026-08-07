@@ -19,7 +19,7 @@ export function ArchiveStudentButton({ id }: { id: string }) {
         setPending(true);
         try {
           await archiveStudent(id);
-          router.replace('/parent/students');
+          router.replace('/student/students');
           router.refresh();
         } finally {
           setPending(false);

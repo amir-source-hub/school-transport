@@ -10,7 +10,7 @@ const navigation = vi.hoisted(() => {
 });
 
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/parent/dashboard',
+  usePathname: () => '/student/dashboard',
   useSearchParams: () => navigation.searchParams,
   useRouter: () => navigation.router,
 }));

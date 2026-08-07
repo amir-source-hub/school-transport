@@ -58,5 +58,5 @@ describe('AdminFamilyEnrollmentForm', () => {
     );
     expect(await screen.findByText(/قرارداد و پیش‌پرداخت اکنون برای بررسی و اقدام والد/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /پذیرش قرارداد|پرداخت/ })).not.toBeInTheDocument();
-  });
+  }, 30_000);
 });

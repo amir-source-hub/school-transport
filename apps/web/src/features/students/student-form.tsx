@@ -44,7 +44,7 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
         router.refresh();
       } else {
         const created = await createStudent(form);
-        router.replace(`/parent/students/${created.id}`);
+        router.replace(`/student/students/${created.id}`);
       }
     } catch (caught) {
       setError(getApiErrorFeedback(caught).message);

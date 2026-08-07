@@ -14,7 +14,7 @@ navigation.router = { replace: navigation.replace, refresh: navigation.refresh }
 const apiRequest = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/parent/contracts',
+  usePathname: () => '/student/contracts',
   useSearchParams: () => navigation.searchParams,
   useRouter: () => navigation.router,
 }));
@@ -68,7 +68,7 @@ describe('PortalSessionGuard', () => {
 
     await waitFor(() =>
       expect(navigation.replace).toHaveBeenCalledWith(
-        '/login?next=%2Fparent%2Fcontracts%3Ftab%3Dactive',
+        '/login?next=%2Fstudent%2Fcontracts%3Ftab%3Dactive',
       ),
     );
     expect(navigation.refresh).toHaveBeenCalledOnce();

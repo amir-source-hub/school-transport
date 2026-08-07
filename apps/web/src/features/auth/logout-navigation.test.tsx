@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AdminShell } from '@/features/admin-shell/admin-shell';
-import { ParentShell } from '@/features/parent-shell/parent-shell';
+import { StudentShell } from '@/features/student-shell/student-shell';
 import { getAuthSession, setAuthSession } from './auth-session';
 
 const navigation = vi.hoisted(() => ({
-  pathname: '/parent/dashboard',
+  pathname: '/student/dashboard',
   replace: vi.fn(),
   refresh: vi.fn(),
 }));
@@ -31,7 +31,7 @@ afterEach(() => {
 });
 
 describe.each([
-  ['parent', ParentShell, 'PARENT', '/parent/dashboard'],
+  ['student', StudentShell, 'PARENT', '/student/dashboard'],
   ['administrator', AdminShell, 'ADMIN', '/admin/dashboard'],
 ] as const)('%s navigation logout', (_label, Shell, role, pathname) => {
   it('keeps the action in the side navigation and securely clears the session', async () => {

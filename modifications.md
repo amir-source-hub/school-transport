@@ -620,12 +620,12 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Route migration
 
-- [ ] Create the new `apps/web/src/app/student/` route tree by moving or wrapping current parent pages one section at a time.
-- [ ] Rename `parent-shell` and `parent-dashboard` components only after imports are mapped; avoid a single enormous rename mixed with behavior changes.
-- [ ] Update `route-metadata.ts`, breadcrumbs, navigation links, redirects, session guards, E2E fixtures, and test expectations.
-- [ ] Add redirects for every old route, including dynamic student and contract URLs. Preserve query strings where they are meaningful.
-- [ ] Keep backend ownership keyed to the authenticated guardian/user ID even though the visible panel is called the student panel.
-- [ ] Add a homepage link to the shell navigation using a normal `Link`; it must not call `logout()` or clear `auth-session.ts`.
+- [x] Create the new `apps/web/src/app/student/` route tree by moving or wrapping current parent pages one section at a time.
+- [x] Rename `parent-shell` and `parent-dashboard` components only after imports are mapped; avoid a single enormous rename mixed with behavior changes.
+- [x] Update `route-metadata.ts`, breadcrumbs, navigation links, redirects, session guards, E2E fixtures, and test expectations.
+- [x] Add redirects for every old route, including dynamic student and contract URLs. Preserve query strings where they are meaningful.
+- [x] Keep backend ownership keyed to the authenticated guardian/user ID even though the visible panel is called the student panel.
+- [x] Add a homepage link to the shell navigation using a normal `Link`; it must not call `logout()` or clear `auth-session.ts`.
 
 #### Two-student limit
 

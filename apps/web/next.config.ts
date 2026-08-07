@@ -13,6 +13,15 @@ const environment = validateWebEnvironment({
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   deploymentId: environment.deploymentId,
+  async redirects() {
+    return [
+      {
+        source: '/parent/:path*',
+        destination: '/student/:path*',
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

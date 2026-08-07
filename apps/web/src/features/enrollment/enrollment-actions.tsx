@@ -1055,7 +1055,7 @@ export function CreateEnrollmentForm({
                   await payGuidedPrepayment(result.scheduleItemId, mode);
                   if (mode === 'onboarding') {
                     await finalizeOnboarding();
-                    router.replace('/parent/dashboard');
+                    router.replace('/student/dashboard');
                     return;
                   }
                   setPaid(true);
