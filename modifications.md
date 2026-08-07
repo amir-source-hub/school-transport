@@ -148,14 +148,14 @@ Primary backend and data files:
 
 ### 4.1 First step: student and guardian details
 
-- [ ] Add a `سرپرست` section to the first enrollment step.
+- [x] Add a `سرپرست` section to the first enrollment step.
   - Show the phone number used during login as read-only.
   - Enforce immutability in the backend; a disabled or hidden input alone is not sufficient.
   - Collect guardian name, national ID, and relationship.
   - Relationship choices: `پدر`، `مادر`، `سایر`.
   - When `سایر` is selected, reveal a required relationship-description field for values such as `پدربزرگ` or `عمو`.
 
-- [ ] Make only the student and primary guardian sections mandatory.
+- [x] Make only the student and primary guardian sections mandatory.
   - Father, mother, and emergency-contact sections remain optional.
   - Do not display “optional” above optional fields, as requested.
   - If the user begins filling an optional section, validate the fields required to make that partial record meaningful.
@@ -547,13 +547,13 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Guardian and optional contacts
 
-- [ ] Replace the assumption that both father and mother are mandatory with a mandatory `guardian` object.
-- [ ] Suggested guardian fields: firstName, lastName, nationalId, phoneNumber, relationshipType, and optional relationshipDescription.
-- [ ] Obtain guardian phone from the verified onboarding/session context. Ignore or reject a different client-supplied value.
-- [ ] Keep father, mother, and emergencyContact nullable/optional in TypeScript, DTOs, services, and database writes.
-- [ ] In `registrations.service.ts` guided enrollment, insert/update only optional records that were actually provided.
-- [ ] If the current `parents` schema requires father/mother rows, create a migration that supports a generic guardian relationship before changing service code.
-- [ ] Preserve existing father/mother data and map it to the new representation; do not erase records during migration.
+- [x] Replace the assumption that both father and mother are mandatory with a mandatory `guardian` object.
+- [x] Suggested guardian fields: firstName, lastName, nationalId, phoneNumber, relationshipType, and optional relationshipDescription.
+- [x] Obtain guardian phone from the verified onboarding/session context. Ignore or reject a different client-supplied value.
+- [x] Keep father, mother, and emergencyContact nullable/optional in TypeScript, DTOs, services, and database writes.
+- [x] In `registrations.service.ts` guided enrollment, insert/update only optional records that were actually provided.
+- [x] If the current `parents` schema requires father/mother rows, create a migration that supports a generic guardian relationship before changing service code.
+- [x] Preserve existing father/mother data and map it to the new representation; do not erase records during migration.
 
 #### Phone fields
 
