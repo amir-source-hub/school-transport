@@ -161,19 +161,19 @@ Primary backend and data files:
   - If the user begins filling an optional section, validate the fields required to make that partial record meaningful.
   - Keep frontend and backend required/optional rules identical.
 
-- [ ] Add a home phone number.
+- [x] Add a home phone number.
   - Display fixed, non-editable prefix `021-`.
   - Allow exactly eight additional digits.
   - Store a normalized canonical value in the backend.
 
-- [ ] Standardize mobile phone inputs.
+- [x] Standardize mobile phone inputs.
   - Display fixed, non-editable prefix `09` on the left as requested.
   - Allow exactly nine additional digits, no more and no fewer.
   - The final number is therefore 11 digits, for example `09123456789`.
   - Note: the original example `091234567890` contains 12 digits and must not be used as the validation rule.
   - Normalize Persian and Arabic numerals before validation and store the canonical `09XXXXXXXXX` representation.
 
-- [ ] Add an optional student mobile number to the first step.
+- [x] Add an optional student mobile number to the first step.
 
 - [x] Validate national IDs as exactly ten digits and verify the Iranian national-ID checksum.
   - Reuse `apps/web/src/features/enrollment/national-id.ts` and `apps/api/src/common/iranian-national-id.ts` rather than creating inconsistent implementations.
@@ -187,14 +187,14 @@ Primary backend and data files:
   - Do not require users to type `/`, especially when a numeric mobile keyboard is open.
   - Define one canonical backend storage format and test Jalali/Gregorian conversion and timezone boundaries.
 
-- [ ] Restrict appropriate personal-name and relationship fields to Persian text.
+- [x] Restrict appropriate personal-name and relationship fields to Persian text.
   - Permit Persian letters, spaces, and `،` as requested.
   - Decide explicitly whether Persian half-space is accepted; it is usually necessary for valid Persian writing.
   - Normalize Arabic/Persian variants before validation where safe.
   - If Latin letters are entered, show `لطفاً صفحه‌کلید را به فارسی تغییر دهید`.
   - Do not apply this restriction blindly to passwords, codes, addresses, emails, or free-text fields that legitimately need digits or other characters.
 
-- [ ] Provide field-level Persian validation for every enrollment input.
+- [x] Provide field-level Persian validation for every enrollment input.
   - Validate in both frontend and backend.
   - Disable native browser validation with controlled validation where needed so English messages such as “Please fill in this field” never appear.
   - Required-field message: `پر کردن این فیلد اجباری است`.
@@ -203,7 +203,7 @@ Primary backend and data files:
   - Focus the first invalid field and set `aria-invalid` and `aria-describedby` for accessibility.
   - Map backend errors through `apps/web/src/lib/api-error-feedback.ts`; never show raw English server messages.
 
-- [ ] Add explicit validation tests for every field.
+- [x] Add explicit validation tests for every field.
   - Cover empty values, minimum and maximum length, invalid characters, pasted values, Persian numerals, Arabic numerals, English numerals, and boundary values.
   - Ensure optional empty fields pass and partially completed optional sections fail correctly.
 
@@ -214,7 +214,7 @@ Primary backend and data files:
   - Before removing a database column, verify whether pricing, routing, reporting, or old contracts depend on `district`.
   - Migrate or deprecate old data safely before dropping anything.
 
-- [ ] Require the postal code to contain exactly ten digits.
+- [x] Require the postal code to contain exactly ten digits.
 
 - [ ] Make every field on this step mandatory, including map location.
 
@@ -561,24 +561,24 @@ This section turns the requirements above into concrete work packages. A junior 
 - [x] Build a prefix input component or compose an input with a non-editable prefix element.
 - [x] Store only the nine editable mobile digits in local field state if that simplifies UX, but send/store the normalized full number.
 - [x] Accept Persian/Arabic digits through normalization, then validate `^09\d{9}$` for mobile and `^021\d{8}$` for the requested Tehran landline.
-- [ ] Reject extra digits even if pasted. Do not silently truncate a value because that can change the intended phone number.
+- [x] Reject extra digits even if pasted. Do not silently truncate a value because that can change the intended phone number.
 - [x] Provide exact field errors such as `شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.` and `شماره تلفن منزل باید شامل پیش‌شماره ۰۲۱ و ۸ رقم باشد.`
 
 #### Persian text
 
-- [ ] Define a tested Unicode regular expression covering Persian letters, approved Arabic variants, space, optional half-space, and `،`.
-- [ ] Normalize presentation variants only when normalization does not change legal identity data unexpectedly.
-- [ ] Validate on blur and submit; do not prevent every keydown because IME, mobile keyboards, accessibility tools, and paste may break.
-- [ ] Show `لطفاً صفحه‌کلید را به فارسی تغییر دهید` when Latin letters are detected.
-- [ ] Apply stricter text rules only to approved name/relationship fields. Address and notes need a broader character set.
+- [x] Define a tested Unicode regular expression covering Persian letters, approved Arabic variants, space, optional half-space, and `،`.
+- [x] Normalize presentation variants only when normalization does not change legal identity data unexpectedly.
+- [x] Validate on blur and submit; do not prevent every keydown because IME, mobile keyboards, accessibility tools, and paste may break.
+- [x] Show `لطفاً صفحه‌کلید را به فارسی تغییر دهید` when Latin letters are detected.
+- [x] Apply stricter text rules only to approved name/relationship fields. Address and notes need a broader character set.
 
 #### Required and optional behavior
 
-- [ ] Remove HTML `required` attributes or use `noValidate` consistently if native English browser messages can appear.
-- [ ] Keep the visual required marker hidden if product does not want required/optional labels, but preserve programmatic accessibility and validation.
-- [ ] For an entirely blank optional object, send `undefined`/`null`, not an object full of empty strings.
-- [ ] If one optional field is entered, validate the minimum coherent set and show errors only in that section.
-- [ ] In the wizard submit handler, validate the current step, set all field errors, focus the first error, and return without incrementing `step`.
+- [x] Remove HTML `required` attributes or use `noValidate` consistently if native English browser messages can appear.
+- [x] Keep the visual required marker hidden if product does not want required/optional labels, but preserve programmatic accessibility and validation.
+- [x] For an entirely blank optional object, send `undefined`/`null`, not an object full of empty strings.
+- [x] If one optional field is entered, validate the minimum coherent set and show errors only in that section.
+- [x] In the wizard submit handler, validate the current step, set all field errors, focus the first error, and return without incrementing `step`.
 
 ### Work package G — Jalali dates, address, map, and final consent
 

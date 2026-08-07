@@ -156,13 +156,13 @@ export function CreateEnrollmentForm({
     ];
     const section = sectionOf(key);
     if (section && !sectionStarted(section)) return undefined;
-    if (requiredFields.includes(key) && !text) return 'این فیلد الزامی است.';
+    if (requiredFields.includes(key) && !text) return 'پر کردن این فیلد اجباری است';
     if (key === 'guardianRelationshipDescription') {
       if (form.guardianRelationshipType === 'OTHER' && !text) return 'شرح نسبت را وارد کنید.';
       return undefined;
     }
     if (key === 'homePhone') {
-      if (!text) return 'این فیلد الزامی است.';
+      if (!text) return 'پر کردن این فیلد اجباری است';
       return /^\d{8}$/.test(normalizeDigits(text)) ? undefined : 'شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.';
     }
     if (key === 'studentPhone') {
@@ -537,9 +537,20 @@ export function CreateEnrollmentForm({
           required={key === 'homePhone'}
           value={String(form[key])}
           disabled={lockedParentFields.has(key)}
-          onChange={(event) =>
-            set(key, normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, maxDigits))
-          }
+          onChange={(event) => {
+            const digits = normalizeDigits(event.target.value).replace(/\D/g, '');
+            if (digits.length > maxDigits) {
+              setFieldErrors((current) => ({
+                ...current,
+                [key]:
+                  key === 'homePhone'
+                    ? 'شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.'
+                    : 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.',
+              }));
+              return;
+            }
+            set(key, digits);
+          }}
           onBlur={(event) =>
             setFieldErrors((current) => ({
               ...current,

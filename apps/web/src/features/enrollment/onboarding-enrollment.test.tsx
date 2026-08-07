@@ -128,4 +128,23 @@ describe('onboarding guided enrollment funnel', () => {
     expect(enrollmentApi.finalizeOnboarding).toHaveBeenCalledOnce();
     expect(navigation.replace).toHaveBeenCalledWith('/parent/dashboard');
   });
+
+  it('rejects pasted extra digits in prefix fields instead of truncating them', async () => {
+    const user = userEvent.setup();
+    renderOnboarding();
+
+    const homePhoneInput = within(section('مشخصات دانش‌آموز')).getByLabelText('شماره تلفن منزل');
+    await user.clear(homePhoneInput);
+    await user.paste('2211333344');
+    expect(homePhoneInput).toHaveValue('');
+    await screen.findByText('شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.');
+
+    const studentPhoneInput = within(section('مشخصات دانش‌آموز')).getByLabelText(
+      'شماره همراه دانش‌آموز',
+    );
+    await user.clear(studentPhoneInput);
+    await user.paste('12345678901');
+    expect(studentPhoneInput).toHaveValue('');
+    await screen.findByText('شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.');
+  });
 });

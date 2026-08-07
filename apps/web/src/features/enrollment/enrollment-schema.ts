@@ -7,7 +7,7 @@ import {
 import { isAllowedPersianText, persianTextMessage } from './persian-text';
 import { isValidIranianNationalId } from './national-id';
 
-const required = 'این فیلد الزامی است.';
+const required = 'پر کردن این فیلد اجباری است';
 
 const name = z
   .string()
