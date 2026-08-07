@@ -137,7 +137,7 @@ export function CreateEnrollmentForm({
     return null;
   }
 
-  function validateField(key: keyof typeof form, value: string | number): string | undefined {
+  function validateField(key: keyof typeof form, value: string | number | boolean): string | undefined {
     const text = String(value).trim();
     const requiredFields: (keyof typeof form)[] = [
       'studentFirst',
@@ -300,6 +300,7 @@ export function CreateEnrollmentForm({
           ...current,
           latitude: coords.latitude,
           longitude: coords.longitude,
+          locationSelected: true,
         })),
       () =>
         setLocationError('اجازه دسترسی به موقعیت داده نشد. دسترسی Location مرورگر را فعال کنید.'),
@@ -362,9 +363,11 @@ export function CreateEnrollmentForm({
     }
     if (
       currentStep === 2 &&
-      (!form.streetAddress.trim() || !/^\d{10}$/.test(normalizeDigits(form.postalCode)))
+      (!form.streetAddress.trim() ||
+        !/^\d{10}$/.test(normalizeDigits(form.postalCode)) ||
+        !form.locationSelected)
     ) {
-      return 'نشانی کامل و کد پستی ۱۰ رقمی معتبر را وارد کنید.';
+      return 'نشانی کامل، کد پستی ۱۰ رقمی معتبر و موقعیت مکانی را وارد کنید.';
     }
     if (currentStep === 3 && (!form.schoolId || !form.educationLevel || !form.grade)) {
       return 'مدرسه، مقطع و پایه تحصیلی را انتخاب کنید.';
@@ -436,7 +439,6 @@ export function CreateEnrollmentForm({
               title: form.addressTitle,
               province: form.province,
               city: form.city,
-              district: form.district || undefined,
               streetAddress: form.streetAddress,
               postalCode: normalizeDigits(form.postalCode),
               latitude: form.latitude,
@@ -776,7 +778,6 @@ export function CreateEnrollmentForm({
                 {field('addressTitle', 'عنوان نشانی')}
                 {field('province', 'استان')}
                 {field('city', 'شهر')}
-                {field('district', 'منطقه')}
                 <div className="sm:col-span-2">{field('streetAddress', 'نشانی کامل')}</div>
                 {field('postalCode', 'کد پستی', 'tel')}
               </div>
@@ -809,12 +810,17 @@ export function CreateEnrollmentForm({
                 latitude={form.latitude}
                 longitude={form.longitude}
                 onChange={(lat, lng) =>
-                  setForm((prev) => ({ ...prev, latitude: lat, longitude: lng }))
+                  setForm((prev) => ({
+                    ...prev,
+                    latitude: lat,
+                    longitude: lng,
+                    locationSelected: true,
+                  }))
                 }
               />
               <div className="mt-3 grid gap-3 sm:grid-cols-2" aria-label="ورود دستی مختصات">
-                <label className="text-sm font-bold">عرض جغرافیایی<Input type="number" inputMode="decimal" dir="ltr" step="any" className="mt-1" value={form.latitude} onChange={(event) => set('latitude', Number(event.target.value))} /></label>
-                <label className="text-sm font-bold">طول جغرافیایی<Input type="number" inputMode="decimal" dir="ltr" step="any" className="mt-1" value={form.longitude} onChange={(event) => set('longitude', Number(event.target.value))} /></label>
+                <label className="text-sm font-bold">عرض جغرافیایی<Input type="number" inputMode="decimal" dir="ltr" step="any" className="mt-1" value={form.latitude} onChange={(event) => set('latitude', Number(event.target.value))} onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))} /></label>
+                <label className="text-sm font-bold">طول جغرافیایی<Input type="number" inputMode="decimal" dir="ltr" step="any" className="mt-1" value={form.longitude} onChange={(event) => set('longitude', Number(event.target.value))} onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))} /></label>
               </div>
               <p className="mt-2 text-xs leading-6 text-muted">اگر نقشه با لمس، ماوس یا صفحه‌کلید در دسترس نیست، نشانی و مختصات را دستی وارد کنید.</p>
               {locationError && <p className="mt-2 text-sm text-danger">{locationError}</p>}

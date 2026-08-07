@@ -68,7 +68,7 @@ export function AdminFamilyEnrollmentForm({ family, schools }: { family: FamilyD
         father: sectionStarted(fatherKeys) ? { firstName: form.fatherFirst, lastName: form.fatherLast, nationalId: normalizeDigits(form.fatherNationalId), phoneNumber: normalizeDigits(form.fatherPhone) } : null,
         mother: sectionStarted(motherKeys) ? { firstName: form.motherFirst, lastName: form.motherLast, nationalId: normalizeDigits(form.motherNationalId), phoneNumber: normalizeDigits(form.motherPhone) } : null,
         emergencyContact: sectionStarted(emergencyKeys) ? { firstName: form.emergencyFirst, lastName: form.emergencyLast, relationship: form.emergencyRelationship, phoneNumber: normalizeDigits(form.emergencyPhone) } : null,
-        address: { title: form.addressTitle, province: form.province, city: form.city, district: form.district || undefined, streetAddress: form.streetAddress, postalCode: normalizeDigits(form.postalCode), latitude: Number(form.latitude), longitude: Number(form.longitude) },
+        address: { title: form.addressTitle, province: form.province, city: form.city, streetAddress: form.streetAddress, postalCode: normalizeDigits(form.postalCode), latitude: Number(form.latitude), longitude: Number(form.longitude) },
         school: { schoolId: form.schoolId, educationLevel: form.educationLevel, grade: form.grade },
         service: { serviceType: form.serviceType as 'BUS' | 'MINIBUS' | 'CAR' | 'VAN', paymentPlanType: form.paymentPlanType as 'FULL' | 'INSTALLMENTS', parentNotes: form.parentNotes || undefined },
       });

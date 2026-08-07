@@ -56,6 +56,32 @@ function renderOnboarding() {
   );
 }
 
+function renderOnboardingWithoutCoordinates() {
+  return render(
+    <CreateEnrollmentForm
+      mode="onboarding"
+      schools={schools}
+      savedParents={{ father: null, mother: null }}
+      existingStudents={[]}
+      defaults={{
+        address: {
+          title: 'منزل',
+          province: 'تهران',
+          city: 'تهران',
+          streetAddress: 'خیابان آزادی، پلاک ۱',
+          postalCode: '1111111221',
+        },
+        emergencyContact: {
+          firstName: 'مریم',
+          lastName: 'رضایی',
+          relationship: 'مادر',
+          phoneNumber: '09121112222',
+        },
+      }}
+    />,
+  );
+}
+
 const section = (title: string) =>
   screen.getByRole('heading', { name: title }).closest('section') as HTMLElement;
 
@@ -146,5 +172,33 @@ describe('onboarding guided enrollment funnel', () => {
     await user.paste('12345678901');
     expect(studentPhoneInput).toHaveValue('');
     await screen.findByText('شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.');
+  });
+
+  it('requires an explicit location on the map before leaving the address step', async () => {
+    const user = userEvent.setup();
+    renderOnboardingWithoutCoordinates();
+
+    await fillIn(user, 'مشخصات دانش‌آموز', 'شماره تلفن منزل', '22113333');
+    await fillIn(user, 'مشخصات دانش‌آموز', 'نام دانش‌آموز', 'علی');
+    await fillIn(user, 'مشخصات دانش‌آموز', 'نام خانوادگی', 'احمدی');
+    await fillIn(user, 'مشخصات دانش‌آموز', 'کد ملی', '1234567891');
+    await fillIn(user, 'سرپرست', 'نام', 'حسین');
+    await fillIn(user, 'سرپرست', 'نام خانوادگی', 'احمدی');
+    await fillIn(user, 'سرپرست', 'کد ملی', '1234567891');
+    await user.click(within(section('سرپرست')).getByRole('combobox', { name: 'نسبت' }));
+    await user.click(await screen.findByRole('option', { name: 'پدر' }));
+    await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
+
+    await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
+    expect(
+      await screen.findByText('نشانی کامل، کد پستی ۱۰ رقمی معتبر و موقعیت مکانی را وارد کنید.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('نشانی محل سوار شدن')).toBeInTheDocument();
+
+    const latitudeInput = screen.getByLabelText('عرض جغرافیایی');
+    fireEvent.change(latitudeInput, { target: { value: '35.7225' } });
+    fireEvent.blur(latitudeInput);
+    await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
+    expect(screen.getByText('مدرسه')).toBeInTheDocument();
   });
 });

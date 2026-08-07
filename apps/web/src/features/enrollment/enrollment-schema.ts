@@ -101,7 +101,6 @@ export const addressSchema = z.object({
   title: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
   province: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
   city: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
-  district: z.string().trim().max(50, 'حداکثر ۵۰ نویسه مجاز است.').optional(),
   streetAddress: z
     .string()
     .trim()

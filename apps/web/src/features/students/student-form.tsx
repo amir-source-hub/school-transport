@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -25,8 +26,8 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
 
-  const set = (key: keyof StudentInput, value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
+  const set = (key: keyof StudentInput, value: string | undefined) =>
+    setForm((current) => ({ ...current, [key]: value ?? '' }));
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -82,7 +83,7 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
         {!student && (
           <>
             <label className="text-sm font-bold">تاریخ تولد
-              <Input type="date" value={form.birthDate} onChange={(event) => set('birthDate', event.target.value)} />
+              <JalaliDateInput value={form.birthDate ?? ''} onChange={(value) => set('birthDate', value)} required />
             </label>
             <label className="text-sm font-bold">جنسیت
               <Select

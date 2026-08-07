@@ -584,20 +584,20 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Dates
 
-- [ ] Inventory every date input in enrollment, student editing, admin payments, contracts, and installment configuration.
-- [ ] Use `JalaliDateInput` consistently and verify whether it returns a Jalali display string or canonical Gregorian ISO value.
-- [ ] Make conversion happen at one boundary. Recommended: UI displays Jalali; API sends a documented Gregorian date-only `YYYY-MM-DD` value.
-- [ ] Do not call `new Date(dateOnlyString)` casually for a birth date because timezone conversion can shift the calendar day.
-- [ ] Add leap-year, Esfand, invalid-day, minimum/maximum age, and timezone tests in `jalali-date.test.ts` and component tests.
+- [x] Inventory every date input in enrollment, student editing, admin payments, contracts, and installment configuration.
+- [x] Use `JalaliDateInput` consistently and verify whether it returns a Jalali display string or canonical Gregorian ISO value.
+- [x] Make conversion happen at one boundary. Recommended: UI displays Jalali; API sends a documented Gregorian date-only `YYYY-MM-DD` value.
+- [x] Do not call `new Date(dateOnlyString)` casually for a birth date because timezone conversion can shift the calendar day.
+- [x] Add leap-year, Esfand, invalid-day, minimum/maximum age, and timezone tests in `jalali-date.test.ts` and component tests.
 
 #### District removal and address validation
 
-- [ ] Search `district` across web, API, schemas, contract rendering, pricing, reports, seeds, and tests.
-- [ ] First make the field optional/ignored in new requests while preserving reads of old records.
-- [ ] Remove it from `EnrollmentFormState`, the UI step, `GuidedEnrollmentInput`, `AddressDto`, and new contract snapshots.
-- [ ] Keep the database column through at least one compatibility release if old contracts or reports display it.
-- [ ] Make address title, province, city, street address, ten-digit postal code, latitude, and longitude mandatory in frontend and backend.
-- [ ] Do not accept the default map center as user consent to a location. Track an explicit `locationSelected` flag or require a marker-change event.
+- [x] Search `district` across web, API, schemas, contract rendering, pricing, reports, seeds, and tests.
+- [x] First make the field optional/ignored in new requests while preserving reads of old records.
+- [x] Remove it from `EnrollmentFormState`, the UI step, `GuidedEnrollmentInput`, `AddressDto`, and new contract snapshots.
+- [x] Keep the database column through at least one compatibility release if old contracts or reports display it.
+- [x] Make address title, province, city, street address, ten-digit postal code, latitude, and longitude mandatory in frontend and backend.
+- [x] Do not accept the default map center as user consent to a location. Track an explicit `locationSelected` flag or require a marker-change event.
 
 #### Map repair workflow
 

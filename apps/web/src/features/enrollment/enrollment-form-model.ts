@@ -34,7 +34,6 @@ export type EnrollmentDefaults = {
     title: string;
     province: string;
     city: string;
-    district?: string;
     streetAddress: string;
     postalCode?: string;
     latitude?: number;
@@ -84,11 +83,11 @@ export type EnrollmentFormState = {
   addressTitle: string;
   province: string;
   city: string;
-  district: string;
   streetAddress: string;
   postalCode: string;
   latitude: number;
   longitude: number;
+  locationSelected: boolean;
   schoolId: string;
   educationLevel: string;
   grade: string;
@@ -127,11 +126,11 @@ const emptyForm: EnrollmentFormState = {
   addressTitle: 'منزل',
   province: 'تهران',
   city: 'تهران',
-  district: '',
   streetAddress: '',
   postalCode: '',
   latitude: 35.7219,
   longitude: 51.3347,
+  locationSelected: false,
   schoolId: '',
   educationLevel: '',
   grade: '',
@@ -192,11 +191,11 @@ export function createEnrollmentFormState({
     addressTitle: defaults.address?.title ?? emptyForm.addressTitle,
     province: defaults.address?.province ?? emptyForm.province,
     city: defaults.address?.city ?? emptyForm.city,
-    district: defaults.address?.district ?? '',
     streetAddress: defaults.address?.streetAddress ?? '',
     postalCode: defaults.address?.postalCode ?? '',
     latitude: defaults.address?.latitude ?? emptyForm.latitude,
     longitude: defaults.address?.longitude ?? emptyForm.longitude,
+    locationSelected: Boolean(defaults.address?.latitude !== undefined && defaults.address?.longitude !== undefined),
     schoolId: firstExisting?.schoolId ?? firstSchool?.id ?? '',
     educationLevel: existingLevel?.level ?? firstLevel?.level ?? '',
     grade: firstExisting?.grade ?? existingLevel?.grades[0] ?? firstLevel?.grades[0] ?? '',

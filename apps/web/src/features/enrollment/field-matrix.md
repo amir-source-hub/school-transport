@@ -70,7 +70,7 @@ section becomes required (minimum coherent set) and errors appear only in that s
 | `address.title` | family_addresses.title | عنوان | always | Persian text | Persian text, 1–50 | IsString + Length(1,50) | عنوان نشانی باید بین ۱ تا ۵۰ نویسه باشد. |
 | `address.province` | family_addresses.province | استان | always | Persian text | 1–100 | IsString + Length(1,100) | استان باید بین ۱ تا ۱۰۰ نویسه باشد. |
 | `address.city` | family_addresses.city | شهر | always | Persian text | 1–100 | IsString + Length(1,100) | شهر باید بین ۱ تا ۱۰۰ نویسه باشد. |
-| `address.district` | family_addresses.district | منطقه | optional | Persian text | 1–100 | IsOptional + Length(1,100) | منطقه باید بین ۱ تا ۱۰۰ نویسه باشد. (حذف در Work G) |
+| `address.district` | family_addresses.district | منطقه | removed (Work G) | — | removed from new requests; DB column kept for old records | ignored/removed from `AddressInputDto` | حذف شد؛ فقط برای رکوردهای قدیمی خوانده می‌شود. |
 | `address.streetAddress` | family_addresses.street_address | نشانی | always | broader char set | 1–500 | IsString + Length(1,500) | نشانی باید بین ۱ تا ۵۰۰ نویسه باشد. |
 | `address.postalCode` | family_addresses.postal_code | کد پستی | always | digits | exactly 10 digits | `^\d{10}$` | کد پستی باید ۱۰ رقم باشد. |
 | `address.latitude` | family_addresses.latitude | عرض جغرافیایی | always (explicit marker) | number | −90..90, requires `locationSelected` | Min(−90) Max(90) | موقعیت روی نقشه را انتخاب کنید. |

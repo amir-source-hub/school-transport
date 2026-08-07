@@ -40,7 +40,6 @@ export class AddressInputDto {
   @IsString({ message: 'عنوان نشانی باید متن باشد.' }) @Length(1, 100, { message: 'عنوان نشانی باید بین ۱ تا ۱۰۰ نویسه باشد.' }) title!: string;
   @IsString({ message: 'استان باید متن باشد.' }) @Length(1, 100, { message: 'استان باید بین ۱ تا ۱۰۰ نویسه باشد.' }) province!: string;
   @IsString({ message: 'شهر باید متن باشد.' }) @Length(1, 100, { message: 'شهر باید بین ۱ تا ۱۰۰ نویسه باشد.' }) city!: string;
-  @IsOptional() @IsString({ message: 'منطقه باید متن باشد.' }) @Length(1, 50, { message: 'منطقه باید بین ۱ تا ۵۰ نویسه باشد.' }) district?: string;
   @IsString({ message: 'نشانی کامل باید متن باشد.' }) @Length(1, 500, { message: 'نشانی کامل باید بین ۱ تا ۵۰۰ نویسه باشد.' }) streetAddress!: string;
   @Transform(digits) @Matches(/^\d{10}$/, { message: 'کد پستی باید ۱۰ رقم باشد.' }) postalCode!: string;
   @Type(() => Number) @IsNumber(undefined, { message: 'عرض جغرافیایی باید عدد باشد.' }) @Min(-90, { message: 'عرض جغرافیایی باید بین ۹۰- و ۹۰ باشد.' }) @Max(90, { message: 'عرض جغرافیایی باید بین ۹۰- و ۹۰ باشد.' }) latitude!: number;

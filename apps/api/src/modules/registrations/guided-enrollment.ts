@@ -50,7 +50,6 @@ export type GuidedEnrollmentData = {
     title: string;
     province: string;
     city: string;
-    district?: string;
     streetAddress: string;
     postalCode: string;
     latitude: number;
