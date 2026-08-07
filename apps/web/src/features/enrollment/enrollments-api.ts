@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiRequest } from '@/lib/api-client';
+import type { GuidedEnrollmentInput } from './enrollment-schema';
 
 export const enrollmentSchema = z.object({
   id: z.string(),
@@ -27,26 +28,7 @@ export const priceSchema = z.object({
 export type Enrollment = z.infer<typeof enrollmentSchema>;
 export type EnrollmentPrice = z.infer<typeof priceSchema>;
 
-export type GuidedEnrollmentInput = {
-  student: {
-    id?: string;
-    firstName: string;
-    lastName: string;
-    nationalId: string;
-    birthDate?: string;
-    gender?: string;
-  };
-  father: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
-  mother: { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
-  emergencyContact: { firstName: string; lastName: string; relationship: string; phoneNumber: string };
-  address: { title: string; province: string; city: string; district?: string; streetAddress: string; postalCode: string; latitude: number; longitude: number };
-  school: { schoolId: string; educationLevel: string; grade: string };
-  service: {
-    serviceType: string;
-    paymentPlanType: 'FULL' | 'INSTALLMENTS';
-    parentNotes?: string;
-  };
-};
+export type { GuidedEnrollmentInput };
 
 const guidedResultSchema = z.object({
   registrationId: z.string(),

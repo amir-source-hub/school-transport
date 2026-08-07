@@ -45,6 +45,7 @@ import {
   type SavedParents,
   type SchoolOption,
 } from './enrollment-form-model';
+import type { ServiceInput, StudentInput } from './enrollment-schema';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const vehicleOptions = [
@@ -352,7 +353,7 @@ export function CreateEnrollmentForm({
               lastName: form.studentLast,
               nationalId: normalizeDigits(form.studentNationalId),
               birthDate: form.birthDate || undefined,
-              gender: form.gender || undefined,
+              gender: (form.gender || undefined) as StudentInput['gender'],
             },
             father: {
               firstName: form.fatherFirst,
@@ -388,8 +389,8 @@ export function CreateEnrollmentForm({
               grade: form.grade,
             },
             service: {
-              serviceType: form.serviceType,
-              paymentPlanType: form.paymentPlanType as 'FULL' | 'INSTALLMENTS',
+              serviceType: form.serviceType as ServiceInput['serviceType'],
+              paymentPlanType: form.paymentPlanType as ServiceInput['paymentPlanType'],
               parentNotes: form.parentNotes || undefined,
             },
           },

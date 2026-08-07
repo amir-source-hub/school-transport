@@ -528,7 +528,7 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Shared model first
 
-- [ ] Write a field matrix before editing UI. For every field record:
+- [x] Write a field matrix before editing UI. For every field record:
   - JSON path and database destination.
   - Persian label.
   - Required or optional behavior.
@@ -536,14 +536,14 @@ This section turns the requirements above into concrete work packages. A junior 
   - Frontend rule.
   - Backend rule.
   - Exact Persian error messages.
-- [ ] Add shared frontend validation modules, for example:
+- [x] Add shared frontend validation modules, for example:
   - `apps/web/src/features/enrollment/enrollment-schema.ts`
   - `apps/web/src/features/enrollment/input-normalizers.ts`
   - `apps/web/src/features/enrollment/persian-text.ts`
-- [ ] Keep API input types derived from or checked against the schema to avoid updating `EnrollmentFormState` but forgetting `GuidedEnrollmentInput`.
-- [ ] On the backend, split nested DTO classes into clearly named exported or tested classes rather than keeping every rule compressed onto one line.
-- [ ] Add explicit Persian messages to `class-validator` decorators or translate structured validation errors in `apps/api/src/common/filters.ts`.
-- [ ] Ensure error responses contain a stable field path such as `guardian.nationalId`, not only a combined English sentence.
+- [x] Keep API input types derived from or checked against the schema to avoid updating `EnrollmentFormState` but forgetting `GuidedEnrollmentInput`.
+- [x] On the backend, split nested DTO classes into clearly named exported or tested classes rather than keeping every rule compressed onto one line.
+- [x] Add explicit Persian messages to `class-validator` decorators or translate structured validation errors in `apps/api/src/common/filters.ts`.
+- [x] Ensure error responses contain a stable field path such as `guardian.nationalId`, not only a combined English sentence.
 
 #### Guardian and optional contacts
 

@@ -49,13 +49,13 @@ export function AdminFamilyEnrollmentForm({ family, schools }: { family: FamilyD
     setPending(true); setError(undefined);
     try {
       await createAdminFamilyEnrollment(family.id, {
-        student: { firstName: form.studentFirst, lastName: form.studentLast, nationalId: normalizeDigits(form.studentNationalId), birthDate: form.birthDate || undefined, gender: form.gender },
+        student: { firstName: form.studentFirst, lastName: form.studentLast, nationalId: normalizeDigits(form.studentNationalId), birthDate: form.birthDate || undefined, gender: form.gender as 'MALE' | 'FEMALE' },
         father: { firstName: form.fatherFirst, lastName: form.fatherLast, nationalId: normalizeDigits(form.fatherNationalId), phoneNumber: normalizeDigits(form.fatherPhone) },
         mother: { firstName: form.motherFirst, lastName: form.motherLast, nationalId: normalizeDigits(form.motherNationalId), phoneNumber: normalizeDigits(form.motherPhone) },
         emergencyContact: { firstName: form.emergencyFirst, lastName: form.emergencyLast, relationship: form.emergencyRelationship, phoneNumber: normalizeDigits(form.emergencyPhone) },
         address: { title: form.addressTitle, province: form.province, city: form.city, district: form.district || undefined, streetAddress: form.streetAddress, postalCode: normalizeDigits(form.postalCode), latitude: Number(form.latitude), longitude: Number(form.longitude) },
         school: { schoolId: form.schoolId, educationLevel: form.educationLevel, grade: form.grade },
-        service: { serviceType: form.serviceType, paymentPlanType: form.paymentPlanType as 'FULL' | 'INSTALLMENTS', parentNotes: form.parentNotes || undefined },
+        service: { serviceType: form.serviceType as 'BUS' | 'MINIBUS' | 'CAR' | 'VAN', paymentPlanType: form.paymentPlanType as 'FULL' | 'INSTALLMENTS', parentNotes: form.parentNotes || undefined },
       });
       setDone(true); router.refresh();
     } catch (caught) { setError(getApiErrorFeedback(caught).message); }

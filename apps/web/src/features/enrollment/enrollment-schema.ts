@@ -1,0 +1,111 @@
+import { z } from 'zod';
+import {
+  composeMobileNumber,
+  normalizeNationalId,
+  normalizePhoneNumber,
+} from './input-normalizers';
+import { isAllowedPersianText, persianTextMessage } from './persian-text';
+
+const required = 'این فیلد الزامی است.';
+
+const name = z
+  .string()
+  .trim()
+  .min(1, required)
+  .max(100, 'حداکثر ۱۰۰ نویسه مجاز است.')
+  .superRefine((value, ctx) => {
+    if (!value || isAllowedPersianText(value)) return;
+    ctx.addIssue({ code: 'custom', message: persianTextMessage(value) });
+  });
+
+const nationalId = z
+  .string()
+  .transform(normalizeNationalId)
+  .refine((value) => /^\d{1,20}$/.test(value), {
+    message: 'کد ملی نامعتبر است. فقط عدد و حداکثر ۲۰ رقم وارد کنید.',
+  });
+
+const mobile = z
+  .string()
+  .transform(normalizePhoneNumber)
+  .refine((value) => composeMobileNumber(value).length === 11, {
+    message: 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.',
+  });
+
+export const studentSchema = z.object({
+  id: z.string().uuid().optional(),
+  firstName: name,
+  lastName: name,
+  nationalId,
+  birthDate: z.string().optional(),
+  gender: z.enum(['MALE', 'FEMALE']).optional(),
+});
+
+export const parentContactSchema = z.object({
+  firstName: name,
+  lastName: name,
+  nationalId,
+  phoneNumber: mobile,
+});
+
+export const emergencyContactSchema = z.object({
+  firstName: name,
+  lastName: name,
+  relationship: z
+    .string()
+    .trim()
+    .min(1, required)
+    .max(50, 'حداکثر ۵۰ نویسه مجاز است.')
+    .superRefine((value, ctx) => {
+      if (!value || isAllowedPersianText(value)) return;
+      ctx.addIssue({ code: 'custom', message: persianTextMessage(value) });
+    }),
+  phoneNumber: mobile,
+});
+
+export const addressSchema = z.object({
+  title: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
+  province: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
+  city: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
+  district: z.string().trim().max(50, 'حداکثر ۵۰ نویسه مجاز است.').optional(),
+  streetAddress: z
+    .string()
+    .trim()
+    .min(1, required)
+    .max(500, 'حداکثر ۵۰۰ نویسه مجاز است.'),
+  postalCode: z
+    .string()
+    .transform(normalizeNationalId)
+    .refine((value) => /^\d{10}$/.test(value), { message: 'کد پستی باید ۱۰ رقم باشد.' }),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+export const schoolSchema = z.object({
+  schoolId: z.string().uuid('مدرسه انتخاب‌شده معتبر نیست.'),
+  educationLevel: z.string().min(1, required),
+  grade: z.string().min(1, required),
+});
+
+export const serviceSchema = z.object({
+  serviceType: z.enum(['BUS', 'MINIBUS', 'CAR', 'VAN']),
+  paymentPlanType: z.enum(['FULL', 'INSTALLMENTS']),
+  parentNotes: z.string().max(1000, 'حداکثر ۱۰۰۰ نویسه مجاز است.').optional(),
+});
+
+export const guidedEnrollmentSchema = z.object({
+  student: studentSchema,
+  father: parentContactSchema,
+  mother: parentContactSchema,
+  emergencyContact: emergencyContactSchema,
+  address: addressSchema,
+  school: schoolSchema,
+  service: serviceSchema,
+});
+
+export type GuidedEnrollmentInput = z.infer<typeof guidedEnrollmentSchema>;
+export type StudentInput = z.infer<typeof studentSchema>;
+export type ParentContactInput = z.infer<typeof parentContactSchema>;
+export type EmergencyContactInput = z.infer<typeof emergencyContactSchema>;
+export type AddressInput = z.infer<typeof addressSchema>;
+export type ServiceInput = z.infer<typeof serviceSchema>;

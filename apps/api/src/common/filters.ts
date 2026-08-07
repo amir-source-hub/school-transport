@@ -44,6 +44,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         } else if (typeof resp.message === 'string') {
           message = resp.message;
         }
+        if (resp.fieldErrors && typeof resp.fieldErrors === 'object') {
+          details = resp.fieldErrors as Record<string, string[]>;
+        }
       }
 
       this.logger.warn(message, 'HttpException');

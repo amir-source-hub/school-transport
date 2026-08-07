@@ -3,58 +3,70 @@ import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, Length, Mat
 import { normalizeIranianDigits } from '../../common/iranian-national-id';
 
 const digits = ({ value }: { value: unknown }) => typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
-class PersonDto {
-  @IsString() @Length(1, 100) firstName!: string;
-  @IsString() @Length(1, 100) lastName!: string;
-  @Transform(digits) @Matches(/^\d{10}$/) nationalId!: string;
+
+class IdentityInputDto {
+  @IsString({ message: 'نام باید متن باشد.' }) @Length(1, 100, { message: 'نام باید بین ۱ تا ۱۰۰ نویسه باشد.' }) firstName!: string;
+  @IsString({ message: 'نام خانوادگی باید متن باشد.' }) @Length(1, 100, { message: 'نام خانوادگی باید بین ۱ تا ۱۰۰ نویسه باشد.' }) lastName!: string;
+  @Transform(digits) @Matches(/^\d{10}$/, { message: 'کد ملی باید ۱۰ رقم باشد.' }) nationalId!: string;
 }
-class ParentDto extends PersonDto { @Transform(digits) @Matches(/^09\d{9}$/) phoneNumber!: string; }
-class StudentDto extends PersonDto {
-  @IsOptional() @IsUUID() id?: string;
-  @IsOptional() @Transform(digits) @IsDateString({ strict: true }) birthDate?: string;
-  @IsOptional() @IsIn(['MALE', 'FEMALE']) gender?: string;
+
+export class StudentInputDto extends IdentityInputDto {
+  @IsOptional() @IsUUID(undefined, { message: 'شناسه دانشآموز معتبر نیست.' }) id?: string;
+  @IsOptional() @Transform(digits) @IsDateString({ strict: true }, { message: 'تاریخ تولد باید معتبر باشد.' }) birthDate?: string;
+  @IsOptional() @IsIn(['MALE', 'FEMALE'], { message: 'جنسیت باید پسر یا دختر باشد.' }) gender?: string;
 }
-class EmergencyDto {
-  @IsString() @Length(1, 100) firstName!: string;
-  @IsString() @Length(1, 100) lastName!: string;
-  @IsString() @Length(1, 50) relationship!: string;
-  @Transform(digits) @Matches(/^09\d{9}$/) phoneNumber!: string;
+
+export class ParentContactInputDto extends IdentityInputDto {
+  @Transform(digits) @Matches(/^09\d{9}$/, { message: 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.' }) phoneNumber!: string;
 }
-class AddressDto {
-  @IsString() @Length(1, 100) title!: string;
-  @IsString() @Length(1, 100) province!: string;
-  @IsString() @Length(1, 100) city!: string;
-  @IsOptional() @IsString() @Length(1, 50) district?: string;
-  @IsString() @Length(1, 500) streetAddress!: string;
-  @Transform(digits) @Matches(/^\d{10}$/) postalCode!: string;
-  @Type(() => Number) @IsNumber() @Min(-90) @Max(90) latitude!: number;
-  @Type(() => Number) @IsNumber() @Min(-180) @Max(180) longitude!: number;
+
+export class EmergencyContactInputDto {
+  @IsString({ message: 'نام باید متن باشد.' }) @Length(1, 100, { message: 'نام باید بین ۱ تا ۱۰۰ نویسه باشد.' }) firstName!: string;
+  @IsString({ message: 'نام خانوادگی باید متن باشد.' }) @Length(1, 100, { message: 'نام خانوادگی باید بین ۱ تا ۱۰۰ نویسه باشد.' }) lastName!: string;
+  @IsString({ message: 'نسبت باید متن باشد.' }) @Length(1, 50, { message: 'نسبت باید بین ۱ تا ۵۰ نویسه باشد.' }) relationship!: string;
+  @Transform(digits) @Matches(/^09\d{9}$/, { message: 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.' }) phoneNumber!: string;
 }
-class SchoolDto {
-  @IsUUID() schoolId!: string;
-  @IsString() @Length(1, 100) educationLevel!: string;
-  @IsString() @Length(1, 50) grade!: string;
+
+export class AddressInputDto {
+  @IsString({ message: 'عنوان نشانی باید متن باشد.' }) @Length(1, 100, { message: 'عنوان نشانی باید بین ۱ تا ۱۰۰ نویسه باشد.' }) title!: string;
+  @IsString({ message: 'استان باید متن باشد.' }) @Length(1, 100, { message: 'استان باید بین ۱ تا ۱۰۰ نویسه باشد.' }) province!: string;
+  @IsString({ message: 'شهر باید متن باشد.' }) @Length(1, 100, { message: 'شهر باید بین ۱ تا ۱۰۰ نویسه باشد.' }) city!: string;
+  @IsOptional() @IsString({ message: 'منطقه باید متن باشد.' }) @Length(1, 50, { message: 'منطقه باید بین ۱ تا ۵۰ نویسه باشد.' }) district?: string;
+  @IsString({ message: 'نشانی کامل باید متن باشد.' }) @Length(1, 500, { message: 'نشانی کامل باید بین ۱ تا ۵۰۰ نویسه باشد.' }) streetAddress!: string;
+  @Transform(digits) @Matches(/^\d{10}$/, { message: 'کد پستی باید ۱۰ رقم باشد.' }) postalCode!: string;
+  @Type(() => Number) @IsNumber(undefined, { message: 'عرض جغرافیایی باید عدد باشد.' }) @Min(-90, { message: 'عرض جغرافیایی باید بین ۹۰- و ۹۰ باشد.' }) @Max(90, { message: 'عرض جغرافیایی باید بین ۹۰- و ۹۰ باشد.' }) latitude!: number;
+  @Type(() => Number) @IsNumber(undefined, { message: 'طول جغرافیایی باید عدد باشد.' }) @Min(-180, { message: 'طول جغرافیایی باید بین ۱۸۰- و ۱۸۰ باشد.' }) @Max(180, { message: 'طول جغرافیایی باید بین ۱۸۰- و ۱۸۰ باشد.' }) longitude!: number;
 }
-class ServiceDto {
-  @IsIn(['BUS', 'MINIBUS', 'CAR', 'VAN']) serviceType!: string;
-  @IsIn(['FULL', 'INSTALLMENTS']) paymentPlanType!: 'FULL' | 'INSTALLMENTS';
-  @IsOptional() @IsString() @Length(1, 1000) parentNotes?: string;
+
+export class SchoolInputDto {
+  @IsUUID(undefined, { message: 'شناسه مدرسه معتبر نیست.' }) schoolId!: string;
+  @IsString({ message: 'مقطع تحصیلی باید متن باشد.' }) @Length(1, 100, { message: 'مقطع تحصیلی باید بین ۱ تا ۱۰۰ نویسه باشد.' }) educationLevel!: string;
+  @IsString({ message: 'پایه تحصیلی باید متن باشد.' }) @Length(1, 50, { message: 'پایه تحصیلی باید بین ۱ تا ۵۰ نویسه باشد.' }) grade!: string;
 }
+
+export class ServiceInputDto {
+  @IsIn(['BUS', 'MINIBUS', 'CAR', 'VAN'], { message: 'نوع وسیله نقلیه انتخابشده معتبر نیست.' }) serviceType!: string;
+  @IsIn(['FULL', 'INSTALLMENTS'], { message: 'روش پرداخت باید یکجا یا اقساطی باشد.' }) paymentPlanType!: 'FULL' | 'INSTALLMENTS';
+  @IsOptional() @IsString({ message: 'توضیحات والد باید متن باشد.' }) @Length(1, 1000, { message: 'توضیحات والد باید حداکثر ۱۰۰۰ نویسه باشد.' }) parentNotes?: string;
+}
+
 export class GuidedEnrollmentDto {
-  @ValidateNested() @Type(() => StudentDto) student!: StudentDto;
-  @ValidateNested() @Type(() => ParentDto) father!: ParentDto;
-  @ValidateNested() @Type(() => ParentDto) mother!: ParentDto;
-  @ValidateNested() @Type(() => EmergencyDto) emergencyContact!: EmergencyDto;
-  @ValidateNested() @Type(() => AddressDto) address!: AddressDto;
-  @ValidateNested() @Type(() => SchoolDto) school!: SchoolDto;
-  @ValidateNested() @Type(() => ServiceDto) service!: ServiceDto;
+  @ValidateNested() @Type(() => StudentInputDto) student!: StudentInputDto;
+  @ValidateNested() @Type(() => ParentContactInputDto) father!: ParentContactInputDto;
+  @ValidateNested() @Type(() => ParentContactInputDto) mother!: ParentContactInputDto;
+  @ValidateNested() @Type(() => EmergencyContactInputDto) emergencyContact!: EmergencyContactInputDto;
+  @ValidateNested() @Type(() => AddressInputDto) address!: AddressInputDto;
+  @ValidateNested() @Type(() => SchoolInputDto) school!: SchoolInputDto;
+  @ValidateNested() @Type(() => ServiceInputDto) service!: ServiceInputDto;
 }
+
 export class CreateRegistrationDto {
-  @IsUUID() studentId!: string;
-  @Matches(/^14\d{2}-14\d{2}$/) academicYear!: string;
-  @IsIn(['ONE_WAY', 'ROUND_TRIP']) serviceType!: string;
-  @IsOptional() @IsDateString({ strict: true }) requestedStartDate?: string;
-  @IsOptional() @IsString() @Length(1, 1000) parentNotes?: string;
+  @IsUUID(undefined, { message: 'شناسه دانشآموز معتبر نیست.' }) studentId!: string;
+  @Matches(/^14\d{2}-14\d{2}$/, { message: 'سال تحصیلی باید مطابق قالب ۰۰۰۰-۱۴۰۰ باشد.' }) academicYear!: string;
+  @IsIn(['ONE_WAY', 'ROUND_TRIP'], { message: 'نوع سرویس باید رفتوبرگشتی یا یکطرفه باشد.' }) serviceType!: string;
+  @IsOptional() @IsDateString({ strict: true }, { message: 'تاریخ شروع باید معتبر باشد.' }) requestedStartDate?: string;
+  @IsOptional() @IsString({ message: 'توضیحات والد باید متن باشد.' }) @Length(1, 1000, { message: 'توضیحات والدین باید حداکثر ۱۰۰۰ نویسه باشد.' }) parentNotes?: string;
 }
-export class RejectRegistrationDto { @IsOptional() @IsString() @Length(1, 1000) reason?: string; }
-export class CorrectionDto { @IsString() @Length(1, 1000) message!: string; }
+
+export class RejectRegistrationDto { @IsOptional() @IsString({ message: 'دلیل باید متن باشد.' }) @Length(1, 1000, { message: 'دلیل باید حداکثر ۱۰۰۰ نویسه باشد.' }) reason?: string; }
+export class CorrectionDto { @IsString({ message: 'پیام باید متن باشد.' }) @Length(1, 1000, { message: 'پیام باید حداکثر ۱۰۰۰ نویسه باشد.' }) message!: string; }

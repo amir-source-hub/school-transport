@@ -1,8 +1,12 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import {
+  mapValidationErrors,
+  validationErrorMessage,
+} from './common/validation-errors';
 import { ConfigService, parseTrustedProxyCidrs } from './config/config.service';
 import { GlobalExceptionFilter } from './common/filters';
 import { registerSecurityHeaders } from './common/security-headers';
@@ -59,6 +63,13 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      exceptionFactory: (validationErrors) => {
+        const fieldErrors = mapValidationErrors(validationErrors);
+        return new BadRequestException({
+          message: validationErrorMessage(fieldErrors),
+          fieldErrors,
+        });
+      },
     }),
   );
 
