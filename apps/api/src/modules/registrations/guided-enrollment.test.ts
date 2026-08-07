@@ -12,6 +12,12 @@ function validEnrollment(): GuidedEnrollmentData {
       lastName: 'Ahmadi',
       nationalId: '۰۰۱۳۵۴۰۳۹۹',
     },
+    guardian: {
+      firstName: 'Reza',
+      lastName: 'Ahmadi',
+      nationalId: '0499370899',
+      relationshipType: 'FATHER',
+    },
     father: {
       firstName: 'Reza',
       lastName: 'Ahmadi',
@@ -58,6 +64,7 @@ describe('guided enrollment policy', () => {
     const result = normalizeAndValidateGuidedEnrollment(input);
 
     expect(result.student.nationalId).toBe('0013540399');
+    expect(result.guardian.nationalId).toBe('0499370899');
     expect(input.student.nationalId).toBe('۰۰۱۳۵۴۰۳۹۹');
   });
 
@@ -70,13 +77,41 @@ describe('guided enrollment policy', () => {
     );
   });
 
-  it('rejects incomplete admin or parent submissions through the shared policy', () => {
+  it('rejects incomplete required guardian fields', () => {
     const input = validEnrollment();
-    input.emergencyContact.phoneNumber = '';
+    input.guardian.firstName = '';
 
     expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow(
       'All required enrollment fields must be completed.',
     );
+  });
+
+  it('requires a relationship description when the guardian is "other"', () => {
+    const input = validEnrollment();
+    input.guardian.relationshipType = 'OTHER';
+    input.guardian.relationshipDescription = '';
+
+    expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow(
+      'A relationship description is required when the guardian relationship is other.',
+    );
+  });
+
+  it('rejects partially completed optional parent sections', () => {
+    const input = validEnrollment();
+    input.father = { ...input.father!, phoneNumber: '' };
+
+    expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow(
+      'Partially completed parent information must include all fields.',
+    );
+  });
+
+  it('accepts an enrollment with no optional contacts', () => {
+    const input = validEnrollment();
+    input.father = null;
+    input.mother = null;
+    input.emergencyContact = null;
+
+    expect(() => normalizeAndValidateGuidedEnrollment(input)).not.toThrow();
   });
 
   it('keeps contract generation independent from persistence', () => {

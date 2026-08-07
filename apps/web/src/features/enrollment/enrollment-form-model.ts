@@ -46,6 +46,12 @@ export type EnrollmentDefaults = {
     relationship: string;
     phoneNumber: string;
   };
+  guardian?: {
+    firstName: string;
+    lastName: string;
+    nationalId: string;
+    relationshipType: 'FATHER' | 'MOTHER' | 'OTHER';
+  };
 };
 
 export type EnrollmentFormState = {
@@ -55,6 +61,12 @@ export type EnrollmentFormState = {
   studentNationalId: string;
   birthDate: string;
   gender: string;
+  guardianFirst: string;
+  guardianLast: string;
+  guardianNationalId: string;
+  guardianRelationshipType: string;
+  guardianRelationshipDescription: string;
+  guardianPhone: string;
   fatherFirst: string;
   fatherLast: string;
   fatherNationalId: string;
@@ -90,6 +102,12 @@ const emptyForm: EnrollmentFormState = {
   studentNationalId: '',
   birthDate: '',
   gender: '',
+  guardianFirst: '',
+  guardianLast: '',
+  guardianNationalId: '',
+  guardianRelationshipType: 'FATHER',
+  guardianRelationshipDescription: '',
+  guardianPhone: '',
   fatherFirst: '',
   fatherLast: '',
   fatherNationalId: '',
@@ -123,11 +141,13 @@ export function createEnrollmentFormState({
   savedParents,
   existingStudents,
   defaults,
+  guardianPhone,
 }: {
   schools: SchoolOption[];
   savedParents: SavedParents;
   existingStudents: ExistingStudent[];
   defaults: EnrollmentDefaults;
+  guardianPhone?: string;
 }): EnrollmentFormState {
   const firstSchool = schools[0];
   const firstLevel = firstSchool?.educationOptions[0];
@@ -147,6 +167,12 @@ export function createEnrollmentFormState({
     studentNationalId: firstExisting?.nationalId ?? '',
     birthDate: firstExisting?.birthDate ?? '',
     gender: firstExisting?.gender ?? '',
+    guardianFirst: defaults.guardian?.firstName ?? '',
+    guardianLast: defaults.guardian?.lastName ?? '',
+    guardianNationalId: defaults.guardian?.nationalId ?? '',
+    guardianRelationshipType: defaults.guardian?.relationshipType ?? '',
+    guardianRelationshipDescription: '',
+    guardianPhone: guardianPhone ?? '',
     fatherFirst: savedParents.father?.firstName ?? '',
     fatherLast: savedParents.father?.lastName ?? '',
     fatherNationalId: savedParents.father?.nationalId ?? '',

@@ -23,6 +23,8 @@ export const parents = pgTable(
     lastName: varchar('last_name', { length: 100 }).notNull(),
     nationalId: varchar('national_id', { length: 20 }).notNull().unique(),
     phoneNumber: varchar('phone_number', { length: 20 }).notNull(),
+    relationshipType: varchar('relationship_type', { length: 10 }),
+    relationshipDescription: varchar('relationship_description', { length: 100 }),
     isPrimaryContact: boolean('is_primary_contact').notNull().default(false),
     phoneVerifiedAt: timestamp('phone_verified_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

@@ -145,6 +145,7 @@ function OtpAuthForm() {
       if (response.data.user === null) {
         setOnboardingState({
           sessionId: response.data.onboarding.sessionId,
+          phoneNumber,
           expiresAt: response.data.onboarding.expiresAt,
           currentStep: response.data.onboarding.currentStep,
         });

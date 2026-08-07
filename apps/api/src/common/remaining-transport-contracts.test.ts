@@ -26,9 +26,35 @@ describe('remaining API transport contracts', () => {
     const value = guided();
     const dto = await body(value, GuidedEnrollmentDto);
     expect(dto.father.phoneNumber).toBe('09120000000');
+    expect(dto.guardian.relationshipType).toBe('MOTHER');
     expect(dto.address.latitude).toBe(35.7);
     await expect(body({ ...value, address: { ...value.address, latitude: 91 } }, GuidedEnrollmentDto)).rejects.toBeInstanceOf(BadRequestException);
     await expect(body({ ...value, father: { ...value.father, injected: true } }, GuidedEnrollmentDto)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('treats optional contacts and guardian relationship as nullable or conditional', async () => {
+    const value = guided();
+    const stripped = await body(
+      { ...value, father: null, mother: null, emergencyContact: null },
+      GuidedEnrollmentDto,
+    );
+    expect(stripped.father).toBeNull();
+    expect(stripped.mother).toBeNull();
+    await expect(
+      body({ ...value, guardian: { ...value.guardian, relationshipType: 'OTHER' } }, GuidedEnrollmentDto),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    const described = await body(
+      {
+        ...value,
+        guardian: {
+          ...value.guardian,
+          relationshipType: 'OTHER',
+          relationshipDescription: 'پدربزرگ',
+        },
+      },
+      GuidedEnrollmentDto,
+    );
+    expect(described.guardian.relationshipDescription).toBe('پدربزرگ');
   });
 
   it('validates nested family and admin-parent payloads', async () => {
@@ -56,6 +82,7 @@ function guided() {
   const parent = { firstName: 'A', lastName: 'B', nationalId: '۱۲۳۴۵۶۷۸۹۰', phoneNumber: '۰۹۱۲۰۰۰۰۰۰۰' };
   return {
     student: { firstName: 'S', lastName: 'T', nationalId: '1234567890' },
+    guardian: { firstName: 'G', lastName: 'H', nationalId: '0499370899', relationshipType: 'MOTHER' },
     father: parent, mother: { ...parent, phoneNumber: '09120000001' },
     emergencyContact: { firstName: 'E', lastName: 'C', relationship: 'UNCLE', phoneNumber: '09120000002' },
     address: { title: 'Home', province: 'Tehran', city: 'Tehran', streetAddress: 'Street', postalCode: '1234567890', latitude: '35.7', longitude: '51.4' },

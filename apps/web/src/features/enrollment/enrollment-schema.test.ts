@@ -9,6 +9,12 @@ const validInput = {
     birthDate: '2012-05-14',
     gender: 'MALE',
   },
+  guardian: {
+    firstName: 'حسین',
+    lastName: 'احمدی',
+    nationalId: '0012345679',
+    relationshipType: 'FATHER',
+  },
   father: {
     firstName: 'حسین',
     lastName: 'احمدی',
@@ -45,6 +51,36 @@ describe('guided enrollment schema', () => {
     const result = guidedEnrollmentSchema.safeParse(validInput);
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.student.nationalId).toBe('0012345678');
+  });
+
+  it('accepts an enrollment with no optional contacts', () => {
+    const result = guidedEnrollmentSchema.safeParse({
+      ...validInput,
+      father: null,
+      mother: null,
+      emergencyContact: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('requires a guardian relationship description when relationship is OTHER', () => {
+    const result = guidedEnrollmentSchema.safeParse({
+      ...validInput,
+      guardian: { ...validInput.guardian, relationshipType: 'OTHER' },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((issue) => issue.message)).toContain('شرح نسبت را وارد کنید.');
+    }
+    const described = guidedEnrollmentSchema.safeParse({
+      ...validInput,
+      guardian: {
+        ...validInput.guardian,
+        relationshipType: 'OTHER',
+        relationshipDescription: 'پدربزرگ',
+      },
+    });
+    expect(described.success).toBe(true);
   });
 
   it('normalizes Persian digits and trims national IDs', () => {

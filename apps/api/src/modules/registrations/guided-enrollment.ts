@@ -3,35 +3,46 @@ import { isIranianNationalId, normalizeIranianDigits } from '../../common/irania
 
 const serviceTypes = new Set(['BUS', 'MINIBUS', 'CAR', 'VAN']);
 const paymentPlanTypes = new Set(['FULL', 'INSTALLMENTS']);
+const relationshipTypes = new Set(['FATHER', 'MOTHER', 'OTHER']);
 const iranianMobilePattern = /^09\d{9}$/;
 
+export type StudentEnrollmentData = {
+  id?: string;
+  firstName: string;
+  lastName: string;
+  nationalId: string;
+  birthDate?: string;
+  gender?: string;
+};
+
+export type ParentContactData = {
+  firstName: string;
+  lastName: string;
+  nationalId: string;
+  phoneNumber: string;
+};
+
+export type GuardianEnrollmentData = {
+  firstName: string;
+  lastName: string;
+  nationalId: string;
+  relationshipType: 'FATHER' | 'MOTHER' | 'OTHER';
+  relationshipDescription?: string;
+};
+
+export type EmergencyContactData = {
+  firstName: string;
+  lastName: string;
+  relationship: string;
+  phoneNumber: string;
+};
+
 export type GuidedEnrollmentData = {
-  student: {
-    id?: string;
-    firstName: string;
-    lastName: string;
-    nationalId: string;
-    birthDate?: string;
-    gender?: string;
-  };
-  father: {
-    firstName: string;
-    lastName: string;
-    nationalId: string;
-    phoneNumber: string;
-  };
-  mother: {
-    firstName: string;
-    lastName: string;
-    nationalId: string;
-    phoneNumber: string;
-  };
-  emergencyContact: {
-    firstName: string;
-    lastName: string;
-    relationship: string;
-    phoneNumber: string;
-  };
+  student: StudentEnrollmentData;
+  guardian: GuardianEnrollmentData;
+  father?: ParentContactData | null;
+  mother?: ParentContactData | null;
+  emergencyContact?: EmergencyContactData | null;
   address: {
     title: string;
     province: string;
@@ -50,6 +61,15 @@ export type GuidedEnrollmentData = {
   };
 };
 
+function sectionIsPresent(section: Record<string, unknown> | null | undefined): boolean {
+  if (!section) return false;
+  return Object.values(section).some((value) => value != null && String(value).trim() !== '');
+}
+
+function sectionIsComplete(section: Record<string, unknown>, keys: string[]): boolean {
+  return keys.every((key) => String(section[key] ?? '').trim() !== '');
+}
+
 export function normalizeAndValidateGuidedEnrollment(
   input: GuidedEnrollmentData,
 ): GuidedEnrollmentData {
@@ -59,27 +79,32 @@ export function normalizeAndValidateGuidedEnrollment(
       ...input.student,
       nationalId: normalizeIranianDigits(input.student.nationalId).trim(),
     },
-    father: {
-      ...input.father,
-      nationalId: normalizeIranianDigits(input.father.nationalId).trim(),
-    },
-    mother: {
-      ...input.mother,
-      nationalId: normalizeIranianDigits(input.mother.nationalId).trim(),
+    guardian: {
+      ...input.guardian,
+      nationalId: normalizeIranianDigits(input.guardian.nationalId).trim(),
     },
   };
+  if (input.father) {
+    data.father = {
+      ...input.father,
+      nationalId: normalizeIranianDigits(input.father.nationalId).trim(),
+    };
+  }
+  if (input.mother) {
+    data.mother = {
+      ...input.mother,
+      nationalId: normalizeIranianDigits(input.mother.nationalId).trim(),
+    };
+  }
+
   const required = [
     data.student.firstName,
     data.student.lastName,
     data.student.nationalId,
-    data.father.firstName,
-    data.father.lastName,
-    data.father.phoneNumber,
-    data.mother.firstName,
-    data.mother.lastName,
-    data.mother.phoneNumber,
-    data.emergencyContact.firstName,
-    data.emergencyContact.phoneNumber,
+    data.guardian.firstName,
+    data.guardian.lastName,
+    data.guardian.nationalId,
+    data.guardian.relationshipType,
     data.address.streetAddress,
     data.address.postalCode,
     data.school.schoolId,
@@ -94,23 +119,62 @@ export function normalizeAndValidateGuidedEnrollment(
       'All required enrollment fields must be completed.',
     );
   }
-  if (
-    ![data.student.nationalId, data.father.nationalId, data.mother.nationalId].every(
-      isIranianNationalId,
-    )
-  ) {
+  if (!relationshipTypes.has(data.guardian.relationshipType)) {
     throw new ConflictError(
-      'INVALID_NATIONAL_ID',
-      'A valid national ID is required for the student and both parents.',
+      'INVALID_RELATIONSHIP',
+      'The guardian relationship must be father, mother, or other.',
     );
   }
   if (
-    ![
-      data.father.phoneNumber,
-      data.mother.phoneNumber,
-      data.emergencyContact.phoneNumber,
-    ].every((phoneNumber) => iranianMobilePattern.test(phoneNumber))
+    data.guardian.relationshipType === 'OTHER' &&
+    !String(data.guardian.relationshipDescription ?? '').trim()
   ) {
+    throw new ConflictError(
+      'RELATIONSHIP_DESCRIPTION_REQUIRED',
+      'A relationship description is required when the guardian relationship is other.',
+    );
+  }
+  if (![data.student.nationalId, data.guardian.nationalId].every(isIranianNationalId)) {
+    throw new ConflictError(
+      'INVALID_NATIONAL_ID',
+      'A valid national ID is required for the student and the guardian.',
+    );
+  }
+
+  const phoneNumbers: string[] = [];
+  for (const parent of [data.father, data.mother]) {
+    if (!parent || !sectionIsPresent(parent)) continue;
+    if (!sectionIsComplete(parent, ['firstName', 'lastName', 'nationalId', 'phoneNumber'])) {
+      throw new ConflictError(
+        'INCOMPLETE_CONTACT',
+        'Partially completed parent information must include all fields.',
+      );
+    }
+    if (!isIranianNationalId(parent.nationalId)) {
+      throw new ConflictError(
+        'INVALID_NATIONAL_ID',
+        'A valid national ID is required for every listed parent.',
+      );
+    }
+    phoneNumbers.push(parent.phoneNumber);
+  }
+  if (data.emergencyContact && sectionIsPresent(data.emergencyContact)) {
+    if (
+      !sectionIsComplete(data.emergencyContact, [
+        'firstName',
+        'lastName',
+        'relationship',
+        'phoneNumber',
+      ])
+    ) {
+      throw new ConflictError(
+        'INCOMPLETE_CONTACT',
+        'Partially completed emergency contact information must include all fields.',
+      );
+    }
+    phoneNumbers.push(data.emergencyContact.phoneNumber);
+  }
+  if (phoneNumbers.some((phoneNumber) => !iranianMobilePattern.test(phoneNumber))) {
     throw new ConflictError('INVALID_PHONE_NUMBER', 'Valid Iranian mobile numbers are required.');
   }
   if (!Number.isFinite(data.address.latitude) || !Number.isFinite(data.address.longitude)) {

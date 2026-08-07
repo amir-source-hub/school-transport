@@ -140,17 +140,11 @@ export class RegistrationsService {
           .from(users)
           .where(eq(users.id, userId))
           .limit(1);
-        const loginPhone = account?.phoneNumber;
-        const matchingParentType =
-          loginPhone === data.father.phoneNumber
-            ? 'FATHER'
-            : loginPhone === data.mother.phoneNumber
-              ? 'MOTHER'
-              : null;
-        if (!matchingParentType) {
+        const guardianPhone = account?.phoneNumber;
+        if (!guardianPhone) {
           throw new ConflictError(
-            'LOGIN_PHONE_MUST_MATCH_PARENT',
-            'The login phone number must match the father or mother phone number.',
+            'ACCOUNT_PHONE_REQUIRED',
+            'A verified phone number is required for the guardian.',
           );
         }
         const existingFamilyParents = await txn
@@ -161,21 +155,49 @@ export class RegistrationsService {
             lastName: parents.lastName,
             nationalId: parents.nationalId,
             phoneNumber: parents.phoneNumber,
+            relationshipType: parents.relationshipType,
             isPrimaryContact: parents.isPrimaryContact,
           })
           .from(parents)
           .where(eq(parents.userId, userId));
-        for (const [parentType, parent] of [
-          ['FATHER', data.father],
-          ['MOTHER', data.mother],
-        ] as const) {
+        const parentSections: Array<{
+          parentType: 'GUARDIAN' | 'FATHER' | 'MOTHER';
+          section: {
+            firstName: string;
+            lastName: string;
+            nationalId: string;
+            phoneNumber: string;
+            relationshipType?: string;
+            relationshipDescription?: string | null;
+          } | null;
+        }> = [
+          {
+            parentType: 'GUARDIAN',
+            section: {
+              firstName: data.guardian.firstName,
+              lastName: data.guardian.lastName,
+              nationalId: data.guardian.nationalId,
+              phoneNumber: guardianPhone,
+              relationshipType: data.guardian.relationshipType,
+              relationshipDescription:
+                data.guardian.relationshipType === 'OTHER'
+                  ? (data.guardian.relationshipDescription ?? null)
+                  : null,
+            },
+          },
+          { parentType: 'FATHER', section: data.father ?? null },
+          { parentType: 'MOTHER', section: data.mother ?? null },
+        ];
+        for (const { parentType, section } of parentSections) {
+          if (!section) continue;
           const existing = existingFamilyParents.find((item) => item.parentType === parentType);
           if (existing) {
             const unchanged =
-              existing.firstName === parent.firstName &&
-              existing.lastName === parent.lastName &&
-              existing.nationalId === parent.nationalId &&
-              existing.phoneNumber === parent.phoneNumber;
+              existing.firstName === section.firstName &&
+              existing.lastName === section.lastName &&
+              existing.nationalId === section.nationalId &&
+              existing.phoneNumber === section.phoneNumber &&
+              (!existing.relationshipType || existing.relationshipType === section.relationshipType);
             if (!unchanged) {
               throw new ConflictError(
                 'PARENT_PROFILE_CHANGED',
@@ -187,7 +209,12 @@ export class RegistrationsService {
               id: generateId(),
               userId,
               parentType,
-              ...parent,
+              firstName: section.firstName,
+              lastName: section.lastName,
+              nationalId: section.nationalId,
+              phoneNumber: section.phoneNumber,
+              relationshipType: section.relationshipType,
+              relationshipDescription: section.relationshipDescription,
               isPrimaryContact: false,
             });
           }
@@ -199,21 +226,23 @@ export class RegistrationsService {
         await txn
           .update(parents)
           .set({ isPrimaryContact: true, phoneVerifiedAt: new Date(), updatedAt: new Date() })
-          .where(and(eq(parents.userId, userId), eq(parents.parentType, matchingParentType)));
-        const [emergency] = await txn
-          .select({ id: emergencyContacts.id })
-          .from(emergencyContacts)
-          .where(eq(emergencyContacts.userId, userId))
-          .limit(1);
-        if (emergency) {
-          await txn
-            .update(emergencyContacts)
-            .set({ ...data.emergencyContact, updatedAt: new Date() })
-            .where(eq(emergencyContacts.id, emergency.id));
-        } else {
-          await txn
-            .insert(emergencyContacts)
-            .values({ id: generateId(), userId, ...data.emergencyContact });
+          .where(and(eq(parents.userId, userId), eq(parents.parentType, 'GUARDIAN')));
+        if (data.emergencyContact) {
+          const [emergency] = await txn
+            .select({ id: emergencyContacts.id })
+            .from(emergencyContacts)
+            .where(eq(emergencyContacts.userId, userId))
+            .limit(1);
+          if (emergency) {
+            await txn
+              .update(emergencyContacts)
+              .set({ ...data.emergencyContact, updatedAt: new Date() })
+              .where(eq(emergencyContacts.id, emergency.id));
+          } else {
+            await txn
+              .insert(emergencyContacts)
+              .values({ id: generateId(), userId, ...data.emergencyContact });
+          }
         }
 
         const addressId = generateId();
@@ -292,9 +321,10 @@ export class RegistrationsService {
         const contractId = generateId();
         const snapshot = {
           student: data.student,
-          father: data.father,
-          mother: data.mother,
-          emergencyContact: data.emergencyContact,
+          guardian: { ...data.guardian, phoneNumber: guardianPhone },
+          father: data.father ?? null,
+          mother: data.mother ?? null,
+          emergencyContact: data.emergencyContact ?? null,
           address: data.address,
           school: data.school,
           service: data.service,

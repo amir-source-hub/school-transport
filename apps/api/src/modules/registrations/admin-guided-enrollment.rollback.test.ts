@@ -51,6 +51,12 @@ describe('admin guided enrollment transaction', () => {
     );
     const input: GuidedEnrollmentData = {
       student: { firstName: 'Ali', lastName: 'Ahmadi', nationalId: '0013540399' },
+      guardian: {
+        firstName: 'Reza',
+        lastName: 'Ahmadi',
+        nationalId: '0499370899',
+        relationshipType: 'FATHER',
+      },
       father,
       mother,
       emergencyContact: { firstName: 'Maryam', lastName: 'Ahmadi', relationship: 'Aunt', phoneNumber: '09123333333' },

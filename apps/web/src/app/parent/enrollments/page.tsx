@@ -50,6 +50,10 @@ export default async function EnrollmentsPage() {
   const availableStudents = students.filter((student) => !enrolledStudentIds.has(student.id));
   const activeAddress = family.addresses.find((address) => address.isActive);
   const activeEmergency = family.emergencyContacts.find((contact) => contact.isActive);
+  const primaryParent =
+    [family.father, family.mother].find((parent) => parent?.isPrimaryContact) ??
+    family.father ??
+    family.mother;
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -68,7 +72,20 @@ export default async function EnrollmentsPage() {
         }))}
         savedParents={{ father: family.father, mother: family.mother }}
         existingStudents={availableStudents}
-        defaults={{ address: activeAddress, emergencyContact: activeEmergency }}
+        guardianPhone={primaryParent?.phoneNumber ?? undefined}
+        defaults={{
+          address: activeAddress,
+          emergencyContact: activeEmergency,
+          guardian: primaryParent
+            ? {
+                firstName: primaryParent.firstName,
+                lastName: primaryParent.lastName,
+                nationalId: primaryParent.nationalId,
+                relationshipType:
+                  primaryParent.parentType === 'MOTHER' ? 'MOTHER' : 'FATHER',
+              }
+            : undefined,
+        }}
       />
       <div className="space-y-4">
         {entries.map(({ enrollment, prices }) => {

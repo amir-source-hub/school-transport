@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminFamilyEnrollmentForm } from './admin-family-enrollment-form';
@@ -30,9 +30,13 @@ describe('AdminFamilyEnrollmentForm', () => {
       />,
     );
 
-    await user.type(screen.getByLabelText('نام', { selector: 'input' }), 'علی');
-    await user.type(screen.getAllByLabelText('نام خانوادگی', { selector: 'input' })[0], 'احمدی');
-    await user.type(screen.getByLabelText('کد ملی', { selector: 'input' }), '0013540399');
+    const studentFieldset = screen.getByText('مشخصات دانش‌آموز').closest('fieldset') as HTMLElement;
+    await user.type(within(studentFieldset).getByLabelText('نام', { selector: 'input' }), 'علی');
+    await user.type(
+      within(studentFieldset).getAllByLabelText('نام خانوادگی', { selector: 'input' })[0],
+      'احمدی',
+    );
+    await user.type(within(studentFieldset).getByLabelText('کد ملی', { selector: 'input' }), '0013540399');
     await user.type(screen.getByPlaceholderText('۱۴۰۵/۰۱/۰۱'), '13980101');
     await user.click(screen.getByRole('button', { name: 'ایجاد ثبت‌نام و ارسال برای اقدام والد' }));
 
@@ -40,6 +44,10 @@ describe('AdminFamilyEnrollmentForm', () => {
       'family-1',
       expect.objectContaining({
         student: expect.objectContaining({ firstName: 'علی', nationalId: '0013540399' }),
+        guardian: expect.objectContaining({
+          firstName: 'رضا',
+          relationshipType: 'FATHER',
+        }),
         father: expect.objectContaining({ phoneNumber: '09121111111' }),
         emergencyContact: expect.objectContaining({ relationship: 'خاله' }),
         address: expect.objectContaining({ postalCode: '1234567890', latitude: 35.7 }),

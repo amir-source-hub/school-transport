@@ -1,5 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, Length, Matches, Max, Min, ValidateNested } from 'class-validator';
+import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, Length, Matches, Max, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { normalizeIranianDigits } from '../../common/iranian-national-id';
 
 const digits = ({ value }: { value: unknown }) => typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
@@ -18,6 +18,14 @@ export class StudentInputDto extends IdentityInputDto {
 
 export class ParentContactInputDto extends IdentityInputDto {
   @Transform(digits) @Matches(/^09\d{9}$/, { message: 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.' }) phoneNumber!: string;
+}
+
+export class GuardianInputDto extends IdentityInputDto {
+  @IsIn(['FATHER', 'MOTHER', 'OTHER'], { message: 'نسبت باید پدر، مادر یا سایر باشد.' }) relationshipType!: 'FATHER' | 'MOTHER' | 'OTHER';
+  @ValidateIf((o: GuardianInputDto) => o.relationshipType === 'OTHER')
+  @IsString({ message: 'شرح نسبت را وارد کنید.' })
+  @Length(1, 100, { message: 'شرح نسبت باید بین ۱ تا ۱۰۰ نویسه باشد.' })
+  relationshipDescription?: string;
 }
 
 export class EmergencyContactInputDto {
@@ -52,9 +60,10 @@ export class ServiceInputDto {
 
 export class GuidedEnrollmentDto {
   @ValidateNested() @Type(() => StudentInputDto) student!: StudentInputDto;
-  @ValidateNested() @Type(() => ParentContactInputDto) father!: ParentContactInputDto;
-  @ValidateNested() @Type(() => ParentContactInputDto) mother!: ParentContactInputDto;
-  @ValidateNested() @Type(() => EmergencyContactInputDto) emergencyContact!: EmergencyContactInputDto;
+  @ValidateNested() @Type(() => GuardianInputDto) guardian!: GuardianInputDto;
+  @ValidateNested() @IsOptional() @Type(() => ParentContactInputDto) father?: ParentContactInputDto;
+  @ValidateNested() @IsOptional() @Type(() => ParentContactInputDto) mother?: ParentContactInputDto;
+  @ValidateNested() @IsOptional() @Type(() => EmergencyContactInputDto) emergencyContact?: EmergencyContactInputDto;
   @ValidateNested() @Type(() => AddressInputDto) address!: AddressInputDto;
   @ValidateNested() @Type(() => SchoolInputDto) school!: SchoolInputDto;
   @ValidateNested() @Type(() => ServiceInputDto) service!: ServiceInputDto;

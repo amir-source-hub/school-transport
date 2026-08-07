@@ -48,6 +48,30 @@ export const parentContactSchema = z.object({
   phoneNumber: mobile,
 });
 
+export const guardianSchema = z
+  .object({
+    firstName: name,
+    lastName: name,
+    nationalId,
+    relationshipType: z.enum(['FATHER', 'MOTHER', 'OTHER'], {
+      message: 'نسبت باید پدر، مادر یا سایر باشد.',
+    }),
+    relationshipDescription: z
+      .string()
+      .trim()
+      .max(100, 'حداکثر ۱۰۰ نویسه مجاز است.')
+      .optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.relationshipType === 'OTHER' && !value.relationshipDescription?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['relationshipDescription'],
+        message: 'شرح نسبت را وارد کنید.',
+      });
+    }
+  });
+
 export const emergencyContactSchema = z.object({
   firstName: name,
   lastName: name,
@@ -95,9 +119,10 @@ export const serviceSchema = z.object({
 
 export const guidedEnrollmentSchema = z.object({
   student: studentSchema,
-  father: parentContactSchema,
-  mother: parentContactSchema,
-  emergencyContact: emergencyContactSchema,
+  guardian: guardianSchema,
+  father: parentContactSchema.nullable().optional(),
+  mother: parentContactSchema.nullable().optional(),
+  emergencyContact: emergencyContactSchema.nullable().optional(),
   address: addressSchema,
   school: schoolSchema,
   service: serviceSchema,
@@ -105,6 +130,7 @@ export const guidedEnrollmentSchema = z.object({
 
 export type GuidedEnrollmentInput = z.infer<typeof guidedEnrollmentSchema>;
 export type StudentInput = z.infer<typeof studentSchema>;
+export type GuardianInput = z.infer<typeof guardianSchema>;
 export type ParentContactInput = z.infer<typeof parentContactSchema>;
 export type EmergencyContactInput = z.infer<typeof emergencyContactSchema>;
 export type AddressInput = z.infer<typeof addressSchema>;

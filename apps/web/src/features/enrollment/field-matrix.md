@@ -18,8 +18,12 @@ Notation:
 | `guardian.lastName` | parents.last_name | نام خانوادگی | always | Persian text | Persian text, 1–100 | IsString + Length(1,100) | نام خانوادگی باید بین ۱ تا ۱۰۰ نویسه باشد. |
 | `guardian.nationalId` | parents.national_id | کد ملی | always | Persian/Arabic → Latin digits | 10 digits + checksum | `^\d{10}$` + checksum in service | کد ملی باید ۱۰ رقم باشد. / کد ملی نامعتبر است. |
 | `guardian.phoneNumber` | parents.phone_number | شماره همراه سرپرست | always (from session) | Persian/Arabic → Latin digits | read-only, `^09\d{9}$` | from onboarding context; reject client value | شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد. |
-| `guardian.relationshipType` | parents.parent_type | نسبت | always | — | `FATHER \| MOTHER \| OTHER` | `IsIn(['FATHER','MOTHER','OTHER'])` | نسبت باید پدر، مادر یا سایر باشد. |
+| `guardian.relationshipType` | parents.relationship_type `(new)` | نسبت | always | — | `FATHER \| MOTHER \| OTHER` | `IsIn(['FATHER','MOTHER','OTHER'])` | نسبت باید پدر، مادر یا سایر باشد. |
 | `guardian.relationshipDescription` | parents.relationship_description `(new)` | شرح نسبت | only when `OTHER` | Persian text | required iff `OTHER`; Persian text, 1–100 | required iff `OTHER`; Length(1,100) | شرح نسبت را وارد کنید. |
+
+The guardian row is stored as `parents.parent_type = 'GUARDIAN'` (new value alongside the existing
+`FATHER`/`MOTHER` optional rows), so `relationshipType` maps to the new `parents.relationship_type`
+column. One `GUARDIAN` row per user, enforced by the existing `(user_id, parent_type)` unique index.
 
 The guardian `phoneNumber` is the phone verified during login/onboarding. The client renders it
 read-only; the backend derives it from the onboarding session and ignores any supplied value.
