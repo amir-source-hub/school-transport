@@ -601,16 +601,16 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Map repair workflow
 
-- [ ] Run the existing tests for `location-picker.test.tsx` and the tile route test before modifying code.
+- [x] Run the existing tests for `location-picker.test.tsx` and the tile route test before modifying code.
 - [ ] Inspect browser network requests for `/api/map-tiles/...`: distinguish a missing tile, 4xx provider response, CSP block, server error, or zero-height map container.
-- [ ] Validate z/x/y parameters in the tile route and use bounded timeouts and safe caching.
+- [x] Validate z/x/y parameters in the tile route and use bounded timeouts and safe caching.
 - [ ] Confirm tile-provider terms permit proxying/caching and include required attribution.
-- [ ] Render a Persian retry/error state if tiles fail; the rest of the address form must remain understandable.
-- [ ] Store latitude/longitude only after explicit selection and validate geographic bounds server-side.
+- [x] Render a Persian retry/error state if tiles fail; the rest of the address form must remain understandable.
+- [x] Store latitude/longitude only after explicit selection and validate geographic bounds server-side.
 
 #### Notes and notification consent
 
-- [ ] Rename the label to `توضیحات` without renaming the persisted `parentNotes` field in the same release unless an API migration is planned.
+- [x] Rename the label to `توضیحات` without renaming the persisted `parentNotes` field in the same release unless an API migration is planned.
 - [ ] Add notification-consent fields to the final contract/onboarding step only after the consent text is approved.
 - [ ] Suggested data model: user ID, channel, purpose, granted boolean, text version, source, granted/revoked time, and updatedBy.
 - [ ] Do not use one boolean for legally required service notices and optional marketing messages; model purposes separately.

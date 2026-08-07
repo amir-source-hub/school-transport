@@ -951,7 +951,7 @@ export function CreateEnrollmentForm({
               </p>
             </Section>
             <label className="text-sm font-bold">
-              توضیحات برای واحد مسیر
+              توضیحات
               <Textarea
                 className="mt-2"
                 value={form.parentNotes}

@@ -47,4 +47,30 @@ describe('map tile route', () => {
     expect(response.headers.get('retry-after')).toBe('5');
     expect(response.headers.get('cache-control')).toBe('no-store');
   });
+
+  it('maps a provider 404 to a missing-tile 404 without caching', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response('not found', { status: 404 })),
+    );
+
+    const response = await GET(new Request('http://localhost/api/map-tiles/2/1/2'), context('2', '1', '2'));
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('retry-after')).toBe('5');
+  });
+
+  it('rejects a non-image upstream response as a server error (502)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response('html', { status: 200, headers: { 'Content-Type': 'text/html' } })),
+    );
+
+    const response = await GET(new Request('http://localhost/api/map-tiles/2/1/2'), context('2', '1', '2'));
+
+    expect(response.status).toBe(502);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('retry-after')).toBe('5');
+  });
 });
