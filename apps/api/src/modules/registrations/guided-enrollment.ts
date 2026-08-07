@@ -5,6 +5,7 @@ const serviceTypes = new Set(['BUS', 'MINIBUS', 'CAR', 'VAN']);
 const paymentPlanTypes = new Set(['FULL', 'INSTALLMENTS']);
 const relationshipTypes = new Set(['FATHER', 'MOTHER', 'OTHER']);
 const iranianMobilePattern = /^09\d{9}$/;
+const homePhonePattern = /^021\d{8}$/;
 
 export type StudentEnrollmentData = {
   id?: string;
@@ -13,6 +14,7 @@ export type StudentEnrollmentData = {
   nationalId: string;
   birthDate?: string;
   gender?: string;
+  phoneNumber?: string;
 };
 
 export type ParentContactData = {
@@ -40,6 +42,7 @@ export type EmergencyContactData = {
 export type GuidedEnrollmentData = {
   student: StudentEnrollmentData;
   guardian: GuardianEnrollmentData;
+  homePhone: string;
   father?: ParentContactData | null;
   mother?: ParentContactData | null;
   emergencyContact?: EmergencyContactData | null;
@@ -75,9 +78,13 @@ export function normalizeAndValidateGuidedEnrollment(
 ): GuidedEnrollmentData {
   const data: GuidedEnrollmentData = {
     ...input,
+    homePhone: normalizeIranianDigits(input.homePhone).replace(/\D/g, ''),
     student: {
       ...input.student,
       nationalId: normalizeIranianDigits(input.student.nationalId).trim(),
+      phoneNumber: input.student.phoneNumber
+        ? normalizeIranianDigits(input.student.phoneNumber).replace(/\D/g, '')
+        : undefined,
     },
     guardian: {
       ...input.guardian,
@@ -105,6 +112,7 @@ export function normalizeAndValidateGuidedEnrollment(
     data.guardian.lastName,
     data.guardian.nationalId,
     data.guardian.relationshipType,
+    data.homePhone,
     data.address.streetAddress,
     data.address.postalCode,
     data.school.schoolId,
@@ -117,6 +125,15 @@ export function normalizeAndValidateGuidedEnrollment(
     throw new ConflictError(
       'INCOMPLETE_ENROLLMENT',
       'All required enrollment fields must be completed.',
+    );
+  }
+  if (!homePhonePattern.test(data.homePhone)) {
+    throw new ConflictError('INVALID_HOME_PHONE', 'A 021 Tehran landline number is required.');
+  }
+  if (data.student.phoneNumber && !iranianMobilePattern.test(data.student.phoneNumber)) {
+    throw new ConflictError(
+      'INVALID_PHONE_NUMBER',
+      'A valid Iranian mobile number is required for the student.',
     );
   }
   if (!relationshipTypes.has(data.guardian.relationshipType)) {

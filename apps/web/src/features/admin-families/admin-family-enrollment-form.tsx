@@ -34,7 +34,8 @@ export function AdminFamilyEnrollmentForm({ family, schools }: { family: FamilyD
   const initialSchool = schools[0];
   const initialLevel = initialSchool?.educationOptions[0];
   const [form, setForm] = useState({
-    studentFirst: '', studentLast: '', studentNationalId: '', birthDate: '', gender: 'FEMALE',
+    studentFirst: '', studentLast: '', studentNationalId: '', birthDate: '', gender: 'FEMALE', studentPhone: '',
+    homePhone: '',
     guardianFirst: guardian?.firstName ?? '', guardianLast: guardian?.lastName ?? '', guardianNationalId: guardian?.nationalId ?? '', guardianRelationshipType: guardian?.parentType === 'MOTHER' ? 'MOTHER' : 'FATHER', guardianRelationshipDescription: '',
     fatherFirst: father?.firstName ?? '', fatherLast: father?.lastName ?? '', fatherNationalId: father?.nationalId ?? '', fatherPhone: father?.phoneNumber ?? '',
     motherFirst: mother?.firstName ?? '', motherLast: mother?.lastName ?? '', motherNationalId: mother?.nationalId ?? '', motherPhone: mother?.phoneNumber ?? '',
@@ -62,6 +63,7 @@ export function AdminFamilyEnrollmentForm({ family, schools }: { family: FamilyD
     try {
       await createAdminFamilyEnrollment(family.id, {
         student: { firstName: form.studentFirst, lastName: form.studentLast, nationalId: normalizeDigits(form.studentNationalId), birthDate: form.birthDate || undefined, gender: form.gender as 'MALE' | 'FEMALE' },
+        homePhone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
         guardian: { firstName: form.guardianFirst, lastName: form.guardianLast, nationalId: normalizeDigits(form.guardianNationalId), relationshipType: form.guardianRelationshipType as 'FATHER' | 'MOTHER' | 'OTHER', relationshipDescription: form.guardianRelationshipType === 'OTHER' ? form.guardianRelationshipDescription || undefined : undefined },
         father: sectionStarted(fatherKeys) ? { firstName: form.fatherFirst, lastName: form.fatherLast, nationalId: normalizeDigits(form.fatherNationalId), phoneNumber: normalizeDigits(form.fatherPhone) } : null,
         mother: sectionStarted(motherKeys) ? { firstName: form.motherFirst, lastName: form.motherLast, nationalId: normalizeDigits(form.motherNationalId), phoneNumber: normalizeDigits(form.motherPhone) } : null,
@@ -79,7 +81,7 @@ export function AdminFamilyEnrollmentForm({ family, schools }: { family: FamilyD
 
   return (
     <form onSubmit={submit} className="space-y-6">
-      <fieldset><legend className="mb-3 font-black">مشخصات دانش‌آموز</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{textField('studentFirst', 'نام')}{textField('studentLast', 'نام خانوادگی')}{textField('studentNationalId', 'کد ملی', 'ltr')}<label className="text-sm font-bold">تاریخ تولد<JalaliDateInput value={form.birthDate} onChange={(value) => set('birthDate', value)} required /></label><label className="text-sm font-bold">جنسیت<Select value={form.gender} onValueChange={(value) => set('gender', value)} options={[{ value: 'FEMALE', label: 'دختر' }, { value: 'MALE', label: 'پسر' }]} /></label></div></fieldset>
+      <fieldset><legend className="mb-3 font-black">مشخصات دانش‌آموز</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{textField('studentFirst', 'نام')}{textField('studentLast', 'نام خانوادگی')}{textField('studentNationalId', 'کد ملی', 'ltr')}{textField('homePhone', 'تلفن منزل (۰۲۱)', 'ltr')}<label className="text-sm font-bold">تاریخ تولد<JalaliDateInput value={form.birthDate} onChange={(value) => set('birthDate', value)} required /></label><label className="text-sm font-bold">جنسیت<Select value={form.gender} onValueChange={(value) => set('gender', value)} options={[{ value: 'FEMALE', label: 'دختر' }, { value: 'MALE', label: 'پسر' }]} /></label></div></fieldset>
       <fieldset><legend className="mb-3 font-black">سرپرست</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{textField('guardianFirst', 'نام')}{textField('guardianLast', 'نام خانوادگی')}{textField('guardianNationalId', 'کد ملی', 'ltr')}<label className="text-sm font-bold">نسبت<Select value={form.guardianRelationshipType} onValueChange={(value) => set('guardianRelationshipType', value)} options={[{ value: 'FATHER', label: 'پدر' }, { value: 'MOTHER', label: 'مادر' }, { value: 'OTHER', label: 'سایر' }]} /></label>{form.guardianRelationshipType === 'OTHER' && <div className="lg:col-span-2">{textField('guardianRelationshipDescription', 'شرح نسبت')}</div>}<label className="text-sm font-bold">شماره همراه سرپرست<Input required className="mt-1" dir="ltr" value={guardianPhone} disabled /></label></div></fieldset>
       <fieldset><legend className="mb-3 font-black">اطلاعات پدر</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{textField('fatherFirst', 'نام پدر')}{textField('fatherLast', 'نام خانوادگی پدر')}{textField('fatherNationalId', 'کد ملی پدر', 'ltr')}{textField('fatherPhone', 'همراه پدر', 'ltr')}</div></fieldset>
       <fieldset><legend className="mb-3 font-black">اطلاعات مادر</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{textField('motherFirst', 'نام مادر')}{textField('motherLast', 'نام خانوادگی مادر')}{textField('motherNationalId', 'کد ملی مادر', 'ltr')}{textField('motherPhone', 'همراه مادر', 'ltr')}</div></fieldset>

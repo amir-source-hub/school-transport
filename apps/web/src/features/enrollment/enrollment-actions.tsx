@@ -29,6 +29,7 @@ import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { getOnboardingState } from '@/features/auth/onboarding-session';
 import { isValidIranianNationalId, normalizeDigits } from './national-id';
+import { composeMobileNumber } from './input-normalizers';
 import {
   acceptEnrollmentPrice,
   acceptGuidedContract,
@@ -146,6 +147,7 @@ export function CreateEnrollmentForm({
       'guardianLast',
       'guardianNationalId',
       'guardianRelationshipType',
+      'homePhone',
       'addressTitle',
       'province',
       'city',
@@ -158,6 +160,14 @@ export function CreateEnrollmentForm({
     if (key === 'guardianRelationshipDescription') {
       if (form.guardianRelationshipType === 'OTHER' && !text) return 'شرح نسبت را وارد کنید.';
       return undefined;
+    }
+    if (key === 'homePhone') {
+      if (!text) return 'این فیلد الزامی است.';
+      return /^\d{8}$/.test(normalizeDigits(text)) ? undefined : 'شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.';
+    }
+    if (key === 'studentPhone') {
+      if (!text) return undefined;
+      return /^\d{9}$/.test(normalizeDigits(text)) ? undefined : 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.';
     }
     if (
       ['studentNationalId', 'guardianNationalId', 'fatherNationalId', 'motherNationalId'].includes(
@@ -196,6 +206,7 @@ export function CreateEnrollmentForm({
             'guardianNationalId',
             'guardianRelationshipType',
             'guardianRelationshipDescription',
+            'homePhone',
             ...fatherKeys,
             ...motherKeys,
             ...emergencyKeys,
@@ -383,6 +394,7 @@ export function CreateEnrollmentForm({
               nationalId: normalizeDigits(form.studentNationalId),
               birthDate: form.birthDate || undefined,
               gender: (form.gender || undefined) as StudentInput['gender'],
+              ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
             },
             guardian: {
               firstName: form.guardianFirst,
@@ -419,6 +431,7 @@ export function CreateEnrollmentForm({
                   phoneNumber: normalizeDigits(form.emergencyPhone),
                 }
               : null,
+            homePhone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
             address: {
               title: form.addressTitle,
               province: form.province,
@@ -507,10 +520,49 @@ export function CreateEnrollmentForm({
       )}
     </div>
   );
+  const prefixField = (key: keyof typeof form, label: string, prefix: string, maxDigits: number) => (
+    <div>
+      <label htmlFor={`enrollment-${key}`} className="text-sm font-bold text-foreground">
+        {label}
+      </label>
+      <div className="mt-2 flex items-center overflow-hidden rounded-lg border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
+        <span className="select-none border-r border-input bg-surface-muted px-3 py-2 text-sm font-bold text-muted ltr">
+          {prefix}
+        </span>
+        <Input
+          id={`enrollment-${key}`}
+          type="tel"
+          inputMode="numeric"
+          dir="ltr"
+          required={key === 'homePhone'}
+          value={String(form[key])}
+          disabled={lockedParentFields.has(key)}
+          onChange={(event) =>
+            set(key, normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, maxDigits))
+          }
+          onBlur={(event) =>
+            setFieldErrors((current) => ({
+              ...current,
+              [key]: validateField(key, event.target.value),
+            }))
+          }
+          aria-invalid={Boolean(fieldErrors[key])}
+          aria-describedby={fieldErrors[key] ? `enrollment-${key}-error` : undefined}
+          className="h-auto rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
+        />
+      </div>
+      {fieldErrors[key] && (
+        <p id={`enrollment-${key}-error`} className="mt-1 text-xs text-danger">
+          {fieldErrors[key]}
+        </p>
+      )}
+    </div>
+  );
   const fieldLabels: Partial<Record<keyof typeof form, string>> = {
     studentFirst: 'نام دانش‌آموز', studentLast: 'نام خانوادگی دانش‌آموز', studentNationalId: 'کد ملی دانش‌آموز',
     guardianFirst: 'نام سرپرست', guardianLast: 'نام خانوادگی سرپرست', guardianNationalId: 'کد ملی سرپرست',
     guardianRelationshipType: 'نسبت سرپرست', guardianRelationshipDescription: 'شرح نسبت', guardianPhone: 'شماره همراه سرپرست',
+    homePhone: 'شماره تلفن منزل', studentPhone: 'شماره همراه دانش‌آموز',
     fatherFirst: 'نام پدر', fatherLast: 'نام خانوادگی پدر', fatherNationalId: 'کد ملی پدر', fatherPhone: 'شماره همراه پدر',
     motherFirst: 'نام مادر', motherLast: 'نام خانوادگی مادر', motherNationalId: 'کد ملی مادر', motherPhone: 'شماره همراه مادر',
     emergencyFirst: 'نام تماس اضطراری', emergencyLast: 'نام خانوادگی تماس اضطراری', emergencyRelationship: 'نسبت تماس اضطراری', emergencyPhone: 'شماره همراه تماس اضطراری',
@@ -590,9 +642,11 @@ export function CreateEnrollmentForm({
             )}
             <Section title="مشخصات دانش‌آموز">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {prefixField('homePhone', 'شماره تلفن منزل', '021', 8)}
                 {field('studentFirst', 'نام دانش‌آموز')}
                 {field('studentLast', 'نام خانوادگی')}
                 {field('studentNationalId', 'کد ملی', 'tel')}
+                {prefixField('studentPhone', 'شماره همراه دانش‌آموز', '09', 9)}
                 <label className="text-sm font-bold">
                   تاریخ تولد (شمسی)
                   <div className="mt-2">

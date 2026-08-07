@@ -10,7 +10,7 @@ function validEnrollment(): GuidedEnrollmentData {
     student: {
       firstName: 'Ali',
       lastName: 'Ahmadi',
-      nationalId: '۰۰۱۳۵۴۰۳۹۹',
+      nationalId: '۰۰۱۳۵۴۰۳۹۴',
     },
     guardian: {
       firstName: 'Reza',
@@ -18,6 +18,7 @@ function validEnrollment(): GuidedEnrollmentData {
       nationalId: '0499370899',
       relationshipType: 'FATHER',
     },
+    homePhone: '02122113333',
     father: {
       firstName: 'Reza',
       lastName: 'Ahmadi',
@@ -27,7 +28,7 @@ function validEnrollment(): GuidedEnrollmentData {
     mother: {
       firstName: 'Sara',
       lastName: 'Ahmadi',
-      nationalId: '0067749829',
+      nationalId: '0067749811',
       phoneNumber: '09122222222',
     },
     emergencyContact: {
@@ -63,9 +64,9 @@ describe('guided enrollment policy', () => {
 
     const result = normalizeAndValidateGuidedEnrollment(input);
 
-    expect(result.student.nationalId).toBe('0013540399');
+    expect(result.student.nationalId).toBe('0013540394');
     expect(result.guardian.nationalId).toBe('0499370899');
-    expect(input.student.nationalId).toBe('۰۰۱۳۵۴۰۳۹۹');
+    expect(input.student.nationalId).toBe('۰۰۱۳۵۴۰۳۹۴');
   });
 
   it('rejects unsupported service types', () => {
@@ -112,6 +113,31 @@ describe('guided enrollment policy', () => {
     input.emergencyContact = null;
 
     expect(() => normalizeAndValidateGuidedEnrollment(input)).not.toThrow();
+  });
+
+  it('requires a 021 Tehran home phone', () => {
+    const input = validEnrollment();
+    input.homePhone = '0';
+
+    expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow('A 021 Tehran landline number is required.');
+  });
+
+  it('normalizes and validates the optional student mobile number', () => {
+    const input = validEnrollment();
+    input.student.phoneNumber = '۰۹۱۲۳۴۵۶۷۸۹';
+
+    const result = normalizeAndValidateGuidedEnrollment(input);
+
+    expect(result.student.phoneNumber).toBe('09123456789');
+  });
+
+  it('rejects an invalid optional student mobile number', () => {
+    const input = validEnrollment();
+    input.student.phoneNumber = '091234';
+
+    expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow(
+      'A valid Iranian mobile number is required for the student.',
+    );
   });
 
   it('keeps contract generation independent from persistence', () => {

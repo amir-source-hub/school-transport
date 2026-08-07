@@ -20,7 +20,7 @@ describe('AdminFamilyEnrollmentForm', () => {
           id: 'family-1', username: 'احمدی', primaryPhone: '09121111111', studentCount: 0,
           status: 'فعال', parents: [
             { id: 'f', parentType: 'FATHER', firstName: 'رضا', lastName: 'احمدی', nationalId: '0499370899', phoneNumber: '09121111111', isPrimaryContact: true },
-            { id: 'm', parentType: 'MOTHER', firstName: 'سارا', lastName: 'احمدی', nationalId: '0067749829', phoneNumber: '09122222222', isPrimaryContact: false },
+            { id: 'm', parentType: 'MOTHER', firstName: 'سارا', lastName: 'احمدی', nationalId: '0067749811', phoneNumber: '09122222222', isPrimaryContact: false },
           ],
           addresses: [{ id: 'a', title: 'منزل', province: 'تهران', city: 'تهران', district: null, streetAddress: 'خیابان نمونه', postalCode: '1234567890', latitude: 35.7, longitude: 51.3, isActive: true }],
           emergencyContacts: [{ id: 'e', firstName: 'مریم', lastName: 'احمدی', relationship: 'خاله', phoneNumber: '09123333333', isActive: true }],
@@ -36,14 +36,16 @@ describe('AdminFamilyEnrollmentForm', () => {
       within(studentFieldset).getAllByLabelText('نام خانوادگی', { selector: 'input' })[0],
       'احمدی',
     );
-    await user.type(within(studentFieldset).getByLabelText('کد ملی', { selector: 'input' }), '0013540399');
+    await user.type(within(studentFieldset).getByLabelText('کد ملی', { selector: 'input' }), '1234567891');
+    await user.type(within(studentFieldset).getByLabelText('تلفن منزل (۰۲۱)', { selector: 'input' }), '22113333');
     await user.type(screen.getByPlaceholderText('۱۴۰۵/۰۱/۰۱'), '13980101');
     await user.click(screen.getByRole('button', { name: 'ایجاد ثبت‌نام و ارسال برای اقدام والد' }));
 
     expect(createAdminFamilyEnrollment).toHaveBeenCalledWith(
       'family-1',
       expect.objectContaining({
-        student: expect.objectContaining({ firstName: 'علی', nationalId: '0013540399' }),
+        student: expect.objectContaining({ firstName: 'علی', nationalId: '1234567891' }),
+        homePhone: '02122113333',
         guardian: expect.objectContaining({
           firstName: 'رضا',
           relationshipType: 'FATHER',

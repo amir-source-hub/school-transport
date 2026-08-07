@@ -5,6 +5,7 @@ import {
   normalizePhoneNumber,
 } from './input-normalizers';
 import { isAllowedPersianText, persianTextMessage } from './persian-text';
+import { isValidIranianNationalId } from './national-id';
 
 const required = 'این فیلد الزامی است.';
 
@@ -21,15 +22,23 @@ const name = z
 const nationalId = z
   .string()
   .transform(normalizeNationalId)
-  .refine((value) => /^\d{1,20}$/.test(value), {
-    message: 'کد ملی نامعتبر است. فقط عدد و حداکثر ۲۰ رقم وارد کنید.',
-  });
+  .refine((value) => /^\d{10}$/.test(value), {
+    message: 'کد ملی باید ۱۰ رقم باشد.',
+  })
+  .refine(isValidIranianNationalId, { message: 'کد ملی نامعتبر است.' });
 
 const mobile = z
   .string()
   .transform(normalizePhoneNumber)
   .refine((value) => composeMobileNumber(value).length === 11, {
     message: 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.',
+  });
+
+const homePhone = z
+  .string()
+  .transform(normalizePhoneNumber)
+  .refine((value) => /^021\d{8}$/.test(value), {
+    message: 'شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.',
   });
 
 export const studentSchema = z.object({
@@ -39,6 +48,7 @@ export const studentSchema = z.object({
   nationalId,
   birthDate: z.string().optional(),
   gender: z.enum(['MALE', 'FEMALE']).optional(),
+  phoneNumber: mobile.optional(),
 });
 
 export const parentContactSchema = z.object({
@@ -123,6 +133,7 @@ export const guidedEnrollmentSchema = z.object({
   father: parentContactSchema.nullable().optional(),
   mother: parentContactSchema.nullable().optional(),
   emergencyContact: emergencyContactSchema.nullable().optional(),
+  homePhone,
   address: addressSchema,
   school: schoolSchema,
   service: serviceSchema,

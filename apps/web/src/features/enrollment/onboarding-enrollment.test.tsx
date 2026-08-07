@@ -83,9 +83,10 @@ describe('onboarding guided enrollment funnel', () => {
     const user = userEvent.setup();
     renderOnboarding();
 
+    await fillIn(user, 'مشخصات دانش‌آموز', 'شماره تلفن منزل', '22113333');
     await fillIn(user, 'مشخصات دانش‌آموز', 'نام دانش‌آموز', 'علی');
     await fillIn(user, 'مشخصات دانش‌آموز', 'نام خانوادگی', 'احمدی');
-    await fillIn(user, 'مشخصات دانش‌آموز', 'کد ملی', '1234567890');
+    await fillIn(user, 'مشخصات دانش‌آموز', 'کد ملی', '1234567891');
     await fillIn(user, 'سرپرست', 'نام', 'حسین');
     await fillIn(user, 'سرپرست', 'نام خانوادگی', 'احمدی');
     await fillIn(user, 'سرپرست', 'کد ملی', '1234567891');
@@ -97,7 +98,7 @@ describe('onboarding guided enrollment funnel', () => {
     await fillIn(user, 'اطلاعات پدر', 'شماره همراه', '09123456789');
     await fillIn(user, 'اطلاعات مادر', 'نام', 'مریم');
     await fillIn(user, 'اطلاعات مادر', 'نام خانوادگی', 'رضایی');
-    await fillIn(user, 'اطلاعات مادر', 'کد ملی', '1234567892');
+    await fillIn(user, 'اطلاعات مادر', 'کد ملی', '1234567891');
     await fillIn(user, 'اطلاعات مادر', 'شماره همراه', '09129998877');
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
 

@@ -16,7 +16,7 @@ function terminal(rows: unknown[]) {
 describe('admin guided enrollment transaction', () => {
   it('rolls back and emits no notification when the required audit write fails', async () => {
     const father = { parentType: 'FATHER', firstName: 'Reza', lastName: 'Ahmadi', nationalId: '0499370899', phoneNumber: '09121111111', isPrimaryContact: true };
-    const mother = { parentType: 'MOTHER', firstName: 'Sara', lastName: 'Ahmadi', nationalId: '0067749829', phoneNumber: '09122222222', isPrimaryContact: false };
+    const mother = { parentType: 'MOTHER', firstName: 'Sara', lastName: 'Ahmadi', nationalId: '0067749811', phoneNumber: '09122222222', isPrimaryContact: false };
     const selectResults = [
       [{ id: 'school-1', educationOptions: [{ level: 'Primary', grades: ['First'] }] }],
       [],
@@ -50,13 +50,14 @@ describe('admin guided enrollment transaction', () => {
       audit,
     );
     const input: GuidedEnrollmentData = {
-      student: { firstName: 'Ali', lastName: 'Ahmadi', nationalId: '0013540399' },
+      student: { firstName: 'Ali', lastName: 'Ahmadi', nationalId: '0013540394' },
       guardian: {
         firstName: 'Reza',
         lastName: 'Ahmadi',
         nationalId: '0499370899',
         relationshipType: 'FATHER',
       },
+      homePhone: '02122113333',
       father,
       mother,
       emergencyContact: { firstName: 'Maryam', lastName: 'Ahmadi', relationship: 'Aunt', phoneNumber: '09123333333' },

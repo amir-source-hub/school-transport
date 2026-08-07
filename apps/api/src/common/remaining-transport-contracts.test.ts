@@ -67,6 +67,7 @@ describe('remaining API transport contracts', () => {
   it('requires UUID ownership fields for admin student creation and bounds student text', async () => {
     await expect(body({ userId: 'bad' }, AdminCreateStudentDto)).rejects.toBeInstanceOf(BadRequestException);
     await expect(body({ schoolId: 'bad', firstName: 'x'.repeat(101), lastName: 'B', nationalId: '1234567890', grade: '1' }, CreateStudentDto)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(body({ schoolId: '00000000-0000-4000-8000-000000000001', firstName: 'S', lastName: 'T', nationalId: '1234567891', grade: '1' }, CreateStudentDto)).resolves.toBeInstanceOf(CreateStudentDto);
   });
 
   it('normalizes OTP/admin phones and rejects unknown or malformed auth fields', async () => {
@@ -81,8 +82,9 @@ describe('remaining API transport contracts', () => {
 function guided() {
   const parent = { firstName: 'A', lastName: 'B', nationalId: '۱۲۳۴۵۶۷۸۹۰', phoneNumber: '۰۹۱۲۰۰۰۰۰۰۰' };
   return {
-    student: { firstName: 'S', lastName: 'T', nationalId: '1234567890' },
+    student: { firstName: 'S', lastName: 'T', nationalId: '1234567891' },
     guardian: { firstName: 'G', lastName: 'H', nationalId: '0499370899', relationshipType: 'MOTHER' },
+    homePhone: '02122331122',
     father: parent, mother: { ...parent, phoneNumber: '09120000001' },
     emergencyContact: { firstName: 'E', lastName: 'C', relationship: 'UNCLE', phoneNumber: '09120000002' },
     address: { title: 'Home', province: 'Tehran', city: 'Tehran', streetAddress: 'Street', postalCode: '1234567890', latitude: '35.7', longitude: '51.4' },

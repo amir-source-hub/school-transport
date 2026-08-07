@@ -175,7 +175,7 @@ Primary backend and data files:
 
 - [ ] Add an optional student mobile number to the first step.
 
-- [ ] Validate national IDs as exactly ten digits and verify the Iranian national-ID checksum.
+- [x] Validate national IDs as exactly ten digits and verify the Iranian national-ID checksum.
   - Reuse `apps/web/src/features/enrollment/national-id.ts` and `apps/api/src/common/iranian-national-id.ts` rather than creating inconsistent implementations.
 
 ### 4.2 Date, language, and validation rules for all steps
@@ -557,12 +557,12 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Phone fields
 
-- [ ] Add `studentPhone?: string` and `homePhone: string` to form state, API input, DTO, schema, and persistence destination.
-- [ ] Build a prefix input component or compose an input with a non-editable prefix element.
-- [ ] Store only the nine editable mobile digits in local field state if that simplifies UX, but send/store the normalized full number.
-- [ ] Accept Persian/Arabic digits through normalization, then validate `^09\d{9}$` for mobile and `^021\d{8}$` for the requested Tehran landline.
+- [x] Add `studentPhone?: string` and `homePhone: string` to form state, API input, DTO, schema, and persistence destination.
+- [x] Build a prefix input component or compose an input with a non-editable prefix element.
+- [x] Store only the nine editable mobile digits in local field state if that simplifies UX, but send/store the normalized full number.
+- [x] Accept Persian/Arabic digits through normalization, then validate `^09\d{9}$` for mobile and `^021\d{8}$` for the requested Tehran landline.
 - [ ] Reject extra digits even if pasted. Do not silently truncate a value because that can change the intended phone number.
-- [ ] Provide exact field errors such as `شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.` and `شماره تلفن منزل باید شامل پیش‌شماره ۰۲۱ و ۸ رقم باشد.`
+- [x] Provide exact field errors such as `شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.` and `شماره تلفن منزل باید شامل پیش‌شماره ۰۲۱ و ۸ رقم باشد.`
 
 #### Persian text
 

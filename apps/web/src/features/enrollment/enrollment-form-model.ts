@@ -61,6 +61,8 @@ export type EnrollmentFormState = {
   studentNationalId: string;
   birthDate: string;
   gender: string;
+  studentPhone: string;
+  homePhone: string;
   guardianFirst: string;
   guardianLast: string;
   guardianNationalId: string;
@@ -102,6 +104,8 @@ const emptyForm: EnrollmentFormState = {
   studentNationalId: '',
   birthDate: '',
   gender: '',
+  studentPhone: '',
+  homePhone: '',
   guardianFirst: '',
   guardianLast: '',
   guardianNationalId: '',

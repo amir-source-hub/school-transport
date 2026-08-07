@@ -5,26 +5,26 @@ const validInput = {
   student: {
     firstName: 'علی',
     lastName: 'احمدی',
-    nationalId: '0012345678',
+    nationalId: '0013542419',
     birthDate: '2012-05-14',
     gender: 'MALE',
   },
   guardian: {
     firstName: 'حسین',
     lastName: 'احمدی',
-    nationalId: '0012345679',
+    nationalId: '0084575948',
     relationshipType: 'FATHER',
   },
   father: {
     firstName: 'حسین',
     lastName: 'احمدی',
-    nationalId: '0012345679',
+    nationalId: '0084575948',
     phoneNumber: '09123456789',
   },
   mother: {
     firstName: 'مریم',
     lastName: 'رضایی',
-    nationalId: '0012345680',
+    nationalId: '0013540394',
     phoneNumber: '09129998877',
   },
   emergencyContact: {
@@ -33,6 +33,7 @@ const validInput = {
     relationship: 'خاله',
     phoneNumber: '09121112222',
   },
+  homePhone: '02122113333',
   address: {
     title: 'منزل',
     province: 'تهران',
@@ -50,7 +51,7 @@ describe('guided enrollment schema', () => {
   it('accepts a complete and valid enrollment', () => {
     const result = guidedEnrollmentSchema.safeParse(validInput);
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.student.nationalId).toBe('0012345678');
+    if (result.success) expect(result.data.student.nationalId).toBe('0013542419');
   });
 
   it('accepts an enrollment with no optional contacts', () => {
@@ -86,10 +87,10 @@ describe('guided enrollment schema', () => {
   it('normalizes Persian digits and trims national IDs', () => {
     const result = guidedEnrollmentSchema.safeParse({
       ...validInput,
-      student: { ...validInput.student, nationalId: '۰۱۲۳۴۵۶۷۸۹' },
+      student: { ...validInput.student, nationalId: '۰۰۱۳۵۴۲۴۱۹' },
     });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.student.nationalId).toBe('0123456789');
+    if (result.success) expect(result.data.student.nationalId).toBe('0013542419');
   });
 
   it('rejects a short mobile number with the exact Persian message', () => {
@@ -120,13 +121,12 @@ describe('guided enrollment schema', () => {
   it('rejects an invalid national ID with the exact Persian message', () => {
     const result = guidedEnrollmentSchema.safeParse({
       ...validInput,
-      mother: { ...validInput.mother, nationalId: 'abc123' },
+      mother: { ...validInput.mother, nationalId: '0012345678' },
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.map((issue) => issue.message)).toContain(
-        'کد ملی نامعتبر است. فقط عدد و حداکثر ۲۰ رقم وارد کنید.',
-      );
+      const issues = result.error.issues.map((issue) => issue.message);
+      expect(issues).toContain('کد ملی نامعتبر است.');
     }
   });
 });

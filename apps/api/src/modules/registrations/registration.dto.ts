@@ -14,6 +14,7 @@ export class StudentInputDto extends IdentityInputDto {
   @IsOptional() @IsUUID(undefined, { message: 'شناسه دانشآموز معتبر نیست.' }) id?: string;
   @IsOptional() @Transform(digits) @IsDateString({ strict: true }, { message: 'تاریخ تولد باید معتبر باشد.' }) birthDate?: string;
   @IsOptional() @IsIn(['MALE', 'FEMALE'], { message: 'جنسیت باید پسر یا دختر باشد.' }) gender?: string;
+  @IsOptional() @Transform(digits) @Matches(/^09\d{9}$/, { message: 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.' }) phoneNumber?: string;
 }
 
 export class ParentContactInputDto extends IdentityInputDto {
@@ -61,6 +62,7 @@ export class ServiceInputDto {
 export class GuidedEnrollmentDto {
   @ValidateNested() @Type(() => StudentInputDto) student!: StudentInputDto;
   @ValidateNested() @Type(() => GuardianInputDto) guardian!: GuardianInputDto;
+  @Transform(digits) @Matches(/^021\d{8}$/, { message: 'شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.' }) homePhone!: string;
   @ValidateNested() @IsOptional() @Type(() => ParentContactInputDto) father?: ParentContactInputDto;
   @ValidateNested() @IsOptional() @Type(() => ParentContactInputDto) mother?: ParentContactInputDto;
   @ValidateNested() @IsOptional() @Type(() => EmergencyContactInputDto) emergencyContact?: EmergencyContactInputDto;

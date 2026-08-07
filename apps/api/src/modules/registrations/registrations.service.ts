@@ -155,6 +155,7 @@ export class RegistrationsService {
             lastName: parents.lastName,
             nationalId: parents.nationalId,
             phoneNumber: parents.phoneNumber,
+            homePhone: parents.homePhone,
             relationshipType: parents.relationshipType,
             isPrimaryContact: parents.isPrimaryContact,
           })
@@ -167,6 +168,7 @@ export class RegistrationsService {
             lastName: string;
             nationalId: string;
             phoneNumber: string;
+            homePhone?: string | null;
             relationshipType?: string;
             relationshipDescription?: string | null;
           } | null;
@@ -178,6 +180,7 @@ export class RegistrationsService {
               lastName: data.guardian.lastName,
               nationalId: data.guardian.nationalId,
               phoneNumber: guardianPhone,
+              homePhone: data.homePhone,
               relationshipType: data.guardian.relationshipType,
               relationshipDescription:
                 data.guardian.relationshipType === 'OTHER'
@@ -197,6 +200,7 @@ export class RegistrationsService {
               existing.lastName === section.lastName &&
               existing.nationalId === section.nationalId &&
               existing.phoneNumber === section.phoneNumber &&
+              (existing.homePhone ?? null) === (section.homePhone ?? null) &&
               (!existing.relationshipType || existing.relationshipType === section.relationshipType);
             if (!unchanged) {
               throw new ConflictError(
@@ -213,6 +217,7 @@ export class RegistrationsService {
               lastName: section.lastName,
               nationalId: section.nationalId,
               phoneNumber: section.phoneNumber,
+              homePhone: section.homePhone,
               relationshipType: section.relationshipType,
               relationshipDescription: section.relationshipDescription,
               isPrimaryContact: false,
@@ -255,6 +260,7 @@ export class RegistrationsService {
               schoolId: data.school.schoolId,
               birthDate: data.student.birthDate || null,
               gender: data.student.gender || null,
+              phoneNumber: data.student.phoneNumber ?? null,
               grade: data.school.grade,
               className: data.school.educationLevel,
               updatedAt: new Date(),
@@ -270,6 +276,7 @@ export class RegistrationsService {
             nationalId: data.student.nationalId,
             birthDate: data.student.birthDate || null,
             gender: data.student.gender || null,
+            phoneNumber: data.student.phoneNumber ?? null,
             grade: data.school.grade,
             className: data.school.educationLevel,
           });
@@ -322,6 +329,7 @@ export class RegistrationsService {
         const snapshot = {
           student: data.student,
           guardian: { ...data.guardian, phoneNumber: guardianPhone },
+          homePhone: data.homePhone,
           father: data.father ?? null,
           mother: data.mother ?? null,
           emergencyContact: data.emergencyContact ?? null,
