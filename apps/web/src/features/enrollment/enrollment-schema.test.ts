@@ -130,3 +130,74 @@ describe('guided enrollment schema', () => {
     }
   });
 });
+
+describe('mobile, landline, and postal code validation', () => {
+  it('accepts and normalizes a Persian-digit mobile number', () => {
+    const result = guidedEnrollmentSchema.safeParse({
+      ...validInput,
+      father: { ...validInput.father, phoneNumber: '۰۹۱۲۳۴۵۶۷۸۹' },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it.each(['0912345678', '091234567890', '02622113333'])(
+    'rejects an invalid mobile number: %s',
+    (phoneNumber) => {
+      const result = guidedEnrollmentSchema.safeParse({
+        ...validInput,
+        father: { ...validInput.father, phoneNumber },
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.map((issue) => issue.message)).toContain(
+          'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.',
+        );
+      }
+    },
+  );
+
+  it('accepts a Persian-digit Tehran landline home phone', () => {
+    const result = guidedEnrollmentSchema.safeParse({
+      ...validInput,
+      homePhone: '۰۲۱۲۲۱۱۳۳۳۳',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it.each(['02622113333', '0212211333', '021221133330'])(
+    'rejects an invalid home phone: %s',
+    (homePhone) => {
+      const result = guidedEnrollmentSchema.safeParse({ ...validInput, homePhone });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.map((issue) => issue.message)).toContain(
+          'شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.',
+        );
+      }
+    },
+  );
+
+  it('accepts a Persian-digit ten-digit postal code', () => {
+    const result = guidedEnrollmentSchema.safeParse({
+      ...validInput,
+      address: { ...validInput.address, postalCode: '۱۱۱۱۱۱۱۲۲۱' },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it.each(['111111122', '11111112211', '123456789a'])(
+    'rejects an invalid postal code: %s',
+    (postalCode) => {
+      const result = guidedEnrollmentSchema.safeParse({
+        ...validInput,
+        address: { ...validInput.address, postalCode },
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.map((issue) => issue.message)).toContain(
+          'کد پستی باید ۱۰ رقم باشد.',
+        );
+      }
+    },
+  );
+});

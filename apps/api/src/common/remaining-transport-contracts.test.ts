@@ -88,6 +88,22 @@ describe('remaining API transport contracts', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('rejects invalid mobile, Tehran landline, and postal code values', async () => {
+    const value = guided();
+    await expect(
+      body({ ...value, father: { ...value.father, phoneNumber: '0912' } }, GuidedEnrollmentDto),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      body({ ...value, homePhone: '02622113333' }, GuidedEnrollmentDto),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      body(
+        { ...value, address: { ...value.address, postalCode: '12345' } },
+        GuidedEnrollmentDto,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('validates nested family and admin-parent payloads', async () => {
     await expect(body({ mother: {}, unexpected: true }, CompleteFamilyDto)).rejects.toBeInstanceOf(BadRequestException);
     const parent = await body({ parentType: 'MOTHER', firstName: 'A', lastName: 'B', nationalId: '۱۲۳۴۵۶۷۸۹۰', phoneNumber: '۰۹۱۲۰۰۰۰۰۰۰' }, AdminCreateParentDto);
