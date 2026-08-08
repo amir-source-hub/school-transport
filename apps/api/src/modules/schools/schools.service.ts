@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { schools } from '../../database/schemas';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import type { SchoolEducationOption } from '../../database/schemas/schools.schema';
@@ -11,15 +11,49 @@ export class SchoolsService {
   constructor(private readonly db: DatabaseService) {}
 
   async getAll(includeInactive = false) {
-    const query = this.db.db.select().from(schools);
-    if (!includeInactive) {
-      return query.where(eq(schools.isActive, true));
+    if (includeInactive) {
+      return this.db.db.select().from(schools);
     }
-    return query;
+    return this.db.db
+      .select({
+        id: schools.id,
+        name: schools.name,
+        schoolType: schools.schoolType,
+        genderType: schools.genderType,
+        province: schools.province,
+        city: schools.city,
+        district: schools.district,
+        address: schools.address,
+        phoneNumber: schools.phoneNumber,
+        educationOptions: schools.educationOptions,
+      })
+      .from(schools)
+      .where(eq(schools.isActive, true));
   }
 
   async getById(id: string) {
     const result = await this.db.db.select().from(schools).where(eq(schools.id, id)).limit(1);
+    if (result.length === 0) throw new NotFoundError('School', id);
+    return result[0];
+  }
+
+  async getPublicById(id: string) {
+    const result = await this.db.db
+      .select({
+        id: schools.id,
+        name: schools.name,
+        schoolType: schools.schoolType,
+        genderType: schools.genderType,
+        province: schools.province,
+        city: schools.city,
+        district: schools.district,
+        address: schools.address,
+        phoneNumber: schools.phoneNumber,
+        educationOptions: schools.educationOptions,
+      })
+      .from(schools)
+      .where(and(eq(schools.id, id), eq(schools.isActive, true)))
+      .limit(1);
     if (result.length === 0) throw new NotFoundError('School', id);
     return result[0];
   }
@@ -33,6 +67,8 @@ export class SchoolsService {
     district?: string;
     address: string;
     phoneNumber?: string;
+    managerName?: string;
+    managerPhone?: string;
     educationOptions?: SchoolEducationOption[];
   }) {
     const id = generateId();
@@ -41,6 +77,8 @@ export class SchoolsService {
       ...data,
       district: data.district || null,
       phoneNumber: data.phoneNumber || null,
+      managerName: data.managerName || null,
+      managerPhone: data.managerPhone || null,
       educationOptions: data.educationOptions ?? [],
     });
     return this.getById(id);
@@ -57,14 +95,20 @@ export class SchoolsService {
       district: string;
       address: string;
       phoneNumber: string;
+      managerName: string;
+      managerPhone: string;
       educationOptions: SchoolEducationOption[];
       isActive: boolean;
     }>,
   ) {
     await this.getById(id);
+    const next = { ...data } as Record<string, unknown>;
+    if ('phoneNumber' in data) next.phoneNumber = data.phoneNumber || null;
+    if ('managerName' in data) next.managerName = data.managerName || null;
+    if ('managerPhone' in data) next.managerPhone = data.managerPhone || null;
     await this.db.db
       .update(schools)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...(next as typeof data), updatedAt: new Date() })
       .where(eq(schools.id, id));
     return this.getById(id);
   }

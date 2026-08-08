@@ -1,7 +1,7 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { getAdminSchools } from '@/features/admin-schools/admin-schools-api';
+import { getAdminSchools, GENDER_TYPE_LABELS, SCHOOL_TYPE_LABELS } from '@/features/admin-schools/admin-schools-api';
 import { ArchiveSchoolDialog } from '@/features/admin-schools/archive-action';
 import { SchoolFormDialog } from '@/features/admin-schools/school-form-dialog';
 
@@ -38,12 +38,21 @@ export default async function SchoolsPage() {
               {school.city}، {school.district ?? school.province}
             </p>
             <p className="text-sm text-muted">
-              {school.schoolType} — {school.genderType}
+              {SCHOOL_TYPE_LABELS[school.schoolType] ?? school.schoolType} —{' '}
+              {GENDER_TYPE_LABELS[school.genderType] ?? school.genderType}
             </p>
             <p className="mt-3 text-sm">{school.address}</p>
             {school.phoneNumber && (
               <p className="mt-1 text-sm" dir="ltr">
                 {school.phoneNumber}
+              </p>
+            )}
+            {(school.managerName || school.managerPhone) && (
+              <p className="mt-1 text-sm text-muted">
+                مدیر: {school.managerName ?? '—'}
+                {school.managerPhone && (
+                  <span dir="ltr" className="ms-2">{school.managerPhone}</span>
+                )}
               </p>
             )}
             <div className="mt-4 flex gap-2 border-t border-border pt-4">

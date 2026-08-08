@@ -50,4 +50,16 @@ describe('scoped transport contracts', () => {
     expect(dto.phoneNumber).toBe('02112345678');
     await expect(body({ educationOptions: [{ level: 'Primary', grades: ['1'], extra: true }] }, UpdateSchoolDto)).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('accepts SPECIAL and INTERNATIONAL school types and normalizes manager contacts', async () => {
+    const dto = await body({
+      name: 'School', schoolType: 'SPECIAL', genderType: 'MIXED', province: 'Tehran', city: 'Tehran',
+      address: 'Street', managerName: 'مدیر مدرسه', managerPhone: '۰۹۱۲۳۴۵۶۷۸۹',
+    }, CreateSchoolDto);
+    expect(dto.schoolType).toBe('SPECIAL');
+    expect(dto.managerPhone).toBe('09123456789');
+    await expect(body({ schoolType: 'INTERNATIONAL', genderType: 'MIXED' }, UpdateSchoolDto)).resolves.toMatchObject({ schoolType: 'INTERNATIONAL' });
+    await expect(body({ schoolType: 'OTHER' }, UpdateSchoolDto)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(body({ managerPhone: 'abc' }, UpdateSchoolDto)).rejects.toBeInstanceOf(BadRequestException);
+  });
 });

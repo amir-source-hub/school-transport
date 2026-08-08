@@ -15,6 +15,8 @@ export const schools = pgTable('schools', {
   district: varchar('district', { length: 100 }),
   address: varchar('address', { length: 500 }).notNull(),
   phoneNumber: varchar('phone_number', { length: 20 }),
+  managerName: varchar('manager_name', { length: 100 }),
+  managerPhone: varchar('manager_phone', { length: 20 }),
   educationOptions: jsonb('education_options')
     .$type<SchoolEducationOption[]>()
     .notNull()

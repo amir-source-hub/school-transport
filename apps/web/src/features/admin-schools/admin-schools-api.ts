@@ -11,12 +11,27 @@ const rawSchoolSchema = z.object({
   district: z.string().nullable(),
   address: z.string(),
   phoneNumber: z.string().nullable(),
+  managerName: z.string().nullable(),
+  managerPhone: z.string().nullable(),
   educationOptions: z.array(z.object({
     level: z.string(),
     grades: z.array(z.string()),
   })),
   isActive: z.boolean(),
 });
+
+export const SCHOOL_TYPE_LABELS: Record<string, string> = {
+  PUBLIC: 'دولتی',
+  PRIVATE: 'خصوصی',
+  SPECIAL: 'استثنائی',
+  INTERNATIONAL: 'بین‌المللی',
+};
+
+export const GENDER_TYPE_LABELS: Record<string, string> = {
+  MALE: 'پسرانه',
+  FEMALE: 'دخترانه',
+  MIXED: 'مختلط',
+};
 
 export const schoolSchema = rawSchoolSchema.extend({ status: z.string() });
 export const schoolsSchema = z.array(schoolSchema);
@@ -29,6 +44,8 @@ export const createSchoolSchema = z.object({
   district: z.string().optional(),
   address: z.string().min(1, 'نشانی الزامی است'),
   phoneNumber: z.string().optional(),
+  managerName: z.string().optional(),
+  managerPhone: z.string().optional(),
   educationOptions: z.array(z.object({
     level: z.string().min(1),
     grades: z.array(z.string().min(1)).min(1),

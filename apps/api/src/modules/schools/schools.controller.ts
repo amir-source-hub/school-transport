@@ -20,7 +20,7 @@ export class SchoolsController {
   @Public()
   @Get(':id')
   async getById(@Param('id', new ParseUUIDPipe()) id: string) {
-    const school = await this.schoolsService.getById(id);
+    const school = await this.schoolsService.getPublicById(id);
     return successResponse(school);
   }
 }

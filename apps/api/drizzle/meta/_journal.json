@@ -134,6 +134,13 @@
       "when": 1786156081451,
       "tag": "0018_contract_signer_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786186250553,
+      "tag": "0019_careless_gideon",
+      "breakpoints": true
     }
   ]
 }
