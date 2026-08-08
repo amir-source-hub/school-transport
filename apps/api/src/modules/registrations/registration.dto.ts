@@ -1,6 +1,7 @@
 import { Transform, Type } from 'class-transformer';
-import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, Length, Matches, Max, Min, ValidateIf, ValidateNested } from 'class-validator';
+import { IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Length, Matches, Max, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { normalizeIranianDigits } from '../../common/iranian-national-id';
+import { REGISTRATION_STATUS_GROUP_VALUES } from './registration-status-groups';
 
 const digits = ({ value }: { value: unknown }) => typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
 
@@ -80,3 +81,35 @@ export class CreateRegistrationDto {
 
 export class RejectRegistrationDto { @IsOptional() @IsString({ message: 'دلیل باید متن باشد.' }) @Length(1, 1000, { message: 'دلیل باید حداکثر ۱۰۰۰ نویسه باشد.' }) reason?: string; }
 export class CorrectionDto { @IsString({ message: 'پیام باید متن باشد.' }) @Length(1, 1000, { message: 'پیام باید حداکثر ۱۰۰۰ نویسه باشد.' }) message!: string; }
+
+export const ADMIN_ENROLLMENT_SORT_KEYS = ['studentName', 'schoolName', 'createdAt'] as const;
+
+export class AdminEnrollmentListQueryDto {
+  @IsOptional()
+  @IsIn(REGISTRATION_STATUS_GROUP_VALUES, { message: 'گروه وضعیت انتخاب‌شده معتبر نیست.' })
+  status = 'all';
+
+  @IsOptional()
+  @IsIn(ADMIN_ENROLLMENT_SORT_KEYS, { message: 'مرتب‌سازی انتخاب‌شده معتبر نیست.' })
+  sort: (typeof ADMIN_ENROLLMENT_SORT_KEYS)[number] = 'createdAt';
+
+  @IsOptional()
+  @IsIn(['asc', 'desc'], { message: 'جهت مرتب‌سازی باید صعودی یا نزولی باشد.' })
+  direction: 'asc' | 'desc' = 'desc';
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  q?: string;
+
+  @Type(() => Number)
+  @IsInt({ message: 'شماره صفحه باید عدد باشد.' })
+  @Min(1, { message: 'شماره صفحه باید حداقل ۱ باشد.' })
+  page = 1;
+
+  @Type(() => Number)
+  @IsInt({ message: 'اندازه صفحه باید عدد باشد.' })
+  @Min(1, { message: 'اندازه صفحه باید حداقل ۱ باشد.' })
+  @Max(500, { message: 'اندازه صفحه باید حداکثر ۵۰۰ باشد.' })
+  pageSize = 20;
+}

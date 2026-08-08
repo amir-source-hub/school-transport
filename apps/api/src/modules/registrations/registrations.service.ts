@@ -28,6 +28,8 @@ import {
 } from './guided-enrollment';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { Inject } from '@nestjs/common';
+import type { AdminEnrollmentListQueryDto } from './registration.dto';
+import { expandRegistrationStatusGroup } from './registration-status-groups';
 import type { DatabaseTransaction } from '../../database/payment-plan';
 
 type AdminEnrollmentAudit = { adminId: string; ipAddress?: string };
@@ -405,6 +407,54 @@ export class RegistrationsService {
   }
 
   async getAllForAdmin() {
+    const rows = await this.materializeAdminRows();
+    return rows;
+  }
+
+  async getEnrollmentsForAdminPage(query: AdminEnrollmentListQueryDto) {
+    const rows = await this.materializeAdminRows();
+    const expanded = expandRegistrationStatusGroup(query.status);
+    let items = expanded
+      ? rows.filter((row) => expanded.includes(row.registrationStatus))
+      : rows;
+
+    const search = query.q?.trim().toLocaleLowerCase('fa-IR');
+    if (search) {
+      items = items.filter((row) =>
+        `${row.id} ${row.studentName} ${row.familyName} ${row.schoolName}`
+          .toLocaleLowerCase('fa-IR')
+          .includes(search),
+      );
+    }
+
+    const direction = query.direction === 'asc' ? 1 : -1;
+    items = [...items].sort((a, b) => {
+      const left = a[
+        query.sort === 'studentName'
+          ? 'studentName'
+          : query.sort === 'schoolName'
+            ? 'schoolName'
+            : 'createdAt'
+      ];
+      const right = b[
+        query.sort === 'studentName'
+          ? 'studentName'
+          : query.sort === 'schoolName'
+            ? 'schoolName'
+            : 'createdAt'
+      ];
+      return direction * String(left).localeCompare(String(right), 'fa');
+    });
+
+    const total = items.length;
+    const start = (query.page - 1) * query.pageSize;
+    return {
+      items: items.slice(start, start + query.pageSize),
+      total,
+    };
+  }
+
+  private async materializeAdminRows() {
     const rows = await this.db.db
       .select({
         ...getTableColumns(serviceRegistrations),

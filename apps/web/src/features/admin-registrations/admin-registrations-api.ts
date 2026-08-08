@@ -18,20 +18,19 @@ export const registrationDetailSchema = registrationSchema.extend({
 });
 export type Registration = z.infer<typeof registrationSchema>;
 export type RegistrationDetail = z.infer<typeof registrationDetailSchema>;
-export const registrationStatuses = [
-  'همه',
-  'ارسال‌شده',
-  'در حال بررسی',
-  'نیازمند اصلاح',
-  'تأییدشده',
-  'ردشده',
-  'در انتظار قیمت',
-  'در انتظار قرارداد',
-  'قرارداد آماده',
-  'قرارداد پذیرفته‌شده',
-  'پیش‌پرداخت انجام‌شده',
-  'در حال پرداخت اقساط',
-  'تسویه کامل',
+export const registrationStatusGroups = [
+  { value: 'all', label: 'همه' },
+  { value: 'submitted', label: 'ارسال‌شده' },
+  { value: 'under_review', label: 'در حال بررسی' },
+  { value: 'needs_correction', label: 'نیازمند اصلاح' },
+  { value: 'approved', label: 'تأییدشده' },
+  { value: 'rejected', label: 'ردشده' },
+  { value: 'waiting_contract', label: 'در انتظار قرارداد' },
+  { value: 'contract_ready', label: 'قرارداد آماده' },
+  { value: 'accepted_contract', label: 'قرارداد پذیرفته‌شده' },
+  { value: 'prepaid', label: 'پیش‌پرداخت انجام‌شده' },
+  { value: 'installments', label: 'در حال پرداخت اقساط' },
+  { value: 'completed', label: 'تسویه کامل' },
 ] as const;
 
 const rawSchema = z.object({
@@ -98,9 +97,43 @@ const map = (raw: z.infer<typeof rawSchema>): RegistrationDetail => {
     schoolId: raw.schoolId,
   };
 };
-export async function getAdminRegistrations() {
-  const response = await apiRequest<unknown>('/admin/enrollments', { cache: 'no-store' });
-  return { registrations: z.array(rawSchema).parse(response.data).map(map) };
+export type AdminEnrollmentListParams = {
+  q?: string;
+  status?: string;
+  sort?: 'studentName' | 'schoolName' | 'createdAt';
+  direction?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
+};
+
+export type AdminEnrollmentListPagination = {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+};
+
+export async function getAdminRegistrations(
+  params: AdminEnrollmentListParams = {},
+): Promise<{
+  registrations: RegistrationDetail[];
+  pagination: AdminEnrollmentListPagination;
+}> {
+  const search = new URLSearchParams();
+  if (params.q) search.set('q', params.q);
+  if (params.status && params.status !== 'all') search.set('status', params.status);
+  if (params.sort && params.sort !== 'createdAt') search.set('sort', params.sort);
+  if (params.direction && params.direction !== 'desc') search.set('direction', params.direction);
+  if (params.page && params.page > 1) search.set('page', String(params.page));
+  if (params.pageSize) search.set('pageSize', String(params.pageSize));
+  const qs = search.toString();
+  const response = await apiRequest<unknown>(`/admin/enrollments${qs ? `?${qs}` : ''}`, {
+    cache: 'no-store',
+  });
+  return {
+    registrations: z.array(rawSchema).parse(response.data).map(map),
+    pagination: response.pagination ?? { page: 1, pageSize: 20, totalItems: 0, totalPages: 1 },
+  };
 }
 export async function getAdminRegistration(id: string) {
   const response = await apiRequest<unknown>(`/admin/enrollments/${id}`, { cache: 'no-store' });

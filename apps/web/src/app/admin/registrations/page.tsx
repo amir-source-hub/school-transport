@@ -9,54 +9,49 @@ import { AutoSubmitForm } from '@/components/forms/auto-submit-form';
 import {
   getAdminRegistrations,
   getRegistrationTone,
-  registrationStatuses,
+  registrationStatusGroups,
 } from '@/features/admin-registrations/admin-registrations-api';
 
 export const metadata = { title: 'درخواست‌های ثبت‌نام' };
 
-type SearchParams = Promise<{ q?: string; status?: string; sort?: string; page?: string }>;
+const PAGE_SIZE = 5;
+
+type SearchParams = Promise<{
+  q?: string;
+  status?: string;
+  sort?: string;
+  direction?: string;
+  page?: string;
+}>;
 
 export default async function RegistrationsPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const query = params.q?.trim() ?? '';
-  const status = registrationStatuses.includes(
-    params.status as (typeof registrationStatuses)[number],
-  )
+  const status = registrationStatusGroups.some((group) => group.value === params.status)
     ? params.status!
-    : 'همه';
-  const sort = params.sort === 'student' ? 'student' : 'tracking';
-  const requestedPage = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
+    : 'all';
+  const sort = ['studentName', 'schoolName', 'createdAt'].includes(params.sort ?? '')
+    ? (params.sort as 'studentName' | 'schoolName' | 'createdAt')
+    : 'createdAt';
+  const direction = params.direction === 'asc' ? 'asc' : 'desc';
+  const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
 
-  const { registrations } = await getAdminRegistrations();
+  const { registrations, pagination } = await getAdminRegistrations({
+    q: query || undefined,
+    status,
+    sort,
+    direction,
+    page,
+    pageSize: PAGE_SIZE,
+  });
 
-  const filtered = registrations
-    .filter(
-      (item) => status === 'همه' || item.status === status || item.status.startsWith(`${status} (`),
-    )
-    .filter(
-      (item) =>
-        !query ||
-        `${item.trackingCode} ${item.studentName} ${item.familyName} ${item.schoolName}`.includes(
-          query,
-        ),
-    )
-    .toSorted((a, b) =>
-      sort === 'student'
-        ? a.studentName.localeCompare(b.studentName, 'fa')
-        : a.trackingCode.localeCompare(b.trackingCode, 'fa'),
-    );
-
-  const pageSize = 5;
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(requestedPage, totalPages);
-  const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  const getPageHref = (page: number) => {
+  const getPageHref = (nextPage: number) => {
     const next = new URLSearchParams();
     if (query) next.set('q', query);
-    if (status !== 'همه') next.set('status', status);
-    if (sort !== 'tracking') next.set('sort', sort);
-    next.set('page', String(page));
+    if (status !== 'all') next.set('status', status);
+    if (sort !== 'createdAt') next.set('sort', sort);
+    if (direction !== 'desc') next.set('direction', direction);
+    next.set('page', String(nextPage));
     return `/admin/registrations?${next.toString()}`;
   };
 
@@ -100,8 +95,10 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
               defaultValue={status}
               className="mt-2 min-h-12 w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm"
             >
-              {registrationStatuses.map((option) => (
-                <option key={option}>{option}</option>
+              {registrationStatusGroups.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
               ))}
             </select>
           </label>
@@ -112,14 +109,15 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
               defaultValue={sort}
               className="mt-2 min-h-12 w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm"
             >
-              <option value="tracking">کد پیگیری</option>
-              <option value="student">نام دانش‌آموز</option>
+              <option value="createdAt">جدیدترین</option>
+              <option value="studentName">نام دانش‌آموز</option>
+              <option value="schoolName">مدرسه</option>
             </select>
           </label>
         </AutoSubmitForm>
       </Card>
 
-      {visible.length === 0 ? (
+      {registrations.length === 0 ? (
         <Card>
           <p className="font-black">نتیجه‌ای پیدا نشد</p>
           <p className="mt-2 text-sm text-muted">عبارت یا وضعیت دیگری را امتحان کنید.</p>
@@ -127,7 +125,7 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
       ) : (
         <>
           <div className="grid gap-3 md:hidden">
-            {visible.map((item) => (
+            {registrations.map((item) => (
               <Card key={item.id}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -172,7 +170,7 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((item) => (
+                  {registrations.map((item) => (
                     <tr key={item.id} className="border-b border-border last:border-0">
                       <td className="px-3 py-3 font-bold" dir="ltr">
                         {item.trackingCode}
@@ -193,9 +191,14 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
               </table>
             </div>
           </Card>
-          <Pagination currentPage={currentPage} totalPages={totalPages} getHref={getPageHref} />
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            getHref={getPageHref}
+          />
         </>
       )}
     </div>
   );
 }
+

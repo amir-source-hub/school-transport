@@ -7,7 +7,7 @@ import {
   students,
   users,
 } from '../../database/schemas';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -15,6 +15,11 @@ import { EditableStudentFields, parseEditableStudentFields } from './student-upd
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import { assertStudentCapacity, getStudentCapacity } from '../../database/student-capacity';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
+import type { AdminStudentListQueryDto } from './student-list.dto';
+import {
+  buildAdminStudentArchiveWhere,
+  buildAdminStudentOrderBy,
+} from './student-list.sort';
 
 @Injectable()
 export class StudentsService {
@@ -146,6 +151,44 @@ export class StudentsService {
           : student.username,
       };
     });
+  }
+
+  async getStudentsForAdminPage(query: AdminStudentListQueryDto) {
+    const { archive, sort, direction, page, pageSize } = query;
+    const archiveFilter =
+      buildAdminStudentArchiveWhere(archive) ?? sql`1 = 1`;
+    const [countRow] = await this.db.db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(students)
+      .where(archiveFilter);
+
+    const rows = await this.db.db
+      .select({
+        ...getTableColumns(students),
+        schoolName: schools.name,
+        username: users.username,
+      })
+      .from(students)
+      .innerJoin(schools, eq(schools.id, students.schoolId))
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(archiveFilter)
+      .orderBy(...buildAdminStudentOrderBy(sort, direction))
+      .offset((page - 1) * pageSize)
+      .limit(pageSize);
+
+    const parentRows = await this.db.db.select().from(parents);
+    const items = rows.map((student) => {
+      const familyParent =
+        parentRows.find((parent) => parent.userId === student.userId && parent.isPrimaryContact) ??
+        parentRows.find((parent) => parent.userId === student.userId);
+      return {
+        ...student,
+        familyName: familyParent
+          ? `${familyParent.firstName} ${familyParent.lastName}`
+          : student.username,
+      };
+    });
+    return { items, total: countRow?.total ?? 0 };
   }
 
   async getCapacity(userId: string) {

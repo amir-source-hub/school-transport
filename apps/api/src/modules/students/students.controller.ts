@@ -1,11 +1,12 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
-import { successResponse } from '../../common/response';
+import { paginatedResponse, successResponse } from '../../common/response';
 import { AdminCreateStudentDto, ArchiveStudentDto, CreateStudentDto, UpdateStudentDto } from './student.dto';
 import { CreateLimitRequestDto, RejectLimitRequestDto } from './student-limit-request.dto';
+import { AdminStudentListQueryDto } from './student-list.dto';
 import { AuthenticatedRequest } from '../../common/http-request';
 
 @UseGuards(AuthGuard)
@@ -80,8 +81,9 @@ export class AdminStudentsController {
   constructor(private readonly studentsService: StudentsService) {}
 
   @Get()
-  async getAll() {
-    return successResponse(await this.studentsService.getAllForAdmin());
+  async getAll(@Query() query: AdminStudentListQueryDto) {
+    const { items, total } = await this.studentsService.getStudentsForAdminPage(query);
+    return paginatedResponse(items, query.page, query.pageSize, total);
   }
 
   @Get('limit-requests')

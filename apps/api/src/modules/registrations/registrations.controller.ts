@@ -1,12 +1,12 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
 import { RegistrationsService } from './registrations.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
-import { successResponse } from '../../common/response';
+import { paginatedResponse, successResponse } from '../../common/response';
 import { AuthenticatedRequest } from '../../common/http-request';
-import { CorrectionDto, CreateRegistrationDto, GuidedEnrollmentDto, RejectRegistrationDto } from './registration.dto';
+import { AdminEnrollmentListQueryDto, CorrectionDto, CreateRegistrationDto, GuidedEnrollmentDto, RejectRegistrationDto } from './registration.dto';
 
 @UseGuards(AuthGuard)
 @Controller('enrollments')
@@ -104,8 +104,9 @@ export class AdminRegistrationsController {
   }
 
   @Get()
-  async getAll() {
-    return successResponse(await this.registrationsService.getAllForAdmin());
+  async getAll(@Query() query: AdminEnrollmentListQueryDto) {
+    const { items, total } = await this.registrationsService.getEnrollmentsForAdminPage(query);
+    return paginatedResponse(items, query.page, query.pageSize, total);
   }
 
   @Get(':id')

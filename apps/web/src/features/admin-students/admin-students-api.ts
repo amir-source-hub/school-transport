@@ -20,8 +20,32 @@ export const adminStudentsSchema = z.array(rawAdminStudentSchema);
 
 export type AdminStudent = z.infer<typeof adminStudentSchema>;
 
-export async function getAdminStudents(): Promise<{ students: AdminStudent[] }> {
-  const response = await apiRequest<unknown>('/admin/students', {
+export type AdminStudentListParams = {
+  archive?: 'all' | 'active' | 'archived';
+  sort?: 'studentName' | 'schoolName' | 'createdAt';
+  direction?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
+};
+
+export type AdminStudentListPagination = {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+};
+
+export async function getAdminStudents(
+  params: AdminStudentListParams = {},
+): Promise<{ students: AdminStudent[]; pagination: AdminStudentListPagination }> {
+  const search = new URLSearchParams();
+  if (params.archive && params.archive !== 'all') search.set('archive', params.archive);
+  if (params.sort && params.sort !== 'createdAt') search.set('sort', params.sort);
+  if (params.direction && params.direction !== 'desc') search.set('direction', params.direction);
+  if (params.page && params.page > 1) search.set('page', String(params.page));
+  if (params.pageSize) search.set('pageSize', String(params.pageSize));
+  const qs = search.toString();
+  const response = await apiRequest<unknown>(`/admin/students${qs ? `?${qs}` : ''}`, {
     cache: 'no-store',
     timeoutMs: 8_000,
   });
@@ -30,6 +54,7 @@ export async function getAdminStudents(): Promise<{ students: AdminStudent[] }> 
       ...student,
       status: student.isActive ? 'فعال' : 'بایگانی‌شده',
     })),
+    pagination: response.pagination ?? { page: 1, pageSize: 20, totalItems: 0, totalPages: 1 },
   };
 }
 

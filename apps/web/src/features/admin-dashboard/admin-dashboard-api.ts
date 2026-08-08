@@ -22,7 +22,7 @@ export type RecentEnrollment = z.infer<typeof recentEnrollmentSchema>;
 
 export async function getAdminDashboard() {
   const [{ registrations }, { contracts }, { payments }] = await Promise.all([
-    getAdminRegistrations(),
+    getAdminRegistrations({ pageSize: 500 }),
     getAdminContracts(),
     getAdminPayments(),
   ]);
