@@ -108,4 +108,32 @@ export class AdminFamiliesController {
   async deleteParent(@Param('id', new ParseUUIDPipe()) id: string, @Param('parentId', new ParseUUIDPipe()) parentId: string) {
     return successResponse(await this.familiesService.adminDeleteParent(id, parentId));
   }
+
+  @Post(':id/addresses')
+  async addAddress(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: AddAddressDto,
+  ) {
+    return successResponse(await this.familiesService.addAddress(id, dto));
+  }
+
+  @Patch(':id/addresses/:addressId')
+  async updateAddress(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('addressId', new ParseUUIDPipe()) addressId: string,
+    @Body() dto: AddressMutationDto,
+  ) {
+    await this.familiesService.updateAddress(addressId, id, { ...dto });
+    return successResponse({ updated: true });
+  }
+
+  @Patch(':id/emergency-contacts/:contactId')
+  async updateEmergencyContact(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('contactId', new ParseUUIDPipe()) contactId: string,
+    @Body() dto: EmergencyMutationDto,
+  ) {
+    await this.familiesService.updateEmergencyContact(contactId, id, dto);
+    return successResponse({ updated: true });
+  }
 }

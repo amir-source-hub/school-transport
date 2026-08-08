@@ -280,6 +280,8 @@ export class FamiliesService {
       district?: string;
       streetAddress: string;
       postalCode?: string;
+      latitude?: number;
+      longitude?: number;
     },
   ): Promise<AddressProfile> {
     const id = generateId();
@@ -292,6 +294,8 @@ export class FamiliesService {
       district: data.district || null,
       streetAddress: data.streetAddress,
       postalCode: data.postalCode || null,
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null,
     });
 
     return { id, ...data, isActive: true } as AddressProfile;

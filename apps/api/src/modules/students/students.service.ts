@@ -1,21 +1,33 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import {
+  contracts,
+  emergencyContacts,
+  familyAddresses,
   parents,
+  paymentPlans,
+  paymentScheduleItems,
+  registrationPrices,
   schools,
+  serviceRegistrations,
   studentLimitRequests,
   students,
   users,
 } from '../../database/schemas';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, desc } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { EditableStudentFields, parseEditableStudentFields } from './student-update';
+import {
+  AdminEditableStudentFields,
+  parseAdminEditableStudentFields,
+} from './student-admin-update';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import { assertStudentCapacity, getStudentCapacity } from '../../database/student-capacity';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import type { AdminStudentListQueryDto } from './student-list.dto';
+import type { AdminUpdateStudentDto } from './student.dto';
 import {
   buildAdminStudentArchiveWhere,
   buildAdminStudentOrderBy,
@@ -189,6 +201,155 @@ export class StudentsService {
       };
     });
     return { items, total: countRow?.total ?? 0 };
+  }
+
+  async getForAdmin(studentId: string) {
+    const student = await this.getById(studentId);
+    const [schoolRow] = await this.db.db
+      .select({ schoolType: schools.schoolType })
+      .from(schools)
+      .where(eq(schools.id, student.schoolId))
+      .limit(1);
+
+    const [parentRows, addressRows, emergencyRows, registrationRows] = await Promise.all([
+      this.db.db.select().from(parents).where(eq(parents.userId, student.userId)),
+      this.db.db
+        .select()
+        .from(familyAddresses)
+        .where(eq(familyAddresses.userId, student.userId)),
+      this.db.db
+        .select()
+        .from(emergencyContacts)
+        .where(eq(emergencyContacts.userId, student.userId)),
+      this.db.db
+        .select()
+        .from(serviceRegistrations)
+        .where(eq(serviceRegistrations.studentId, studentId))
+        .orderBy(desc(serviceRegistrations.createdAt)),
+    ]);
+
+    const latestRegistration = registrationRows[0] ?? null;
+    let enrollmentSummary: unknown = null;
+    if (latestRegistration) {
+      const [contractRow, priceRow] = await Promise.all([
+        this.db.db
+          .select()
+          .from(contracts)
+          .where(eq(contracts.registrationId, latestRegistration.id))
+          .orderBy(desc(contracts.versionNumber))
+          .limit(1),
+        this.db.db
+          .select()
+          .from(registrationPrices)
+          .where(eq(registrationPrices.registrationId, latestRegistration.id))
+          .orderBy(desc(registrationPrices.versionNumber))
+          .limit(1),
+      ]);
+      const contract = contractRow[0] ?? null;
+      const price = priceRow[0] ?? null;
+      let plan = null;
+      if (price) {
+        const [planRow] = await this.db.db
+          .select()
+          .from(paymentPlans)
+          .where(eq(paymentPlans.registrationPriceId, price.id))
+          .limit(1);
+        plan = planRow ?? null;
+      }
+      let scheduleItems: typeof paymentScheduleItems.$inferSelect[] = [];
+      if (plan) {
+        scheduleItems = await this.db.db
+          .select()
+          .from(paymentScheduleItems)
+          .where(eq(paymentScheduleItems.paymentPlanId, plan.id));
+      }
+      enrollmentSummary = {
+        registrationId: latestRegistration.id,
+        registrationStatus: latestRegistration.registrationStatus,
+        academicYear: latestRegistration.academicYear,
+        serviceType: latestRegistration.serviceType,
+        requestedStartDate: latestRegistration.requestedStartDate,
+        submittedAt: latestRegistration.submittedAt,
+        reviewedAt: latestRegistration.reviewedAt,
+        createdAt: latestRegistration.createdAt,
+        contract: contract
+          ? {
+              id: contract.id,
+              contractNumber: contract.contractNumber,
+              contractStatus: contract.contractStatus,
+              versionNumber: contract.versionNumber,
+              generatedAt: contract.generatedAt,
+              acceptedAt: contract.acceptedAt,
+            }
+          : null,
+        price: price
+          ? {
+              id: price.id,
+              totalAmount: price.totalAmount,
+              prepaymentAmount: price.prepaymentAmount,
+              installmentCount: price.installmentCount,
+              priceStatus: price.priceStatus,
+            }
+          : null,
+        plan: plan
+          ? {
+              id: plan.id,
+              planType: plan.planType,
+              totalAmount: plan.totalAmount,
+              prepaymentAmount: plan.prepaymentAmount,
+              remainingInstallmentAmount: plan.remainingInstallmentAmount,
+              installmentCount: plan.installmentCount,
+              planStatus: plan.planStatus,
+              paidInstallmentCount: scheduleItems.filter(
+                (item) => item.itemType === 'INSTALLMENT' && item.itemStatus === 'PAID',
+              ).length,
+              scheduleItems: scheduleItems.map((item) => ({
+                itemType: item.itemType,
+                sequenceNumber: item.sequenceNumber,
+                amount: item.amount,
+                dueDate: item.dueDate,
+                itemStatus: item.itemStatus,
+                paidAt: item.paidAt,
+              })),
+            }
+          : null,
+      };
+    }
+
+    return {
+      ...student,
+      schoolType: schoolRow?.schoolType ?? null,
+      parents: parentRows.map((parent) => ({
+        id: parent.id,
+        parentType: parent.parentType,
+        firstName: parent.firstName,
+        lastName: parent.lastName,
+        nationalId: parent.nationalId,
+        phoneNumber: parent.phoneNumber,
+        isPrimaryContact: parent.isPrimaryContact,
+      })),
+      addresses: addressRows.map((address) => ({
+        id: address.id,
+        title: address.title,
+        province: address.province,
+        city: address.city,
+        district: address.district,
+        streetAddress: address.streetAddress,
+        postalCode: address.postalCode,
+        latitude: address.latitude,
+        longitude: address.longitude,
+        isActive: address.isActive,
+      })),
+      emergencyContacts: emergencyRows.map((contact) => ({
+        id: contact.id,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        relationship: contact.relationship,
+        phoneNumber: contact.phoneNumber,
+        isActive: contact.isActive,
+      })),
+      enrollmentSummary,
+    };
   }
 
   async getCapacity(userId: string) {
@@ -395,9 +556,125 @@ export class StudentsService {
     });
   }
 
-  async updateByAdmin(studentId: string, data: EditableStudentFields) {
-    const student = await this.getById(studentId);
-    return this.update(studentId, student.userId, data);
+  async updateByAdmin(
+    studentId: string,
+    data: AdminUpdateStudentDto,
+    context: { adminId: string; ipAddress?: string } = { adminId: '' },
+  ) {
+    const current = await this.getById(studentId);
+
+    const expectedUpdatedAt = data.expectedUpdatedAt
+      ? new Date(data.expectedUpdatedAt)
+      : null;
+    if (
+      expectedUpdatedAt &&
+      current.updatedAt.toISOString() !== expectedUpdatedAt.toISOString()
+    ) {
+      throw new ConflictError(
+        'STUDENT_CONCURRENT_MODIFIED',
+        'This student was modified by another admin. Refresh the page and try again.',
+      );
+    }
+
+    const payload: Record<string, string | undefined> = { ...data };
+    delete payload.expectedUpdatedAt;
+    if (payload.educationLevel !== undefined) {
+      payload.className = payload.educationLevel;
+    }
+    delete payload.educationLevel;
+
+    const editable = parseAdminEditableStudentFields(payload);
+
+    if (
+      editable.nationalId !== undefined &&
+      editable.nationalId !== current.nationalId
+    ) {
+      const duplicate = await this.db.db
+        .select({ id: students.id })
+        .from(students)
+        .where(eq(students.nationalId, editable.nationalId))
+        .limit(1);
+      if (duplicate[0]) {
+        throw new ConflictError(
+          'DUPLICATE_NATIONAL_ID',
+          'A student with this national ID already exists.',
+        );
+      }
+    }
+
+    if (
+      editable.schoolId !== undefined ||
+      editable.className !== undefined ||
+      editable.grade !== undefined
+    ) {
+      await this.assertValidSchoolProgram(editable, current);
+    }
+
+    const changedKeys = Object.keys(editable) as (keyof AdminEditableStudentFields)[];
+    const previousValues = Object.fromEntries(
+      changedKeys.map((key) => [key, current[key] ?? null]),
+    );
+    const newValues: Record<string, unknown> = { ...editable };
+
+    await this.db.db.transaction(async (txn) => {
+      const conditions = [eq(students.id, studentId)];
+      if (expectedUpdatedAt) conditions.push(eq(students.updatedAt, expectedUpdatedAt));
+      const updated = await txn
+        .update(students)
+        .set({ ...editable, updatedAt: new Date() })
+        .where(and(...conditions))
+        .returning({ id: students.id });
+      if (updated.length === 0) {
+        throw new ConflictError(
+          'STUDENT_CONCURRENT_MODIFIED',
+          'This student was modified by another admin. Refresh the page and try again.',
+        );
+      }
+      await this.auditService.recordInTransaction(txn, {
+        actorType: 'ADMIN',
+        actorId: context.adminId,
+        action: 'STUDENT_UPDATED_BY_ADMIN',
+        entityType: 'STUDENT',
+        entityId: studentId,
+        previousValues,
+        newValues,
+        ipAddress: context.ipAddress,
+      });
+    });
+
+    return this.getById(studentId);
+  }
+
+  private async assertValidSchoolProgram(
+    editable: AdminEditableStudentFields,
+    current: Awaited<ReturnType<StudentsService['getById']>>,
+  ) {
+    const targetSchoolId = editable.schoolId ?? current.schoolId;
+    const [school] = await this.db.db
+      .select({
+        id: schools.id,
+        isActive: schools.isActive,
+        educationOptions: schools.educationOptions,
+      })
+      .from(schools)
+      .where(eq(schools.id, targetSchoolId))
+      .limit(1);
+    if (!school || !school.isActive) {
+      throw new ConflictError('INVALID_SCHOOL', 'The selected school is not active.');
+    }
+    const level = editable.className ?? current.className;
+    const grade = editable.grade ?? current.grade;
+    if (level || grade) {
+      const selectedLevel = school.educationOptions.find(
+        ({ level: candidate }) => candidate === level,
+      );
+      if (!selectedLevel || !selectedLevel.grades.includes(grade ?? '')) {
+        throw new ConflictError(
+          'INVALID_SCHOOL_PROGRAM',
+          'The selected education level or grade is not offered by this school.',
+        );
+      }
+    }
   }
 
   async createByAdmin(userId: string, data: Parameters<StudentsService['create']>[1]) {

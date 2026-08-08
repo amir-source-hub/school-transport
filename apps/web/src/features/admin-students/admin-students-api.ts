@@ -62,8 +62,139 @@ export async function createAdminStudent(data: Record<string, string>) {
   await apiRequest('/admin/students', { method: 'POST', body: data });
 }
 
-export async function updateAdminStudent(id: string, data: Record<string, string>) {
-  await apiRequest(`/admin/students/${id}`, { method: 'PATCH', body: data });
+export const adminUpdatedStudentSchema = z.object({
+  id: z.string(),
+  updatedAt: z.string(),
+});
+
+export type AdminUpdateStudentInput = {
+  firstName?: string;
+  lastName?: string;
+  nationalId?: string;
+  birthDate?: string;
+  gender?: string;
+  schoolId?: string;
+  educationLevel?: string;
+  grade?: string;
+  expectedUpdatedAt?: string;
+};
+
+export async function updateAdminStudent(
+  id: string,
+  data: AdminUpdateStudentInput,
+): Promise<{ id: string; updatedAt: string }> {
+  const response = await apiRequest<unknown>(`/admin/students/${id}`, {
+    method: 'PATCH',
+    body: data,
+  });
+  return adminUpdatedStudentSchema.parse(response.data);
+}
+
+export const adminParentSchema = z.object({
+  id: z.string(),
+  parentType: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  nationalId: z.string(),
+  phoneNumber: z.string(),
+  isPrimaryContact: z.boolean(),
+});
+
+export const adminAddressSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  province: z.string(),
+  city: z.string(),
+  district: z.string().nullable(),
+  streetAddress: z.string(),
+  postalCode: z.string().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+  isActive: z.boolean(),
+});
+
+export const adminEmergencyContactSchema = z.object({
+  id: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  relationship: z.string(),
+  phoneNumber: z.string(),
+  isActive: z.boolean(),
+});
+
+export const adminStudentDetailSchema = rawAdminStudentSchema.extend({
+  birthDate: z.string().nullable(),
+  gender: z.string().nullable(),
+  updatedAt: z.string(),
+  schoolType: z.string().nullable(),
+  parents: z.array(adminParentSchema),
+  addresses: z.array(adminAddressSchema),
+  emergencyContacts: z.array(adminEmergencyContactSchema),
+  enrollmentSummary: z
+    .object({
+      registrationId: z.string(),
+      registrationStatus: z.string(),
+      academicYear: z.string(),
+      serviceType: z.string(),
+      requestedStartDate: z.string().nullable(),
+      submittedAt: z.string().nullable(),
+      reviewedAt: z.string().nullable(),
+      createdAt: z.string(),
+      contract: z
+        .object({
+          id: z.string(),
+          contractNumber: z.string(),
+          contractStatus: z.string(),
+          versionNumber: z.number(),
+          generatedAt: z.string().nullable(),
+          acceptedAt: z.string().nullable(),
+        })
+        .nullable(),
+      price: z
+        .object({
+          id: z.string(),
+          totalAmount: z.number(),
+          prepaymentAmount: z.number(),
+          installmentCount: z.number(),
+          priceStatus: z.string(),
+        })
+        .nullable(),
+      plan: z
+        .object({
+          id: z.string(),
+          planType: z.string(),
+          totalAmount: z.number(),
+          prepaymentAmount: z.number(),
+          remainingInstallmentAmount: z.number(),
+          installmentCount: z.number(),
+          planStatus: z.string(),
+          paidInstallmentCount: z.number(),
+          scheduleItems: z.array(
+            z.object({
+              itemType: z.string(),
+              sequenceNumber: z.number(),
+              amount: z.number(),
+              dueDate: z.string().nullable(),
+              itemStatus: z.string(),
+              paidAt: z.string().nullable(),
+            }),
+          ),
+        })
+        .nullable(),
+    })
+    .nullable(),
+});
+
+export type AdminStudentDetail = z.infer<typeof adminStudentDetailSchema>;
+export type AdminParent = z.infer<typeof adminParentSchema>;
+export type AdminAddress = z.infer<typeof adminAddressSchema>;
+
+export async function getAdminStudentDetail(id: string): Promise<AdminStudentDetail> {
+  const response = await apiRequest<unknown>(`/admin/students/${id}`, {
+    cache: 'no-store',
+    timeoutMs: 8_000,
+  });
+  return adminStudentDetailSchema.parse(response.data);
 }
 
 export async function setAdminStudentActive(

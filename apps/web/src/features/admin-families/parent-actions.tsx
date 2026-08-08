@@ -51,7 +51,10 @@ export function ParentEditor({
       if (parent) {
         await updateFamilyParent(familyId, parent.id, form);
       } else {
-        await createFamilyParent(familyId, form);
+        await createFamilyParent(familyId, {
+          ...form,
+          parentType: form.parentType as 'FATHER' | 'MOTHER',
+        });
       }
       setOpen(false);
       router.refresh();

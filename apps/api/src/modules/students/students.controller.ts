@@ -4,7 +4,7 @@ import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { paginatedResponse, successResponse } from '../../common/response';
-import { AdminCreateStudentDto, ArchiveStudentDto, CreateStudentDto, UpdateStudentDto } from './student.dto';
+import { AdminCreateStudentDto, AdminUpdateStudentDto, ArchiveStudentDto, CreateStudentDto, UpdateStudentDto } from './student.dto';
 import { CreateLimitRequestDto, RejectLimitRequestDto } from './student-limit-request.dto';
 import { AdminStudentListQueryDto } from './student-list.dto';
 import { AuthenticatedRequest } from '../../common/http-request';
@@ -91,6 +91,11 @@ export class AdminStudentsController {
     return successResponse(await this.studentsService.getAllLimitRequestsForAdmin());
   }
 
+  @Get(':studentId')
+  async getById(@Param('studentId', new ParseUUIDPipe()) studentId: string) {
+    return successResponse(await this.studentsService.getForAdmin(studentId));
+  }
+
   @Post('limit-requests/:requestId/approve')
   async approveLimitRequest(
     @Req() req: AuthenticatedRequest,
@@ -126,8 +131,17 @@ export class AdminStudentsController {
   }
 
   @Patch(':studentId')
-  async update(@Param('studentId', new ParseUUIDPipe()) studentId: string, @Body() dto: UpdateStudentDto) {
-    return successResponse(await this.studentsService.updateByAdmin(studentId, dto));
+  async update(
+    @Req() req: AuthenticatedRequest,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Body() dto: AdminUpdateStudentDto,
+  ) {
+    return successResponse(
+      await this.studentsService.updateByAdmin(studentId, dto, {
+        adminId: req.user.id,
+        ipAddress: req.ip,
+      }),
+    );
   }
 
   @Post(':studentId/archive')

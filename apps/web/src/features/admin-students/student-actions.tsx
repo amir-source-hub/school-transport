@@ -118,7 +118,6 @@ export function AdminStudentForm({
     birthDate: '',
     gender: '',
     grade: student?.grade ?? defaultSchool?.educationOptions[0]?.grades[0] ?? '',
-    className: student?.className ?? '',
   });
   const initialSchool = schools.find((school) => school.id === form.schoolId);
   const initialEducationLevel =
@@ -162,10 +161,10 @@ export function AdminStudentForm({
           firstName: form.firstName,
           lastName: form.lastName,
           grade: form.grade,
-          className: form.className,
+          educationLevel,
         });
       } else {
-        await createAdminStudent(form);
+        await createAdminStudent({ ...form, className: educationLevel });
       }
       onSuccess?.();
       router.refresh();
@@ -190,7 +189,6 @@ export function AdminStudentForm({
         {!student && <label className="text-sm font-bold">کد ملی<Input required dir="ltr" value={form.nationalId} onChange={(event) => set('nationalId', event.target.value)} /></label>}
         <label className="text-sm font-bold">مقطع<Select value={educationLevel} onValueChange={selectEducationLevel} options={educationOptions.map((option) => ({ value: option.level, label: option.level }))} disabled={educationOptions.length === 0} /></label>
         <label className="text-sm font-bold">پایه<Select value={form.grade} onValueChange={(value) => set('grade', value)} options={gradeOptions.map((grade) => ({ value: grade, label: grade }))} disabled={gradeOptions.length === 0} /></label>
-        <label className="text-sm font-bold">کلاس<Input value={form.className} onChange={(event) => set('className', event.target.value)} /></label>
         {!student && <label className="text-sm font-bold">تاریخ تولد<JalaliDateInput value={form.birthDate} onChange={(value) => set('birthDate', value)} required /></label>}
         {!student && <label className="text-sm font-bold">جنسیت<Select value={form.gender} onValueChange={(value) => set('gender', value)} options={[{ value: 'FEMALE', label: 'دختر' }, { value: 'MALE', label: 'پسر' }]} /></label>}
       </div>

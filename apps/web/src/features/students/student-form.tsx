@@ -21,7 +21,6 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
     birthDate: student?.birthDate ?? '',
     gender: student?.gender ?? '',
     grade: student?.grade ?? '',
-    className: student?.className ?? '',
   });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -39,7 +38,6 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
           firstName: form.firstName,
           lastName: form.lastName,
           grade: form.grade,
-          className: form.className,
         });
         router.refresh();
       } else {
@@ -76,9 +74,6 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
         </label>
         <label className="text-sm font-bold">پایه
           <Input required value={form.grade} onChange={(event) => set('grade', event.target.value)} />
-        </label>
-        <label className="text-sm font-bold">کلاس
-          <Input value={form.className} onChange={(event) => set('className', event.target.value)} />
         </label>
         {!student && (
           <>

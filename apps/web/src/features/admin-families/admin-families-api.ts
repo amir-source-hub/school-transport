@@ -62,7 +62,14 @@ export async function getAdminFamilies(): Promise<{ families: Family[] }> {
 
 export async function createFamilyParent(
   familyId: string,
-  data: Omit<AdminParent, 'id'>,
+  data: {
+    parentType: 'FATHER' | 'MOTHER';
+    firstName: string;
+    lastName: string;
+    nationalId: string;
+    phoneNumber: string;
+    isPrimaryContact?: boolean;
+  },
 ) {
   await apiRequest(`/admin/families/${familyId}/parents`, { method: 'POST', body: data });
 }
@@ -70,7 +77,13 @@ export async function createFamilyParent(
 export async function updateFamilyParent(
   familyId: string,
   parentId: string,
-  data: Omit<AdminParent, 'id' | 'parentType'>,
+  data: {
+    firstName: string;
+    lastName: string;
+    nationalId: string;
+    phoneNumber: string;
+    isPrimaryContact?: boolean;
+  },
 ) {
   await apiRequest(`/admin/families/${familyId}/parents/${parentId}`, {
     method: 'PATCH',
@@ -100,4 +113,41 @@ export async function createAdminFamilyEnrollment(
     status: 'CONTRACT_READY';
     parentActionRequired: true;
   }>(`/admin/enrollments/families/${familyId}/guided`, { method: 'POST', body: input });
+}
+
+export type AdminAddressInput = {
+  title: string;
+  province: string;
+  city: string;
+  district?: string;
+  streetAddress: string;
+  postalCode?: string;
+  latitude?: number;
+  longitude?: number;
+};
+
+export async function createAdminFamilyAddress(familyId: string, data: AdminAddressInput) {
+  await apiRequest(`/admin/families/${familyId}/addresses`, { method: 'POST', body: data });
+}
+
+export async function updateAdminFamilyAddress(
+  familyId: string,
+  addressId: string,
+  data: Partial<AdminAddressInput>,
+) {
+  await apiRequest(`/admin/families/${familyId}/addresses/${addressId}`, {
+    method: 'PATCH',
+    body: data,
+  });
+}
+
+export async function updateAdminFamilyEmergencyContact(
+  familyId: string,
+  contactId: string,
+  data: { firstName: string; lastName: string; relationship: string; phoneNumber: string },
+) {
+  await apiRequest(`/admin/families/${familyId}/emergency-contacts/${contactId}`, {
+    method: 'PATCH',
+    body: data,
+  });
 }

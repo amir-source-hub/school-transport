@@ -95,6 +95,56 @@ export class AdminCreateStudentDto extends CreateStudentDto {
   userId!: string;
 }
 
+export class AdminUpdateStudentDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 100)
+  firstName?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 100)
+  lastName?: string;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? normalizeIranianDigits(value).trim() : value,
+  )
+  @Validate(IranianNationalIdConstraint)
+  nationalId?: string;
+
+  @IsOptional()
+  @IsDateString()
+  birthDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  gender?: string;
+
+  @IsOptional()
+  @IsUUID()
+  schoolId?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 100)
+  educationLevel?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 50)
+  grade?: string;
+
+  @IsOptional()
+  @IsDateString()
+  expectedUpdatedAt?: string;
+}
+
 export class ArchiveStudentDto {
   @IsOptional()
   @IsString()

@@ -13,6 +13,7 @@ import {
   AdminStudentDialog,
   ArchiveStudentDialog,
 } from '@/features/admin-students/student-actions';
+import { StudentEditDialog } from '@/features/admin-students/student-edit-dialog';
 import { getAdminFamilies } from '@/features/admin-families/admin-families-api';
 import { getAdminSchools } from '@/features/admin-schools/admin-schools-api';
 
@@ -139,10 +140,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                 </p>
                 <p className="text-sm text-muted">خانواده: {student.familyName}</p>
                 <div className="mt-3 flex gap-2 border-t border-border pt-3">
-                  <AdminStudentDialog
-                    families={familyOptions}
+                  <StudentEditDialog
+                    studentId={student.id}
+                    studentName={`${student.firstName} ${student.lastName}`}
                     schools={schoolOptions}
-                    student={student}
                   />
                   <ArchiveStudentDialog
                     studentId={student.id}
@@ -184,10 +185,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex gap-2">
-                        <AdminStudentDialog
-                          families={familyOptions}
+                        <StudentEditDialog
+                          studentId={student.id}
+                          studentName={`${student.firstName} ${student.lastName}`}
                           schools={schoolOptions}
-                          student={student}
                         />
                         <ArchiveStudentDialog
                           studentId={student.id}

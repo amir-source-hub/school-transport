@@ -1,5 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsOptional, IsString, Length, Matches, ValidateNested } from 'class-validator';
+import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, Length, Matches, Max, Min, ValidateNested } from 'class-validator';
 import { normalizeIranianDigits } from '../../../common/iranian-national-id';
 const digits = ({ value }: { value: unknown }) => typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
 export class ParentInputDto {
@@ -43,6 +43,8 @@ export class AddressMutationDto {
   @IsOptional() @IsString() @Length(1, 50) district?: string;
   @IsOptional() @IsString() @Length(1, 500) streetAddress?: string;
   @IsOptional() @Transform(digits) @Matches(/^\d{10}$/) postalCode?: string;
+  @IsOptional() @IsNumber() @Min(-90) @Max(90) latitude?: number;
+  @IsOptional() @IsNumber() @Min(-180) @Max(180) longitude?: number;
 }
 export class AddAddressDto {
   @IsString() @Length(1, 100) title!: string;
@@ -51,6 +53,8 @@ export class AddAddressDto {
   @IsOptional() @IsString() @Length(1, 50) district?: string;
   @IsString() @Length(1, 500) streetAddress!: string;
   @IsOptional() @Transform(digits) @Matches(/^\d{10}$/) postalCode?: string;
+  @IsOptional() @IsNumber() @Min(-90) @Max(90) latitude?: number;
+  @IsOptional() @IsNumber() @Min(-180) @Max(180) longitude?: number;
 }
 export class EmergencyMutationDto {
   @IsOptional() @IsString() @Length(1, 100) firstName?: string;

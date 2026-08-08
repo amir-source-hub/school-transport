@@ -25,7 +25,6 @@ export type StudentInput = {
   birthDate?: string;
   gender?: string;
   grade: string;
-  className?: string;
 };
 
 export async function getStudents() {
@@ -43,7 +42,7 @@ export async function createStudent(input: StudentInput) {
   return studentSchema.parse(response.data);
 }
 
-export async function updateStudent(id: string, input: Pick<StudentInput, 'firstName' | 'lastName' | 'grade' | 'className'>) {
+export async function updateStudent(id: string, input: Pick<StudentInput, 'firstName' | 'lastName' | 'grade'>) {
   const response = await apiRequest<unknown>(`/students/${id}`, { method: 'PATCH', body: input });
   return studentSchema.parse(response.data);
 }

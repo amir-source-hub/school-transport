@@ -28,6 +28,15 @@ const ALLOWED_VALUE_FIELDS = new Set([
   'scheduleItemId',
   'status',
   'isActive',
+  'firstName',
+  'lastName',
+  'nationalId',
+  'birthDate',
+  'gender',
+  'grade',
+  'className',
+  'schoolId',
+  'educationLevel',
 ]);
 
 @Injectable()
