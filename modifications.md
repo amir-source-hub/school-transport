@@ -665,12 +665,12 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Admin-created student
 
-- [ ] Keep `admin-family-enrollment-form.tsx` but refactor it to consume the shared enrollment sections and schema.
-- [ ] Add the verified/selected guardian phone and create or associate the correct account without duplicating users.
-- [ ] Let the authorized admin accept/sign the contract on the student’s behalf only if the legal model permits it; record signer role, actor ID, timestamp, contract version, and reason/source.
-- [ ] Create an offline/cash prepayment transaction using the existing payment domain rather than directly marking schedule rows paid.
-- [ ] Display the Persian cash warning before confirmation and require receipt/reference information.
-- [ ] Preserve the existing rollback guarantees in `admin-guided-enrollment.rollback.test.ts` and add duplicate-phone/idempotency cases.
+- [x] Keep `admin-family-enrollment-form.tsx` but refactor it to consume the shared enrollment sections and schema. (form now builds a `GuidedEnrollmentInput` and validates with the shared `guidedEnrollmentSchema`)
+- [x] Add the verified/selected guardian phone and create or associate the correct account without duplicating users. (guardian phone is the family's verified primary phone; reuse `getOwnedParentByNationalId` + duplicate-student guard, no duplicate `users` row)
+- [x] Let the authorized admin accept/sign the contract on the student's behalf only if the legal model permits it; record signer role, actor ID, timestamp, contract version, and reason/source. (recorded via new `contracts` columns `acceptedByAdminId`, `signerRole`, `signerReason`, `signerSource`; actor/timestamp/version captured in audit `CONTRACT_ACCEPTED_BY_ADMIN`. Deviation: `signerRole` is a denormalized copy of the contract-status owner; accept/reject stays parent-only, no admin force-cancel)
+- [x] Create an offline/cash prepayment transaction using the existing payment domain rather than directly marking schedule rows paid. (inserts a `SUCCEEDED`/`MANUAL_ADMIN_ENTRY` payment transaction with `gatewayTransactionId` = receipt reference and `recordedByAdminId`; schedule row/plan status derived from the payment)
+- [x] Display the Persian cash warning before confirmation and require receipt/reference information. (`CASH_RECEIPT_REQUIRED` at transport + warning panel + required receipt/paidAt/description in the UI)
+- [x] Preserve the existing rollback guarantees in `admin-guided-enrollment.rollback.test.ts` and add duplicate-phone/idempotency cases. (audit-failure rollback, `CONTRACT_ACCEPTANCE_REQUIRED`, `CASH_RECEIPT_REQUIRED`, duplicate-student no-touch, guardian-phone reuse)
 
 #### Filters, sorting, and registration status groups
 
