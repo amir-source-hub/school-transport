@@ -37,6 +37,12 @@ const ALLOWED_VALUE_FIELDS = new Set([
   'className',
   'schoolId',
   'educationLevel',
+  'contractVersion',
+  'signerRole',
+  'signerReason',
+  'signerSource',
+  'referenceNumber',
+  'familyId',
 ]);
 
 @Injectable()

@@ -57,6 +57,37 @@ describe('remaining API transport contracts', () => {
     expect(described.guardian.relationshipDescription).toBe('پدربزرگ');
   });
 
+  it('normalizes admin enrollment actions and bounds receipt and reason text', async () => {
+    const value = guided();
+    const accepted = await body(
+      {
+        ...value,
+        adminActions: {
+          signContractOnBehalf: { reason: 'حضور والد در دفتر', source: 'in_person' },
+          cashPrepayment: { referenceNumber: '۱۲۳۴۵۶', paidAt: '2026-08-08T10:00:00.000Z' },
+        },
+      },
+      GuidedEnrollmentDto,
+    );
+    expect(accepted.adminActions?.cashPrepayment?.referenceNumber).toBe('123456');
+    expect(accepted.adminActions?.signContractOnBehalf?.source).toBe('in_person');
+    await expect(
+      body({ ...value, adminActions: { cashPrepayment: { referenceNumber: '' } } }, GuidedEnrollmentDto),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      body(
+        { ...value, adminActions: { signContractOnBehalf: { reason: 'x'.repeat(501) } } },
+        GuidedEnrollmentDto,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      body(
+        { ...value, adminActions: { injected: true } },
+        GuidedEnrollmentDto,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('validates nested family and admin-parent payloads', async () => {
     await expect(body({ mother: {}, unexpected: true }, CompleteFamilyDto)).rejects.toBeInstanceOf(BadRequestException);
     const parent = await body({ parentType: 'MOTHER', firstName: 'A', lastName: 'B', nationalId: '۱۲۳۴۵۶۷۸۹۰', phoneNumber: '۰۹۱۲۰۰۰۰۰۰۰' }, AdminCreateParentDto);

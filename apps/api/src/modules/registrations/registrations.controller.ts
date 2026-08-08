@@ -91,15 +91,23 @@ export class AdminRegistrationsController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: GuidedEnrollmentDto,
   ) {
-    const result = await this.registrationsService.createGuidedEnrollment(familyId, dto, {
-      adminId: req.user.id,
-      ipAddress: req.ip,
-    });
+    const result = await this.registrationsService.createGuidedEnrollment(
+      familyId,
+      dto,
+      {
+        adminId: req.user.id,
+        ipAddress: req.ip,
+      },
+      dto.adminActions,
+    );
     return successResponse({
       registrationId: result.registrationId,
       studentId: result.studentId,
-      status: 'CONTRACT_READY',
-      parentActionRequired: true,
+      contractId: result.contractId,
+      scheduleItemId: result.scheduleItemId,
+      prepaymentAmount: result.prepaymentAmount,
+      status: result.status,
+      parentActionRequired: result.status === 'CONTRACT_READY',
     });
   }
 

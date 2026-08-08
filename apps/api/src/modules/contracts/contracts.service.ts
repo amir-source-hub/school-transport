@@ -301,6 +301,8 @@ export class ContractsService {
           contractStatus: 'ACCEPTED',
           acceptedAt: new Date(),
           paymentPlanId: plan[0].id,
+          acceptedByAdminId: null,
+          signerRole: 'PARENT',
         })
         .where(and(eq(contracts.id, contractId), eq(contracts.contractStatus, 'GENERATED')))
         .returning({ id: contracts.id });

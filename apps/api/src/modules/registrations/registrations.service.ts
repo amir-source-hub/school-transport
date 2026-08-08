@@ -7,6 +7,7 @@ import {
   registrationPrices,
   paymentPlans,
   paymentScheduleItems,
+  paymentTransactions,
   contracts,
   emergencyContacts,
   users,
@@ -26,6 +27,10 @@ import {
   normalizeAndValidateGuidedEnrollment,
   type GuidedEnrollmentData,
 } from './guided-enrollment';
+import {
+  normalizeAndValidateAdminEnrollmentActions,
+  type AdminEnrollmentActions,
+} from './admin-guided-enrollment';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { Inject } from '@nestjs/common';
 import type { AdminEnrollmentListQueryDto } from './registration.dto';
@@ -46,8 +51,10 @@ export class RegistrationsService {
     userId: string,
     input: GuidedEnrollmentData,
     adminAudit?: AdminEnrollmentAudit,
+    adminActions?: AdminEnrollmentActions,
   ) {
     const data = normalizeAndValidateGuidedEnrollment(input);
+    const actions = normalizeAndValidateAdminEnrollmentActions(adminActions);
     const [school] = await this.db.db
       .select({
         id: schools.id,
@@ -354,6 +361,143 @@ export class RegistrationsService {
           contractDataSnapshot: JSON.stringify(snapshot),
           generatedAt: new Date(),
         });
+        let finalStatus = 'CONTRACT_READY';
+        if (adminAudit && actions) {
+          if (actions.signContractOnBehalf) {
+            const signedAt = new Date();
+            await txn
+              .update(contracts)
+              .set({
+                contractStatus: 'ACCEPTED',
+                acceptedAt: signedAt,
+                acceptedByAdminId: adminAudit.adminId,
+                signerRole: 'ADMIN',
+                signerReason: actions.signContractOnBehalf.reason ?? null,
+                signerSource: actions.signContractOnBehalf.source ?? 'admin_console',
+                updatedAt: signedAt,
+              })
+              .where(and(eq(contracts.id, contractId), eq(contracts.contractStatus, 'GENERATED')));
+            await txn
+              .update(serviceRegistrations)
+              .set({ registrationStatus: 'CONTRACT_ACCEPTED', updatedAt: signedAt })
+              .where(
+                and(
+                  eq(serviceRegistrations.id, registrationId),
+                  eq(serviceRegistrations.registrationStatus, 'CONTRACT_READY'),
+                ),
+              );
+            finalStatus = 'CONTRACT_ACCEPTED';
+            await this.auditService.recordInTransaction(txn, {
+              actorType: 'ADMIN',
+              actorId: adminAudit.adminId,
+              action: 'CONTRACT_ACCEPTED_BY_ADMIN',
+              entityType: 'CONTRACT',
+              entityId: contractId,
+              previousValues: { contractStatus: 'GENERATED' },
+              newValues: {
+                contractStatus: 'ACCEPTED',
+                registrationStatus: 'CONTRACT_ACCEPTED',
+                contractVersion: 1,
+                signerRole: 'ADMIN',
+                signerReason: actions.signContractOnBehalf.reason ?? null,
+                signerSource: actions.signContractOnBehalf.source ?? 'admin_console',
+              },
+              ipAddress: adminAudit.ipAddress,
+            });
+            await this.notifications.enqueueInTransaction(txn, {
+              eventId: `CONTRACT_ACCEPTED_BY_ADMIN:${contractId}:${userId}`,
+              userId,
+              notificationType: 'CONTRACT_ACCEPTED',
+              title: 'قرارداد به نمایندگی پذیرفته شد',
+              message: `قرارداد دانش‌آموز ${data.student.firstName} ${data.student.lastName} توسط مدیریت پذیرفته شد.`,
+              relatedEntityType: 'CONTRACT',
+              relatedEntityId: contractId,
+            });
+          }
+          if (actions.cashPrepayment) {
+            if (!actions.signContractOnBehalf) {
+              throw new ConflictError(
+                'CONTRACT_ACCEPTANCE_REQUIRED',
+                'The contract must be accepted before a cash prepayment can be recorded.',
+              );
+            }
+            const now = new Date();
+            const paidAt = actions.cashPrepayment.paidAt
+              ? new Date(actions.cashPrepayment.paidAt)
+              : now;
+            const transactionId = generateId();
+            await txn.insert(paymentTransactions).values({
+              id: transactionId,
+              paymentPlanId: planId,
+              paymentScheduleItemId: scheduleItemId,
+              userId,
+              amount: prepaymentAmount,
+              paymentMethod: 'MANUAL_ADMIN_ENTRY',
+              gatewayTransactionId: actions.cashPrepayment.referenceNumber,
+              transactionStatus: 'SUCCEEDED',
+              requestedAt: paidAt,
+              verifiedAt: now,
+              recordedByAdminId: adminAudit.adminId,
+            });
+            await txn
+              .update(paymentScheduleItems)
+              .set({
+                itemStatus: 'PAID',
+                paidAmount: prepaymentAmount,
+                paidAt: now,
+                updatedAt: now,
+              })
+              .where(
+                and(
+                  eq(paymentScheduleItems.id, scheduleItemId),
+                  eq(paymentScheduleItems.itemType, 'PREPAYMENT'),
+                ),
+              );
+            await txn
+              .update(paymentPlans)
+              .set({
+                planStatus: 'COMPLETED',
+                activatedAt: now,
+                completedAt: now,
+                updatedAt: now,
+              })
+              .where(eq(paymentPlans.id, planId));
+            await txn
+              .update(serviceRegistrations)
+              .set({ registrationStatus: 'ENROLLED', updatedAt: now })
+              .where(
+                and(
+                  eq(serviceRegistrations.id, registrationId),
+                  eq(serviceRegistrations.registrationStatus, 'CONTRACT_ACCEPTED'),
+                ),
+              );
+            finalStatus = 'ENROLLED';
+            await this.auditService.recordInTransaction(txn, {
+              actorType: 'ADMIN',
+              actorId: adminAudit.adminId,
+              action: 'ADMIN_CASH_PREPAYMENT_RECORDED',
+              entityType: 'PAYMENT',
+              entityId: transactionId,
+              newValues: {
+                transactionStatus: 'SUCCEEDED',
+                paymentMethod: 'MANUAL_ADMIN_ENTRY',
+                prepaymentAmount,
+                referenceNumber: actions.cashPrepayment.referenceNumber,
+                registrationStatus: 'ENROLLED',
+              },
+              ipAddress: adminAudit.ipAddress,
+            });
+            await this.notifications.enqueueInTransaction(txn, {
+              eventId: `PAYMENT_APPROVED:${transactionId}:${userId}`,
+              userId,
+              notificationType: 'PAYMENT_APPROVED',
+              title: 'پیش‌پرداخت نقدی ثبت شد',
+              message: `پیش‌پرداخت ${prepaymentAmount.toLocaleString('fa-IR')} ریال برای دانش‌آموز ${data.student.firstName} ${data.student.lastName} ثبت شد.`,
+              relatedEntityType: 'PAYMENT',
+              relatedEntityId: transactionId,
+            });
+          }
+        }
         if (adminAudit) {
           await this.auditService.recordInTransaction(txn, {
             actorType: 'ADMIN',
@@ -361,16 +505,22 @@ export class RegistrationsService {
             action: 'ADMIN_FAMILY_ENROLLMENT_CREATED',
             entityType: 'REGISTRATION',
             entityId: registrationId,
-            newValues: { familyId: userId, studentId, status: 'CONTRACT_READY' },
+            newValues: { familyId: userId, studentId, status: finalStatus },
             ipAddress: adminAudit.ipAddress,
           });
         }
+        const completionMessage =
+          finalStatus === 'ENROLLED'
+            ? `ثبت‌نام دانش‌آموز ${data.student.firstName} ${data.student.lastName} تکمیل شد و سرویس فعال است.`
+            : finalStatus === 'CONTRACT_ACCEPTED'
+              ? `ثبت‌نام دانش‌آموز ${data.student.firstName} ${data.student.lastName} انجام شد و قرارداد به نمایندگی پذیرفته شد.`
+              : `ثبت‌نام دانش‌آموز ${data.student.firstName} ${data.student.lastName} انجام شد و قرارداد آماده بررسی است.`;
         await this.notifications.enqueueInTransaction(txn, {
           eventId: `ENROLLMENT_CREATED:${registrationId}:${userId}`,
           userId,
           notificationType: 'ENROLLMENT_CREATED',
           title: 'ثبت‌نام دانش‌آموز انجام شد',
-          message: `ثبت‌نام دانش‌آموز ${data.student.firstName} ${data.student.lastName} انجام شد و قرارداد آماده بررسی است.`,
+          message: completionMessage,
           relatedEntityType: 'REGISTRATION',
           relatedEntityId: registrationId,
         });
@@ -381,6 +531,7 @@ export class RegistrationsService {
           scheduleItemId,
           prepaymentAmount,
           contractText: guidedContractText(data.student.firstName, data.student.lastName),
+          status: finalStatus,
         };
       }),
     );

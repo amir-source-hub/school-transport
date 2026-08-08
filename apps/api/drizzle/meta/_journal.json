@@ -127,6 +127,13 @@
       "when": 1786147997559,
       "tag": "0017_classy_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786156081451,
+      "tag": "0018_contract_signer_metadata",
+      "breakpoints": true
     }
   ]
 }

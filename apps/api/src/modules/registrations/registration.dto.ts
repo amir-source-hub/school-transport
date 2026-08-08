@@ -59,6 +59,22 @@ export class ServiceInputDto {
   @IsOptional() @IsString({ message: 'توضیحات والد باید متن باشد.' }) @Length(1, 1000, { message: 'توضیحات والد باید حداکثر ۱۰۰۰ نویسه باشد.' }) parentNotes?: string;
 }
 
+export class SignContractOnBehalfDto {
+  @IsOptional() @IsString({ message: 'دلیل پذیرش باید متن باشد.' }) @Length(1, 500, { message: 'دلیل پذیرش باید حداکثر ۵۰۰ نویسه باشد.' }) reason?: string;
+  @IsOptional() @IsString({ message: 'منبع پذیرش باید متن باشد.' }) @Length(1, 30, { message: 'منبع پذیرش باید حداکثر ۳۰ نویسه باشد.' }) source?: string;
+}
+
+export class CashPrepaymentDto {
+  @Transform(digits) @IsString({ message: 'شماره رسید باید متن باشد.' }) @Length(1, 100, { message: 'شماره رسید باید حداکثر ۱۰۰ نویسه باشد.' }) referenceNumber!: string;
+  @IsOptional() @Transform(digits) @IsDateString({ strict: true }, { message: 'تاریخ پرداخت باید معتبر باشد.' }) paidAt?: string;
+  @IsOptional() @IsString({ message: 'توضیحات پرداخت باید متن باشد.' }) @Length(1, 500, { message: 'توضیحات پرداخت باید حداکثر ۵۰۰ نویسه باشد.' }) description?: string;
+}
+
+export class AdminEnrollmentActionsDto {
+  @ValidateNested() @IsOptional() @Type(() => SignContractOnBehalfDto) signContractOnBehalf?: SignContractOnBehalfDto;
+  @ValidateNested() @IsOptional() @Type(() => CashPrepaymentDto) cashPrepayment?: CashPrepaymentDto;
+}
+
 export class GuidedEnrollmentDto {
   @ValidateNested() @Type(() => StudentInputDto) student!: StudentInputDto;
   @ValidateNested() @Type(() => GuardianInputDto) guardian!: GuardianInputDto;
@@ -69,6 +85,7 @@ export class GuidedEnrollmentDto {
   @ValidateNested() @Type(() => AddressInputDto) address!: AddressInputDto;
   @ValidateNested() @Type(() => SchoolInputDto) school!: SchoolInputDto;
   @ValidateNested() @Type(() => ServiceInputDto) service!: ServiceInputDto;
+  @ValidateNested() @IsOptional() @Type(() => AdminEnrollmentActionsDto) adminActions?: AdminEnrollmentActionsDto;
 }
 
 export class CreateRegistrationDto {

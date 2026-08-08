@@ -103,16 +103,33 @@ export async function getAdminFamily(id: string): Promise<{ family: FamilyDetail
   return { family: familyDetailSchema.parse(response.data) };
 }
 
+export type AdminEnrollmentActions = {
+  signContractOnBehalf?: { reason?: string; source?: string };
+  cashPrepayment?: { referenceNumber: string; paidAt?: string; description?: string };
+};
+
+export type AdminFamilyEnrollmentResult = {
+  registrationId: string;
+  studentId: string;
+  contractId: string;
+  scheduleItemId: string;
+  prepaymentAmount: number;
+  status: 'CONTRACT_READY' | 'CONTRACT_ACCEPTED' | 'ENROLLED';
+  parentActionRequired: boolean;
+};
+
 export async function createAdminFamilyEnrollment(
   familyId: string,
   input: GuidedEnrollmentInput,
+  actions?: AdminEnrollmentActions,
 ) {
-  return apiRequest<{
-    registrationId: string;
-    studentId: string;
-    status: 'CONTRACT_READY';
-    parentActionRequired: true;
-  }>(`/admin/enrollments/families/${familyId}/guided`, { method: 'POST', body: input });
+  return apiRequest<AdminFamilyEnrollmentResult>(
+    `/admin/enrollments/families/${familyId}/guided`,
+    {
+      method: 'POST',
+      body: actions ? { ...input, adminActions: actions } : input,
+    },
+  );
 }
 
 export type AdminAddressInput = {

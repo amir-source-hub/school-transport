@@ -9,8 +9,10 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { normalizeDigits } from '@/features/enrollment/national-id';
+import { guidedEnrollmentSchema, type GuidedEnrollmentInput } from '@/features/enrollment/enrollment-schema';
 import {
   createAdminFamilyEnrollment,
+  type AdminEnrollmentActions,
   type FamilyDetail,
 } from './admin-families-api';
 
@@ -44,9 +46,16 @@ export function AdminFamilyEnrollmentForm({ family, schools }: { family: FamilyD
     latitude: String(address?.latitude ?? 35.7219), longitude: String(address?.longitude ?? 51.3347),
     schoolId: initialSchool?.id ?? '', educationLevel: initialLevel?.level ?? '', grade: initialLevel?.grades[0] ?? '', serviceType: 'BUS', paymentPlanType: 'INSTALLMENTS', parentNotes: '',
   });
+  const [signOnBehalf, setSignOnBehalf] = useState(false);
+  const [signReason, setSignReason] = useState('');
+  const [signSource, setSignSource] = useState('admin_console');
+  const [recordCash, setRecordCash] = useState(false);
+  const [cashReference, setCashReference] = useState('');
+  const [cashPaidAt, setCashPaidAt] = useState('');
+  const [cashDescription, setCashDescription] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<string | false>(false);
   const school = useMemo(() => schools.find((item) => item.id === form.schoolId), [form.schoolId, schools]);
   const levels = school?.educationOptions ?? [];
   const grades = levels.find((item) => item.level === form.educationLevel)?.grades ?? [];
@@ -60,36 +69,104 @@ export function AdminFamilyEnrollmentForm({ family, schools }: { family: FamilyD
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setPending(true); setError(undefined);
+    const payload: GuidedEnrollmentInput = {
+      student: { firstName: form.studentFirst, lastName: form.studentLast, nationalId: normalizeDigits(form.studentNationalId), birthDate: form.birthDate || undefined, gender: form.gender as 'MALE' | 'FEMALE' },
+      homePhone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
+      guardian: { firstName: form.guardianFirst, lastName: form.guardianLast, nationalId: normalizeDigits(form.guardianNationalId), relationshipType: form.guardianRelationshipType as 'FATHER' | 'MOTHER' | 'OTHER', relationshipDescription: form.guardianRelationshipType === 'OTHER' ? form.guardianRelationshipDescription || undefined : undefined },
+      father: sectionStarted(fatherKeys) ? { firstName: form.fatherFirst, lastName: form.fatherLast, nationalId: normalizeDigits(form.fatherNationalId), phoneNumber: normalizeDigits(form.fatherPhone) } : null,
+      mother: sectionStarted(motherKeys) ? { firstName: form.motherFirst, lastName: form.motherLast, nationalId: normalizeDigits(form.motherNationalId), phoneNumber: normalizeDigits(form.motherPhone) } : null,
+      emergencyContact: sectionStarted(emergencyKeys) ? { firstName: form.emergencyFirst, lastName: form.emergencyLast, relationship: form.emergencyRelationship, phoneNumber: normalizeDigits(form.emergencyPhone) } : null,
+      address: { title: form.addressTitle, province: form.province, city: form.city, streetAddress: form.streetAddress, postalCode: normalizeDigits(form.postalCode), latitude: Number(form.latitude), longitude: Number(form.longitude) },
+      school: { schoolId: form.schoolId, educationLevel: form.educationLevel, grade: form.grade },
+      service: { serviceType: form.serviceType as 'BUS' | 'MINIBUS' | 'CAR' | 'VAN', paymentPlanType: form.paymentPlanType as 'FULL' | 'INSTALLMENTS', parentNotes: form.parentNotes || undefined },
+    };
+    const parsed = guidedEnrollmentSchema.safeParse(payload);
+    if (!parsed.success) {
+      setError(parsed.error.issues.map((issue) => issue.message).slice(0, 3).join(' — '));
+      setPending(false);
+      return;
+    }
+    if (recordCash && !cashReference.trim()) {
+      setError('برای ثبت پیش‌پرداخت نقدی، شماره رسید یا مرجع پرداخت را وارد کنید.');
+      setPending(false);
+      return;
+    }
+    if (recordCash && !signOnBehalf) {
+      setError('برای ثبت پیش‌پرداخت نقدی، ابتدا پذیرش قرارداد به نمایندگی از والد را فعال کنید.');
+      setPending(false);
+      return;
+    }
+    const actions: AdminEnrollmentActions | undefined =
+      signOnBehalf || recordCash
+        ? {
+            signContractOnBehalf: signOnBehalf ? { reason: signReason.trim() || undefined, source: signSource } : undefined,
+            cashPrepayment: recordCash ? { referenceNumber: normalizeDigits(cashReference), paidAt: cashPaidAt || undefined, description: cashDescription.trim() || undefined } : undefined,
+          }
+        : undefined;
     try {
-      await createAdminFamilyEnrollment(family.id, {
-        student: { firstName: form.studentFirst, lastName: form.studentLast, nationalId: normalizeDigits(form.studentNationalId), birthDate: form.birthDate || undefined, gender: form.gender as 'MALE' | 'FEMALE' },
-        homePhone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
-        guardian: { firstName: form.guardianFirst, lastName: form.guardianLast, nationalId: normalizeDigits(form.guardianNationalId), relationshipType: form.guardianRelationshipType as 'FATHER' | 'MOTHER' | 'OTHER', relationshipDescription: form.guardianRelationshipType === 'OTHER' ? form.guardianRelationshipDescription || undefined : undefined },
-        father: sectionStarted(fatherKeys) ? { firstName: form.fatherFirst, lastName: form.fatherLast, nationalId: normalizeDigits(form.fatherNationalId), phoneNumber: normalizeDigits(form.fatherPhone) } : null,
-        mother: sectionStarted(motherKeys) ? { firstName: form.motherFirst, lastName: form.motherLast, nationalId: normalizeDigits(form.motherNationalId), phoneNumber: normalizeDigits(form.motherPhone) } : null,
-        emergencyContact: sectionStarted(emergencyKeys) ? { firstName: form.emergencyFirst, lastName: form.emergencyLast, relationship: form.emergencyRelationship, phoneNumber: normalizeDigits(form.emergencyPhone) } : null,
-        address: { title: form.addressTitle, province: form.province, city: form.city, streetAddress: form.streetAddress, postalCode: normalizeDigits(form.postalCode), latitude: Number(form.latitude), longitude: Number(form.longitude) },
-        school: { schoolId: form.schoolId, educationLevel: form.educationLevel, grade: form.grade },
-        service: { serviceType: form.serviceType as 'BUS' | 'MINIBUS' | 'CAR' | 'VAN', paymentPlanType: form.paymentPlanType as 'FULL' | 'INSTALLMENTS', parentNotes: form.parentNotes || undefined },
-      });
-      setDone(true); router.refresh();
+      const result = await createAdminFamilyEnrollment(family.id, parsed.data, actions);
+      setDone(result.data.status); router.refresh();
     } catch (caught) { setError(getApiErrorFeedback(caught).message); }
     finally { setPending(false); }
   }
 
-  if (done) return <p role="status" className="rounded-xl bg-success/10 p-4 text-sm font-bold text-success">ثبت‌نام ایجاد شد. قرارداد و پیش‌پرداخت اکنون برای بررسی و اقدام والد در پنل خانواده نمایش داده می‌شود.</p>;
+  if (done) {
+    const message =
+      done === 'ENROLLED'
+        ? 'ثبت‌نام تکمیل شد؛ قرارداد به نمایندگی از والد پذیرفته شد و پیش‌پرداخت نقدی ثبت گردید. سرویس فعال است.'
+        : done === 'CONTRACT_ACCEPTED'
+          ? 'ثبت‌نام انجام شد و قرارداد به نمایندگی از والد پذیرفته شد؛ تعیین اقساط و شروع سرویس توسط مدیریت ادامه می‌یابد.'
+          : 'ثبت‌نام ایجاد شد؛ قرارداد و پیش‌پرداخت اکنون برای بررسی و اقدام والد در پنل خانواده نمایش داده می‌شود.';
+    return <p role="status" className="rounded-xl bg-success/10 p-4 text-sm font-bold text-success">{message}</p>;
+  }
 
   return (
-    <form onSubmit={submit} className="space-y-6">
+    <form onSubmit={submit} noValidate className="space-y-6">
       <fieldset><legend className="mb-3 font-black">مشخصات دانش‌آموز</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{textField('studentFirst', 'نام')}{textField('studentLast', 'نام خانوادگی')}{textField('studentNationalId', 'کد ملی', 'ltr')}{textField('homePhone', 'تلفن منزل (۰۲۱)', 'ltr')}<label className="text-sm font-bold">تاریخ تولد<JalaliDateInput value={form.birthDate} onChange={(value) => set('birthDate', value)} required /></label><label className="text-sm font-bold">جنسیت<Select value={form.gender} onValueChange={(value) => set('gender', value)} options={[{ value: 'FEMALE', label: 'دختر' }, { value: 'MALE', label: 'پسر' }]} /></label></div></fieldset>
-      <fieldset><legend className="mb-3 font-black">سرپرست</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{textField('guardianFirst', 'نام')}{textField('guardianLast', 'نام خانوادگی')}{textField('guardianNationalId', 'کد ملی', 'ltr')}<label className="text-sm font-bold">نسبت<Select value={form.guardianRelationshipType} onValueChange={(value) => set('guardianRelationshipType', value)} options={[{ value: 'FATHER', label: 'پدر' }, { value: 'MOTHER', label: 'مادر' }, { value: 'OTHER', label: 'سایر' }]} /></label>{form.guardianRelationshipType === 'OTHER' && <div className="lg:col-span-2">{textField('guardianRelationshipDescription', 'شرح نسبت')}</div>}<label className="text-sm font-bold">شماره همراه سرپرست<Input required className="mt-1" dir="ltr" value={guardianPhone} disabled /></label></div></fieldset>
+      <fieldset><legend className="mb-3 font-black">سرپرست</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{textField('guardianFirst', 'نام')}{textField('guardianLast', 'نام خانوادگی')}{textField('guardianNationalId', 'کد ملی', 'ltr')}<label className="text-sm font-bold">نسبت<Select value={form.guardianRelationshipType} onValueChange={(value) => set('guardianRelationshipType', value)} options={[{ value: 'FATHER', label: 'پدر' }, { value: 'MOTHER', label: 'مادر' }, { value: 'OTHER', label: 'سایر' }]} /></label>{form.guardianRelationshipType === 'OTHER' && <div className="lg:col-span-2">{textField('guardianRelationshipDescription', 'شرح نسبت')}</div>}<label className="text-sm font-bold">شماره همراه سرپرست<Input required className="mt-1" dir="ltr" value={guardianPhone} disabled /></label><p className="text-xs leading-5 text-muted lg:col-span-4">شماره تأییدشده حساب خانواده؛ این شماره به‌عنوان شماره سرپرست ثبت می‌شود و حساب جدیدی برای آن ساخته نمی‌شود.</p></div></fieldset>
       <fieldset><legend className="mb-3 font-black">اطلاعات پدر</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{textField('fatherFirst', 'نام پدر')}{textField('fatherLast', 'نام خانوادگی پدر')}{textField('fatherNationalId', 'کد ملی پدر', 'ltr')}{textField('fatherPhone', 'همراه پدر', 'ltr')}</div></fieldset>
       <fieldset><legend className="mb-3 font-black">اطلاعات مادر</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{textField('motherFirst', 'نام مادر')}{textField('motherLast', 'نام خانوادگی مادر')}{textField('motherNationalId', 'کد ملی مادر', 'ltr')}{textField('motherPhone', 'همراه مادر', 'ltr')}</div></fieldset>
       <fieldset><legend className="mb-3 font-black">تماس اضطراری و نشانی</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{textField('emergencyFirst', 'نام تماس اضطراری')}{textField('emergencyLast', 'نام خانوادگی')}{textField('emergencyRelationship', 'نسبت')}{textField('emergencyPhone', 'شماره همراه', 'ltr')}{textField('addressTitle', 'عنوان نشانی')}{textField('province', 'استان')}{textField('city', 'شهر')}{textField('district', 'منطقه', undefined, false)}<div className="sm:col-span-2">{textField('streetAddress', 'نشانی کامل')}</div>{textField('postalCode', 'کد پستی', 'ltr')}{textField('latitude', 'عرض جغرافیایی', 'ltr')}{textField('longitude', 'طول جغرافیایی', 'ltr')}</div></fieldset>
       <fieldset><legend className="mb-3 font-black">مدرسه و سرویس</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><label className="text-sm font-bold">مدرسه<Select value={form.schoolId} onValueChange={(value) => { const next = schools.find((item) => item.id === value); setForm((current) => ({ ...current, schoolId: value, educationLevel: next?.educationOptions[0]?.level ?? '', grade: next?.educationOptions[0]?.grades[0] ?? '' })); }} options={schools.map(({ id, name }) => ({ value: id, label: name }))} /></label><label className="text-sm font-bold">مقطع<Select value={form.educationLevel} onValueChange={(value) => { const nextGrades = levels.find((item) => item.level === value)?.grades ?? []; setForm((current) => ({ ...current, educationLevel: value, grade: nextGrades[0] ?? '' })); }} options={levels.map(({ level }) => ({ value: level, label: level }))} /></label><label className="text-sm font-bold">پایه<Select value={form.grade} onValueChange={(value) => set('grade', value)} options={grades.map((value) => ({ value, label: value }))} /></label><label className="text-sm font-bold">نوع سرویس<Select value={form.serviceType} onValueChange={(value) => set('serviceType', value)} options={[{ value: 'BUS', label: 'اتوبوس' }, { value: 'MINIBUS', label: 'مینی‌بوس' }, { value: 'CAR', label: 'خودرو' }, { value: 'VAN', label: 'ون' }]} /></label><label className="text-sm font-bold">روش پرداخت باقی‌مانده<Select value={form.paymentPlanType} onValueChange={(value) => set('paymentPlanType', value)} options={[{ value: 'FULL', label: 'یکجا' }, { value: 'INSTALLMENTS', label: 'اقساط' }]} /></label></div><label className="mt-3 block text-sm font-bold">توضیحات<Textarea className="mt-1" value={form.parentNotes} onChange={(event) => set('parentNotes', event.target.value)} /></label></fieldset>
-      <p className="rounded-xl bg-warning/10 p-3 text-sm">مدیریت فقط اطلاعات را ثبت می‌کند؛ پذیرش یا رد قرارداد و پرداخت پیش‌پرداخت فقط توسط والد در پنل خانواده انجام می‌شود.</p>
+      <fieldset>
+        <legend className="mb-3 font-black">تکمیل به نمایندگی والد (اختیاری)</legend>
+        <div className="space-y-3">
+          <label className="flex items-start gap-3 rounded-xl border border-border p-4">
+            <input type="checkbox" className="mt-1 size-4" checked={signOnBehalf} onChange={(event) => setSignOnBehalf(event.target.checked)} />
+            <span>
+              <span className="block text-sm font-bold">پذیرش قرارداد به نمایندگی از والد</span>
+              <span className="block text-xs leading-5 text-muted">فقط زمانی فعال کنید که والد شخصاً (حضوری یا تلفنی) درخواست پذیرش داده باشد؛ نام شما در گزارش حسابرسی ثبت می‌شود.</span>
+            </span>
+          </label>
+          {signOnBehalf && (
+            <div className="grid gap-3 rounded-xl bg-surface-muted p-4 sm:grid-cols-2">
+              <label className="text-sm font-bold">منبع پذیرش<Select value={signSource} onValueChange={setSignSource} options={[{ value: 'admin_console', label: 'پنل مدیریت' }, { value: 'in_person', label: 'حضوری در دفتر' }, { value: 'phone', label: 'تلفنی' }]} /></label>
+              <label className="text-sm font-bold">دلیل پذیرش<Input className="mt-1" value={signReason} onChange={(event) => setSignReason(event.target.value)} /></label>
+            </div>
+          )}
+          <label className="flex items-start gap-3 rounded-xl border border-border p-4">
+            <input type="checkbox" className="mt-1 size-4" checked={recordCash} onChange={(event) => setRecordCash(event.target.checked)} />
+            <span>
+              <span className="block text-sm font-bold">ثبت پیش‌پرداخت نقدی (۴٬۰۰۰٬۰۰۰ تومان)</span>
+              <span className="block text-xs leading-5 text-muted">هنگامی که مبلغ نقدی دریافت شده است؛ با ثبت آن سرویس بلافاصله فعال می‌شود.</span>
+            </span>
+          </label>
+          {recordCash && (
+            <div className="space-y-3 rounded-xl border border-warning/40 bg-warning/10 p-4">
+              <p className="text-sm font-black text-foreground">هشدار پیش‌پرداخت نقدی</p>
+              <p className="text-sm leading-6 text-muted">با ثبت پیش‌پرداخت نقدی به نمایندگی از والد، مبلغ ۴٬۰۰۰٬۰۰۰ تومان (معادل ۴۰٬۰۰۰٬۰۰۰ ریال) به‌عنوان پرداخت قطعی ثبت می‌شود و سرویس بلافاصله فعال خواهد شد. حتماً شماره رسید دریافتی را درج کنید؛ این اقدام با نام شما در گزارش حسابرسی ثبت می‌شود و قابل بازگشت نیست.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-sm font-bold">شماره رسید / مرجع پرداخت<Input required className="mt-1" dir="ltr" value={cashReference} onChange={(event) => setCashReference(event.target.value)} /></label>
+                <label className="text-sm font-bold">تاریخ دریافت (شمسی)<div className="mt-1"><JalaliDateInput value={cashPaidAt} onChange={setCashPaidAt} /></div></label>
+                <div className="sm:col-span-2"><label className="text-sm font-bold">توضیحات پرداخت<Textarea className="mt-1" value={cashDescription} onChange={(event) => setCashDescription(event.target.value)} /></label></div>
+              </div>
+            </div>
+          )}
+        </div>
+      </fieldset>
+      <p className="rounded-xl bg-warning/10 p-3 text-sm leading-6">بدون انتخاب گزینه‌های بالا، مدیریت فقط اطلاعات را ثبت می‌کند و پذیرش یا رد قرارداد و پرداخت پیش‌پرداخت فقط توسط والد در پنل خانواده انجام می‌شود.</p>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-      <Button type="submit" loading={pending}>ایجاد ثبت‌نام و ارسال برای اقدام والد</Button>
+      <Button type="submit" loading={pending}>{signOnBehalf || recordCash ? 'ایجاد ثبت‌نام و تکمیل به نمایندگی والد' : 'ایجاد ثبت‌نام و ارسال برای اقدام والد'}</Button>
     </form>
   );
 }
