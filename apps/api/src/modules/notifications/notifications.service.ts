@@ -102,7 +102,7 @@ export class NotificationsService {
     let items = await this.db.db
       .select()
       .from(notifications)
-      .where(eq(notifications.userId, userId))
+      .where(and(eq(notifications.userId, userId), eq(notifications.channel, 'IN_APP')))
       .orderBy(desc(notifications.createdAt));
     if (items.length === 0) {
       await this.outbox.create({
@@ -116,7 +116,7 @@ export class NotificationsService {
       items = await this.db.db
         .select()
         .from(notifications)
-        .where(eq(notifications.userId, userId))
+        .where(and(eq(notifications.userId, userId), eq(notifications.channel, 'IN_APP')))
         .orderBy(desc(notifications.createdAt));
     }
     return items;
@@ -127,17 +127,20 @@ export class NotificationsService {
       .select()
       .from(notifications)
       .where(
-        inArray(notifications.notificationType, [
-          'ACCOUNT_REGISTERED',
-          'ADMIN_STUDENT_ADDED',
-          'ENROLLMENT_CREATED',
-          'PAYMENT_SUCCEEDED',
-          'PAYMENT_APPROVED',
-          'PAYMENT_REJECTED',
-          'PAYMENT_PLAN_READY',
-          'CONTRACT_ACCEPTED',
-          'CONTRACT_REJECTED',
-        ]),
+        and(
+          eq(notifications.channel, 'IN_APP'),
+          inArray(notifications.notificationType, [
+            'ACCOUNT_REGISTERED',
+            'ADMIN_STUDENT_ADDED',
+            'ENROLLMENT_CREATED',
+            'PAYMENT_SUCCEEDED',
+            'PAYMENT_APPROVED',
+            'PAYMENT_REJECTED',
+            'PAYMENT_PLAN_READY',
+            'CONTRACT_ACCEPTED',
+            'CONTRACT_REJECTED',
+          ]),
+        ),
       )
       .orderBy(desc(notifications.createdAt));
   }
@@ -147,7 +150,11 @@ export class NotificationsService {
       .select()
       .from(notifications)
       .where(
-        and(eq(notifications.userId, userId), eq(notifications.notificationStatus, 'PENDING')),
+        and(
+          eq(notifications.userId, userId),
+          eq(notifications.channel, 'IN_APP'),
+          eq(notifications.notificationStatus, 'PENDING'),
+        ),
       );
 
     return { unreadCount: result.length };
@@ -157,7 +164,13 @@ export class NotificationsService {
     await this.db.db
       .update(notifications)
       .set({ notificationStatus: 'SENT', sentAt: new Date() })
-      .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
+      .where(
+        and(
+          eq(notifications.id, notificationId),
+          eq(notifications.userId, userId),
+          eq(notifications.channel, 'IN_APP'),
+        ),
+      );
   }
 
   async markAllRead(userId: string) {
@@ -165,7 +178,11 @@ export class NotificationsService {
       .update(notifications)
       .set({ notificationStatus: 'SENT', sentAt: new Date() })
       .where(
-        and(eq(notifications.userId, userId), eq(notifications.notificationStatus, 'PENDING')),
+        and(
+          eq(notifications.userId, userId),
+          eq(notifications.channel, 'IN_APP'),
+          eq(notifications.notificationStatus, 'PENDING'),
+        ),
       );
   }
 }

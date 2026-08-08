@@ -148,6 +148,13 @@
       "when": 1786204800000,
       "tag": "0020_notification_consents",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1786212000000,
+      "tag": "0021_sms_delivery_metadata",
+      "breakpoints": true
     }
   ]
 }

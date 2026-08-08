@@ -22,6 +22,7 @@ import { QueueModule } from './infrastructure/queue/queue.module';
 import { LoggingModule } from './common/logging.module';
 import { InAppNotificationModule } from './infrastructure/notifications/in-app-notification.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { SmsModule } from './infrastructure/sms/sms.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     ConfigModule,
     DatabaseModule,
+    SmsModule,
     InAppNotificationModule,
     IdentityModule,
     FamiliesModule,

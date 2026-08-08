@@ -53,6 +53,8 @@ export const notifications = pgTable(
       .references(() => users.id),
     notificationType: varchar('notification_type', { length: 50 }).notNull(),
     channel: varchar('channel', { length: 20 }).notNull().default('IN_APP'),
+    purpose: varchar('purpose', { length: 30 }),
+    providerMessageId: varchar('provider_message_id', { length: 100 }),
     title: varchar('title', { length: 200 }).notNull(),
     message: text('message').notNull(),
     relatedEntityType: varchar('related_entity_type', { length: 50 }),
@@ -68,6 +70,7 @@ export const notifications = pgTable(
     userIdx: index('idx_notifications_user').on(table.userId),
     statusIdx: index('idx_notifications_status').on(table.notificationStatus),
     eventIdx: uniqueIndex('idx_notifications_event').on(table.eventId),
+    providerMessageIdx: index('idx_notifications_provider_message').on(table.providerMessageId),
   }),
 );
 

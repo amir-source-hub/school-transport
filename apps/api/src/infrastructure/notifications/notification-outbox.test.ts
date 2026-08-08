@@ -29,7 +29,9 @@ describe('notification transactional outbox', () => {
       db: { transaction: vi.fn().mockRejectedValue(new Error('database unavailable')) },
     } as unknown as DatabaseService;
     const logger = { error: vi.fn() } as unknown as AppLogger;
-    const service = new InAppNotificationService(database, logger);
+    const service = new InAppNotificationService(database, logger, {
+      dispatch: vi.fn(async () => ({ status: 'DISABLED', purpose: 'SERVICE_NOTICE' })),
+    } as never);
 
     await expect(
       service.create({
@@ -107,10 +109,13 @@ describe('notification transactional outbox', () => {
         update,
       },
     } as unknown as DatabaseService;
-    const service = new InAppNotificationService(database, {
-      error: vi.fn(),
-      warn: vi.fn(),
-    } as unknown as AppLogger);
+    const service = new InAppNotificationService(
+      database,
+      { error: vi.fn(), warn: vi.fn() } as unknown as AppLogger,
+      {
+        dispatch: vi.fn(async () => ({ status: 'DISABLED', purpose: 'SERVICE_NOTICE' })),
+      } as never,
+    );
 
     await expect(service.dispatchAvailable()).resolves.toBe(1);
     expect(insert).toHaveBeenCalledTimes(1);

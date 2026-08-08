@@ -5,6 +5,8 @@ import { generateId } from '../../common/utils';
 import { DatabaseService } from '../../database/database.service';
 import type { DatabaseTransaction } from '../../database/payment-plan';
 import { notificationOutbox, notifications } from '../../database/schemas';
+import { KavenegarProviderError } from '../sms/kavenegar.client';
+import { SmsNotificationService } from '../sms/sms-notification.service';
 
 export type InAppNotification = {
   eventId?: string;
@@ -24,6 +26,7 @@ export class InAppNotificationService {
   constructor(
     private readonly db: DatabaseService,
     private readonly logger: AppLogger,
+    private readonly sms: SmsNotificationService,
   ) {}
 
   async enqueueInTransaction(txn: DatabaseTransaction, data: InAppNotification): Promise<string> {
@@ -62,8 +65,8 @@ export class InAppNotificationService {
       try {
         await this.deliver(event);
         delivered += 1;
-      } catch {
-        await this.recordFailure(event.id, event.eventId, event.attemptCount);
+      } catch (error) {
+        await this.recordFailure(event.id, event.eventId, event.attemptCount, error);
       }
     }
     return delivered;
@@ -122,6 +125,33 @@ export class InAppNotificationService {
           relatedEntityId: event.relatedEntityId,
         })
         .onConflictDoNothing({ target: notifications.eventId });
+    });
+    const sms = await this.sms.dispatch({
+      eventId: event.eventId,
+      userId: event.userId,
+      notificationType: event.notificationType,
+    });
+    await this.db.db.transaction(async (txn) => {
+      if (sms.status !== 'DISABLED') {
+        await txn
+          .insert(notifications)
+          .values({
+            id: generateId(),
+            eventId: `${event.eventId}:SMS`,
+            userId: event.userId,
+            notificationType: event.notificationType,
+            channel: 'SMS',
+            purpose: sms.purpose,
+            title: event.title,
+            message: event.message,
+            relatedEntityType: event.relatedEntityType,
+            relatedEntityId: event.relatedEntityId,
+            notificationStatus: sms.status === 'SENT' ? 'SENT' : sms.status,
+            providerMessageId: sms.status === 'SENT' ? sms.providerMessageId : null,
+            sentAt: sms.status === 'SENT' ? new Date() : null,
+          })
+          .onConflictDoNothing({ target: notifications.eventId });
+      }
       await txn
         .update(notificationOutbox)
         .set({
@@ -135,15 +165,23 @@ export class InAppNotificationService {
     });
   }
 
-  private async recordFailure(id: string, eventId: string, attemptCount: number): Promise<void> {
-    const retry = notificationRetryDecision(attemptCount);
+  private async recordFailure(
+    id: string,
+    eventId: string,
+    attemptCount: number,
+    error: unknown,
+  ): Promise<void> {
+    const permanent = error instanceof KavenegarProviderError && !error.transient;
+    const retry = permanent
+      ? { status: 'DEAD' as const, delayMs: 0 }
+      : notificationRetryDecision(attemptCount);
     await this.db.db
       .update(notificationOutbox)
       .set({
         outboxStatus: retry.status,
         nextAttemptAt: new Date(Date.now() + retry.delayMs),
         lockedAt: null,
-        failureCode: 'DELIVERY_FAILED',
+        failureCode: permanent ? 'SMS_PROVIDER_REJECTED' : 'DELIVERY_FAILED',
         updatedAt: new Date(),
       })
       .where(eq(notificationOutbox.id, id));

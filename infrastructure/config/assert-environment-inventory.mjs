@@ -25,7 +25,7 @@ for (const file of sourceFiles) {
     for (const match of content.matchAll(/\$\{([A-Z][A-Z0-9_]*)(?=[:}])/g)) consumed.add(match[1]);
   }
   if (file.endsWith('config.service.ts')) {
-    for (const match of content.matchAll(/^\s{2}([A-Z][A-Z0-9_]+):/gm)) consumed.add(match[1]);
+    for (const match of content.matchAll(/^\s+([A-Z][A-Z0-9_]+):/gm)) consumed.add(match[1]);
   }
 }
 

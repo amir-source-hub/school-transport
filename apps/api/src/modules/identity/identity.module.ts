@@ -8,6 +8,7 @@ import { TrustedOriginGuard } from '../access-control/trusted-origin.guard';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
 import {
   ConsoleOtpDelivery,
+  KavenegarOtpDelivery,
   UnconfiguredOtpDelivery,
 } from './infrastructure/otp-delivery';
 import { OTP_DELIVERY } from './application/otp-delivery.port';
@@ -30,18 +31,22 @@ import { OTP_DELIVERY } from './application/otp-delivery.port';
     TrustedOriginGuard,
     OnboardingGuard,
     ConsoleOtpDelivery,
+    KavenegarOtpDelivery,
     UnconfiguredOtpDelivery,
     {
       provide: OTP_DELIVERY,
-      inject: [ConfigService, ConsoleOtpDelivery, UnconfiguredOtpDelivery],
+      inject: [ConfigService, ConsoleOtpDelivery, KavenegarOtpDelivery, UnconfiguredOtpDelivery],
       useFactory: (
         config: ConfigService,
         consoleDelivery: ConsoleOtpDelivery,
+        kavenegarDelivery: KavenegarOtpDelivery,
         unavailableDelivery: UnconfiguredOtpDelivery,
-      ) =>
-        config.nodeEnv !== 'production' && config.otpProvider === 'console'
-          ? consoleDelivery
-          : unavailableDelivery,
+      ) => {
+        if (config.otpProvider === 'kavenegar') return kavenegarDelivery;
+        if (config.nodeEnv !== 'production' && config.otpProvider === 'console')
+          return consoleDelivery;
+        return unavailableDelivery;
+      },
     },
   ],
   exports: [AuthService, JwtModule],

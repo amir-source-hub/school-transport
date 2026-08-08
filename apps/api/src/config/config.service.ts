@@ -3,7 +3,10 @@ import { z } from 'zod';
 import { isIP } from 'node:net';
 
 export function parseTrustedProxyCidrs(value = ''): string[] {
-  const entries = value.split(',').map((entry) => entry.trim()).filter(Boolean);
+  const entries = value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
   for (const entry of entries) {
     const [address, prefix, ...extra] = entry.split('/');
     const version = isIP(address);
@@ -18,84 +21,124 @@ export function parseTrustedProxyCidrs(value = ''): string[] {
   return entries;
 }
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().default(5000),
-  HOST: z.string().default('0.0.0.0'),
-  DATABASE_URL: z.string(),
-  REDIS_URL: z.string().default('redis://localhost:6379'),
-  PG_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
-  PG_IDLE_TIMEOUT_MS: z.coerce.number().int().min(1000).max(300000).default(30000),
-  PG_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(250).max(30000).default(5000),
-  PG_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(250).max(120000).default(15000),
-  PG_SSL_MODE: z.enum(['disable', 'verify-full']).default('disable'),
-  READINESS_TIMEOUT_MS: z.coerce.number().int().min(100).max(10000).default(2000),
-  JWT_SECRET: z.string().min(16),
-  JWT_ACCESS_TOKEN_TTL: z.coerce.number().default(3600),
-  JWT_REFRESH_TOKEN_TTL: z.coerce.number().default(86400),
-  JWT_REMEMBER_REFRESH_TOKEN_TTL: z.coerce.number().default(604800),
-  ADMIN_JWT_ACCESS_TOKEN_TTL: z.coerce.number().default(3600),
-  ADMIN_JWT_REFRESH_TOKEN_TTL: z.coerce.number().default(86400),
-  ADMIN_JWT_REMEMBER_REFRESH_TOKEN_TTL: z.coerce.number().default(604800),
-  OTP_EXPIRY_SECONDS: z.coerce.number().default(120),
-  OTP_MAX_ATTEMPTS: z.coerce.number().default(5),
-  OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().default(60),
-  ADMIN_CHALLENGE_TTL_SECONDS: z.coerce.number().default(120),
-  ONBOARDING_SESSION_TTL_SECONDS: z.coerce.number().default(604800),
-  FEATURE_ADMIN_2FA: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
-  FEATURE_ONBOARDING: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
-  API_DOCS_ENABLED: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
-  CORS_ORIGINS: z.string().default('http://localhost:3000'),
-  TRUSTED_PROXY_CIDRS: z.string().default('').transform((value, context) => {
-    try {
-      return parseTrustedProxyCidrs(value);
-    } catch (error) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: error instanceof Error ? error.message : 'Invalid trusted proxy configuration.',
-      });
-      return z.NEVER;
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    PORT: z.coerce.number().default(5000),
+    HOST: z.string().default('0.0.0.0'),
+    DATABASE_URL: z.string(),
+    REDIS_URL: z.string().default('redis://localhost:6379'),
+    PG_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+    PG_IDLE_TIMEOUT_MS: z.coerce.number().int().min(1000).max(300000).default(30000),
+    PG_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(250).max(30000).default(5000),
+    PG_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(250).max(120000).default(15000),
+    PG_SSL_MODE: z.enum(['disable', 'verify-full']).default('disable'),
+    READINESS_TIMEOUT_MS: z.coerce.number().int().min(100).max(10000).default(2000),
+    JWT_SECRET: z.string().min(16),
+    JWT_ACCESS_TOKEN_TTL: z.coerce.number().default(3600),
+    JWT_REFRESH_TOKEN_TTL: z.coerce.number().default(86400),
+    JWT_REMEMBER_REFRESH_TOKEN_TTL: z.coerce.number().default(604800),
+    ADMIN_JWT_ACCESS_TOKEN_TTL: z.coerce.number().default(3600),
+    ADMIN_JWT_REFRESH_TOKEN_TTL: z.coerce.number().default(86400),
+    ADMIN_JWT_REMEMBER_REFRESH_TOKEN_TTL: z.coerce.number().default(604800),
+    OTP_EXPIRY_SECONDS: z.coerce.number().default(120),
+    OTP_MAX_ATTEMPTS: z.coerce.number().default(5),
+    OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().default(60),
+    ADMIN_CHALLENGE_TTL_SECONDS: z.coerce.number().default(120),
+    ONBOARDING_SESSION_TTL_SECONDS: z.coerce.number().default(604800),
+    FEATURE_ADMIN_2FA: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
+    FEATURE_ONBOARDING: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
+    API_DOCS_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+    CORS_ORIGINS: z.string().default('http://localhost:3000'),
+    TRUSTED_PROXY_CIDRS: z
+      .string()
+      .default('')
+      .transform((value, context) => {
+        try {
+          return parseTrustedProxyCidrs(value);
+        } catch (error) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              error instanceof Error ? error.message : 'Invalid trusted proxy configuration.',
+          });
+          return z.NEVER;
+        }
+      }),
+    LOG_LEVEL: z.string().default('debug'),
+    OTP_PROVIDER: z.enum(['console', 'kavenegar', 'none']).default('none'),
+    SMS_PROVIDER: z.enum(['kavenegar', 'none']).default('none'),
+    KAVEHNEGAR_API_KEY: z.string().trim().optional(),
+    KAVEHNEGAR_BASE_URL: z.string().url().default('https://api.kavenegar.com/v1'),
+    KAVEHNEGAR_SENDER: z.string().trim().optional(),
+    KAVEHNEGAR_OTP_TEMPLATE: z.string().trim().optional(),
+    KAVEHNEGAR_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000).default(5_000),
+    PAYMENT_GATEWAY_PROVIDER: z.enum(['mock', 'none']).default('none'),
+    SERVICE_ROLE: z.enum(['api', 'worker']).default('api'),
+    AUTH_SESSION_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
+    SEED_DEMO_DATA: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+    QUEUE_REQUIRED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+  })
+  .superRefine((env, context) => {
+    if (env.NODE_ENV !== 'production') return;
+    const issue = (path: string, message: string) =>
+      context.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+    if (/demo|development|replace|change/i.test(env.JWT_SECRET) || env.JWT_SECRET.length < 32) {
+      issue('JWT_SECRET', 'Production requires a strong externally supplied JWT secret.');
     }
-  }),
-  LOG_LEVEL: z.string().default('debug'),
-  OTP_PROVIDER: z.enum(['console', 'none']).default('none'),
-  PAYMENT_GATEWAY_PROVIDER: z.enum(['mock', 'none']).default('none'),
-  SERVICE_ROLE: z.enum(['api', 'worker']).default('api'),
-  AUTH_SESSION_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
-  SEED_DEMO_DATA: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
-  QUEUE_REQUIRED: z
-    .enum(['true', 'false'])
-    .default('false')
-    .transform((value) => value === 'true'),
-}).superRefine((env, context) => {
-  if (env.NODE_ENV !== 'production') return;
-  const issue = (path: string, message: string) =>
-    context.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
-  if (/demo|development|replace|change/i.test(env.JWT_SECRET) || env.JWT_SECRET.length < 32) {
-    issue('JWT_SECRET', 'Production requires a strong externally supplied JWT secret.');
-  }
-  try {
-    const database = new URL(env.DATABASE_URL);
-    if (!database.password) issue('DATABASE_URL', 'Production database credentials are required.');
-  } catch { issue('DATABASE_URL', 'A valid production database URL is required.'); }
-  try {
-    const redis = new URL(env.REDIS_URL);
-    if (!redis.password) issue('REDIS_URL', 'Production Redis credentials are required.');
-  } catch { issue('REDIS_URL', 'A valid production Redis URL is required.'); }
-  if (env.OTP_PROVIDER === 'console') issue('OTP_PROVIDER', 'Console OTP is development-only.');
-  if (env.PAYMENT_GATEWAY_PROVIDER === 'mock') issue('PAYMENT_GATEWAY_PROVIDER', 'Mock payments are development-only.');
-  if (env.SERVICE_ROLE === 'api' && env.OTP_PROVIDER === 'none') {
-    issue('OTP_PROVIDER', 'Production API startup requires an integrated OTP provider.');
-  }
-  if (env.SERVICE_ROLE === 'api' && env.PAYMENT_GATEWAY_PROVIDER === 'none') {
-    issue(
-      'PAYMENT_GATEWAY_PROVIDER',
-      'Production API startup requires an integrated payment gateway.',
-    );
-  }
-  if (env.LOG_LEVEL === 'debug') issue('LOG_LEVEL', 'Debug logging is not permitted in production.');
-  if (env.SEED_DEMO_DATA) issue('SEED_DEMO_DATA', 'Demo seeding is not permitted in production.');
-});
+    try {
+      const database = new URL(env.DATABASE_URL);
+      if (!database.password)
+        issue('DATABASE_URL', 'Production database credentials are required.');
+    } catch {
+      issue('DATABASE_URL', 'A valid production database URL is required.');
+    }
+    try {
+      const redis = new URL(env.REDIS_URL);
+      if (!redis.password) issue('REDIS_URL', 'Production Redis credentials are required.');
+    } catch {
+      issue('REDIS_URL', 'A valid production Redis URL is required.');
+    }
+    if (env.OTP_PROVIDER === 'console') issue('OTP_PROVIDER', 'Console OTP is development-only.');
+    if (
+      (env.OTP_PROVIDER === 'kavenegar' || env.SMS_PROVIDER === 'kavenegar') &&
+      !env.KAVEHNEGAR_API_KEY
+    ) {
+      issue('KAVEHNEGAR_API_KEY', 'Kavenegar API key is required when its provider is enabled.');
+    }
+    if (env.OTP_PROVIDER === 'kavenegar' && !env.KAVEHNEGAR_OTP_TEMPLATE) {
+      issue('KAVEHNEGAR_OTP_TEMPLATE', 'An approved Kavenegar VerifyLookup template is required.');
+    }
+    if (env.PAYMENT_GATEWAY_PROVIDER === 'mock')
+      issue('PAYMENT_GATEWAY_PROVIDER', 'Mock payments are development-only.');
+    if (env.SERVICE_ROLE === 'api' && env.OTP_PROVIDER === 'none') {
+      issue('OTP_PROVIDER', 'Production API startup requires an integrated OTP provider.');
+    }
+    if (env.SERVICE_ROLE === 'api' && env.PAYMENT_GATEWAY_PROVIDER === 'none') {
+      issue(
+        'PAYMENT_GATEWAY_PROVIDER',
+        'Production API startup requires an integrated payment gateway.',
+      );
+    }
+    if (env.LOG_LEVEL === 'debug')
+      issue('LOG_LEVEL', 'Debug logging is not permitted in production.');
+    if (env.SEED_DEMO_DATA) issue('SEED_DEMO_DATA', 'Demo seeding is not permitted in production.');
+  });
 
 export function validateEnvironment(environment: NodeJS.ProcessEnv) {
   return envSchema.safeParse(environment);
@@ -168,23 +211,59 @@ export class ConfigService implements OnApplicationShutdown {
   get corsOrigins(): string[] {
     return this.env.CORS_ORIGINS.split(',').map((s) => s.trim());
   }
-  get featureAdminTwoFactor(): boolean { return this.env.FEATURE_ADMIN_2FA; }
-  get featureOnboarding(): boolean { return this.env.FEATURE_ONBOARDING; }
-  get apiDocsEnabled(): boolean { return this.env.API_DOCS_ENABLED; }
-  get pgPoolMax() { return this.env.PG_POOL_MAX; }
-  get pgIdleTimeoutMs() { return this.env.PG_IDLE_TIMEOUT_MS; }
-  get pgConnectTimeoutMs() { return this.env.PG_CONNECT_TIMEOUT_MS; }
-  get pgStatementTimeoutMs() { return this.env.PG_STATEMENT_TIMEOUT_MS; }
-  get pgSslMode() { return this.env.PG_SSL_MODE; }
-  get readinessTimeoutMs() { return this.env.READINESS_TIMEOUT_MS; }
+  get featureAdminTwoFactor(): boolean {
+    return this.env.FEATURE_ADMIN_2FA;
+  }
+  get featureOnboarding(): boolean {
+    return this.env.FEATURE_ONBOARDING;
+  }
+  get apiDocsEnabled(): boolean {
+    return this.env.API_DOCS_ENABLED;
+  }
+  get pgPoolMax() {
+    return this.env.PG_POOL_MAX;
+  }
+  get pgIdleTimeoutMs() {
+    return this.env.PG_IDLE_TIMEOUT_MS;
+  }
+  get pgConnectTimeoutMs() {
+    return this.env.PG_CONNECT_TIMEOUT_MS;
+  }
+  get pgStatementTimeoutMs() {
+    return this.env.PG_STATEMENT_TIMEOUT_MS;
+  }
+  get pgSslMode() {
+    return this.env.PG_SSL_MODE;
+  }
+  get readinessTimeoutMs() {
+    return this.env.READINESS_TIMEOUT_MS;
+  }
   get trustedProxyCidrs(): string[] {
     return this.env.TRUSTED_PROXY_CIDRS;
   }
   get logLevel(): string {
     return this.env.LOG_LEVEL;
   }
-  get otpProvider(): 'console' | 'none' {
+  get otpProvider(): 'console' | 'kavenegar' | 'none' {
     return this.env.OTP_PROVIDER;
+  }
+  get smsProvider(): 'kavenegar' | 'none' {
+    return this.env.SMS_PROVIDER;
+  }
+  get kavenegarApiKey(): string | undefined {
+    return this.env.KAVEHNEGAR_API_KEY;
+  }
+  get kavenegarBaseUrl(): string {
+    return this.env.KAVEHNEGAR_BASE_URL;
+  }
+  get kavenegarSender(): string | undefined {
+    return this.env.KAVEHNEGAR_SENDER;
+  }
+  get kavenegarOtpTemplate(): string | undefined {
+    return this.env.KAVEHNEGAR_OTP_TEMPLATE;
+  }
+  get kavenegarTimeoutMs(): number {
+    return this.env.KAVEHNEGAR_TIMEOUT_MS;
   }
   get paymentGatewayProvider(): 'mock' | 'none' {
     return this.env.PAYMENT_GATEWAY_PROVIDER;
@@ -195,7 +274,9 @@ export class ConfigService implements OnApplicationShutdown {
   get authSessionRetentionDays(): number {
     return this.env.AUTH_SESSION_RETENTION_DAYS;
   }
-  get seedDemoData(): boolean { return this.env.SEED_DEMO_DATA; }
+  get seedDemoData(): boolean {
+    return this.env.SEED_DEMO_DATA;
+  }
   get queueRequired(): boolean {
     return (
       this.env.QUEUE_REQUIRED ||

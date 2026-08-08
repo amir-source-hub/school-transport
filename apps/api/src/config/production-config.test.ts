@@ -37,13 +37,47 @@ describe('production configuration', () => {
     ['LOG_LEVEL', 'debug'],
     ['SEED_DEMO_DATA', 'true'],
   ])('rejects unsafe production %s', (name, value) => {
-    expect(validateEnvironment({ ...production, SERVICE_ROLE: 'worker', [name]: value }).success).toBe(false);
+    expect(
+      validateEnvironment({ ...production, SERVICE_ROLE: 'worker', [name]: value }).success,
+    ).toBe(false);
   });
 
   it('retains explicit development-only providers outside production', () => {
-    expect(validateEnvironment({
-      ...production, NODE_ENV: 'development', OTP_PROVIDER: 'console',
-      PAYMENT_GATEWAY_PROVIDER: 'mock', LOG_LEVEL: 'debug', SEED_DEMO_DATA: 'true',
-    }).success).toBe(true);
+    expect(
+      validateEnvironment({
+        ...production,
+        NODE_ENV: 'development',
+        OTP_PROVIDER: 'console',
+        PAYMENT_GATEWAY_PROVIDER: 'mock',
+        LOG_LEVEL: 'debug',
+        SEED_DEMO_DATA: 'true',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('requires Kavenegar credentials and an approved OTP template when enabled', () => {
+    const missing = validateEnvironment({
+      ...production,
+      OTP_PROVIDER: 'kavenegar',
+      SMS_PROVIDER: 'kavenegar',
+      SERVICE_ROLE: 'worker',
+    });
+    expect(missing.success).toBe(false);
+    if (!missing.success) {
+      expect(missing.error.flatten().fieldErrors).toMatchObject({
+        KAVEHNEGAR_API_KEY: expect.any(Array),
+        KAVEHNEGAR_OTP_TEMPLATE: expect.any(Array),
+      });
+    }
+    expect(
+      validateEnvironment({
+        ...production,
+        OTP_PROVIDER: 'kavenegar',
+        SMS_PROVIDER: 'kavenegar',
+        KAVEHNEGAR_API_KEY: 'provider-secret',
+        KAVEHNEGAR_OTP_TEMPLATE: 'schooltransportotp',
+        SERVICE_ROLE: 'worker',
+      }).success,
+    ).toBe(true);
   });
 });
