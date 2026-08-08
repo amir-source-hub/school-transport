@@ -71,6 +71,7 @@ export function ConfigureInstallmentsDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>();
   const [items, setItems] = useState([{ amount: '', dueDate: '' }]);
   const update = (index: number, key: 'amount' | 'dueDate', value: string) =>
     setItems((current) =>
@@ -90,34 +91,42 @@ export function ConfigureInstallmentsDialog({
         }
       >
         <div className="max-h-[65vh] space-y-4 overflow-y-auto">
-          {items.map((item, index) => (
-            <div
-              key={index}
-              className="grid grid-cols-[auto_1fr_1fr] items-end gap-3 rounded-xl bg-surface-muted p-3"
-            >
-              <span className="pb-3 text-sm font-black">
-                {fullPayment ? 'باقی‌مانده' : `قسط ${(index + 1).toLocaleString('fa-IR')}`}
-              </span>
-              <label className="text-xs font-bold">
-                مبلغ (ریال)
-                <Input
-                  inputMode="numeric"
-                  value={item.amount}
-                  onChange={(event) =>
-                    update(index, 'amount', event.target.value.replace(/\D/g, ''))
-                  }
-                />
-              </label>
-              <label className="text-xs font-bold">
-                سررسید (شمسی)
-                <JalaliDateInput
-                  required
-                  value={item.dueDate}
-                  onChange={(value) => update(index, 'dueDate', value)}
-                />
-              </label>
-            </div>
-          ))}
+          {items.map((item, index) => {
+            const amountErrors = fieldErrors?.[`items.${index}.amount`] ?? [];
+            const dueDateErrors = fieldErrors?.[`items.${index}.dueDate`] ?? [];
+            return (
+              <div key={index} className="space-y-2">
+                <div className="grid grid-cols-[auto_1fr_1fr] items-end gap-3 rounded-xl bg-surface-muted p-3">
+                  <span className="pb-3 text-sm font-black">
+                    {fullPayment ? 'باقی‌مانده' : `قسط ${(index + 1).toLocaleString('fa-IR')}`}
+                  </span>
+                  <label className="text-xs font-bold">
+                    مبلغ (ریال)
+                    <Input
+                      inputMode="numeric"
+                      value={item.amount}
+                      onChange={(event) =>
+                        update(index, 'amount', event.target.value.replace(/\D/g, ''))
+                      }
+                    />
+                  </label>
+                  <label className="text-xs font-bold">
+                    سررسید (شمسی)
+                    <JalaliDateInput
+                      required
+                      value={item.dueDate}
+                      onChange={(value) => update(index, 'dueDate', value)}
+                    />
+                  </label>
+                </div>
+                {[...amountErrors, ...dueDateErrors].map((message, messageIndex) => (
+                  <p key={messageIndex} className="text-xs text-danger">
+                    {message}
+                  </p>
+                ))}
+              </div>
+            );
+          })}
           <div className="flex gap-2">
             {!fullPayment && items.length < 12 && (
               <Button
@@ -146,6 +155,7 @@ export function ConfigureInstallmentsDialog({
             onClick={async () => {
               setLoading(true);
               setError(undefined);
+              setFieldErrors(undefined);
               try {
                 await configureInstallments(
                   planId,
@@ -154,7 +164,9 @@ export function ConfigureInstallmentsDialog({
                 setOpen(false);
                 router.refresh();
               } catch (caught) {
-                setError(getApiErrorFeedback(caught).message);
+                const feedback = getApiErrorFeedback(caught);
+                setError(feedback.message);
+                setFieldErrors(feedback.fieldErrors);
               } finally {
                 setLoading(false);
               }

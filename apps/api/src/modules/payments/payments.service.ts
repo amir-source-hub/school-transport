@@ -665,23 +665,42 @@ export class PaymentsService {
     if (items.length < 1 || items.length > 12) {
       throw new ValidationError('Installment count must be between 1 and 12.');
     }
-    if (
-      items.some(
-        (item) =>
-          !Number.isInteger(item.amount) ||
-          item.amount <= 0 ||
-          Number.isNaN(Date.parse(item.dueDate)),
-      )
-    ) {
-      throw new ValidationError('Each installment requires a valid amount and due date.');
+    const [plan] = await this.db.db
+      .select()
+      .from(paymentPlans)
+      .where(eq(paymentPlans.id, planId))
+      .limit(1);
+    if (!plan) throw new NotFoundError('Payment plan', planId);
+
+    const errors: Record<string, string[]> = {};
+    const startDay = plan.createdAt.toISOString().slice(0, 10);
+    let previousDay: string | null = null;
+    items.forEach((item, index) => {
+      const key = `items.${index}.dueDate`;
+      const messages: string[] = [];
+      if (!Number.isInteger(item.amount) || item.amount <= 0) {
+        messages.push('مبلغ قسط باید عددی بزرگ‌تر از صفر باشد.');
+      }
+      const dueDate = new Date(item.dueDate);
+      if (Number.isNaN(dueDate.getTime())) {
+        messages.push('تاریخ این قسط معتبر نیست.');
+      } else {
+        const dueDay = dueDate.toISOString().slice(0, 10);
+        if (previousDay !== null && dueDay <= previousDay) {
+          messages.push('تاریخ این قسط باید پس از تاریخ قسط قبلی باشد و تکرار نشود.');
+        }
+        if (dueDay < startDay) {
+          messages.push('تاریخ سررسید نمی‌تواند پیش از تاریخ شروع برنامه پرداخت باشد.');
+        }
+        previousDay = dueDay;
+      }
+      if (messages.length > 0) errors[key] = messages;
+    });
+    if (Object.keys(errors).length > 0) {
+      throw new ValidationError('Installment dates are invalid.', errors);
     }
+
     const result = await this.db.db.transaction(async (txn) => {
-      const [plan] = await txn
-        .select()
-        .from(paymentPlans)
-        .where(eq(paymentPlans.id, planId))
-        .limit(1);
-      if (!plan) throw new NotFoundError('Payment plan', planId);
       if (plan.planType === 'FULL' && items.length !== 1) {
         throw new ValidationError('Full payment requires exactly one remaining payment.');
       }
