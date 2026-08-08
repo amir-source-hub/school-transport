@@ -48,6 +48,7 @@ import {
   type SchoolOption,
 } from './enrollment-form-model';
 import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-schema';
+import { updateNotificationConsent } from '@/features/notifications/notifications-api';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const vehicleOptions = [
@@ -114,6 +115,8 @@ export function CreateEnrollmentForm({
   const [contractChecked, setContractChecked] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [optionalInAppConsent, setOptionalInAppConsent] = useState(false);
+  const [optionalSmsConsent, setOptionalSmsConsent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const [locationError, setLocationError] = useState<string>();
@@ -1057,6 +1060,21 @@ export function CreateEnrollmentForm({
                 ? 'مبلغ باقی‌مانده و تاریخ پرداخت یکجا پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'
                 : 'تعداد، مبلغ و تاریخ اقساط پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'}
             </div>
+            <fieldset className="mt-5 space-y-3 rounded-2xl border border-border p-4 text-right">
+              <legend className="px-2 text-sm font-black">رضایت اختیاری اطلاع‌رسانی</legend>
+              <p className="text-xs leading-6 text-muted">
+                مایلم پیام‌های اختیاری درباره تغییرات سرویس و یادآوری‌های غیرالزامی را دریافت کنم.
+                این انتخاب از پنل قابل تغییر است و پیام‌های ضروری قرارداد، پرداخت و ایمنی را متوقف نمی‌کند.
+              </p>
+              <label className="flex min-h-11 items-center gap-3">
+                <input type="checkbox" checked={optionalInAppConsent} onChange={(event) => setOptionalInAppConsent(event.target.checked)} />
+                <span className="text-sm font-bold">داخل سامانه</span>
+              </label>
+              <label className="flex min-h-11 items-center gap-3">
+                <input type="checkbox" checked={optionalSmsConsent} onChange={(event) => setOptionalSmsConsent(event.target.checked)} />
+                <span className="text-sm font-bold">پیامک</span>
+              </label>
+            </fieldset>
             <Button
               className="mt-6 w-full"
               size="lg"
@@ -1070,9 +1088,22 @@ export function CreateEnrollmentForm({
                   await payGuidedPrepayment(result.scheduleItemId, mode);
                   if (mode === 'onboarding') {
                     await finalizeOnboarding();
+                    try {
+                      await Promise.all([
+                        updateNotificationConsent('IN_APP', optionalInAppConsent, 'ONBOARDING'),
+                        updateNotificationConsent('SMS', optionalSmsConsent, 'ONBOARDING'),
+                      ]);
+                    } catch {
+                      router.replace('/student/notifications?consentError=1');
+                      return;
+                    }
                     router.replace('/student/dashboard');
                     return;
                   }
+                  await Promise.all([
+                    updateNotificationConsent('IN_APP', optionalInAppConsent, 'ONBOARDING'),
+                    updateNotificationConsent('SMS', optionalSmsConsent, 'ONBOARDING'),
+                  ]);
                   setPaid(true);
                   router.refresh();
                 } catch (caught) {

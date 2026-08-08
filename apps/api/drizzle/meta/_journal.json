@@ -141,6 +141,13 @@
       "when": 1786186250553,
       "tag": "0019_careless_gideon",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1786204800000,
+      "tag": "0020_notification_consents",
+      "breakpoints": true
     }
   ]
 }

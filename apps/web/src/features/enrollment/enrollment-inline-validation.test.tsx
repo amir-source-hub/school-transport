@@ -37,6 +37,7 @@ describe('CreateEnrollmentForm inline validation', () => {
       'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.',
     );
     expect(phone).toHaveAttribute('aria-invalid', 'true');
+    expect(phone.getAttribute('aria-describedby')).toBe(error.id);
     expect(phone.nextElementSibling).toBe(error);
 
     await user.clear(phone);

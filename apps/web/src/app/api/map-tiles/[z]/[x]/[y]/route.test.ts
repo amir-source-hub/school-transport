@@ -34,7 +34,12 @@ describe('map tile route', () => {
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
     expect(fetchMock).toHaveBeenCalledWith(
       'https://tile.openstreetmap.org/2/1/2.png',
-      expect.objectContaining({ next: { revalidate: 86_400 } }),
+      expect.objectContaining({
+        headers: {
+          'User-Agent': 'SaminGashtSchoolTransport/1.0 (+https://samingasht.ir/contact)',
+        },
+        next: { revalidate: 604_800 },
+      }),
     );
   });
 

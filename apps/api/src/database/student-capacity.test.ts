@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { CasingCache } from 'drizzle-orm/casing';
 import {
   assertStudentCapacity,
   getStudentCapacity,
@@ -73,6 +74,7 @@ describe('assertStudentCapacity', () => {
     const query = (countChain.where.mock.calls[0][0] as {
       toQuery: (config: unknown) => { sql: string; params: unknown[] };
     }).toQuery({
+      casing: new CasingCache(),
       escapeName: (name: string) => `"${name}"`,
       escapeParam: (num: number) => `$${num + 1}`,
       escapeString: (value: string) => `'${value}'`,

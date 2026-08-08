@@ -4,11 +4,44 @@ import {
   varchar,
   timestamp,
   text,
+  boolean,
   index,
   uniqueIndex,
   integer,
 } from 'drizzle-orm/pg-core';
 import { users } from './auth.schema';
+
+export const NOTIFICATION_CONSENT_TEXT_VERSION = '2026-08-08.v1';
+
+export const notificationConsents = pgTable(
+  'notification_consents',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    channel: varchar('channel', { length: 20 }).notNull(),
+    purpose: varchar('purpose', { length: 30 }).notNull(),
+    granted: boolean('granted').notNull().default(false),
+    textVersion: varchar('text_version', { length: 40 }).notNull(),
+    source: varchar('source', { length: 30 }).notNull(),
+    grantedAt: timestamp('granted_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    updatedBy: uuid('updated_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userPurposeChannelIdx: uniqueIndex('idx_notification_consents_user_purpose_channel').on(
+      table.userId,
+      table.purpose,
+      table.channel,
+    ),
+    userIdx: index('idx_notification_consents_user').on(table.userId),
+  }),
+);
 
 export const notifications = pgTable(
   'notifications',

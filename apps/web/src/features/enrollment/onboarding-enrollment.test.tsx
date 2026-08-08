@@ -12,11 +12,13 @@ const enrollmentApi = vi.hoisted(() => ({
   cancelEnrollment: vi.fn(),
   acceptEnrollmentPrice: vi.fn(),
 }));
+const notificationsApi = vi.hoisted(() => ({ updateNotificationConsent: vi.fn() }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: navigation.replace, refresh: navigation.refresh }),
 }));
 vi.mock('./enrollments-api', () => enrollmentApi);
+vi.mock('@/features/notifications/notifications-api', () => notificationsApi);
 vi.mock('leaflet', () => ({}));
 
 const schools = [
@@ -154,6 +156,16 @@ describe('onboarding guided enrollment funnel', () => {
       expect(enrollmentApi.acceptGuidedContract).toHaveBeenCalledWith('contract-1', 'onboarding');
       expect(enrollmentApi.payGuidedPrepayment).toHaveBeenCalledWith('sch-1', 'onboarding');
       expect(enrollmentApi.finalizeOnboarding).toHaveBeenCalledOnce();
+      expect(notificationsApi.updateNotificationConsent).toHaveBeenCalledWith(
+        'IN_APP',
+        false,
+        'ONBOARDING',
+      );
+      expect(notificationsApi.updateNotificationConsent).toHaveBeenCalledWith(
+        'SMS',
+        false,
+        'ONBOARDING',
+      );
       expect(navigation.replace).toHaveBeenCalledWith('/student/dashboard');
     },
     30_000,

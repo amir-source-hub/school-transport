@@ -33,6 +33,8 @@ import {
   buildAdminStudentOrderBy,
 } from './student-list.sort';
 
+export const MAX_STUDENTS_PER_GUARDIAN = 5;
+
 @Injectable()
 export class StudentsService {
   constructor(
@@ -391,6 +393,12 @@ export class StudentsService {
         );
       }
       const currentLimit = account.studentLimit;
+      if (currentLimit >= MAX_STUDENTS_PER_GUARDIAN) {
+        throw new ConflictError(
+          'STUDENT_LIMIT_MAX_REACHED',
+          `Student capacity cannot exceed ${MAX_STUDENTS_PER_GUARDIAN}.`,
+        );
+      }
       const id = generateId();
       await txn.insert(studentLimitRequests).values({
         id,
@@ -456,6 +464,12 @@ export class StudentsService {
         throw new ConflictError(
           'LIMIT_REQUEST_NOT_PENDING',
           'This limit request is no longer pending.',
+        );
+      }
+      if (request.requestedLimit > MAX_STUDENTS_PER_GUARDIAN) {
+        throw new ConflictError(
+          'STUDENT_LIMIT_MAX_REACHED',
+          `Student capacity cannot exceed ${MAX_STUDENTS_PER_GUARDIAN}.`,
         );
       }
       await txn

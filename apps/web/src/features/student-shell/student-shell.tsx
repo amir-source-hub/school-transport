@@ -96,7 +96,7 @@ function StudentNavigation({ mobile = false }: { mobile?: boolean }) {
 
   const content = navGroups.map(({ group, items }) => (
     <div key={group} className="space-y-1">
-      <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-white/40">{group}</p>
+      <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-white/50">{group}</p>
       {items.map(({ href, label, icon: Icon }) => {
         const active = isStudentRouteActive(pathname, href);
         const link = (
@@ -173,6 +173,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
 
           <Link
             href="/student/dashboard"
+            aria-label="پنل دانش‌آموز"
             className="flex items-center gap-2.5 font-black text-foreground"
           >
             <BrandMark size={24} />
@@ -205,7 +206,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
             <BrandMark size={24} className="text-sun" />
             <div>
               <p className="text-sm font-black text-white">سرویس مدرسه</p>
-              <p className="text-[10px] text-white/40">پنل دانش‌آموز</p>
+              <p className="text-[10px] text-white/50">پنل دانش‌آموز</p>
             </div>
           </div>
           <StudentNavigation />

@@ -4,10 +4,13 @@ import { Card } from '@/components/ui/card';
 import { MarkAllReadButton, MarkReadButton } from '@/features/notifications/notification-actions';
 import { getNotifications } from '@/features/notifications/notifications-api';
 import { formatJalaliDateTime } from '@/lib/formatters';
+import { NotificationSettingsForm } from '@/features/notifications/notification-settings-form';
+import { getNotificationSettings } from '@/features/notifications/notifications-api';
 export const metadata = { title: 'اعلان‌ها' };
 export const dynamic = 'force-dynamic';
 export default async function NotificationsPage() {
   const notifications = await getNotifications();
+  const settings = await getNotificationSettings();
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -20,6 +23,7 @@ export default async function NotificationsPage() {
         </div>
         <MarkAllReadButton />
       </div>
+      <NotificationSettingsForm initial={settings} />
       {notifications.map((item) => (
         <Card key={item.id}>
           <div className="flex flex-wrap items-start justify-between gap-3">

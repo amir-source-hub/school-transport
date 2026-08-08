@@ -92,7 +92,7 @@ export function PublicHero() {
               <div key={label} className="flex items-center gap-3 rounded-xl bg-white/8 px-3 py-2.5">
                 <CheckCircle2 className="size-4 shrink-0 text-sun" />
                 <span className="text-xs font-bold text-white/85">{label}</span>
-                <span className="mr-auto text-[10px] text-white/40">۰{index + 1}</span>
+                <span className="mr-auto text-[10px] text-white/50">۰{index + 1}</span>
               </div>
             ))}
           </div>

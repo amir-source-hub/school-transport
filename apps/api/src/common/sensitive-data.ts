@@ -14,6 +14,20 @@ const SENSITIVE_KEYS = new Set([
   'secretkey',
   'paymentcredentials',
   'nationalid',
+  'phonenumber',
+  'mobile',
+  'homephone',
+  'managerphone',
+  'address',
+  'streetaddress',
+  'postalcode',
+  'latitude',
+  'longitude',
+  'coordinates',
+  'contracttext',
+  'contractdatasnapshot',
+  'gatewaytransactionid',
+  'receiptreference',
 ]);
 
 const normalizeKey = (key: string) => key.toLowerCase().replace(/[^a-z0-9]/g, '');

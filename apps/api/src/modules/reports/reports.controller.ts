@@ -8,8 +8,9 @@ import { ReportPreviewQueryDto } from './reports.dto';
 import { successResponse } from '../../common/response';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { Inject } from '@nestjs/common';
+import { SuperAdminGuard } from '../access-control/super-admin.guard';
 
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(AuthGuard, RolesGuard, SuperAdminGuard)
 @Roles('ADMIN')
 @Controller('admin/reports')
 export class ReportsController {

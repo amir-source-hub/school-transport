@@ -27,5 +27,23 @@ describe('JalaliDateInput', () => {
 
     expect(screen.getByText('تاریخ شمسی را به شکل ۱۴۰۵/۰۱/۰۱ وارد کنید.')).toBeInTheDocument();
   });
+
+  it('marks the input invalid and links the inline error through aria-describedby', async () => {
+    const user = userEvent.setup();
+    render(<JalaliDateInput value="" onChange={vi.fn()} />);
+    const input = screen.getByRole('textbox');
+
+    await user.type(input, '140313');
+    const error = screen.getByText('تاریخ شمسی را به شکل ۱۴۰۵/۰۱/۰۱ وارد کنید.');
+
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input.getAttribute('aria-describedby')).toBe(error.id);
+
+    await user.clear(input);
+    await user.type(input, '14030715');
+
+    expect(input).toHaveAttribute('aria-invalid', 'false');
+    expect(input).not.toHaveAttribute('aria-describedby');
+  });
 });
 

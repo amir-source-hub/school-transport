@@ -171,7 +171,7 @@ export default function AboutPage() {
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.4, delay: i * 0.1 }}
-                    className="relative mr-8 pb-8 last:pb-0"
+                    className="relative mr-6 pb-8 last:pb-0 sm:mr-8"
                   >
                     <span className="absolute -right-[2.15rem] top-0 flex size-4 items-center justify-center rounded-full border-2 border-primary bg-surface-inset">
                       <span className="size-1.5 rounded-full bg-primary" />

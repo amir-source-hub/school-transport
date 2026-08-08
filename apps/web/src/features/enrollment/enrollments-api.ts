@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { apiRequest } from '@/lib/api-client';
 import type { GuidedEnrollmentInput } from './enrollment-schema';
+import { setAuthSession } from '@/features/auth/auth-session';
 
 export const enrollmentSchema = z.object({
   id: z.string(),
@@ -81,10 +82,11 @@ export async function payGuidedPrepayment(
 }
 
 export async function finalizeOnboarding() {
-  await apiRequest<unknown>('/auth/onboarding/finalize', {
+  const response = await apiRequest<{ accessToken: string }>('/auth/onboarding/finalize', {
     method: 'POST',
     body: { rememberMe: false },
   });
+  setAuthSession(response.data.accessToken, 'PARENT');
 }
 
 export async function getEnrollments() {

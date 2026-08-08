@@ -291,6 +291,9 @@ export class AuthService {
     }
 
     if (needsOnboarding) {
+      if (this.config.featureOnboarding === false) {
+        throw new AuthenticationError('Authentication failed.');
+      }
       let userId = account?.id;
       if (!userId) {
         userId = generateId();

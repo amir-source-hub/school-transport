@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { SQL, BuildQueryConfig } from 'drizzle-orm';
+import { CasingCache } from 'drizzle-orm/casing';
 import { buildAdminStudentArchiveWhere, buildAdminStudentOrderBy } from './student-list.sort';
 
 const config: BuildQueryConfig = {
+  casing: new CasingCache(),
   escapeName: (name: string) => `"${name}"`,
   escapeParam: (num: number) => `$${num + 1}`,
   escapeString: (value: string) => `'${value}'`,

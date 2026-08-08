@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -28,6 +28,7 @@ describe('phone navigation and compact controls', () => {
     await user.click(trigger);
 
     const dialog = screen.getByRole('dialog', { name: 'منوی اصلی' });
+    await waitFor(() => expect(dialog).toContainElement(document.activeElement as HTMLElement));
     const mobileNav = within(dialog).getByRole('navigation', { name: 'ناوبری موبایل' });
     expect(dialog.querySelector('.overflow-y-auto')).toHaveClass('overscroll-contain');
     for (const link of within(mobileNav).getAllByRole('link')) {

@@ -61,7 +61,7 @@ export function PublicFooter() {
               <BrandMark size={32} className="text-sun" />
               <div>
                 <p className="font-black text-white">{SITE_NAME}</p>
-                <p className="text-xs text-white/40 mt-0.5">مسیر امن، تجربه روشن</p>
+                <p className="text-xs text-white/50 mt-0.5">مسیر امن، تجربه روشن</p>
               </div>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/50">
@@ -118,7 +118,7 @@ export function PublicFooter() {
           </div>
         )}
 
-        <div className="flex flex-col items-center justify-between gap-2 py-4 text-xs text-white/30 sm:flex-row">
+        <div className="flex flex-col items-center justify-between gap-2 py-4 text-xs text-white/50 sm:flex-row">
           <p>تمام حقوق این سامانه محفوظ است.</p>
           <p className="flex items-center gap-1">
             <Route aria-hidden="true" className="size-3" />

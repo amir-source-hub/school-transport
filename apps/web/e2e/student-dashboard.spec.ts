@@ -1,4 +1,4 @@
-﻿import { expect, test } from './fixtures';
+import { expect, test } from './fixtures';
 
 test.beforeEach(async ({ context, baseURL }) => {
   await context.addCookies([{ name: 'e2e-role', value: 'PARENT', url: baseURL! }]);
@@ -9,7 +9,7 @@ test('parent dashboard authorizes against seeded fixtures and renders empty stat
 }) => {
   await page.goto('/student/dashboard');
   await expect(
-    page.getByRole('status').filter({ hasText: 'Ù‡Ù†ÙˆØ² Ø¯Ø§Ù†Ø´â€ŒØ¢Ù…ÙˆØ²ÛŒ Ø«Ø¨Øª Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª' }),
+    page.getByRole('status').filter({ hasText: 'هنوز دانش‌آموزی ثبت نشده است' }),
   ).toBeVisible();
 });
 
@@ -21,15 +21,15 @@ test('parent session dependency renders an intentional 503 state and retries saf
   test.skip(testInfo.project.name !== 'chromium', 'Dependency-state smoke runs once on desktop.');
   await context.addCookies([{ name: 'e2e-failure', value: '503', url: baseURL! }]);
   await page.goto('/student/dashboard');
-  const alert = page.getByRole('alert').filter({ hasText: 'Ø¨Ø±Ø±Ø³ÛŒ Ù†Ø´Ø³Øª Ø­Ø³Ø§Ø¨ Ù…Ù…Ú©Ù† Ù†ÛŒØ³Øª' });
-  await expect(alert).toContainText('Ø¨Ø±Ø±Ø³ÛŒ Ù†Ø´Ø³Øª Ø­Ø³Ø§Ø¨ Ù…Ù…Ú©Ù† Ù†ÛŒØ³Øª');
+  const alert = page.getByRole('alert').filter({ hasText: 'بررسی نشست حساب ممکن نیست' });
+  await expect(alert).toContainText('بررسی نشست حساب ممکن نیست');
 
   await context.addCookies([
     { name: 'e2e-failure', value: '', url: baseURL!, expires: Math.floor(Date.now() / 1000) - 1 },
   ]);
-  await alert.getByRole('button', { name: 'ØªÙ„Ø§Ø´ Ø¯ÙˆØ¨Ø§Ø±Ù‡' }).click();
+  await alert.getByRole('button', { name: 'تلاش دوباره' }).click();
   await expect(
-    page.getByRole('status').filter({ hasText: 'Ù‡Ù†ÙˆØ² Ø¯Ø§Ù†Ø´â€ŒØ¢Ù…ÙˆØ²ÛŒ Ø«Ø¨Øª Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª' }),
+    page.getByRole('status').filter({ hasText: 'هنوز دانش‌آموزی ثبت نشده است' }),
   ).toBeVisible();
 });
 
@@ -41,11 +41,11 @@ test('parent dock does not overlap phone/tablet content or phone 200% root text'
   if (testInfo.project.name === 'phone-320') {
     await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
   }
-  const dock = page.getByRole('navigation', { name: 'Ù†Ø§ÙˆØ¨Ø±ÛŒ Ø³Ø±ÛŒØ¹ Ù…ÙˆØ¨Ø§ÛŒÙ„' });
+  const dock = page.getByRole('navigation', { name: 'ناوبری سریع موبایل' });
   const main = page.getByRole('main');
   await expect(dock).toBeVisible();
   const geometry = await page.evaluate(() => {
-    const dockElement = document.querySelector('nav[aria-label="Ù†Ø§ÙˆØ¨Ø±ÛŒ Ø³Ø±ÛŒØ¹ Ù…ÙˆØ¨Ø§ÛŒÙ„"]');
+    const dockElement = document.querySelector('nav[aria-label="ناوبری سریع موبایل"]');
     const mainElement = document.querySelector('main');
     if (!dockElement || !mainElement) return null;
     return {
@@ -59,7 +59,6 @@ test('parent dock does not overlap phone/tablet content or phone 200% root text'
   expect(geometry!.mainPaddingBottom).toBeGreaterThanOrEqual(geometry!.dockHeight);
   expect(geometry!.horizontalOverflow).toBe(false);
   await expect(
-    main.getByRole('status').filter({ hasText: 'Ù‡Ù†ÙˆØ² Ø¯Ø§Ù†Ø´â€ŒØ¢Ù…ÙˆØ²ÛŒ Ø«Ø¨Øª Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª' }),
+    main.getByRole('status').filter({ hasText: 'هنوز دانش‌آموزی ثبت نشده است' }),
   ).toBeVisible();
 });
-

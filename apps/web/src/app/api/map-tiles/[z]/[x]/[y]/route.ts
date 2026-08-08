@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
 
-export const revalidate = 86_400;
+export const revalidate = 604_800;
 
 const TILE_SEGMENT = /^\d+$/;
 const MAX_ZOOM = 19;
+const TILE_BASE_URL = (process.env.MAP_TILE_BASE_URL ?? 'https://tile.openstreetmap.org').replace(
+  /\/$/,
+  '',
+);
+const TILE_CONTACT_URL = process.env.MAP_TILE_CONTACT_URL ?? 'https://samingasht.ir/contact';
 
 function parseTileCoordinates(parts: { z: string; x: string; y: string }) {
   if (![parts.z, parts.x, parts.y].every((part) => TILE_SEGMENT.test(part))) return null;
@@ -17,7 +22,7 @@ function parseTileCoordinates(parts: { z: string; x: string; y: string }) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ z: string; x: string; y: string }> },
 ) {
   const coordinates = parseTileCoordinates(await params);
@@ -30,9 +35,11 @@ export async function GET(
 
   try {
     const { z, x, y } = coordinates;
-    const upstream = await fetch(`https://tile.openstreetmap.org/${z}/${x}/${y}.png`, {
+    const referer = request.headers.get('referer');
+    const upstream = await fetch(`${TILE_BASE_URL}/${z}/${x}/${y}.png`, {
       headers: {
-        'User-Agent': 'SchoolTransport/1.0 (school transport enrollment map)',
+        'User-Agent': `SaminGashtSchoolTransport/1.0 (+${TILE_CONTACT_URL})`,
+        ...(referer ? { Referer: referer } : {}),
       },
       next: { revalidate },
       signal: AbortSignal.timeout(8_000),
@@ -53,7 +60,7 @@ export async function GET(
     return new NextResponse(await upstream.arrayBuffer(), {
       headers: {
         'Content-Type': upstream.headers.get('content-type') ?? 'image/png',
-        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+        'Cache-Control': 'public, max-age=604800, stale-while-revalidate=2592000',
         'X-Content-Type-Options': 'nosniff',
       },
     });

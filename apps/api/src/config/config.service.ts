@@ -42,6 +42,9 @@ const envSchema = z.object({
   OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().default(60),
   ADMIN_CHALLENGE_TTL_SECONDS: z.coerce.number().default(120),
   ONBOARDING_SESSION_TTL_SECONDS: z.coerce.number().default(604800),
+  FEATURE_ADMIN_2FA: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
+  FEATURE_ONBOARDING: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
+  API_DOCS_ENABLED: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
   TRUSTED_PROXY_CIDRS: z.string().default('').transform((value, context) => {
     try {
@@ -165,6 +168,9 @@ export class ConfigService implements OnApplicationShutdown {
   get corsOrigins(): string[] {
     return this.env.CORS_ORIGINS.split(',').map((s) => s.trim());
   }
+  get featureAdminTwoFactor(): boolean { return this.env.FEATURE_ADMIN_2FA; }
+  get featureOnboarding(): boolean { return this.env.FEATURE_ONBOARDING; }
+  get apiDocsEnabled(): boolean { return this.env.API_DOCS_ENABLED; }
   get pgPoolMax() { return this.env.PG_POOL_MAX; }
   get pgIdleTimeoutMs() { return this.env.PG_IDLE_TIMEOUT_MS; }
   get pgConnectTimeoutMs() { return this.env.PG_CONNECT_TIMEOUT_MS; }

@@ -5,6 +5,8 @@ import { successResponse } from '../../common/response';
 import { Roles } from '../../common/decorators';
 import { RolesGuard } from '../access-control/roles.guard';
 import { AuthenticatedRequest } from '../../common/http-request';
+import { Body } from '@nestjs/common';
+import { UpdateNotificationConsentDto } from './notification-consent.dto';
 
 @UseGuards(AuthGuard)
 @Controller('notifications')
@@ -33,6 +35,21 @@ export class NotificationsController {
   async markAllRead(@Req() req: AuthenticatedRequest) {
     await this.notificationsService.markAllRead(req.user.id);
     return successResponse({ read: true });
+  }
+
+  @Get('settings')
+  async getSettings(@Req() req: AuthenticatedRequest) {
+    return successResponse(await this.notificationsService.getConsentSettings(req.user.id));
+  }
+
+  @Patch('settings')
+  async updateSettings(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: UpdateNotificationConsentDto,
+  ) {
+    return successResponse(
+      await this.notificationsService.updateConsent(req.user.id, body, req.ip),
+    );
   }
 }
 

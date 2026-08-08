@@ -11,6 +11,7 @@ import { RouteLoading } from '@/components/feedback/route-loading';
 import { apiRequest } from '@/lib/api-client';
 import { SITE_NAME } from '@/lib/route-metadata';
 import { AdminLoginForm } from '@/features/auth/auth-forms';
+import { featureFlags } from '@/lib/feature-flags';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -79,7 +80,13 @@ export default function AdminLoginPage() {
             وارد کنید.
           </p>
           <div className="mt-7">
-            <AdminLoginForm />
+            {featureFlags.adminTwoFactor ? (
+              <AdminLoginForm />
+            ) : (
+              <p role="status" className="rounded-2xl bg-warning/10 p-4 text-sm leading-7">
+                ورود مدیریت در این انتشار موقتاً غیرفعال است.
+              </p>
+            )}
           </div>
         </div>
         <div className="mt-7 flex items-center justify-center gap-3 border-t border-slate-200/70 pt-5 text-xs text-muted">

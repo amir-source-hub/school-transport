@@ -43,6 +43,9 @@ const ALLOWED_VALUE_FIELDS = new Set([
   'signerSource',
   'referenceNumber',
   'familyId',
+  'channel',
+  'purpose',
+  'granted',
 ]);
 
 @Injectable()

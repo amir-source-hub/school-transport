@@ -241,6 +241,9 @@ export class AuthController {
     @Req() req: FastifyRequest,
     @Body() dto: AdminPasswordChallengeDto,
   ) {
+    if (this.config.featureAdminTwoFactor === false) {
+      throw new ValidationError('Admin authentication is temporarily unavailable.');
+    }
     return successResponse(
       await this.authService.createAdminChallenge(dto.username, dto.password, req.ip),
     );
@@ -255,6 +258,9 @@ export class AuthController {
     @Body() dto: AdminOtpVerificationDto,
     @Res({ passthrough: true }) reply: CookieReply,
   ) {
+    if (this.config.featureAdminTwoFactor === false) {
+      throw new ValidationError('Admin authentication is temporarily unavailable.');
+    }
     const context = {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
@@ -317,6 +323,9 @@ export class AuthController {
   @UseGuards(OnboardingGuard)
   @Get('onboarding/me')
   async onboardingMe(@Req() req: OnboardingRequest) {
+    if (this.config.featureOnboarding === false) {
+      throw new ValidationError('Onboarding is temporarily unavailable.');
+    }
     return successResponse({
       accountId: req.onboarding.userId,
       phoneNumber: req.onboarding.phoneNumber,
@@ -334,6 +343,9 @@ export class AuthController {
     @Body() dto: FinalizeOnboardingDto,
     @Res({ passthrough: true }) reply: CookieReply,
   ) {
+    if (this.config.featureOnboarding === false) {
+      throw new ValidationError('Onboarding is temporarily unavailable.');
+    }
     const context = {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],

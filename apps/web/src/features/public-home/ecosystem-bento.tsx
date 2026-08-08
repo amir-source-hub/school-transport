@@ -42,7 +42,7 @@ export function EcosystemBento() {
               <p className="mt-4 leading-7 text-white/70">
                 چهار مرحله روشن، ذخیره اطلاعات در حساب و پیگیری کامل تا شروع سرویس.
               </p>
-              <ButtonLink href="/login" className="mt-auto w-fit bg-sun text-navy hover:bg-sun/90">
+              <ButtonLink href="/login" className="mt-auto w-fit bg-sun !text-navy hover:bg-sun/90">
                 شروع ثبت‌نام
               </ButtonLink>
             </div>

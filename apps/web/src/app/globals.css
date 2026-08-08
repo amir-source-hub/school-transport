@@ -18,7 +18,7 @@
 
   --text-strong: #101828;
   --text-body: #364150;
-  --text-muted: #6f7887;
+  --text-muted: #596574;
   --text-on-dark: #fcfcfd;
 
   --border-default: #dfe3e9;
@@ -142,27 +142,31 @@ select {
   text-wrap: balance;
 }
 
-/* Tailwind v4 theme aliases must never reduce contrast on dark surfaces. */
+/* Tailwind v4 theme aliases must never reduce contrast on dark surfaces.
+   Unlayered (non-important) color still beats layered utilities, while
+   allowing descendants to override their color with dedicated utilities
+   (e.g. .text-navy on a sun button) — CSS !important from an ancestor
+   would otherwise inherit and defeat such overrides. */
 .text-white {
-  color: #fff !important;
+  color: #fff;
 }
 .text-white\/70 {
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: rgba(255, 255, 255, 0.7);
 }
 .text-white\/60 {
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: rgba(255, 255, 255, 0.6);
 }
 .text-white\/50 {
-  color: rgba(255, 255, 255, 0.5) !important;
+  color: rgba(255, 255, 255, 0.5);
 }
 .text-white\/40 {
-  color: rgba(255, 255, 255, 0.4) !important;
+  color: rgba(255, 255, 255, 0.4);
 }
 .text-white\/30 {
-  color: rgba(255, 255, 255, 0.3) !important;
+  color: rgba(255, 255, 255, 0.3);
 }
 .text-sun {
-  color: #ffc857 !important;
+  color: #ffc857;
 }
 
 .portal-main > div {
