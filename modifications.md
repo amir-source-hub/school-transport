@@ -648,20 +648,20 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Student removal/archive
 
-- [ ] Review `archive-student-button.tsx`, `admin-students/student-actions.tsx`, and existing service methods before adding another “remove” concept.
-- [ ] Define the button label and behavior clearly: recommended `غیرفعال‌سازی` or `بایگانی` for ordinary admins, not irreversible deletion.
-- [ ] Require a confirmation dialog that names the student and explains the effect on panel access, enrollment, transport service, and financial history.
-- [ ] Add a reason field and audit actor/time. Preserve contracts and payments.
-- [ ] If permanent erasure is legally required, implement it as a separate privileged retention workflow, not the list-page action.
+- [x] Review `archive-student-button.tsx`, `admin-students/student-actions.tsx`, and existing service methods before adding another “remove” concept.
+- [x] Define the button label and behavior clearly: recommended `غیرفعال‌سازی` or `بایگانی` for ordinary admins, not irreversible deletion.
+- [x] Require a confirmation dialog that names the student and explains the effect on panel access, enrollment, transport service, and financial history.
+- [x] Add a reason field and audit actor/time. Preserve contracts and payments.
+- [x] If permanent erasure is legally required, implement it as a separate privileged retention workflow, not the list-page action.
 
 #### Full admin edit form
 
-- [ ] Replace the narrow `apps/web/src/features/students/student-form.tsx` admin use with the same sections and validation contract used by guided enrollment.
-- [ ] Remove `className` from the visible edit form and update `students-api.ts` request types.
-- [ ] Build tabs/steps for identity, guardian/contacts, address/map, school/service, contract, and payment so the form remains understandable.
-- [ ] Fetch one complete authorized admin DTO rather than stitching together public/student endpoints in the browser.
-- [ ] On save, send only editable fields or use version/updatedAt checks to prevent one admin overwriting another’s recent change.
-- [ ] Audit sensitive before/after values with masking rules.
+- [x] Replace the narrow `apps/web/src/features/students/student-form.tsx` admin use with the same sections and validation contract used by guided enrollment.
+- [x] Remove `className` from the visible edit form and update `students-api.ts` request types.
+- [x] Build tabs/steps for identity, guardian/contacts, address/map, school/service, contract, and payment so the form remains understandable.
+- [x] Fetch one complete authorized admin DTO rather than stitching together public/student endpoints in the browser.
+- [x] On save, send only editable fields or use version/updatedAt checks to prevent one admin overwriting another’s recent change.
+- [x] Audit sensitive before/after values with masking rules.
 
 #### Admin-created student
 
@@ -674,12 +674,12 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Filters, sorting, and registration status groups
 
-- [ ] Define query parameters centrally, for example `archive=all|active|archived`, `sort=studentName|schoolName|createdAt`, and `direction=asc|desc`.
-- [ ] Validate them in DTOs and map values to an allowlisted Drizzle expression in services.
-- [ ] Add school name to the backend select used by admin registration rows; do not perform one school request per row.
-- [ ] Return pagination metadata and preserve filter/sort query parameters across pages.
-- [ ] Create and test one status-group mapper for the requested Persian filters. The UI sends a product group, and the service expands it to the appropriate detailed lifecycle statuses.
-- [ ] Decide Persian collation behavior with PostgreSQL and test representative Persian names rather than assuming JavaScript A→Z is correct.
+- [x] Define query parameters centrally, for example `archive=all|active|archived`, `sort=studentName|schoolName|createdAt`, and `direction=asc|desc`.
+- [x] Validate them in DTOs and map values to an allowlisted Drizzle expression in services.
+- [x] Add school name to the backend select used by admin registration rows; do not perform one school request per row.
+- [x] Return pagination metadata and preserve filter/sort query parameters across pages.
+- [x] Create and test one status-group mapper for the requested Persian filters. The UI sends a product group, and the service expands it to the appropriate detailed lifecycle statuses.
+- [x] Decide Persian collation behavior with PostgreSQL and test representative Persian names rather than assuming JavaScript A→Z is correct.
 
 #### Removing the families section
 
