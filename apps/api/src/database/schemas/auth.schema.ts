@@ -17,6 +17,7 @@ export const users = pgTable(
     username: varchar('username', { length: 100 }).notNull().unique(),
     phoneNumber: varchar('phone_number', { length: 20 }).unique(),
     accountStatus: varchar('account_status', { length: 20 }).notNull().default('ACTIVE'),
+    studentLimit: integer('student_limit').notNull().default(2),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

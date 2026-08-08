@@ -51,3 +51,44 @@ export async function updateStudent(id: string, input: Pick<StudentInput, 'first
 export async function archiveStudent(id: string) {
   await apiRequest(`/students/${id}`, { method: 'DELETE' });
 }
+
+export const studentCapacitySchema = z.object({
+  studentLimit: z.number(),
+  activeStudentCount: z.number(),
+  remaining: z.number(),
+});
+
+export type StudentCapacity = z.infer<typeof studentCapacitySchema>;
+
+export async function getStudentCapacity() {
+  const response = await apiRequest<unknown>('/students/capacity', { cache: 'no-store' });
+  return studentCapacitySchema.parse(response.data);
+}
+
+export const limitRequestSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  currentLimit: z.number(),
+  requestedLimit: z.number(),
+  reason: z.string(),
+  status: z.string(),
+  reviewedByAdminId: z.string().nullable(),
+  reviewedAt: z.string().nullable(),
+  rejectionReason: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+export type LimitRequest = z.infer<typeof limitRequestSchema>;
+
+export async function getLimitRequests() {
+  const response = await apiRequest<unknown>('/students/limit-requests', { cache: 'no-store' });
+  return z.array(limitRequestSchema).parse(response.data);
+}
+
+export async function createLimitRequest(reason: string) {
+  const response = await apiRequest<unknown>('/students/limit-requests', {
+    method: 'POST',
+    body: { reason },
+  });
+  return limitRequestSchema.parse(response.data);
+}

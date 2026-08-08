@@ -1,18 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { parents, schools, students, users } from '../../database/schemas';
+import {
+  parents,
+  schools,
+  studentLimitRequests,
+  students,
+  users,
+} from '../../database/schemas';
 import { eq, and } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { EditableStudentFields, parseEditableStudentFields } from './student-update';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
+import { assertStudentCapacity, getStudentCapacity } from '../../database/student-capacity';
+import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 
 @Injectable()
 export class StudentsService {
   constructor(
     private readonly db: DatabaseService,
     private readonly notifications: InAppNotificationService,
+    @Inject(AUDIT_PORT) private readonly auditService: AuditPort,
   ) {}
 
   async getAllByFamily(userId: string) {
@@ -65,6 +74,7 @@ export class StudentsService {
 
     const id = generateId();
     await this.db.db.transaction(async (txn) => {
+      await assertStudentCapacity(txn, userId);
       await txn.insert(students).values({
         id,
         userId,
@@ -135,6 +145,210 @@ export class StudentsService {
           ? `${familyParent.firstName} ${familyParent.lastName}`
           : student.username,
       };
+    });
+  }
+
+  async getCapacity(userId: string) {
+    return getStudentCapacity(this.db.db, userId);
+  }
+
+  async getLimitRequests(userId: string) {
+    return this.db.db
+      .select()
+      .from(studentLimitRequests)
+      .where(eq(studentLimitRequests.userId, userId))
+      .orderBy(studentLimitRequests.createdAt);
+  }
+
+  async createLimitRequest(userId: string, reason: string) {
+    return this.db.db.transaction(async (txn) => {
+      const [account] = await txn
+        .select({ studentLimit: users.studentLimit })
+        .from(users)
+        .where(eq(users.id, userId))
+        .for('update');
+      if (!account) {
+        throw new ConflictError('ACCOUNT_PHONE_REQUIRED', 'Account not found.');
+      }
+      const [pending] = await txn
+        .select({ id: studentLimitRequests.id })
+        .from(studentLimitRequests)
+        .where(
+          and(
+            eq(studentLimitRequests.userId, userId),
+            eq(studentLimitRequests.status, 'PENDING'),
+          ),
+        )
+        .limit(1);
+      if (pending) {
+        throw new ConflictError(
+          'LIMIT_REQUEST_ALREADY_PENDING',
+          'A limit increase request is already pending for this account.',
+        );
+      }
+      const currentLimit = account.studentLimit;
+      const id = generateId();
+      await txn.insert(studentLimitRequests).values({
+        id,
+        userId,
+        currentLimit,
+        requestedLimit: currentLimit + 1,
+        reason,
+        status: 'PENDING',
+      });
+      await this.notifications.enqueueInTransaction(txn, {
+        eventId: `LIMIT_REQUEST_CREATED:${id}:${userId}`,
+        userId,
+        notificationType: 'LIMIT_REQUEST_CREATED',
+        title: 'درخواست افزایش ظرفیت ثبت شد',
+        message:
+          'درخواست افزایش ظرفیت دانش‌آموز برای بررسی مدیریت ارسال شد. نتیجه به اطلاع شما می‌رسد.',
+        relatedEntityType: 'LIMIT_REQUEST',
+        relatedEntityId: id,
+      });
+      const [created] = await txn
+        .select()
+        .from(studentLimitRequests)
+        .where(eq(studentLimitRequests.id, id))
+        .limit(1);
+      return created;
+    });
+  }
+
+  async getAllLimitRequestsForAdmin() {
+    const rows = await this.db.db
+      .select({
+        ...getTableColumns(studentLimitRequests),
+        username: users.username,
+      })
+      .from(studentLimitRequests)
+      .innerJoin(users, eq(users.id, studentLimitRequests.userId))
+      .orderBy(studentLimitRequests.createdAt);
+
+    const parentRows = await this.db.db.select().from(parents);
+    return rows.map((request) => {
+      const familyParent =
+        parentRows.find(
+          (parent) => parent.userId === request.userId && parent.isPrimaryContact,
+        ) ?? parentRows.find((parent) => parent.userId === request.userId);
+      return {
+        ...request,
+        familyName: familyParent
+          ? `${familyParent.firstName} ${familyParent.lastName}`
+          : request.username,
+      };
+    });
+  }
+
+  async approveLimitRequest(requestId: string, adminId: string, ipAddress?: string) {
+    return this.db.db.transaction(async (txn) => {
+      const [request] = await txn
+        .select()
+        .from(studentLimitRequests)
+        .where(eq(studentLimitRequests.id, requestId))
+        .for('update');
+      if (!request) throw new NotFoundError('Limit request', requestId);
+      if (request.status !== 'PENDING') {
+        throw new ConflictError(
+          'LIMIT_REQUEST_NOT_PENDING',
+          'This limit request is no longer pending.',
+        );
+      }
+      await txn
+        .update(users)
+        .set({ studentLimit: request.requestedLimit, updatedAt: new Date() })
+        .where(eq(users.id, request.userId));
+      await txn
+        .update(studentLimitRequests)
+        .set({
+          status: 'APPROVED',
+          reviewedByAdminId: adminId,
+          reviewedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(studentLimitRequests.id, requestId));
+      await this.auditService.recordInTransaction(txn, {
+        actorType: 'ADMIN',
+        actorId: adminId,
+        action: 'LIMIT_REQUEST_APPROVED',
+        entityType: 'LIMIT_REQUEST',
+        entityId: requestId,
+        previousValues: { status: 'PENDING', requestedLimit: request.requestedLimit },
+        newValues: { status: 'APPROVED', studentLimit: request.requestedLimit },
+        ipAddress,
+      });
+      await this.notifications.enqueueInTransaction(txn, {
+        eventId: `LIMIT_REQUEST_APPROVED:${requestId}:${request.userId}`,
+        userId: request.userId,
+        notificationType: 'LIMIT_REQUEST_APPROVED',
+        title: 'درخواست افزایش ظرفیت تأیید شد',
+        message: `ظرفیت دانش‌آموز حساب شما به ${request.requestedLimit} افزایش یافت.`,
+        relatedEntityType: 'LIMIT_REQUEST',
+        relatedEntityId: requestId,
+      });
+      const [updated] = await txn
+        .select()
+        .from(studentLimitRequests)
+        .where(eq(studentLimitRequests.id, requestId))
+        .limit(1);
+      return updated;
+    });
+  }
+
+  async rejectLimitRequest(
+    requestId: string,
+    adminId: string,
+    reason?: string,
+    ipAddress?: string,
+  ) {
+    return this.db.db.transaction(async (txn) => {
+      const [request] = await txn
+        .select()
+        .from(studentLimitRequests)
+        .where(eq(studentLimitRequests.id, requestId))
+        .for('update');
+      if (!request) throw new NotFoundError('Limit request', requestId);
+      if (request.status !== 'PENDING') {
+        throw new ConflictError(
+          'LIMIT_REQUEST_NOT_PENDING',
+          'This limit request is no longer pending.',
+        );
+      }
+      await txn
+        .update(studentLimitRequests)
+        .set({
+          status: 'REJECTED',
+          reviewedByAdminId: adminId,
+          reviewedAt: new Date(),
+          rejectionReason: reason || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(studentLimitRequests.id, requestId));
+      await this.auditService.recordInTransaction(txn, {
+        actorType: 'ADMIN',
+        actorId: adminId,
+        action: 'LIMIT_REQUEST_REJECTED',
+        entityType: 'LIMIT_REQUEST',
+        entityId: requestId,
+        previousValues: { status: 'PENDING' },
+        newValues: { status: 'REJECTED', rejectionReason: reason || null },
+        ipAddress,
+      });
+      await this.notifications.enqueueInTransaction(txn, {
+        eventId: `LIMIT_REQUEST_REJECTED:${requestId}:${request.userId}`,
+        userId: request.userId,
+        notificationType: 'LIMIT_REQUEST_REJECTED',
+        title: 'درخواست افزایش ظرفیت رد شد',
+        message: reason || 'درخواست افزایش ظرفیت دانش‌آموز رد شد.',
+        relatedEntityType: 'LIMIT_REQUEST',
+        relatedEntityId: requestId,
+      });
+      const [updated] = await txn
+        .select()
+        .from(studentLimitRequests)
+        .where(eq(studentLimitRequests.id, requestId))
+        .limit(1);
+      return updated;
     });
   }
 

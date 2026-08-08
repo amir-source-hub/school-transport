@@ -18,4 +18,5 @@ export { notifications, notificationOutbox } from './notifications.schema';
 export { otpRequests } from './auth.schema';
 export { authSessions } from './auth.schema';
 export { onboardingSessions } from './auth.schema';
+export { studentLimitRequests } from './student-limit-requests.schema';
 export { auditLogs } from './audit.schema';

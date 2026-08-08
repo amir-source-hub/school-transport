@@ -3,12 +3,13 @@ import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { getStudents } from '@/features/students/students-api';
+import { getStudentCapacity } from '@/features/students/students-api';
 
 export const metadata = { title: 'دانش‌آموزان' };
 export const dynamic = 'force-dynamic';
 
 export default async function StudentsPage() {
-  const students = await getStudents();
+  const [students, capacity] = await Promise.all([getStudents(), getStudentCapacity()]);
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -19,7 +20,13 @@ export default async function StudentsPage() {
           <p className="text-sm font-bold text-primary">حساب خانواده</p>
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">دانش‌آموزان</h1>
         </div>
-        <ButtonLink href="/student/enrollments">ثبت‌نام دانش‌آموز جدید</ButtonLink>
+        {capacity.remaining > 0 ? (
+          <ButtonLink href="/student/enrollments">ثبت‌نام دانش‌آموز جدید</ButtonLink>
+        ) : (
+          <p className="text-sm font-bold text-muted">
+            ظرفیت حساب تکمیل است؛ برای ثبت دانش‌آموز جدید ابتدا درخواست افزایش ظرفیت ثبت کنید.
+          </p>
+        )}
       </div>
       {students.length === 0 && (
         <Card>

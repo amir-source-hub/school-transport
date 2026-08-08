@@ -43,6 +43,26 @@ describe('API error feedback', () => {
     expect(feedback.canRetry).toBe(false);
   });
 
+  it('maps the exhausted student capacity conflict to a Persian panel message', () => {
+    const feedback = getApiErrorFeedback(
+      new ApiClientError(409, 'STUDENT_LIMIT_REACHED', 'capacity reached'),
+    );
+
+    expect(feedback.target).toBe('form');
+    expect(feedback.message).toContain('ظرفیت دانش‌آموزان');
+    expect(feedback.canRetry).toBe(false);
+  });
+
+  it('maps a duplicate limit request to a Persian panel message', () => {
+    const feedback = getApiErrorFeedback(
+      new ApiClientError(409, 'LIMIT_REQUEST_ALREADY_PENDING', 'already pending'),
+    );
+
+    expect(feedback.target).toBe('form');
+    expect(feedback.message).toContain('در انتظار بررسی');
+    expect(feedback.canRetry).toBe(false);
+  });
+
   it.each([
     [new TypeError('fetch failed'), 'اتصال برقرار نیست'],
     [new DOMException('timed out', 'TimeoutError'), 'پاسخ سرویس طول کشید'],

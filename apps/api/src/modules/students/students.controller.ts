@@ -5,6 +5,7 @@ import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { successResponse } from '../../common/response';
 import { AdminCreateStudentDto, CreateStudentDto, UpdateStudentDto } from './student.dto';
+import { CreateLimitRequestDto, RejectLimitRequestDto } from './student-limit-request.dto';
 import { AuthenticatedRequest } from '../../common/http-request';
 
 @UseGuards(AuthGuard)
@@ -16,6 +17,27 @@ export class StudentsController {
   async getAll(@Req() req: AuthenticatedRequest) {
     const list = await this.studentsService.getAllByFamily(req.user.id);
     return successResponse(list);
+  }
+
+  @Get('capacity')
+  async getCapacity(@Req() req: AuthenticatedRequest) {
+    const capacity = await this.studentsService.getCapacity(req.user.id);
+    return successResponse(capacity);
+  }
+
+  @Get('limit-requests')
+  async getLimitRequests(@Req() req: AuthenticatedRequest) {
+    const requests = await this.studentsService.getLimitRequests(req.user.id);
+    return successResponse(requests);
+  }
+
+  @Post('limit-requests')
+  async createLimitRequest(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateLimitRequestDto,
+  ) {
+    const request = await this.studentsService.createLimitRequest(req.user.id, dto.reason);
+    return successResponse(request);
   }
 
   @Post()
@@ -60,6 +82,39 @@ export class AdminStudentsController {
   @Get()
   async getAll() {
     return successResponse(await this.studentsService.getAllForAdmin());
+  }
+
+  @Get('limit-requests')
+  async getAllLimitRequests() {
+    return successResponse(await this.studentsService.getAllLimitRequestsForAdmin());
+  }
+
+  @Post('limit-requests/:requestId/approve')
+  async approveLimitRequest(
+    @Req() req: AuthenticatedRequest,
+    @Param('requestId', new ParseUUIDPipe()) requestId: string,
+  ) {
+    const request = await this.studentsService.approveLimitRequest(
+      requestId,
+      req.user.id,
+      req.ip,
+    );
+    return successResponse(request);
+  }
+
+  @Post('limit-requests/:requestId/reject')
+  async rejectLimitRequest(
+    @Req() req: AuthenticatedRequest,
+    @Param('requestId', new ParseUUIDPipe()) requestId: string,
+    @Body() dto: RejectLimitRequestDto,
+  ) {
+    const request = await this.studentsService.rejectLimitRequest(
+      requestId,
+      req.user.id,
+      dto.reason,
+      req.ip,
+    );
+    return successResponse(request);
   }
 
   @Post()

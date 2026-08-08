@@ -2,6 +2,8 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { getAdminStudents } from '@/features/admin-students/admin-students-api';
+import { getAdminLimitRequests } from '@/features/admin-students/admin-students-api';
+import { AdminLimitRequestSection } from '@/features/admin-students/admin-limit-request-section';
 import {
   AdminStudentDialog,
   ArchiveStudentDialog,
@@ -13,10 +15,11 @@ export const metadata = { title: 'دانش‌آموزان' };
 export const dynamic = 'force-dynamic';
 
 export default async function StudentsPage() {
-  const [{ students }, { families }, { schools }] = await Promise.all([
+  const [{ students }, { families }, { schools }, limitRequests] = await Promise.all([
     getAdminStudents(),
     getAdminFamilies(),
     getAdminSchools(),
+    getAdminLimitRequests(),
   ]);
   const familyOptions = families.map((family) => ({ id: family.id, name: family.username }));
   const schoolOptions = schools
@@ -115,6 +118,7 @@ export default async function StudentsPage() {
           </tbody>
         </table>
       </div>
+      <AdminLimitRequestSection initialRequests={limitRequests} />
     </div>
   );
 }

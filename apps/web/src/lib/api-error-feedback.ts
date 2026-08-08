@@ -140,6 +140,12 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
       PARENT_TYPE_EXISTS: 'اطلاعات این والد قبلاً ثبت شده است؛ از گزینه ویرایش استفاده کنید.',
       STUDENT_PROFILE_CHANGED:
         'مشخصات هویتی دانش‌آموز تغییر کرده است. ابتدا اطلاعات دانش‌آموز را در پروفایل اصلاح کنید.',
+      STUDENT_LIMIT_REACHED:
+        'ظرفیت دانش‌آموزان این حساب به پایان رسیده است. می‌توانید درخواست افزایش ظرفیت ثبت کنید.',
+      LIMIT_REQUEST_ALREADY_PENDING:
+        'هم‌اکنون یک درخواست افزایش ظرفیت برای این حساب در انتظار بررسی مدیریت است.',
+      LIMIT_REQUEST_NOT_PENDING:
+        'این درخواست افزایش ظرفیت دیگر در حالت در انتظار نیست و قابل بررسی نیست.',
       DUPLICATE_ACTIVE_ENROLLMENT:
         'یک ثبت‌نام فعال برای این دانش‌آموز در سال تحصیلی جاری وجود دارد.',
       ACTIVE_ADDRESS_REQUIRED: 'لطفاً ابتدا یک نشانی فعال ثبت کنید.',

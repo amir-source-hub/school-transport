@@ -8,6 +8,8 @@ import {
 } from '@/features/enrollment/enrollment-actions';
 import { getEnrollmentPrices, getEnrollments } from '@/features/enrollment/enrollments-api';
 import { getStudents } from '@/features/students/students-api';
+import { getStudentCapacity } from '@/features/students/students-api';
+import { StudentCapacityCard } from '@/features/students/student-capacity-card';
 import { getSchools } from '@/features/schools/schools-api';
 import { formatIrr } from '@/lib/formatters';
 import { getFamilyProfile } from '@/features/family-profile/family-api';
@@ -30,11 +32,12 @@ const statusLabels: Record<string, string> = {
 };
 
 export default async function EnrollmentsPage() {
-  const [students, enrollments, { schools }, family] = await Promise.all([
+  const [students, enrollments, { schools }, family, capacity] = await Promise.all([
     getStudents(),
     getEnrollments(),
     getSchools(),
     getFamilyProfile(),
+    getStudentCapacity(),
   ]);
   const entries = await Promise.all(
     enrollments.map(async (enrollment) => ({
@@ -63,31 +66,43 @@ export default async function EnrollmentsPage() {
         <p className="text-sm font-bold text-primary">درخواست سرویس</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">ثبت‌نام و پیگیری</h1>
       </div>
-      <CreateEnrollmentForm
-        schools={schools.map((school) => ({
-          id: school.id,
-          name: school.name,
-          city: school.city,
-          educationOptions: school.educationOptions,
-        }))}
-        savedParents={{ father: family.father, mother: family.mother }}
-        existingStudents={availableStudents}
-        guardianPhone={primaryParent?.phoneNumber ?? undefined}
-        defaults={{
-          address: activeAddress,
-          emergencyContact: activeEmergency,
-          guardian: primaryParent
-            ? {
-                firstName: primaryParent.firstName,
-                lastName: primaryParent.lastName,
-                nationalId: primaryParent.nationalId,
-                relationshipType:
-                  primaryParent.parentType === 'MOTHER' ? 'MOTHER' : 'FATHER',
-              }
-            : undefined,
-        }}
-      />
-      <div className="space-y-4">
+      <StudentCapacityCard />
+      {capacity.remaining === 0 ? (
+        <Card>
+          <h2 className="text-lg font-black">ظرفیت حساب تکمیل است</h2>
+          <p className="mt-2 text-sm leading-7 text-muted">
+            امکان ثبت‌نام دانش‌آموز جدید وجود ندارد؛ ظرفیت فعال حساب به‌طور کامل استفاده شده است.
+            برای ثبت دانش‌آموز دیگر، ابتدا از طریق کارت «ظرفیت حساب خانواده» درخواست افزایش ظرفیت
+            ثبت کنید.
+          </p>
+        </Card>
+      ) : (
+        <CreateEnrollmentForm
+          schools={schools.map((school) => ({
+            id: school.id,
+            name: school.name,
+            city: school.city,
+            educationOptions: school.educationOptions,
+          }))}
+          savedParents={{ father: family.father, mother: family.mother }}
+          existingStudents={availableStudents}
+          guardianPhone={primaryParent?.phoneNumber ?? undefined}
+          capacityRemaining={capacity.remaining}
+          defaults={{
+            address: activeAddress,
+            emergencyContact: activeEmergency,
+            guardian: primaryParent
+              ? {
+                  firstName: primaryParent.firstName,
+                  lastName: primaryParent.lastName,
+                  nationalId: primaryParent.nationalId,
+                  relationshipType:
+                    primaryParent.parentType === 'MOTHER' ? 'MOTHER' : 'FATHER',
+                }
+              : undefined,
+          }}
+        />
+      )}      <div className="space-y-4">
         {entries.map(({ enrollment, prices }) => {
           const student = students.find(({ id }) => id === enrollment.studentId);
           const offered = prices.find(({ priceStatus }) => priceStatus === 'OFFERED');

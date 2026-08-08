@@ -629,20 +629,20 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Two-student limit
 
-- [ ] Add an account-level `studentLimit` with default 2, or calculate `2 + approved increments`. Prefer an explicit effective limit if support staff need to inspect it easily.
-- [ ] Count active/non-deleted students according to a documented rule. Decide whether archived, rejected, cancelled, and draft students consume capacity.
-- [ ] In the service method that creates a student, lock the owner/account row or otherwise serialize the count-and-insert operation.
-- [ ] Return a stable error code such as `STUDENT_LIMIT_REACHED`; map it to a Persian panel message.
-- [ ] Disable the new-enrollment action in the UI when the returned capacity is exhausted, but retain backend enforcement.
-- [ ] Display the requested responsibility warning before final creation of an additional student.
+- [x] Add an account-level `studentLimit` with default 2, or calculate `2 + approved increments`. Prefer an explicit effective limit if support staff need to inspect it easily.
+- [x] Count active/non-deleted students according to a documented rule. Decide whether archived, rejected, cancelled, and draft students consume capacity.
+- [x] In the service method that creates a student, lock the owner/account row or otherwise serialize the count-and-insert operation.
+- [x] Return a stable error code such as `STUDENT_LIMIT_REACHED`; map it to a Persian panel message.
+- [x] Disable the new-enrollment action in the UI when the returned capacity is exhausted, but retain backend enforcement.
+- [x] Display the requested responsibility warning before final creation of an additional student.
 
 #### Limit-increase requests
 
-- [ ] Create a migration and schema for requests with a unique constraint preventing more than one pending request per account.
-- [ ] Add user endpoints to create and view the current request; derive requester from the authenticated session.
-- [ ] Add admin endpoints to list, approve, and reject with role guards and reviewer audit data.
-- [ ] Approve in a transaction that locks the request, verifies it is still pending, increases the limit once, and marks it approved.
-- [ ] Add student and admin UI states for pending, approved, and rejected requests, including a Persian rejection reason if supplied.
+- [x] Create a migration and schema for requests with a unique constraint preventing more than one pending request per account.
+- [x] Add user endpoints to create and view the current request; derive requester from the authenticated session.
+- [x] Add admin endpoints to list, approve, and reject with role guards and reviewer audit data.
+- [x] Approve in a transaction that locks the request, verifies it is still pending, increases the limit once, and marks it approved.
+- [x] Add student and admin UI states for pending, approved, and rejected requests, including a Persian rejection reason if supplied.
 
 ### Work package I — admin student and registration management
 

@@ -84,6 +84,7 @@ export function CreateEnrollmentForm({
   defaults,
   mode = 'panel',
   guardianPhone,
+  capacityRemaining,
 }: {
   schools: SchoolOption[];
   savedParents: SavedParents;
@@ -91,6 +92,7 @@ export function CreateEnrollmentForm({
   defaults: EnrollmentDefaults;
   mode?: EnrollmentMode;
   guardianPhone?: string;
+  capacityRemaining?: number;
 }) {
   const router = useRouter();
   const firstSchool = schools[0];
@@ -915,6 +917,19 @@ export function CreateEnrollmentForm({
                 تغییر پیش از شروع خدمت اطلاع‌رسانی می‌شود.
               </p>
             </div>
+            {capacityRemaining === 1 && !form.existingStudentId && (
+              <div
+                role="alert"
+                className="rounded-2xl border border-danger/30 bg-danger/5 p-5"
+              >
+                <p className="font-black text-danger">مسئولیت ثبت این دانش‌آموز</p>
+                <p className="mt-2 text-sm leading-7 text-muted">
+                  این دانش‌آموز آخرین جای ظرفیت حساب خانواده را تکمیل می‌کند. با ثبت او، مسئولیت
+                  پرداخت و رعایت تعهدات سرویس بر عهده شماست و تا تأیید درخواست افزایش ظرفیت، امکان
+                  ثبت دانش‌آموز دیگری وجود نخواهد داشت.
+                </p>
+              </div>
+            )}
             <Section title="روش پرداخت مبلغ باقی‌مانده">
               <div className="grid gap-4 sm:grid-cols-2">
                 {[

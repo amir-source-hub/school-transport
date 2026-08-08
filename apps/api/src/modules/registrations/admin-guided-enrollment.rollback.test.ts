@@ -8,6 +8,7 @@ import type { GuidedEnrollmentData } from './guided-enrollment';
 function terminal(rows: unknown[]) {
   return {
     limit: vi.fn(async () => rows),
+    for: vi.fn(async () => rows),
     then: (resolve: (value: unknown[]) => unknown, reject: (reason: unknown) => unknown) =>
       Promise.resolve(rows).then(resolve, reject),
   };
@@ -20,6 +21,8 @@ describe('admin guided enrollment transaction', () => {
     const selectResults = [
       [{ id: 'school-1', educationOptions: [{ level: 'Primary', grades: ['First'] }] }],
       [],
+      [{ studentLimit: 2 }],
+      [{ count: 0 }],
       [],
       [{ phoneNumber: father.phoneNumber }],
       [father, mother],

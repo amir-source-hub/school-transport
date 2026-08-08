@@ -17,6 +17,7 @@ import { getTableColumns, sql } from 'drizzle-orm';
 import { eq, and, inArray, notInArray } from 'drizzle-orm';
 import { ConflictError, NotFoundError } from '../../common/errors';
 import { withParentNationalIdConflict } from '../../common/parent-national-id-conflict';
+import { assertStudentCapacity } from '../../database/student-capacity';
 import { generateContractNumber, generateId } from '../../common/utils';
 import { assertRegistrationTransition } from './registration-lifecycle';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
@@ -126,6 +127,7 @@ export class RegistrationsService {
             );
           }
         } else {
+          await assertStudentCapacity(txn, userId);
           const [duplicateStudent] = await txn
             .select({ id: students.id })
             .from(students)
