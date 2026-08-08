@@ -63,6 +63,23 @@ describe('assertStudentCapacity', () => {
       .value;
     expect(userChain.for).toHaveBeenCalledWith('update');
   });
+
+  it('counts only active profiles so archived students free capacity', async () => {
+    const txn = capacityTx([[{ studentLimit: 2 }], [{ count: 1 }]]);
+
+    await assertStudentCapacity(txn, 'account-1');
+    const countChain = (txn as { select: ReturnType<typeof vi.fn> }).select.mock.results[1]
+      .value as { where: ReturnType<typeof vi.fn> };
+    const query = (countChain.where.mock.calls[0][0] as {
+      toQuery: (config: unknown) => { sql: string; params: unknown[] };
+    }).toQuery({
+      escapeName: (name: string) => `"${name}"`,
+      escapeParam: (num: number) => `$${num + 1}`,
+      escapeString: (value: string) => `'${value}'`,
+    });
+    expect(query.sql).toContain('is_active');
+    expect(query.params).toContain(true);
+  });
 });
 
 describe('getStudentCapacity', () => {

@@ -4,7 +4,7 @@ import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { successResponse } from '../../common/response';
-import { AdminCreateStudentDto, CreateStudentDto, UpdateStudentDto } from './student.dto';
+import { AdminCreateStudentDto, ArchiveStudentDto, CreateStudentDto, UpdateStudentDto } from './student.dto';
 import { CreateLimitRequestDto, RejectLimitRequestDto } from './student-limit-request.dto';
 import { AuthenticatedRequest } from '../../common/http-request';
 
@@ -129,12 +129,32 @@ export class AdminStudentsController {
   }
 
   @Post(':studentId/archive')
-  async archive(@Param('studentId', new ParseUUIDPipe()) studentId: string) {
-    return successResponse(await this.studentsService.setActiveByAdmin(studentId, false));
+  async archive(
+    @Req() req: AuthenticatedRequest,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Body() dto: ArchiveStudentDto,
+  ) {
+    return successResponse(
+      await this.studentsService.setActiveByAdmin(studentId, false, {
+        adminId: req.user.id,
+        ipAddress: req.ip,
+        reason: dto.reason,
+      }),
+    );
   }
 
   @Post(':studentId/unarchive')
-  async unarchive(@Param('studentId', new ParseUUIDPipe()) studentId: string) {
-    return successResponse(await this.studentsService.setActiveByAdmin(studentId, true));
+  async unarchive(
+    @Req() req: AuthenticatedRequest,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Body() dto: ArchiveStudentDto,
+  ) {
+    return successResponse(
+      await this.studentsService.setActiveByAdmin(studentId, true, {
+        adminId: req.user.id,
+        ipAddress: req.ip,
+        reason: dto.reason,
+      }),
+    );
   }
 }

@@ -361,12 +361,31 @@ export class StudentsService {
     return this.create(userId, data, true);
   }
 
-  async setActiveByAdmin(studentId: string, isActive: boolean) {
-    await this.getById(studentId);
-    await this.db.db
-      .update(students)
-      .set({ isActive, updatedAt: new Date() })
-      .where(eq(students.id, studentId));
+  async setActiveByAdmin(
+    studentId: string,
+    isActive: boolean,
+    context: { adminId: string; ipAddress?: string; reason?: string } = { adminId: '' },
+  ) {
+    const student = await this.getById(studentId);
+    await this.db.db.transaction(async (txn) => {
+      await txn
+        .update(students)
+        .set({ isActive, updatedAt: new Date() })
+        .where(eq(students.id, studentId));
+      await this.auditService.recordInTransaction(txn, {
+        actorType: 'ADMIN',
+        actorId: context.adminId,
+        action: isActive ? 'STUDENT_ACTIVATED' : 'STUDENT_ARCHIVED',
+        entityType: 'STUDENT',
+        entityId: studentId,
+        previousValues: {
+          isActive: student.isActive,
+          archiveReason: context.reason ?? null,
+        },
+        newValues: { isActive },
+        ipAddress: context.ipAddress,
+      });
+    });
     return this.getById(studentId);
   }
 }

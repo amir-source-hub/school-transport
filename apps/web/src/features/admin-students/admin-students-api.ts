@@ -41,9 +41,14 @@ export async function updateAdminStudent(id: string, data: Record<string, string
   await apiRequest(`/admin/students/${id}`, { method: 'PATCH', body: data });
 }
 
-export async function setAdminStudentActive(id: string, active: boolean): Promise<void> {
+export async function setAdminStudentActive(
+  id: string,
+  active: boolean,
+  reason?: string,
+): Promise<void> {
   await apiRequest(`/admin/students/${id}/${active ? 'unarchive' : 'archive'}`, {
     method: 'POST',
+    body: reason ? { reason } : undefined,
     timeoutMs: 8_000,
   });
 }

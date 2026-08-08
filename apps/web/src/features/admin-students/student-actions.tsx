@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
   createAdminStudent,
   setAdminStudentActive,
@@ -20,33 +21,65 @@ export function ArchiveStudentDialog({ studentId, studentName, active }: { stude
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const archiving = active;
+
   const handle = async () => {
+    if (archiving && reason.trim().length === 0) {
+      setError('دلیل بایگانی الزامی است.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      await setAdminStudentActive(studentId, !active);
+      await setAdminStudentActive(studentId, !active, archiving ? reason.trim() : undefined);
       setOpen(false);
+      setReason('');
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'خطا در بایگانی دانش‌آموز');
+      setError(getApiErrorFeedback(e).message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) setError(null); }}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm">{active ? 'بایگانی' : 'بازیابی'}</Button>
       </DialogTrigger>
-      <DialogContent title={active ? 'بایگانی دانش‌آموز' : 'بازیابی دانش‌آموز'} description={`دانش‌آموز «${studentName}» ${active ? 'بایگانی' : 'فعال'} می‌شود.`}>
-        <div className="space-y-4">
+      <DialogContent title={active ? 'بایگانی دانش‌آموز' : 'بازیابی دانش‌آموز'}>
+        <div className="space-y-4 text-sm">
+          <p>
+            دانش‌آموز «{studentName}» {active ? 'بایگانی (غیرفعال) می‌شود. ' : 'دوباره فعال می‌شود. '}
+          </p>
+          {active && (
+            <p className="text-muted">
+              با بایگانی، این دانش‌آموز از فهرست فعال حساب خانواده حذف می‌شود و ظرفیت آن آزاد می‌شود؛
+              اما ثبت‌نام، قرارداد، سرویس حمل‌ونقل و سوابق مالی او حفظ می‌شود و می‌توانید بعداً آن را
+              بازیابی کنید.
+            </p>
+          )}
+          {active && (
+            <label className="block space-y-1.5">
+              <span className="font-bold">دلیل بایگانی</span>
+              <Textarea
+                required
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="مانند: ادامه تحصیل در مدرسه دیگر"
+                aria-label="دلیل بایگانی"
+              />
+            </label>
+          )}
           {error && <p className="text-xs text-danger">{error}</p>}
           <div className="flex gap-3">
             <Button variant="ghost" onClick={() => setOpen(false)}>انصراف</Button>
-            <Button variant={active ? 'danger' : 'primary'} loading={loading} onClick={handle}>تأیید</Button>
+            <Button variant={active ? 'danger' : 'primary'} loading={loading} onClick={handle}>
+              {active ? 'تأیید بایگانی' : 'تأیید بازیابی'}
+            </Button>
           </div>
         </div>
       </DialogContent>

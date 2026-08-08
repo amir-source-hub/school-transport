@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from './schemas';
 import { ConflictError } from '../common/errors';
@@ -39,7 +39,12 @@ export async function assertStudentCapacity(
   const [row] = await txn
     .select({ count: sql<number>`count(*)::int` })
     .from(schema.students)
-    .where(eq(schema.students.userId, userId));
+    .where(
+      and(
+        eq(schema.students.userId, userId),
+        eq(schema.students.isActive, true),
+      ),
+    );
   const activeCount = row?.count ?? 0;
   if (activeCount >= account.studentLimit) {
     throw new StudentCapacityLimitError();
@@ -59,7 +64,12 @@ export async function getStudentCapacity(
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(schema.students)
-    .where(eq(schema.students.userId, userId));
+    .where(
+      and(
+        eq(schema.students.userId, userId),
+        eq(schema.students.isActive, true),
+      ),
+    );
   const activeStudentCount = row?.count ?? 0;
   return {
     studentLimit: limit,

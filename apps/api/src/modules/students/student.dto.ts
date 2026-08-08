@@ -94,3 +94,11 @@ export class AdminCreateStudentDto extends CreateStudentDto {
   @IsUUID()
   userId!: string;
 }
+
+export class ArchiveStudentDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 500)
+  reason?: string;
+}
