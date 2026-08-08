@@ -12,7 +12,6 @@ import {
   Search,
   Settings,
   Shield,
-  UsersRound,
   WalletCards,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -30,7 +29,6 @@ import { cn } from '@/lib/cn';
 const navigation = [
   { href: '/admin/dashboard', label: 'داشبورد', icon: LayoutDashboard },
   { href: '/admin/registrations', label: 'ثبت‌نام‌ها', icon: ClipboardCheck },
-  { href: '/admin/families', label: 'خانواده‌ها', icon: UsersRound },
   { href: '/admin/students', label: 'دانش‌آموزان', icon: GraduationCap },
   { href: '/admin/schools', label: 'مدارس', icon: Building2 },
   { href: '/admin/contracts', label: 'قراردادها', icon: FileText },

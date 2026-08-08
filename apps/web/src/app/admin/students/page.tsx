@@ -3,6 +3,7 @@ import { Pagination } from '@/components/navigation/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { AutoSubmitForm } from '@/components/forms/auto-submit-form';
+import Link from 'next/link';
 import {
   getAdminStudents,
   type AdminStudentListParams,
@@ -138,7 +139,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                 <p className="mt-1 text-sm text-muted">
                   {student.schoolName ?? 'مدرسه ثبت نشده'} — {student.grade ?? '—'}
                 </p>
-                <p className="text-sm text-muted">خانواده: {student.familyName}</p>
+                <p className="text-sm text-muted">خانواده: <Link href={`/admin/families/${student.userId}`} className="font-bold text-primary hover:underline">{student.familyName}</Link></p>
                 <div className="mt-3 flex gap-2 border-t border-border pt-3">
                   <StudentEditDialog
                     studentId={student.id}
@@ -179,7 +180,11 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                     <td className="px-3 py-3">{student.lastName}</td>
                     <td className="px-3 py-3">{student.schoolName ?? '—'}</td>
                     <td className="px-3 py-3">{student.grade ?? '—'}</td>
-                    <td className="px-3 py-3">{student.familyName}</td>
+                    <td className="px-3 py-3">
+                      <Link href={`/admin/families/${student.userId}`} className="font-bold text-primary hover:underline">
+                        {student.familyName}
+                      </Link>
+                    </td>
                     <td className="px-3 py-3">
                       <Badge tone={student.isActive ? 'success' : 'neutral'}>{student.status}</Badge>
                     </td>

@@ -18,6 +18,7 @@ import {
 import {
   createAdminFamilyAddress,
   createFamilyParent,
+  deleteFamilyParent,
   updateAdminFamilyAddress,
   updateAdminFamilyEmergencyContact,
   updateFamilyParent,
@@ -379,8 +380,11 @@ function ParentFields({
   parent?: { id: string; parentType: string; firstName: string; lastName: string; nationalId: string; phoneNumber: string };
   parentType: 'FATHER' | 'MOTHER';
 }) {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<{ message: string; tone: 'error' | 'success' }>();
+  const [deletePending, setDeletePending] = useState(false);
+  const [deleteError, setDeleteError] = useState<string>();
   const [form, setForm] = useState<ParentFormValue>({
     firstName: parent?.firstName ?? '',
     lastName: parent?.lastName ?? '',
@@ -408,6 +412,21 @@ function ParentFields({
     }
   }
 
+  const removeParent = async () => {
+    if (!parent) return;
+    if (!window.confirm(`«${parent.firstName} ${parent.lastName}» از خانواده حذف شود؟`)) return;
+    setDeletePending(true);
+    setDeleteError(undefined);
+    try {
+      await deleteFamilyParent(familyId, parent.id);
+      router.refresh();
+    } catch (caught) {
+      setDeleteError(getApiErrorFeedback(caught).message);
+    } finally {
+      setDeletePending(false);
+    }
+  };
+
   return (
     <form className="space-y-4" onSubmit={submit}>
       <p className="text-sm font-bold">{title}</p>
@@ -426,7 +445,15 @@ function ParentFields({
         </label>
       </div>
       <SaveFeedback message={feedback?.message} tone={feedback?.tone ?? 'success'} />
-      <Button type="submit" loading={pending}>{parent ? 'ذخیره' : 'ثبت'}</Button>
+      <div className="flex items-center gap-3">
+        <Button type="submit" loading={pending}>{parent ? 'ذخیره' : 'ثبت'}</Button>
+        {parent && (
+          <Button type="button" variant="danger" size="sm" loading={deletePending} onClick={removeParent}>
+            حذف از خانواده
+          </Button>
+        )}
+        {deleteError && <p className="text-xs text-danger">{deleteError}</p>}
+      </div>
     </form>
   );
 }

@@ -246,6 +246,7 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     title: 'خانواده‌ها',
     description: 'مشاهده و مدیریت حساب‌های خانواده.',
     primaryHeading: 'خانواده‌ها',
+    redirectTo: '/admin/students',
   },
   {
     path: '/admin/families/[familyId]',

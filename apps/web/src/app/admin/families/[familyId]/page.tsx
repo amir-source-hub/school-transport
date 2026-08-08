@@ -27,7 +27,7 @@ export default async function FamilyDetailPage({
       <Breadcrumbs
         items={[
           { label: 'پنل مدیریت', href: '/admin/dashboard' },
-          { label: 'خانواده‌ها', href: '/admin/families' },
+          { label: 'دانش‌آموزان', href: '/admin/students' },
           { label: family.username },
         ]}
       />
