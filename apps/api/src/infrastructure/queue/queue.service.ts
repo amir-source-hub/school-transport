@@ -7,6 +7,7 @@ import { DatabaseService } from '../../database/database.service';
 import { authSessions, otpRequests, onboardingSessions } from '../../database/schemas';
 import { lt, and, eq } from 'drizzle-orm';
 import { InAppNotificationService } from '../notifications/in-app-notification.service';
+import { BroadcastsService } from '../../modules/broadcasts/broadcasts.service';
 
 export const QUEUE_NAMES = {
   notifications: 'notification-delivery',
@@ -25,6 +26,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     private readonly logger: AppLogger,
     private readonly database: DatabaseService,
     private readonly notificationOutbox: InAppNotificationService,
+    private readonly broadcasts: BroadcastsService,
   ) {
     this.connection = new IORedis(config.redisUrl, {
       maxRetriesPerRequest: null,
@@ -86,6 +88,11 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
           removeOnComplete: 30,
           removeOnFail: 100,
         },
+      );
+      await this.queue(QUEUE_NAMES.maintenance).add(
+        'dispatch-sms-broadcasts',
+        {},
+        { jobId: 'scheduled-sms-broadcasts', repeat: { every: 5_000 }, removeOnComplete: 30, removeOnFail: 100 },
       );
     }
   }
@@ -168,6 +175,10 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     }
     if (job.name === 'dispatch-notification-outbox') {
       await this.notificationOutbox.dispatchAvailable();
+      return;
+    }
+    if (job.name === 'dispatch-sms-broadcasts') {
+      await this.broadcasts.dispatchAvailable();
       return;
     }
     this.logger.log(`Processed maintenance job ${job.name}.`);

@@ -82,6 +82,12 @@ const envSchema = z
     KAVEHNEGAR_SENDER: z.string().trim().optional(),
     KAVEHNEGAR_OTP_TEMPLATE: z.string().trim().optional(),
     KAVEHNEGAR_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000).default(5_000),
+    FEATURE_SMS_BROADCASTS: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+    SMS_BROADCAST_BATCH_SIZE: z.coerce.number().int().min(1).max(200).default(50),
+    SMS_BROADCAST_MAX_RECIPIENTS: z.coerce.number().int().min(1).max(100_000).default(5_000),
+    SMS_BROADCAST_MAX_SEGMENTS: z.coerce.number().int().min(1).max(10).default(3),
+    SMS_BROADCAST_PRICE_PER_SEGMENT_RIAL: z.coerce.number().int().min(0).default(0),
+    SMS_BROADCAST_TEST_NUMBERS: z.string().default(''),
     PAYMENT_GATEWAY_PROVIDER: z.enum(['mock', 'none']).default('none'),
     SERVICE_ROLE: z.enum(['api', 'worker']).default('api'),
     AUTH_SESSION_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
@@ -264,6 +270,24 @@ export class ConfigService implements OnApplicationShutdown {
   }
   get kavenegarTimeoutMs(): number {
     return this.env.KAVEHNEGAR_TIMEOUT_MS;
+  }
+  get featureSmsBroadcasts(): boolean {
+    return this.env.FEATURE_SMS_BROADCASTS;
+  }
+  get smsBroadcastBatchSize(): number {
+    return this.env.SMS_BROADCAST_BATCH_SIZE;
+  }
+  get smsBroadcastMaxRecipients(): number {
+    return this.env.SMS_BROADCAST_MAX_RECIPIENTS;
+  }
+  get smsBroadcastMaxSegments(): number {
+    return this.env.SMS_BROADCAST_MAX_SEGMENTS;
+  }
+  get smsBroadcastPricePerSegmentRial(): number {
+    return this.env.SMS_BROADCAST_PRICE_PER_SEGMENT_RIAL;
+  }
+  get smsBroadcastTestNumbers(): string[] {
+    return this.env.SMS_BROADCAST_TEST_NUMBERS.split(',').map((value) => value.trim()).filter(Boolean);
   }
   get paymentGatewayProvider(): 'mock' | 'none' {
     return this.env.PAYMENT_GATEWAY_PROVIDER;

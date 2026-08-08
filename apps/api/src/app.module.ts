@@ -23,6 +23,7 @@ import { LoggingModule } from './common/logging.module';
 import { InAppNotificationModule } from './infrastructure/notifications/in-app-notification.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { SmsModule } from './infrastructure/sms/sms.module';
+import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { SmsModule } from './infrastructure/sms/sms.module';
     PaymentsModule,
     NotificationsModule,
     AuditModule,
+    BroadcastsModule,
     HealthModule,
     QueueModule,
     ReportsModule,
