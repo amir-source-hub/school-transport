@@ -713,7 +713,7 @@ This section turns the requirements above into concrete work packages. A junior 
 
 - [ ] Add forward-only migrations for authentication, guardian/contact fields, notification consent, limit requests, and new school fields.
 - [ ] Run migrations against a sanitized production-like snapshot and verify rollback or forward-fix procedures.
-- [ ] Add unit tests for mobile, landline, postal code, national ID, Persian text, and Jalali date validation.
+- [x] Add unit tests for mobile, landline, postal code, national ID, Persian text, and Jalali date validation. (national ID, Persian text, and Jalali dates were already covered by dedicated test files; added mobile/landline/postal acceptance (Persian digits) and rejection cases to `enrollment-schema.test.ts` and server-side rejection cases to `remaining-transport-contracts.test.ts`)
 - [ ] Add integration tests for two-minute OTP expiry, admin 2FA, panel activation lifecycle, two-student limits, limit increases, admin cash payment, and transactional rollback.
 - [ ] Update or rename:
   - `apps/web/e2e/public-pages.spec.ts`
