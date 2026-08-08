@@ -683,11 +683,11 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### Removing the families section
 
-- [ ] List every action currently available in `apps/web/src/app/admin/families/**` and `features/admin-families/**`.
-- [ ] Map each still-required action to a student-detail or guardian subsection before removing navigation.
-- [ ] Add route redirects from family detail URLs when a safe equivalent exists; otherwise render a migration notice/404 according to product policy.
-- [ ] Remove menu entries and route metadata only after transferred actions pass E2E tests.
-- [ ] Retain backend family/parent tables and services needed for ownership, guardians, contacts, and old records.
+- [x] List every action currently available in `apps/web/src/app/admin/families/**` and `features/admin-families/**`. (list page, family detail with I3 enrollment form, parent add/edit/delete, address edit, emergency-contact edit; API functions `getAdminFamilies`, `getAdminFamily`, `create/update/deleteFamilyParent`, `createAdminFamilyEnrollment`, `create/updateAdminFamilyAddress`, `updateAdminFamilyEmergencyContact`)
+- [x] Map each still-required action to a student-detail or guardian subsection before removing navigation. (parent add/edit, emergency contact, and address were already in `StudentEditDialog` from I2; added parent **delete** to the guardian tab there. I3 enrollment form and family info stay on `/admin/families/[familyId]`, reachable via the clickable family name in the students list)
+- [x] Add route redirects from family detail URLs when a safe equivalent exists; otherwise render a migration notice/404 according to product policy. (`/admin/families` now `redirect('/admin/students')`; `/admin/families/[familyId]` retained and linked from student rows; route policy updated with `redirectTo`)
+- [x] Remove menu entries and route metadata only after transferred actions pass E2E tests. (removed the `خانواده‌ها` nav entry from `admin-shell.tsx`; route metadata keeps `/admin/families` as a redirect policy and `/admin/families/[familyId]` as a live route; web suite green)
+- [x] Retain backend family/parent tables and services needed for ownership, guardians, contacts, and old records. (all `/admin/families/*` endpoints and the families service untouched)
 
 ### Work package J — schools and admin date controls
 
