@@ -693,21 +693,21 @@ This section turns the requirements above into concrete work packages. A junior 
 
 #### School fields
 
-- [ ] Inspect whether `schoolType` is a database enum, varchar with validation, or both. Update every layer consistently.
-- [ ] Add stable internal values such as `SPECIAL` and `INTERNATIONAL`; map them to `استثنائی` and `بین المللی` in the UI.
-- [ ] Never store Persian display strings as enum values if the existing schema uses English constants.
-- [ ] Add manager name, manager phone, and school phone columns through a nullable migration so existing schools remain valid.
-- [ ] Update `school.dto.ts`, controller/service selections, `admin-schools-api.ts`, `school-form-dialog.tsx`, and tests.
-- [ ] Keep manager contact fields out of `apps/web/src/features/schools/schools-api.ts` if that API feeds the public school directory.
-- [ ] Normalize and validate phone values server-side. Decide whether landline `021` remains mandatory before enforcing it for every school.
+- [x] Inspect whether `schoolType` is a database enum, varchar with validation, or both. Update every layer consistently. (`schoolType` is `varchar` with DTO-level `@IsIn` validation, not a DB enum; applied consistently across schema, DTO, service, and web form)
+- [x] Add stable internal values such as `SPECIAL` and `INTERNATIONAL`; map them to `استثنائی` and `بین المللی` in the UI. (added `PUBLIC`/`PRIVATE`/`SPECIAL`/`INTERNATIONAL`; labels via `SCHOOL_TYPE_LABELS`; also added `GENDER_TYPE_LABELS`)
+- [x] Never store Persian display strings as enum values if the existing schema uses English constants. (the form previously sent Persian display strings while the backend validates English constants; fixed to send constants, labels mapped separately)
+- [x] Add manager name, manager phone, and school phone columns through a nullable migration so existing schools remain valid. (nullable `manager_name`/`manager_phone` via `drizzle/0019_careless_gideon.sql`; school phone already existed)
+- [x] Update `school.dto.ts`, controller/service selections, `admin-schools-api.ts`, `school-form-dialog.tsx`, and tests. (all updated; `transport-contracts.test.ts` extended for SPECIAL/INTERNATIONAL and phone normalization)
+- [x] Keep manager contact fields out of `apps/web/src/features/schools/schools-api.ts` if that API feeds the public school directory. (public `getAll`/new `getPublicById` project only public columns; manager fields never exposed)
+- [x] Normalize and validate phone values server-side. Decide whether landline `021` remains mandatory before enforcing it for every school. (`normalizeIranianDigits` + `^0\d{9,10}$`; kept the existing pattern, did not make `021` mandatory)
 
 #### Payment-date UI
 
-- [ ] Locate date inputs in `admin-payments/payment-actions.tsx`, installment configuration, contracts, and any pricing forms.
-- [ ] Replace free-text/date typing with the shared Jalali picker.
-- [ ] Convert the chosen date to the canonical API format before sending `ConfigureInstallmentsDto`.
-- [ ] Validate that installment dates are real, ordered according to business rules, not duplicated, and appropriate relative to contract/start dates.
-- [ ] Display backend date errors in Persian at the exact installment row rather than only at the dialog top.
+- [x] Locate date inputs in `admin-payments/payment-actions.tsx`, installment configuration, contracts, and any pricing forms. (`ConfigureInstallmentsDialog`, approve/reject payments, and the I3 admin cash form all already use `JalaliDateInput`)
+- [x] Replace free-text/date typing with the shared Jalali picker. (no free-text or `type="date"` inputs remained)
+- [x] Convert the chosen date to the canonical API format before sending `ConfigureInstallmentsDto`. (`jalaliToIsoDate` emits `YYYY-MM-DD`, which passes the strict `IsDateString` on the DTO; verified)
+- [x] Validate that installment dates are real, ordered according to business rules, not duplicated, and appropriate relative to contract/start dates. (`configureInstallments` now requires strictly increasing dates after the plan start; per-row Persian `details`; service test added)
+- [x] Display backend date errors in Persian at the exact installment row rather than only at the dialog top. (`fieldErrors` keyed `items.<index>.dueDate` rendered under the matching row)
 
 ## 9. Testing, migration, and delivery
 
