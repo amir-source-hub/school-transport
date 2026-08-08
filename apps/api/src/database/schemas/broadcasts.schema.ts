@@ -1,5 +1,6 @@
 import {
   boolean,
+  bigint,
   index,
   integer,
   jsonb,
@@ -26,8 +27,10 @@ export const smsBroadcasts = pgTable(
     featureEnabled: boolean('feature_enabled').notNull().default(false),
     segmentCount: integer('segment_count').notNull(),
     estimatedRecipients: integer('estimated_recipients').notNull().default(0),
-    estimatedCostRial: integer('estimated_cost_rial').notNull().default(0),
-    creatorId: uuid('creator_id').notNull().references(() => adminUsers.id),
+    estimatedCostRial: bigint('estimated_cost_rial', { mode: 'number' }).notNull().default(0),
+    creatorId: uuid('creator_id')
+      .notNull()
+      .references(() => adminUsers.id),
     approverId: uuid('approver_id').references(() => adminUsers.id),
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -50,8 +53,12 @@ export const smsBroadcastRecipients = pgTable(
   'sms_broadcast_recipients',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    broadcastId: uuid('broadcast_id').notNull().references(() => smsBroadcasts.id),
-    userId: uuid('user_id').notNull().references(() => users.id),
+    broadcastId: uuid('broadcast_id')
+      .notNull()
+      .references(() => smsBroadcasts.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
     normalizedPhone: varchar('normalized_phone', { length: 20 }).notNull(),
     status: varchar('status', { length: 30 }).notNull().default('QUEUED'),
     providerMessageId: varchar('provider_message_id', { length: 100 }),

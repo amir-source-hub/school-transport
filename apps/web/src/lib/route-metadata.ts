@@ -263,6 +263,13 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     primaryHeading: 'اعلان‌ها',
   },
   {
+    path: '/admin/notifications/broadcasts',
+    audience: 'admin',
+    title: 'ارسال گروهی پیامک',
+    description: 'ساخت، تأیید، زمان‌بندی و پایش کمپین‌های پیامکی رضایت‌محور.',
+    primaryHeading: 'ارسال گروهی پیامک',
+  },
+  {
     path: '/admin/payments',
     audience: 'admin',
     title: 'پرداخت‌ها',

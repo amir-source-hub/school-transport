@@ -15,10 +15,14 @@ export class BroadcastsController {
   constructor(private readonly broadcasts: BroadcastsService) {}
 
   @Get()
-  async list() { return successResponse(await this.broadcasts.list()); }
+  async list() {
+    return successResponse(await this.broadcasts.list());
+  }
 
   @Post('preview')
-  async preview(@Body() body: CreateBroadcastDto) { return successResponse(await this.broadcasts.preview(body)); }
+  async preview(@Req() request: AuthenticatedRequest, @Body() body: CreateBroadcastDto) {
+    return successResponse(await this.broadcasts.preview(body, request.user.id, request.ip));
+  }
 
   @Post()
   async create(@Req() request: AuthenticatedRequest, @Body() body: CreateBroadcastDto) {
@@ -26,21 +30,36 @@ export class BroadcastsController {
   }
 
   @Post(':id/approve')
-  async approve(@Req() request: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
+  async approve(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
     return successResponse(await this.broadcasts.approve(id, request.user.id, request.ip));
   }
 
   @Post(':id/test')
-  async test(@Req() request: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string, @Body() body: TestBroadcastDto) {
-    return successResponse(await this.broadcasts.testSend(id, body.phoneNumber, request.user.id, request.ip));
+  async test(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: TestBroadcastDto,
+  ) {
+    return successResponse(
+      await this.broadcasts.testSend(id, body.phoneNumber, request.user.id, request.ip),
+    );
   }
 
   @Post(':id/pause')
-  async pause(@Req() request: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) { return successResponse(await this.broadcasts.pause(id, request.user.id, request.ip)); }
+  async pause(@Req() request: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
+    return successResponse(await this.broadcasts.pause(id, request.user.id, request.ip));
+  }
 
   @Post(':id/resume')
-  async resume(@Req() request: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) { return successResponse(await this.broadcasts.resume(id, request.user.id, request.ip)); }
+  async resume(@Req() request: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
+    return successResponse(await this.broadcasts.resume(id, request.user.id, request.ip));
+  }
 
   @Post(':id/cancel')
-  async cancel(@Req() request: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) { return successResponse(await this.broadcasts.cancel(id, request.user.id, request.ip)); }
+  async cancel(@Req() request: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
+    return successResponse(await this.broadcasts.cancel(id, request.user.id, request.ip));
+  }
 }

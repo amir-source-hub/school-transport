@@ -63,6 +63,9 @@ describe('phone navigation and compact controls', () => {
     expect(isPublicRouteActive('/services-old', '/services')).toBe(false);
     expect(isAdminRouteActive('/admin/reports/annual/', '/admin/reports')).toBe(true);
     expect(isAdminRouteActive('/admin/reporting', '/admin/reports')).toBe(false);
+    expect(
+      isAdminRouteActive('/admin/notifications/broadcasts', '/admin/notifications', true),
+    ).toBe(false);
   });
 
   it('keeps shared compact buttons at the 44px touch-target contract', () => {

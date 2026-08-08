@@ -82,11 +82,15 @@ const envSchema = z
     KAVEHNEGAR_SENDER: z.string().trim().optional(),
     KAVEHNEGAR_OTP_TEMPLATE: z.string().trim().optional(),
     KAVEHNEGAR_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000).default(5_000),
-    FEATURE_SMS_BROADCASTS: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+    FEATURE_SMS_BROADCASTS: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
     SMS_BROADCAST_BATCH_SIZE: z.coerce.number().int().min(1).max(200).default(50),
     SMS_BROADCAST_MAX_RECIPIENTS: z.coerce.number().int().min(1).max(100_000).default(5_000),
     SMS_BROADCAST_MAX_SEGMENTS: z.coerce.number().int().min(1).max(10).default(3),
     SMS_BROADCAST_PRICE_PER_SEGMENT_RIAL: z.coerce.number().int().min(0).default(0),
+    SMS_BROADCAST_MAX_COST_RIAL: z.coerce.number().int().min(0).default(0),
     SMS_BROADCAST_TEST_NUMBERS: z.string().default(''),
     PAYMENT_GATEWAY_PROVIDER: z.enum(['mock', 'none']).default('none'),
     SERVICE_ROLE: z.enum(['api', 'worker']).default('api'),
@@ -129,6 +133,21 @@ const envSchema = z
     }
     if (env.OTP_PROVIDER === 'kavenegar' && !env.KAVEHNEGAR_OTP_TEMPLATE) {
       issue('KAVEHNEGAR_OTP_TEMPLATE', 'An approved Kavenegar VerifyLookup template is required.');
+    }
+    if (env.FEATURE_SMS_BROADCASTS && env.SMS_PROVIDER !== 'kavenegar') {
+      issue('SMS_PROVIDER', 'Production SMS broadcasts require Kavenegar SMS delivery.');
+    }
+    if (env.FEATURE_SMS_BROADCASTS && env.SMS_BROADCAST_PRICE_PER_SEGMENT_RIAL <= 0) {
+      issue(
+        'SMS_BROADCAST_PRICE_PER_SEGMENT_RIAL',
+        'Production broadcasts require a current per-segment price.',
+      );
+    }
+    if (env.FEATURE_SMS_BROADCASTS && env.SMS_BROADCAST_MAX_COST_RIAL <= 0) {
+      issue(
+        'SMS_BROADCAST_MAX_COST_RIAL',
+        'Production broadcasts require a finite campaign spend cap.',
+      );
     }
     if (env.PAYMENT_GATEWAY_PROVIDER === 'mock')
       issue('PAYMENT_GATEWAY_PROVIDER', 'Mock payments are development-only.');
@@ -286,8 +305,13 @@ export class ConfigService implements OnApplicationShutdown {
   get smsBroadcastPricePerSegmentRial(): number {
     return this.env.SMS_BROADCAST_PRICE_PER_SEGMENT_RIAL;
   }
+  get smsBroadcastMaxCostRial(): number {
+    return this.env.SMS_BROADCAST_MAX_COST_RIAL;
+  }
   get smsBroadcastTestNumbers(): string[] {
-    return this.env.SMS_BROADCAST_TEST_NUMBERS.split(',').map((value) => value.trim()).filter(Boolean);
+    return this.env.SMS_BROADCAST_TEST_NUMBERS.split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
   }
   get paymentGatewayProvider(): 'mock' | 'none' {
     return this.env.PAYMENT_GATEWAY_PROVIDER;

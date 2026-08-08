@@ -3,5 +3,9 @@ import { BroadcastsController } from './broadcasts.controller';
 import { BroadcastsService } from './broadcasts.service';
 
 @Global()
-@Module({ controllers: [BroadcastsController], providers: [BroadcastsService], exports: [BroadcastsService] })
+@Module({
+  controllers: [BroadcastsController],
+  providers: [BroadcastsService],
+  exports: [BroadcastsService],
+})
 export class BroadcastsModule {}

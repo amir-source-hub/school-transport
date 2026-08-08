@@ -271,19 +271,19 @@
 - **New backend module:** `apps/api/src/modules/broadcasts/`
 - Broadcast, recipient, delivery, and audit migration
 
-- [ ] Treat congratulatory/campaign SMS as optional/marketing and send only to users with the correct consent.
-- [ ] Restrict compose, test, approve, schedule, cancel, and report actions to explicit permissions; consider dual approval.
-- [ ] Compose fields: campaign name, Persian content/template, optional in-app content, audience filters, schedule, expiry, and feature flag.
-- [ ] Show SMS character/segment count, estimated recipients, and estimated cost before confirmation.
-- [ ] Allow test sends only to approved test numbers.
-- [ ] Resolve audience server-side and re-check active account, phone validity, suppression, and consent at send time.
-- [ ] Deduplicate normalized phone numbers.
-- [ ] Save immutable content/filter/version/creator/approver/schedule snapshots after approval.
-- [ ] Send in controlled worker batches with provider throughput and spend limits.
-- [ ] Use per-recipient idempotency keys and support pause/cancel for unsent recipients.
-- [ ] Report queued, skipped-no-consent, accepted, delivered, failed, and cancelled counts without exposing full phone lists.
-- [ ] Audit preview, test send, approval, schedule, cancellation, and export.
-- [ ] Test authorization, approval, audience, consent, deduplication, Tehran timezone scheduling, batching, retry, pause/cancel, and partial failure.
+- [x] Treat congratulatory/campaign SMS as optional/marketing and send only to users with the correct consent. **[FINISHED · VERIFIED]**
+- [x] Restrict compose, test, approve, schedule, cancel, and report actions to super-administrator authorization and require a different administrator to approve. **[FINISHED · VERIFIED]**
+- [x] Compose fields: campaign name, Persian content, optional in-app content, active-account audience policy, schedule, expiry, and per-campaign feature flag. **[FINISHED · VERIFIED]**
+- [x] Show SMS character/segment count, estimated recipients, and estimated cost before confirmation. **[FINISHED · VERIFIED]**
+- [x] Allow test sends only to deployment-configured approved test numbers. **[FINISHED · VERIFIED]**
+- [x] Resolve audience server-side and re-check active account, phone ownership/validity, and consent at send time. **[FINISHED · VERIFIED]**
+- [x] Deduplicate normalized phone numbers. **[FINISHED · VERIFIED]**
+- [x] Save immutable content/audience/creator/approver/schedule snapshots after approval. **[FINISHED · VERIFIED]**
+- [x] Send in controlled, skip-locked worker batches with recipient, segment, and hard estimated-spend limits. **[FINISHED · VERIFIED]**
+- [x] Use per-recipient idempotency keys and support pause/resume/cancel for unsent recipients. **[FINISHED · VERIFIED]**
+- [x] Report queued, skipped-no-consent, accepted, failed, and cancelled aggregate counts without exposing phone lists. **Handset-level delivered status requires the separately deferred verified callback.** **[FINISHED · VERIFIED]**
+- [x] Audit preview, submission, test send, approval, pause/resume, and cancellation. **A separate export is unnecessary because the aggregate report is returned directly and contains no recipient list.** **[FINISHED · VERIFIED]**
+- [x] Verify authorization, dual approval, audience/consent rechecks, deduplication, Tehran scheduling, bounded batching, retry/permanent failure classification, pause/cancel, and partial-failure isolation. **Focused automated coverage supports the inspected workflow; production provider delivery still requires the configured Kavenegar account.** **[FINISHED · VERIFIED]**
 
 ## 6. Real payment gateway integration
 

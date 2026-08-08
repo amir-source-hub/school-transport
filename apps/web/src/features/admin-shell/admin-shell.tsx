@@ -2,6 +2,7 @@
 
 import {
   Bell,
+  Send,
   Building2,
   ClipboardCheck,
   FileText,
@@ -34,15 +35,18 @@ const navigation = [
   { href: '/admin/contracts', label: 'قراردادها', icon: FileText },
   { href: '/admin/payments', label: 'پرداخت‌ها', icon: WalletCards },
   { href: '/admin/reports', label: 'گزارش‌ها', icon: FileSpreadsheet },
-  { href: '/admin/notifications', label: 'اعلان‌ها', icon: Bell },
+  { href: '/admin/notifications', label: 'اعلان‌ها', icon: Bell, exact: true },
+  { href: '/admin/notifications/broadcasts', label: 'ارسال گروهی پیامک', icon: Send },
   { href: '/admin/admins', label: 'مدیران', icon: Shield },
   { href: '/admin/settings', label: 'تنظیمات', icon: Settings },
 ] as const;
 
-export function isAdminRouteActive(pathname: string, href: string) {
+export function isAdminRouteActive(pathname: string, href: string, exact = false) {
   const normalizedPath = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
   const normalizedHref = href.length > 1 ? href.replace(/\/+$/, '') : href;
-  return normalizedPath === normalizedHref || normalizedPath.startsWith(`${normalizedHref}/`);
+  return (
+    normalizedPath === normalizedHref || (!exact && normalizedPath.startsWith(`${normalizedHref}/`))
+  );
 }
 
 function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
@@ -50,8 +54,8 @@ function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
   return (
     <div className="flex min-h-full flex-col">
       <nav aria-label="ناوبری پنل مدیریت" className="space-y-1">
-        {navigation.map(({ href, label, icon: Icon }) => {
-          const active = isAdminRouteActive(pathname, href);
+        {navigation.map(({ href, label, icon: Icon, ...item }) => {
+          const active = isAdminRouteActive(pathname, href, 'exact' in item ? item.exact : false);
           const link = (
             <Link
               href={href}

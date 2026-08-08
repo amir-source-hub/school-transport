@@ -80,4 +80,20 @@ describe('production configuration', () => {
       }).success,
     ).toBe(true);
   });
+
+  it('requires a real SMS provider, current price, and finite spend cap for broadcasts', () => {
+    const result = validateEnvironment({
+      ...production,
+      SERVICE_ROLE: 'worker',
+      FEATURE_SMS_BROADCASTS: 'true',
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.flatten().fieldErrors).toMatchObject({
+        SMS_PROVIDER: expect.any(Array),
+        SMS_BROADCAST_PRICE_PER_SEGMENT_RIAL: expect.any(Array),
+        SMS_BROADCAST_MAX_COST_RIAL: expect.any(Array),
+      });
+    }
+  });
 });

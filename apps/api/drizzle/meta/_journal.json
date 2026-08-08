@@ -162,6 +162,13 @@
       "when": 1786221000000,
       "tag": "0022_sms_broadcasts",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1786222000000,
+      "tag": "0023_broadcast_cost_bigint",
+      "breakpoints": true
     }
   ]
 }

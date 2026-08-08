@@ -92,7 +92,12 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       await this.queue(QUEUE_NAMES.maintenance).add(
         'dispatch-sms-broadcasts',
         {},
-        { jobId: 'scheduled-sms-broadcasts', repeat: { every: 5_000 }, removeOnComplete: 30, removeOnFail: 100 },
+        {
+          jobId: 'scheduled-sms-broadcasts',
+          repeat: { every: 5_000 },
+          removeOnComplete: 30,
+          removeOnFail: 100,
+        },
       );
     }
   }
