@@ -10,6 +10,7 @@ export type GatewayVerification = {
 };
 
 export interface PaymentGateway {
+  readonly enabled?: boolean;
   verify(input: { authority: string; amount: number }): Promise<GatewayVerification>;
 }
 
@@ -25,6 +26,7 @@ export function assertGatewayVerification(
 
 @Injectable()
 export class UnconfiguredPaymentGateway implements PaymentGateway {
+  readonly enabled = false;
   async verify(): Promise<GatewayVerification> {
     throw new AppError(
       'PAYMENT_GATEWAY_UNAVAILABLE',
@@ -36,6 +38,7 @@ export class UnconfiguredPaymentGateway implements PaymentGateway {
 
 @Injectable()
 export class MockPaymentGateway implements PaymentGateway {
+  readonly enabled = true;
   async verify(input: { authority: string; amount: number }): Promise<GatewayVerification> {
     const match = /^mock:(\d+):([A-Za-z0-9_-]+)$/.exec(input.authority);
     if (!match) return { verified: false, amount: input.amount };

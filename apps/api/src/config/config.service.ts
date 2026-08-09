@@ -92,7 +92,7 @@ const envSchema = z
     SMS_BROADCAST_PRICE_PER_SEGMENT_RIAL: z.coerce.number().int().min(0).default(0),
     SMS_BROADCAST_MAX_COST_RIAL: z.coerce.number().int().min(0).default(0),
     SMS_BROADCAST_TEST_NUMBERS: z.string().default(''),
-    PAYMENT_GATEWAY_PROVIDER: z.enum(['mock', 'none']).default('none'),
+    PAYMENT_GATEWAY_PROVIDER: z.literal('none').default('none'),
     ARVAN_S3_ENDPOINT: z.string().trim().optional(),
     ARVAN_S3_REGION: z.string().trim().optional(),
     ARVAN_S3_BUCKET: z.string().trim().optional(),
@@ -168,8 +168,6 @@ const envSchema = z
         'Production broadcasts require a finite campaign spend cap.',
       );
     }
-    if (env.PAYMENT_GATEWAY_PROVIDER === 'mock')
-      issue('PAYMENT_GATEWAY_PROVIDER', 'Mock payments are development-only.');
     const arvanValues = [
       env.ARVAN_S3_ENDPOINT,
       env.ARVAN_S3_REGION,
@@ -193,12 +191,6 @@ const envSchema = z
     }
     if (env.SERVICE_ROLE === 'api' && env.OTP_PROVIDER === 'none') {
       issue('OTP_PROVIDER', 'Production API startup requires an integrated OTP provider.');
-    }
-    if (env.SERVICE_ROLE === 'api' && env.PAYMENT_GATEWAY_PROVIDER === 'none') {
-      issue(
-        'PAYMENT_GATEWAY_PROVIDER',
-        'Production API startup requires an integrated payment gateway.',
-      );
     }
     if (env.LOG_LEVEL === 'debug')
       issue('LOG_LEVEL', 'Debug logging is not permitted in production.');
@@ -353,7 +345,7 @@ export class ConfigService implements OnApplicationShutdown {
       .map((value) => value.trim())
       .filter(Boolean);
   }
-  get paymentGatewayProvider(): 'mock' | 'none' {
+  get paymentGatewayProvider(): 'none' {
     return this.env.PAYMENT_GATEWAY_PROVIDER;
   }
   get arvanS3Endpoint(): string | undefined {

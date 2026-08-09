@@ -50,9 +50,6 @@ const enrollmentBase = (mode: EnrollmentMode, suffix: string) =>
 const contractBase = (mode: EnrollmentMode, suffix: string) =>
   mode === 'onboarding' ? `/onboarding/contracts${suffix}` : `/contracts${suffix}`;
 
-const paymentBase = (mode: EnrollmentMode, suffix: string) =>
-  mode === 'onboarding' ? `/onboarding/payments${suffix}` : `/payments${suffix}`;
-
 export async function createGuidedEnrollment(input: GuidedEnrollmentInput, mode: EnrollmentMode = 'panel') {
   const response = await apiRequest<unknown>(enrollmentBase(mode, '/guided'), {
     method: 'POST',
@@ -63,22 +60,6 @@ export async function createGuidedEnrollment(input: GuidedEnrollmentInput, mode:
 
 export async function acceptGuidedContract(contractId: string, mode: EnrollmentMode = 'panel') {
   await apiRequest(contractBase(mode, `/${contractId}/accept`), { method: 'POST' });
-}
-
-export async function payGuidedPrepayment(
-  scheduleItemId: string,
-  mode: EnrollmentMode = 'panel',
-) {
-  const idempotencyKey = crypto.randomUUID();
-  const started = await apiRequest<{ id: string; amount: number }>(
-    paymentBase(mode, `/${scheduleItemId}/online/start`),
-    { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey } },
-  );
-  const gatewayTransactionId = `mock:${started.data.amount}:enrollment-${started.data.id}`;
-  await apiRequest(paymentBase(mode, `/${started.data.id}/online/verify`), {
-    method: 'POST',
-    body: { gatewayTransactionId },
-  });
 }
 
 export async function finalizeOnboarding() {

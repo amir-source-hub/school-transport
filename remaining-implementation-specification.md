@@ -107,12 +107,7 @@ Tasks:
 
 ### Product behavior
 
-- [ ] Disable online payment everywhere until a real gateway is selected and production-verified. **[NOT FINISHED]**
-  - Keep the `پرداخت آنلاین` choice visible beside `پرداخت آفلاین` wherever payment is required, but render it disabled with accessible explanatory text such as `به‌زودی فعال می‌شود`.
-  - Do not rely only on button disabling. API online start/verify endpoints must reject requests while the online-payment feature is disabled.
-  - Remove all production/user paths that fabricate `mock:` authorities, including `online-payment-button.tsx` and onboarding/enrollment helpers.
-  - Mock gateway behavior may remain only in isolated automated tests or an explicit development-only test harness.
-  - Add one shared feature/config decision so onboarding prepayment, student prepayment, installments, contracts, and any future payment entry point cannot drift.
+Online payment is now fail-closed until a real gateway is integrated: the only accepted runtime provider is `none`, every start path rejects before database access, user-facing choices remain visibly disabled with an accessible Persian explanation, onboarding uses offline receipt submission, and `mock:` authorities remain only in isolated gateway tests.
 
 ### Payment destination shown to students
 

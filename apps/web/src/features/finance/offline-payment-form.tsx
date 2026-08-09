@@ -11,7 +11,7 @@ import { submitOfflinePayment } from './payments-api';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 
-export function OfflinePaymentForm({ items = [] }: { items?: { id: string; label: string }[] }) {
+export function OfflinePaymentForm({ items = [], mode = 'panel' }: { items?: { id: string; label: string }[]; mode?: 'panel' | 'onboarding' }) {
   const router = useRouter();
   const [scheduleItemId, setScheduleItemId] = useState(items[0]?.id ?? '');
   const [paidAt, setPaidAt] = useState('');
@@ -45,7 +45,7 @@ export function OfflinePaymentForm({ items = [] }: { items?: { id: string; label
           paidAt,
           referenceNumber: referenceNumber.trim(),
           description: description || undefined,
-        });
+        }, mode);
         setSubmitted(true);
         setScheduleItemId('');
         setPaidAt('');

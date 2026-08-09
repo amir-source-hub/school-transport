@@ -10,7 +10,7 @@ import {
   parents,
 } from '../../database/schemas';
 import { eq, and, inArray } from 'drizzle-orm';
-import { NotFoundError, ConflictError, ValidationError } from '../../common/errors';
+import { AppError, NotFoundError, ConflictError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
@@ -103,6 +103,13 @@ export class PaymentsService {
   }
 
   async startOnlinePayment(scheduleItemId: string, userId: string, idempotencyKey: string) {
+    if (this.gateway.enabled === false) {
+      throw new AppError(
+        'PAYMENT_GATEWAY_UNAVAILABLE',
+        'Online payment is not available. Use the offline payment workflow.',
+        503,
+      );
+    }
     const key = idempotencyKey.trim();
     if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(key)) {
       throw new ValidationError(

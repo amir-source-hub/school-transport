@@ -7,18 +7,14 @@ const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
 const enrollmentApi = vi.hoisted(() => ({
   createGuidedEnrollment: vi.fn(),
   acceptGuidedContract: vi.fn(),
-  payGuidedPrepayment: vi.fn(),
-  finalizeOnboarding: vi.fn(),
   cancelEnrollment: vi.fn(),
   acceptEnrollmentPrice: vi.fn(),
 }));
-const notificationsApi = vi.hoisted(() => ({ updateNotificationConsent: vi.fn() }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: navigation.replace, refresh: navigation.refresh }),
 }));
 vi.mock('./enrollments-api', () => enrollmentApi);
-vi.mock('@/features/notifications/notifications-api', () => notificationsApi);
 vi.mock('leaflet', () => ({}));
 
 const schools = [
@@ -108,7 +104,7 @@ describe('onboarding guided enrollment funnel', () => {
   });
 
   it(
-    'drives a new account through enrollment, contract, prepayment and finalize',
+    'drives a new account through enrollment and contract to the offline receipt step',
     async () => {
       const user = userEvent.setup();
       renderOnboarding();
@@ -151,22 +147,11 @@ describe('onboarding guided enrollment funnel', () => {
       await user.click(screen.getByLabelText(/تمام بندهای قرارداد را مطالعه/));
       await user.click(screen.getByRole('button', { name: /پذیرش قرارداد و ادامه/ }));
 
-      await user.click(screen.getByRole('button', { name: /پرداخت امن و تکمیل ثبت‌نام/ }));
-
       expect(enrollmentApi.acceptGuidedContract).toHaveBeenCalledWith('contract-1', 'onboarding');
-      expect(enrollmentApi.payGuidedPrepayment).toHaveBeenCalledWith('sch-1', 'onboarding');
-      expect(enrollmentApi.finalizeOnboarding).toHaveBeenCalledOnce();
-      expect(notificationsApi.updateNotificationConsent).toHaveBeenCalledWith(
-        'IN_APP',
-        false,
-        'ONBOARDING',
-      );
-      expect(notificationsApi.updateNotificationConsent).toHaveBeenCalledWith(
-        'SMS',
-        false,
-        'ONBOARDING',
-      );
-      expect(navigation.replace).toHaveBeenCalledWith('/student/dashboard');
+      expect(screen.getByRole('button', { name: 'پرداخت آنلاین' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' })).toBeEnabled();
+      expect(screen.getByText(/ثبت‌نام فقط پس از تأیید مدیریت فعال می‌شود/)).toBeInTheDocument();
+      expect(navigation.replace).not.toHaveBeenCalledWith('/student/dashboard');
     },
     30_000,
   );

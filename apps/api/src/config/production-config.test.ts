@@ -13,14 +13,11 @@ const production = {
 };
 
 describe('production configuration', () => {
-  it('fails production API startup while real providers are absent', () => {
+  it('fails production API startup while the required OTP provider is absent', () => {
     const result = validateEnvironment(production);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.flatten().fieldErrors).toMatchObject({
-        OTP_PROVIDER: expect.any(Array),
-        PAYMENT_GATEWAY_PROVIDER: expect.any(Array),
-      });
+      expect(result.error.flatten().fieldErrors).toMatchObject({ OTP_PROVIDER: expect.any(Array) });
     }
   });
 
@@ -42,17 +39,24 @@ describe('production configuration', () => {
     ).toBe(false);
   });
 
-  it('retains explicit development-only providers outside production', () => {
+  it('allows console OTP in development while online payment remains disabled', () => {
     expect(
       validateEnvironment({
         ...production,
         NODE_ENV: 'development',
         OTP_PROVIDER: 'console',
-        PAYMENT_GATEWAY_PROVIDER: 'mock',
+        PAYMENT_GATEWAY_PROVIDER: 'none',
         LOG_LEVEL: 'debug',
         SEED_DEMO_DATA: 'true',
       }).success,
     ).toBe(true);
+    expect(
+      validateEnvironment({
+        ...production,
+        NODE_ENV: 'development',
+        PAYMENT_GATEWAY_PROVIDER: 'mock',
+      }).success,
+    ).toBe(false);
   });
 
   it('requires Kavenegar credentials and an approved OTP template when enabled', () => {

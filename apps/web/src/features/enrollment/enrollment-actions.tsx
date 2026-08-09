@@ -35,8 +35,6 @@ import {
   acceptGuidedContract,
   cancelEnrollment,
   createGuidedEnrollment,
-  finalizeOnboarding,
-  payGuidedPrepayment,
   type EnrollmentMode,
   type GuidedEnrollmentResult,
 } from './enrollments-api';
@@ -48,8 +46,8 @@ import {
   type SchoolOption,
 } from './enrollment-form-model';
 import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-schema';
-import { updateNotificationConsent } from '@/features/notifications/notifications-api';
 import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
+import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const vehicleOptions = [
@@ -96,7 +94,6 @@ export function CreateEnrollmentForm({
   guardianPhone?: string;
   capacityRemaining?: number;
 }) {
-  const router = useRouter();
   const firstSchool = schools[0];
   const firstLevel = firstSchool?.educationOptions[0];
   const effectiveGuardianPhone =
@@ -1192,47 +1189,24 @@ export function CreateEnrollmentForm({
                 <span className="text-sm font-bold">پیامک</span>
               </label>
             </fieldset>
-            <Button
-              className="mt-6 w-full"
-              size="lg"
-              loading={pending}
-              onClick={async () => {
-                if (submissionLockRef.current) return;
-                submissionLockRef.current = true;
-                setPending(true);
-                setError(undefined);
-                try {
-                  await payGuidedPrepayment(result.scheduleItemId, mode);
-                  if (mode === 'onboarding') {
-                    await finalizeOnboarding();
-                    try {
-                      await Promise.all([
-                        updateNotificationConsent('IN_APP', optionalInAppConsent, 'ONBOARDING'),
-                        updateNotificationConsent('SMS', optionalSmsConsent, 'ONBOARDING'),
-                      ]);
-                    } catch {
-                      router.replace('/student/notifications?consentError=1');
-                      return;
-                    }
-                    router.replace('/student/dashboard');
-                    return;
-                  }
-                  await Promise.all([
-                    updateNotificationConsent('IN_APP', optionalInAppConsent, 'ONBOARDING'),
-                    updateNotificationConsent('SMS', optionalSmsConsent, 'ONBOARDING'),
-                  ]);
-                  setPaid(true);
-                  router.refresh();
-                } catch (caught) {
-                  setError(getApiErrorFeedback(caught).message);
-                } finally {
-                  submissionLockRef.current = false;
-                  setPending(false);
-                }
-              }}
-            >
-              پرداخت امن و تکمیل ثبت‌نام
-            </Button>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-border p-4 text-right">
+                <p className="font-black">پرداخت آفلاین</p>
+                <p className="mt-2 text-xs leading-6 text-muted">
+                  رسید را ارسال کنید. ثبت‌نام فقط پس از تأیید مدیریت فعال می‌شود.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border p-4 text-right" aria-describedby="enrollment-online-unavailable">
+                <Button className="w-full" size="lg" disabled aria-disabled="true">پرداخت آنلاین</Button>
+                <p id="enrollment-online-unavailable" className="mt-2 text-xs text-muted">به‌زودی فعال می‌شود.</p>
+              </div>
+            </div>
+            <div className="mt-5 text-right">
+              <OfflinePaymentForm
+                items={[{ id: result.scheduleItemId, label: 'پیش‌پرداخت ثبت‌نام — ۴٬۰۰۰٬۰۰۰ تومان' }]}
+                mode={mode}
+              />
+            </div>
             {error && <p className="mt-3 text-sm text-danger">{error}</p>}
           </div>
         )}

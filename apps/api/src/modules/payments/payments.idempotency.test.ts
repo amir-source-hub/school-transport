@@ -75,6 +75,17 @@ function service(harness = databaseHarness()) {
 }
 
 describe('online payment idempotency', () => {
+  it('rejects before any database access when the gateway feature is disabled', async () => {
+    let touchedDatabase = false;
+    const db = { db: { select: () => { touchedDatabase = true; throw new Error('unexpected'); } } };
+    const payments = new PaymentsService(db as never, { enabled: false } as never, {} as never);
+
+    await expect(
+      payments.startOnlinePayment('schedule-1', 'user-1', 'request-123'),
+    ).rejects.toMatchObject({ code: 'PAYMENT_GATEWAY_UNAVAILABLE', status: 503 });
+    expect(touchedDatabase).toBe(false);
+  });
+
   it.each(['', '   ', 'short', 'bad key!', `a${'x'.repeat(128)}`])(
     'rejects a missing, blank, malformed, or oversized key %#',
     async (key) => {

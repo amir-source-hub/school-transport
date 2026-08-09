@@ -93,6 +93,16 @@ export class OnboardingPaymentsController {
     );
     return successResponse(tx);
   }
+
+  @Post(':scheduleItemId/offline-submissions')
+  async offlineSubmission(
+    @Req() req: AuthenticatedRequest,
+    @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string,
+    @Body() dto: OfflinePaymentDto,
+  ) {
+    const txId = await this.paymentsService.createOfflineSubmission(scheduleItemId, req.user.id, dto);
+    return successResponse({ transactionId: txId });
+  }
 }
 
 @UseGuards(AuthGuard, RolesGuard)

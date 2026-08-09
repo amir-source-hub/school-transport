@@ -5,8 +5,7 @@ import {
   PaymentsController,
   AdminPaymentsController,
 } from './payments.controller';
-import { MockPaymentGateway, PAYMENT_GATEWAY, UnconfiguredPaymentGateway } from './payment-gateway';
-import { ConfigService } from '../../config/config.service';
+import { PAYMENT_GATEWAY, UnconfiguredPaymentGateway } from './payment-gateway';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
 
 @Module({
@@ -15,18 +14,10 @@ import { OnboardingGuard } from '../access-control/onboarding.guard';
     PaymentsService,
     OnboardingGuard,
     UnconfiguredPaymentGateway,
-    MockPaymentGateway,
     {
       provide: PAYMENT_GATEWAY,
-      inject: [ConfigService, MockPaymentGateway, UnconfiguredPaymentGateway],
-      useFactory: (
-        config: ConfigService,
-        mockGateway: MockPaymentGateway,
-        unavailableGateway: UnconfiguredPaymentGateway,
-      ) =>
-        config.nodeEnv !== 'production' && config.paymentGatewayProvider === 'mock'
-          ? mockGateway
-          : unavailableGateway,
+      inject: [UnconfiguredPaymentGateway],
+      useFactory: (unavailableGateway: UnconfiguredPaymentGateway) => unavailableGateway,
     },
   ],
   exports: [PaymentsService],

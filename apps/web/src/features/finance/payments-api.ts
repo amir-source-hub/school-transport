@@ -42,8 +42,9 @@ export async function getPayments() {
   return overviewSchema.parse(response.data);
 }
 
-export async function submitOfflinePayment(scheduleItemId: string, input: { paidAt: string; referenceNumber: string; description?: string }) {
-  await apiRequest(`/payments/${scheduleItemId}/offline-submissions`, { method: 'POST', body: input });
+export async function submitOfflinePayment(scheduleItemId: string, input: { paidAt: string; referenceNumber: string; description?: string }, mode: 'panel' | 'onboarding' = 'panel') {
+  const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
+  await apiRequest(`${prefix}/${scheduleItemId}/offline-submissions`, { method: 'POST', body: input });
 }
 
 export async function startOnlinePayment(scheduleItemId: string) {
