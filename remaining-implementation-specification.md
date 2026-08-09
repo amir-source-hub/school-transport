@@ -72,15 +72,17 @@ The request is for ordinary admins and student accounts only. `SuperAdminGuard` 
 
 ### Local configuration status
 
-- The local Kavenegar API key, OTP template name, and sender `2000660110` are set in ignored `.env`.
+- The local Kavenegar API key, OTP template name, and latest candidate sender `0018018949161` are set in ignored `.env`.
 - A read-only official `account/info.json` request succeeded on 2026-08-09; the key is valid and the account reported positive credit. No SMS was sent and no secret/account value was logged.
 - The approved owned test number is stored only in ignored local `.env`; it is not present in tracked documentation/examples.
 - Live provider tests on 2026-08-09 reached Kavenegar. Without an explicit sender, ordinary SMS returned `412`; with sender `2000660110`, it returned `427` (the line requires an access level/permission). VerifyLookup returned `424` (template missing or not approved). None of these requests returned a delivery message ID.
+- Attempts using candidate sender `0018018949161` could not connect to `api.kavenegar.com:443`, including idempotent retries, so this sender has not yet been accepted or rejected by Kavenegar.
 - ArvanCloud connection/credential fields are empty.
 
 Tasks:
 
 - [ ] Ask Kavenegar to grant this API key/account permission to send from line `2000660110`, or provide another line already authorized for the account; status `427` must no longer occur. **[BLOCKED — KAVENEGAR ACCOUNT]**
+- [ ] Retry candidate sender `0018018949161` after network access to `api.kavenegar.com:443` is restored and record the actual provider response. **[BLOCKED — NETWORK/PROVIDER]**
 - [ ] Add the server's outbound IP to Kavenegar security settings if delivery reconciliation through `LatestOutbox`/`SelectOutbox` is required; the current read-only reconciliation attempt returns `407`. **[BLOCKED — KAVENEGAR ACCOUNT]**
 - [ ] Create/approve the exact VerifyLookup template configured by `KAVEHNEGAR_OTP_TEMPLATE`; status `424` must no longer occur. **[BLOCKED — KAVENEGAR ACCOUNT]**
 - [ ] After both account settings are corrected, rerun one ordinary SMS and one OTP send to the locally configured approved test number and confirm handset receipt. **[BLOCKED — PROVIDER CONFIGURATION]**
