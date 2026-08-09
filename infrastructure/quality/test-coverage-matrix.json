@@ -1,0 +1,15 @@
+{
+  "version": "2026-08-10",
+  "layers": [
+    { "layer": "unit", "evidence": ["apps/api/src/common/database-errors.test.ts", "apps/web/src/lib/api-client.test.ts"] },
+    { "layer": "component", "evidence": ["apps/web/src/features/enrollment/onboarding-enrollment.test.tsx", "apps/web/src/features/student-photos/photo-upload-card.test.tsx"] },
+    { "layer": "integration-real-services", "evidence": ["apps/api/src/integration/real-services.integration.test.ts"] },
+    { "layer": "browser-e2e", "evidence": ["apps/web/e2e/public-pages.spec.ts", "apps/web/e2e/student-notifications-payments.spec.ts", "apps/web/e2e/enrollment-long-form.spec.ts"] },
+    { "layer": "accessibility", "evidence": ["apps/web/e2e/accessibility.spec.ts"] },
+    { "layer": "mobile-tablet", "evidence": ["apps/web/playwright.config.ts", "apps/web/e2e/admin-responsive-lists.spec.ts"] },
+    { "layer": "visual", "evidence": ["apps/web/e2e/visual-regression.spec.ts", "apps/web/e2e/visual-regression.spec.ts-snapshots/public-landing-chromium.png", "apps/web/e2e/visual-regression.spec.ts-snapshots/public-landing-phone-320.png", "apps/web/e2e/visual-regression.spec.ts-snapshots/public-landing-tablet-768.png"] },
+    { "layer": "performance", "evidence": ["apps/web/scripts/check-performance-budgets.mjs", "apps/web/scripts/run-browser-performance-audit.mjs"] },
+    { "layer": "dependency-failure", "evidence": ["apps/web/e2e/student-dashboard.spec.ts", "apps/web/e2e/student-notifications-payments.spec.ts"] },
+    { "layer": "regression-ci", "evidence": [".github/workflows/backend-ci.yml", ".github/workflows/frontend-ci.yml"] }
+  ]
+}

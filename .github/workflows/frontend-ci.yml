@@ -87,6 +87,8 @@ jobs:
       - run: pnpm --filter web contract:check
       - run: pnpm --filter web typecheck
       - run: pnpm --filter web test
+      - name: Enforce complete test-layer inventory
+        run: node infrastructure/quality/assert-test-coverage.mjs
       - run: pnpm --filter web build
       - name: Enforce deterministic frontend performance budgets
         run: pnpm --filter web performance:check
