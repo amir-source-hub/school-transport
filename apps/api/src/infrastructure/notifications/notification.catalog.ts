@@ -39,7 +39,8 @@ export type NotificationType =
   | 'PRICE_ACCEPTED'
   | 'PAYMENT_SUCCEEDED'
   | 'PAYMENT_APPROVED'
-  | 'PAYMENT_REJECTED'
+  | 'OFFLINE_PAYMENT_SUBMITTED'
+  | 'OFFLINE_PAYMENT_CORRECTION_REQUIRED'
   | 'PAYMENT_PLAN_READY'
   | 'CONTRACT_READY'
   | 'CONTRACT_ACCEPTED'
@@ -278,16 +279,28 @@ export const notificationCatalog: Record<NotificationType, NotificationCatalogEn
       hidesWhenResolved: false,
     },
   },
-  PAYMENT_REJECTED: {
+  OFFLINE_PAYMENT_SUBMITTED: {
     audience: 'STUDENT_ACCOUNT',
     purpose: 'SERVICE_NOTICE',
     channels: ['IN_APP', 'SMS'],
-    smsMessage: 'ثمین گشت: وضعیت مالی سرویس شما تغییر کرد. جزئیات را در پنل امن مشاهده کنید.',
-    inAppTitle: 'رد پرداخت',
-    inAppMessage: 'پرداخت شما رد شد. برای بررسی بیشتر با مدیریت تماس بگیرید.',
-    relatedEntityType: 'PAYMENT_TRANSACTION',
+    smsMessage: 'ثمین گشت: وضعیت رسید پرداخت شما تغییر کرد. جزئیات را در پنل امن مشاهده کنید.',
+    inAppTitle: 'رسید پرداخت ارسال شد',
+    inAppMessage: 'رسید برای بررسی مدیریت ثبت شد و هنوز به معنی تأیید پرداخت نیست.',
+    relatedEntityType: 'OFFLINE_PAYMENT_SUBMISSION',
     route: () => FINANCE,
-    exactlyOnce: false,
+    exactlyOnce: true,
+    adminOperational: { route: () => '/admin/payments', hidesWhenResolved: true },
+  },
+  OFFLINE_PAYMENT_CORRECTION_REQUIRED: {
+    audience: 'STUDENT_ACCOUNT',
+    purpose: 'SERVICE_NOTICE',
+    channels: ['IN_APP', 'SMS'],
+    smsMessage: 'ثمین گشت: وضعیت رسید پرداخت شما تغییر کرد. جزئیات را در پنل امن مشاهده کنید.',
+    inAppTitle: 'رسید پرداخت نیازمند اصلاح است',
+    inAppMessage: 'رسید تأیید نشد. دلیل را در پنل ببینید و رسید اصلاح‌شده ارسال کنید.',
+    relatedEntityType: 'OFFLINE_PAYMENT_SUBMISSION',
+    route: () => FINANCE,
+    exactlyOnce: true,
   },
   PAYMENT_PLAN_READY: {
     audience: 'STUDENT_ACCOUNT',

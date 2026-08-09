@@ -115,22 +115,13 @@ Central offline-payment destination settings are implemented with immutable vers
 
 ### Student offline-payment submission
 
-- [ ] Support offline payment for both prepayment and every installment. **[NOT FINISHED]**
-  - When the user selects offline payment, show the approved bank/card details and the exact amount/schedule item being paid.
-  - Collect: target schedule-item ID, paid amount, payment date/time, payer/card-holder name if required, source card last four digits (not the full source card number), bank/reference/tracking number, optional note, and receipt image.
-  - The backend derives account/student/plan/installment ownership and expected amount; never trust user/account IDs or a client-calculated amount.
-  - Accept one active pending receipt per schedule item. Make repeat submission idempotent and require explicit replacement/withdrawal rules.
-  - Submission creates `PENDING_REVIEW`; it must not mark the prepayment/installment paid, activate the panel, advance contract/payment lifecycle, or increase totals.
-  - After rejection, show a safe Persian reason and allow a new corrected submission. Preserve immutable history of earlier attempts.
+Offline payment now supports prepayments and installments with centrally sourced destination details, exact schedule-item amounts, payment date/reference, optional payer/card suffix/note, required receipt evidence, server-derived ownership and amounts, stable retry idempotency, and one active draft/review submission per item. A completed upload enters `PENDING_REVIEW` without changing financial totals or enrollment; rejected history and safe reasons remain visible and a corrected submission may be created. Pending evidence cannot be replaced until reviewed, preventing ambiguous simultaneous claims.
 
 ### Receipt image storage
 
-- [ ] Store receipt images privately using the same vendor-neutral S3/Arvan infrastructure boundary, with a separate prefix/bucket policy from child photos. **[NOT FINISHED]**
-  - Do not expose storage credentials or permanent/public URLs.
-  - Validate declared/actual bytes, signature, MIME, size, dimensions, decode, and processing limits; reject SVG/PDF/executable/polyglot/decompression-bomb inputs unless PDF support is separately approved and safely implemented.
-  - Strip unnecessary metadata and store an approved normalized derivative plus checksum, size, type, dimensions, and object key.
-  - Return short-lived signed views only after payer ownership or admin-role authorization.
-  - Define retention for accepted, rejected, replaced, abandoned, archived, disputed, and legally retained payment evidence.
+Receipt images use the private vendor-neutral S3 boundary under separate `payment-receipts/raw` and `payment-receipts/canonical` prefixes. Completion verifies declared/actual bytes, signatures, MIME, dimensions and decode limits, rejects non-JPEG/PNG inputs, strips metadata into a bounded sRGB JPEG, persists checksum/size/type/dimensions/key, deletes raw evidence, and exposes only short-lived owner/admin-authorized views.
+
+- [ ] Implement and operationally approve retention/cleanup for accepted, rejected, abandoned, archived, disputed, and legally retained receipt evidence. **[BLOCKED — RETENTION/LEGAL POLICY]**
 
 ### Data model and API
 
@@ -153,17 +144,15 @@ Central offline-payment destination settings are implemented with immutable vers
 
 ### Offline-payment notifications
 
-- [ ] Add cataloged in-app and safe SMS events for receipt submitted, approved, rejected, and correction required. **[NOT FINISHED]**
-  - Student SMS contains only a generic payment-status change and panel direction—no amount, card number, reference, receipt link, or child details.
-  - The shared admin operational view should expose pending receipt reviews without per-admin read state.
+Receipt submitted, approved, and correction-required/rejected transitions are cataloged for in-app and generic privacy-safe SMS delivery. Messages contain no amount, card/reference, receipt link, or child data; submitted receipts appear in the shared admin operational view without per-admin read state.
 
 ### Offline-payment verification
 
 - [ ] Test prepayment and installment ownership/IDOR, invalid amount/date/reference, duplicate pending submission, replacement, receipt tampering, private access, and signed URL expiry. **[NOT FINISHED]**
 - [ ] Test approval/rejection authorization, optimistic concurrency, idempotency, rollback, exact-once financial effect, audit, notifications, and worker/provider failure isolation. **[NOT FINISHED]**
 Disabled online controls have accessible native disabled semantics and explanatory text in component coverage; both online start and verify reject before database access while the feature is disabled.
-- [ ] Test onboarding: panel activation occurs only after an offline prepayment is approved—not merely submitted. **[NOT FINISHED]**
-- [ ] Test mobile receipt capture/upload, progress/cancel/retry, Persian errors, preview, long filenames, and network/storage failures. **[NOT FINISHED]**
+Component coverage proves onboarding finalization is refused while the receipt is pending and runs only after an approved prepayment is observed; the backend independently verifies paid prepayment before issuing panel credentials.
+- [ ] Add real-browser mobile receipt capture plus long-filename and real network/storage-failure verification. Component coverage now exercises destination display, required evidence, preview, progress, upload ordering, and retry-safe submission. **[NOT FINISHED]**
 
 ## 7. Contract and legal-text updates
 

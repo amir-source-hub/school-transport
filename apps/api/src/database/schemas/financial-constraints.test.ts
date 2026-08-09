@@ -94,10 +94,12 @@ describe('documented financial database constraints', () => {
       checks: expect.arrayContaining([
         'offline_submissions_amount_positive',
         'offline_submissions_last_four',
+        'offline_submissions_valid_status',
+        'offline_submissions_receipt_required',
       ]),
       indexes: expect.arrayContaining([
         'idx_offline_submissions_idempotency',
-        'idx_offline_submissions_one_pending',
+        'idx_offline_submissions_one_active',
         'idx_offline_submissions_one_approved',
       ]),
     });

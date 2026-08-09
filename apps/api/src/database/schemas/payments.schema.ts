@@ -189,6 +189,8 @@ export const offlinePaymentSubmissions = pgTable(
     receiptObjectKey: varchar('receipt_object_key', { length: 255 }),
     receiptMime: varchar('receipt_mime', { length: 60 }),
     receiptSize: integer('receipt_size'),
+    receiptWidth: integer('receipt_width'),
+    receiptHeight: integer('receipt_height'),
     receiptChecksum: varchar('receipt_checksum', { length: 64 }),
     status: varchar('status', { length: 30 }).notNull().default('PENDING_REVIEW'),
     version: integer('version').notNull().default(1),
@@ -205,13 +207,15 @@ export const offlinePaymentSubmissions = pgTable(
     ownerIdx: index('idx_offline_submissions_owner').on(table.payerUserId, table.createdAt),
     reviewIdx: index('idx_offline_submissions_review').on(table.status, table.createdAt),
     idempotencyIdx: uniqueIndex('idx_offline_submissions_idempotency').on(table.payerUserId, table.idempotencyKey),
-    onePendingIdx: uniqueIndex('idx_offline_submissions_one_pending')
+    onePendingIdx: uniqueIndex('idx_offline_submissions_one_active')
       .on(table.paymentScheduleItemId)
-      .where(sql`${table.status} = 'PENDING_REVIEW'`),
+      .where(sql`${table.status} IN ('DRAFT', 'PENDING_REVIEW')`),
     oneApprovedIdx: uniqueIndex('idx_offline_submissions_one_approved')
       .on(table.paymentScheduleItemId)
       .where(sql`${table.status} = 'APPROVED'`),
     positiveAmount: check('offline_submissions_amount_positive', sql`${table.submittedAmount} > 0`),
     validLastFour: check('offline_submissions_last_four', sql`${table.sourceCardLastFour} IS NULL OR ${table.sourceCardLastFour} ~ '^[0-9]{4}$'`),
+    validStatus: check('offline_submissions_valid_status', sql`${table.status} IN ('DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN', 'SUPERSEDED')`),
+    receiptRequiredForReview: check('offline_submissions_receipt_required', sql`${table.status} = 'DRAFT' OR (${table.receiptObjectKey} IS NOT NULL AND ${table.receiptChecksum} IS NOT NULL)`),
   }),
 );

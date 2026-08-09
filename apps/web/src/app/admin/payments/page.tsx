@@ -7,6 +7,7 @@ import {
   ApprovePaymentDialog,
   ConfigureInstallmentsDialog,
   RejectPaymentDialog,
+  ReceiptPreviewDialog,
 } from '@/features/admin-payments/payment-actions';
 import { formatIrr, formatJalaliDate, formatJalaliDateTime } from '@/lib/formatters';
 
@@ -100,10 +101,18 @@ export default async function AdminPaymentsPage() {
                     </dd>
                   </div>
                 </dl>
+                {payment.prepayment.transaction?.destinationSnapshot && (
+                  <div className="mt-4 rounded-xl bg-surface-muted p-3 text-sm leading-7">
+                    مقصد نسخه {payment.prepayment.transaction.destinationSnapshot.version.toLocaleString('fa-IR')} — {payment.prepayment.transaction.destinationSnapshot.bankName} — <span dir="ltr">{payment.prepayment.transaction.destinationSnapshot.cardNumber}</span>
+                    {payment.prepayment.transaction.sourceCardLastFour && <> · کارت مبدأ ****{payment.prepayment.transaction.sourceCardLastFour}</>}
+                    {(payment.prepayment.transaction.previousAttempts ?? 0) > 0 && <> · تلاش‌های قبلی: {payment.prepayment.transaction.previousAttempts?.toLocaleString('fa-IR')}</>}
+                  </div>
+                )}
                 {payment.prepayment.transaction?.status === 'در انتظار بررسی' && (
                   <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
                     <ApprovePaymentDialog paymentId={payment.prepayment.transaction.id} version={payment.prepayment.transaction.version} />
                     <RejectPaymentDialog paymentId={payment.prepayment.transaction.id} version={payment.prepayment.transaction.version} />
+                    <ReceiptPreviewDialog submissionId={payment.prepayment.transaction.id} />
                   </div>
                 )}
                 {canConfigure && (
@@ -141,15 +150,18 @@ export default async function AdminPaymentsPage() {
                             </Badge>
                           </div>
                           {installment.transaction && (
-                            <p className="mt-3 text-sm text-muted">
-                              مرجع <span dir="ltr">{installment.transaction.reference}</span> —{' '}
-                              {formatJalaliDateTime(installment.transaction.submittedAt)}
-                            </p>
+                            <div className="mt-3 text-sm text-muted">
+                              <p>مرجع <span dir="ltr">{installment.transaction.reference}</span> — {formatJalaliDateTime(installment.transaction.submittedAt)}</p>
+                              {installment.transaction.destinationSnapshot && <p className="mt-1">مقصد نسخه {installment.transaction.destinationSnapshot.version.toLocaleString('fa-IR')} — {installment.transaction.destinationSnapshot.bankName} — <span dir="ltr">{installment.transaction.destinationSnapshot.cardNumber}</span></p>}
+                              {installment.transaction.sourceCardLastFour && <p className="mt-1">کارت مبدأ ****{installment.transaction.sourceCardLastFour}</p>}
+                              {(installment.transaction.previousAttempts ?? 0) > 0 && <p className="mt-1">تلاش‌های قبلی: {installment.transaction.previousAttempts?.toLocaleString('fa-IR')}</p>}
+                            </div>
                           )}
                           {installment.transaction?.status === 'در انتظار بررسی' && (
                             <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
                               <ApprovePaymentDialog paymentId={installment.transaction.id} version={installment.transaction.version} />
                               <RejectPaymentDialog paymentId={installment.transaction.id} version={installment.transaction.version} />
+                              <ReceiptPreviewDialog submissionId={installment.transaction.id} />
                             </div>
                           )}
                         </div>

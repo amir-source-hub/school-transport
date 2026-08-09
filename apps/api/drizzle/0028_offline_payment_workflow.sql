@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS "offline_payment_submissions" (
   "receipt_object_key" varchar(255),
   "receipt_mime" varchar(60),
   "receipt_size" integer,
+  "receipt_width" integer,
+  "receipt_height" integer,
   "receipt_checksum" varchar(64),
   "status" varchar(30) DEFAULT 'PENDING_REVIEW' NOT NULL,
   "version" integer DEFAULT 1 NOT NULL,
@@ -46,7 +48,9 @@ CREATE TABLE IF NOT EXISTS "offline_payment_submissions" (
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT "offline_submissions_amount_positive" CHECK ("submitted_amount" > 0),
-  CONSTRAINT "offline_submissions_last_four" CHECK ("source_card_last_four" IS NULL OR "source_card_last_four" ~ '^[0-9]{4}$')
+  CONSTRAINT "offline_submissions_last_four" CHECK ("source_card_last_four" IS NULL OR "source_card_last_four" ~ '^[0-9]{4}$'),
+  CONSTRAINT "offline_submissions_valid_status" CHECK ("status" IN ('DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN', 'SUPERSEDED')),
+  CONSTRAINT "offline_submissions_receipt_required" CHECK ("status" = 'DRAFT' OR ("receipt_object_key" IS NOT NULL AND "receipt_checksum" IS NOT NULL))
 );
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_offline_submissions_owner" ON "offline_payment_submissions" ("payer_user_id", "created_at");
@@ -55,6 +59,6 @@ CREATE INDEX IF NOT EXISTS "idx_offline_submissions_review" ON "offline_payment_
 --> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "idx_offline_submissions_idempotency" ON "offline_payment_submissions" ("payer_user_id", "idempotency_key");
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "idx_offline_submissions_one_pending" ON "offline_payment_submissions" ("payment_schedule_item_id") WHERE "status" = 'PENDING_REVIEW';
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_offline_submissions_one_active" ON "offline_payment_submissions" ("payment_schedule_item_id") WHERE "status" IN ('DRAFT', 'PENDING_REVIEW');
 --> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "idx_offline_submissions_one_approved" ON "offline_payment_submissions" ("payment_schedule_item_id") WHERE "status" = 'APPROVED';

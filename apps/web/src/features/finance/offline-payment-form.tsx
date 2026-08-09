@@ -1,13 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/feedback/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { getOfflineDestination, submitOfflinePayment, type OfflineDestination } from './payments-api';
+import { authorizeReceiptUpload, completeReceiptUpload, getOfflineDestination, submitOfflinePayment, type OfflineDestination } from './payments-api';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 
@@ -20,6 +21,11 @@ export function OfflinePaymentForm({ items = [], mode = 'panel' }: { items?: { i
   const [payerName, setPayerName] = useState('');
   const [sourceCardLastFour, setSourceCardLastFour] = useState('');
   const [destination, setDestination] = useState<OfflineDestination>();
+  const [receipt, setReceipt] = useState<File>();
+  const [previewUrl, setPreviewUrl] = useState<string>();
+  const [progress, setProgress] = useState(0);
+  const [uploadRequest, setUploadRequest] = useState<XMLHttpRequest>();
+  const idempotencyKey = useRef(crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string>();
@@ -31,6 +37,7 @@ export function OfflinePaymentForm({ items = [], mode = 'panel' }: { items?: { i
       .catch((caught) => active && setError(getApiErrorFeedback(caught).message));
     return () => { active = false; };
   }, [mode]);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   const disabled = items.length === 0 || !destination;
   return (
     <form className="space-y-5" onSubmit={async (event) => {
@@ -53,15 +60,27 @@ export function OfflinePaymentForm({ items = [], mode = 'panel' }: { items?: { i
         setError('چهار رقم آخر کارت مبدأ باید دقیقاً ۴ رقم باشد.');
         return;
       }
+      if (!receipt) { setError('تصویر رسید پرداخت را انتخاب کنید.'); return; }
       setPending(true);
       try {
-        await submitOfflinePayment(scheduleItemId, {
+        const submissionId = await submitOfflinePayment(scheduleItemId, {
           paidAt,
           referenceNumber: referenceNumber.trim(),
           description: description || undefined,
           payerName: payerName || undefined,
           sourceCardLastFour: sourceCardLastFour || undefined,
-        }, mode);
+        }, mode, idempotencyKey.current);
+        const uploadUrl = await authorizeReceiptUpload(submissionId, receipt, mode);
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest(); setUploadRequest(xhr);
+          xhr.open('PUT', uploadUrl); xhr.setRequestHeader('Content-Type', receipt.type);
+          xhr.upload.onprogress = (event) => event.lengthComputable && setProgress(Math.round((event.loaded / event.total) * 100));
+          xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error('بارگذاری رسید ناموفق بود.'));
+          xhr.onerror = () => reject(new Error('ارتباط با ذخیره‌گاه رسید قطع شد.'));
+          xhr.onabort = () => reject(new Error('بارگذاری رسید لغو شد.'));
+          xhr.send(receipt);
+        });
+        await completeReceiptUpload(submissionId, mode);
         setSubmitted(true);
         setScheduleItemId('');
         setPaidAt('');
@@ -69,6 +88,8 @@ export function OfflinePaymentForm({ items = [], mode = 'panel' }: { items?: { i
         setDescription('');
         setPayerName('');
         setSourceCardLastFour('');
+        setReceipt(undefined); setPreviewUrl(undefined); setProgress(0); setUploadRequest(undefined);
+        idempotencyKey.current = crypto.randomUUID();
         setFormVersion((current) => current + 1);
         router.refresh();
       } catch (caught) {
@@ -127,6 +148,17 @@ export function OfflinePaymentForm({ items = [], mode = 'panel' }: { items?: { i
         <label className="text-sm font-bold">نام پرداخت‌کننده (اختیاری)<Input disabled={disabled} className="mt-2" value={payerName} onChange={(event) => setPayerName(event.target.value)} /></label>
         <label className="text-sm font-bold">چهار رقم آخر کارت مبدأ (اختیاری)<Input disabled={disabled} className="mt-2" dir="ltr" inputMode="numeric" maxLength={4} value={sourceCardLastFour} onChange={(event) => setSourceCardLastFour(event.target.value.replace(/\D/g, ''))} /></label>
       </div>
+      <label className="block text-sm font-bold">
+        تصویر رسید (JPEG یا PNG)
+        <Input type="file" accept="image/jpeg,image/png" required disabled={disabled} className="mt-2" onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          setReceipt(file); setPreviewUrl(URL.createObjectURL(file)); setProgress(0); setError(undefined);
+        }} />
+      </label>
+      {previewUrl && <div className="rounded-xl border border-border p-3"><Image src={previewUrl} alt="پیش‌نمایش رسید پرداخت" width={800} height={600} unoptimized className="max-h-64 w-full object-contain" /><Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setReceipt(undefined); setPreviewUrl(undefined); setProgress(0); }}>حذف رسید</Button></div>}
+      {pending && progress > 0 && <div role="status" aria-live="polite"><div className="h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full bg-primary" style={{ width: `${progress}%` }} /></div><p className="mt-1 text-xs text-muted">بارگذاری رسید: {progress.toLocaleString('fa-IR')}٪</p>{uploadRequest && <Button type="button" variant="ghost" size="sm" onClick={() => uploadRequest.abort()}>لغو بارگذاری</Button>}</div>}
       {submitted && <Alert title="پرداخت برای بررسی مدیریت ارسال شد">پس از تأیید مدیر، وضعیت قسط به‌روزرسانی می‌شود.</Alert>}
       {error && <p className="text-sm text-danger">{error}</p>}
       <Button type="submit" loading={pending} disabled={disabled || pending}>ارسال رسید برای بررسی مدیر</Button>

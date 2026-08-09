@@ -8,6 +8,7 @@ import { RolesGuard } from '../access-control/roles.guard';
 import {
   ConfigureInstallmentsDto,
   ConfigureOfflineDestinationDto,
+  AuthorizeReceiptUploadDto,
   IdempotencyKey,
   OfflinePaymentDto,
   RejectPaymentDto,
@@ -51,6 +52,21 @@ export class PaymentsController {
     const submissionId = await this.paymentsService.createOfflineSubmission(scheduleItemId, req.user.id, { ...dto, idempotencyKey });
     return successResponse({ submissionId });
   }
+
+  @Post('offline-submissions/:submissionId/receipt/authorize')
+  async authorizeReceipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string, @Body() dto: AuthorizeReceiptUploadDto) {
+    return successResponse(await this.paymentsService.authorizeReceiptUpload(submissionId, req.user.id, dto));
+  }
+
+  @Post('offline-submissions/:submissionId/receipt/complete')
+  async completeReceipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string) {
+    return successResponse(await this.paymentsService.completeReceiptUpload(submissionId, req.user.id));
+  }
+
+  @Get('offline-submissions/:submissionId/receipt')
+  async receipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string) {
+    return successResponse(await this.paymentsService.getReceiptView(submissionId, req.user.id));
+  }
 }
 
 @UseGuards(OnboardingGuard)
@@ -61,6 +77,11 @@ export class OnboardingPaymentsController {
   @Get('offline-destination')
   async offlineDestination() {
     return successResponse(await this.paymentsService.getActiveOfflineDestination());
+  }
+
+  @Get('offline-submissions')
+  async offlineSubmissions(@Req() req: AuthenticatedRequest) {
+    return successResponse(await this.paymentsService.listOfflineSubmissions(req.user.id));
   }
 
   @Post(':scheduleItemId/online/start')
@@ -77,6 +98,16 @@ export class OnboardingPaymentsController {
   async offlineSubmission(@Req() req: AuthenticatedRequest, @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string, @Body() dto: OfflinePaymentDto, @IdempotencyKey() idempotencyKey: string) {
     const submissionId = await this.paymentsService.createOfflineSubmission(scheduleItemId, req.user.id, { ...dto, idempotencyKey });
     return successResponse({ submissionId });
+  }
+
+  @Post('offline-submissions/:submissionId/receipt/authorize')
+  async authorizeReceipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string, @Body() dto: AuthorizeReceiptUploadDto) {
+    return successResponse(await this.paymentsService.authorizeReceiptUpload(submissionId, req.user.id, dto));
+  }
+
+  @Post('offline-submissions/:submissionId/receipt/complete')
+  async completeReceipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string) {
+    return successResponse(await this.paymentsService.completeReceiptUpload(submissionId, req.user.id));
   }
 }
 
@@ -104,6 +135,11 @@ export class AdminPaymentsController {
   @Get('offline-submissions')
   async offlineSubmissions() {
     return successResponse(await this.paymentsService.listOfflineSubmissionsForAdmin());
+  }
+
+  @Get('offline-submissions/:submissionId/receipt')
+  async receipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string) {
+    return successResponse(await this.paymentsService.getReceiptView(submissionId, req.user.id, true));
   }
 
   @Post('plans/:planId/installments')

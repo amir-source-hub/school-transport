@@ -35,6 +35,7 @@ import {
   acceptGuidedContract,
   cancelEnrollment,
   createGuidedEnrollment,
+  finalizeOnboarding,
   type EnrollmentMode,
   type GuidedEnrollmentResult,
 } from './enrollments-api';
@@ -48,6 +49,8 @@ import {
 import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-schema';
 import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
 import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
+import { getOfflineSubmissions } from '@/features/finance/payments-api';
+import { updateNotificationConsent } from '@/features/notifications/notifications-api';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const vehicleOptions = [
@@ -94,6 +97,7 @@ export function CreateEnrollmentForm({
   guardianPhone?: string;
   capacityRemaining?: number;
 }) {
+  const router = useRouter();
   const firstSchool = schools[0];
   const firstLevel = firstSchool?.educationOptions[0];
   const effectiveGuardianPhone =
@@ -1207,6 +1211,24 @@ export function CreateEnrollmentForm({
                 mode={mode}
               />
             </div>
+            {mode === 'onboarding' && (
+              <Button className="mt-4 w-full" variant="secondary" loading={pending} onClick={async () => {
+                if (submissionLockRef.current) return;
+                submissionLockRef.current = true; setPending(true); setError(undefined);
+                try {
+                  const submissions = await getOfflineSubmissions('onboarding');
+                  const approved = submissions.some((submission) => submission.paymentScheduleItemId === result.scheduleItemId && submission.status === 'APPROVED');
+                  if (!approved) { setError('رسید هنوز توسط مدیریت تأیید نشده است. پس از دریافت اعلان دوباره بررسی کنید.'); return; }
+                  await finalizeOnboarding();
+                  await Promise.all([
+                    updateNotificationConsent('IN_APP', optionalInAppConsent, 'ONBOARDING'),
+                    updateNotificationConsent('SMS', optionalSmsConsent, 'ONBOARDING'),
+                  ]);
+                  router.replace('/student/dashboard');
+                } catch (caught) { setError(getApiErrorFeedback(caught).message); }
+                finally { submissionLockRef.current = false; setPending(false); }
+              }}>بررسی تأیید رسید و فعال‌سازی پنل</Button>
+            )}
             {error && <p className="mt-3 text-sm text-danger">{error}</p>}
           </div>
         )}

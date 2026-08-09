@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { OfflineDestinationForm } from './offline-destination-form';
 
 const api = vi.hoisted(() => ({ configureOfflineDestination: vi.fn() }));
-vi.mock('./admin-payments-api', async (importOriginal) => ({ ...(await importOriginal()), ...api }));
+vi.mock('./admin-payments-api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./admin-payments-api')>()),
+  ...api,
+}));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 describe('OfflineDestinationForm', () => {

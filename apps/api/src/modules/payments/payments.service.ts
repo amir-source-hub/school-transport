@@ -11,7 +11,7 @@ import {
   offlinePaymentDestinations,
   offlinePaymentSubmissions,
 } from '../../database/schemas';
-import { eq, and, inArray, desc, max } from 'drizzle-orm';
+import { eq, and, inArray, desc, max, ne } from 'drizzle-orm';
 import { AppError, NotFoundError, ConflictError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
@@ -19,6 +19,9 @@ import { InAppNotificationService } from '../../infrastructure/notifications/in-
 import { createHash } from 'node:crypto';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { Optional } from '@nestjs/common';
+import { ConfigService } from '../../config/config.service';
+import { S3_CLIENT, S3Storage } from '../../infrastructure/s3/s3-storage.port';
+import { processReceiptImage } from './receipt-image-processor';
 
 const onlinePaymentResult = {
   id: paymentTransactions.id,
@@ -37,6 +40,8 @@ export class PaymentsService {
     @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
     private readonly notifications: InAppNotificationService,
     @Optional() @Inject(AUDIT_PORT) private readonly audit?: AuditPort,
+    @Optional() private readonly config?: ConfigService,
+    @Optional() @Inject(S3_CLIENT) private readonly storage?: S3Storage,
   ) {}
 
   async getActiveOfflineDestination(includeInactive = false) {
@@ -416,6 +421,7 @@ export class PaymentsService {
         referenceNumber: data.referenceNumber.trim(),
         note: data.description?.trim() ?? null,
         idempotencyKey: data.idempotencyKey,
+        status: 'DRAFT',
       })
       .onConflictDoNothing()
       .returning({ id: offlinePaymentSubmissions.id });
@@ -430,16 +436,80 @@ export class PaymentsService {
         'An offline payment receipt is already awaiting admin review for this installment.',
       );
     }
-    await this.notifications.create({
-      eventId: `OFFLINE_PAYMENT_SUBMITTED:${id}:${userId}`,
-      userId,
-      notificationType: 'OFFLINE_PAYMENT_SUBMITTED',
-      title: 'رسید پرداخت ارسال شد',
-      message: 'رسید شما برای بررسی مدیریت ثبت شد. ارسال رسید به معنی تأیید پرداخت نیست.',
-      relatedEntityType: 'OFFLINE_PAYMENT_SUBMISSION',
-      relatedEntityId: id,
-    });
     return id;
+  }
+
+  async authorizeReceiptUpload(submissionId: string, userId: string, input: { declaredMime: 'image/jpeg' | 'image/png'; declaredSize: number }) {
+    if (!this.storage || !this.config) throw new AppError('RECEIPT_STORAGE_UNAVAILABLE', 'Receipt storage is not configured.', 503);
+    const [submission] = await this.db.db.select().from(offlinePaymentSubmissions)
+      .where(and(eq(offlinePaymentSubmissions.id, submissionId), eq(offlinePaymentSubmissions.payerUserId, userId))).limit(1);
+    if (!submission) throw new NotFoundError('Offline payment submission');
+    if (submission.status !== 'DRAFT') throw new ConflictError('RECEIPT_NOT_DRAFT', 'Only a draft receipt can be uploaded.');
+    if (input.declaredSize > this.config.studentPhotoMaxBytes) throw new ValidationError('Receipt image is too large.');
+    const extension = input.declaredMime === 'image/png' ? '.png' : '.jpg';
+    const key = `payment-receipts/raw/${generateId()}${extension}`;
+    const uploadUrl = this.storage.presignPut(key, input.declaredMime, this.config.studentPhotoUploadUrlTtlSeconds);
+    await this.db.db.update(offlinePaymentSubmissions).set({ receiptObjectKey: key, receiptMime: input.declaredMime, receiptSize: input.declaredSize, updatedAt: new Date() })
+      .where(and(eq(offlinePaymentSubmissions.id, submissionId), eq(offlinePaymentSubmissions.status, 'DRAFT')));
+    return { uploadUrl, expiresInSeconds: this.config.studentPhotoUploadUrlTtlSeconds, maxBytes: this.config.studentPhotoMaxBytes };
+  }
+
+  async completeReceiptUpload(submissionId: string, userId: string) {
+    if (!this.storage || !this.config) throw new AppError('RECEIPT_STORAGE_UNAVAILABLE', 'Receipt storage is not configured.', 503);
+    const [submission] = await this.db.db.select().from(offlinePaymentSubmissions)
+      .where(and(eq(offlinePaymentSubmissions.id, submissionId), eq(offlinePaymentSubmissions.payerUserId, userId))).limit(1);
+    if (!submission) throw new NotFoundError('Offline payment submission');
+    if (submission.status === 'PENDING_REVIEW') return submission;
+    if (submission.status !== 'DRAFT' || !submission.receiptObjectKey) throw new ConflictError('RECEIPT_NOT_AUTHORIZED', 'Authorize and upload a receipt first.');
+    const rawKey = submission.receiptObjectKey;
+    const head = await this.storage.headObject(rawKey).catch(() => null);
+    if (!head || head.size !== submission.receiptSize || head.size > this.config.studentPhotoMaxBytes) {
+      throw new ValidationError('Uploaded receipt size does not match the declared file.');
+    }
+    const raw = await this.storage.getObject(rawKey).catch(() => null);
+    if (!raw) throw new AppError('RECEIPT_UPLOAD_MISSING', 'Receipt image could not be read.', 409);
+    let processed;
+    try {
+      processed = await processReceiptImage(raw, { maxBytes: this.config.studentPhotoMaxBytes, maxPixels: this.config.studentPhotoMaxPixels, maxAxis: this.config.studentPhotoMaxAxis });
+      if (processed.sourceMime !== submission.receiptMime) throw new Error('MIME_MISMATCH');
+    } catch {
+      await this.storage.deleteObject(rawKey).catch(() => undefined);
+      throw new ValidationError('Receipt must be a valid JPEG or PNG image.');
+    }
+    const canonicalKey = `payment-receipts/canonical/${generateId()}.jpg`;
+    await this.storage.putObject(canonicalKey, processed.canonical, processed.mime);
+    let updated;
+    try {
+      [updated] = await this.db.db.transaction(async (txn) => {
+        const [saved] = await txn.update(offlinePaymentSubmissions).set({
+        receiptObjectKey: canonicalKey, receiptMime: processed.mime, receiptSize: processed.size,
+        receiptWidth: processed.width, receiptHeight: processed.height, receiptChecksum: processed.checksum,
+        status: 'PENDING_REVIEW', submittedAt: new Date(), updatedAt: new Date(),
+      }).where(and(eq(offlinePaymentSubmissions.id, submissionId), eq(offlinePaymentSubmissions.status, 'DRAFT'))).returning();
+        if (!saved) throw new ConflictError('RECEIPT_NOT_DRAFT', 'Receipt state changed while uploading.');
+        await this.notifications.enqueueInTransaction(txn, {
+        eventId: `OFFLINE_PAYMENT_SUBMITTED:${submissionId}:${userId}`, userId,
+        notificationType: 'OFFLINE_PAYMENT_SUBMITTED', title: 'رسید پرداخت ارسال شد',
+        message: 'رسید شما برای بررسی مدیریت ثبت شد. ارسال رسید به معنی تأیید پرداخت نیست.',
+        relatedEntityType: 'OFFLINE_PAYMENT_SUBMISSION', relatedEntityId: submissionId,
+        });
+        return [saved];
+      });
+    } catch (error) {
+      await this.storage.deleteObject(canonicalKey).catch(() => undefined);
+      throw error;
+    }
+    await this.storage.deleteObject(rawKey).catch(() => undefined);
+    return updated;
+  }
+
+  async getReceiptView(submissionId: string, actorId: string, admin = false) {
+    if (!this.storage || !this.config) throw new AppError('RECEIPT_STORAGE_UNAVAILABLE', 'Receipt storage is not configured.', 503);
+    const filters = [eq(offlinePaymentSubmissions.id, submissionId)];
+    if (!admin) filters.push(eq(offlinePaymentSubmissions.payerUserId, actorId));
+    const [submission] = await this.db.db.select().from(offlinePaymentSubmissions).where(and(...filters)).limit(1);
+    if (!submission?.receiptObjectKey || submission.status === 'DRAFT') throw new NotFoundError('Receipt');
+    return { viewUrl: this.storage.presignGet(submission.receiptObjectKey, this.config.studentPhotoViewUrlTtlSeconds), expiresInSeconds: this.config.studentPhotoViewUrlTtlSeconds };
   }
 
   async approveOfflinePayment(submissionId: string, adminId: string, version: number) {
@@ -467,6 +537,9 @@ export class PaymentsService {
       if (item.itemStatus === 'PAID') {
         throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Schedule item already paid.');
       }
+      const [lockedPlan] = await txn.select({ id: paymentPlans.id }).from(paymentPlans)
+        .where(eq(paymentPlans.id, submission.paymentPlanId)).for('update').limit(1);
+      if (!lockedPlan) throw new NotFoundError('Payment plan');
       if (submission.submittedAmount !== item.amount) throw new ConflictError('OFFLINE_PAYMENT_AMOUNT_MISMATCH', 'Submitted amount does not match the schedule item.');
       const transactionId = generateId();
       await txn.insert(paymentTransactions).values({
@@ -476,7 +549,6 @@ export class PaymentsService {
         userId: submission.payerUserId,
         amount: submission.submittedAmount,
         paymentMethod: 'OFFLINE_RECEIPT',
-        gatewayTransactionId: submission.referenceNumber,
         transactionStatus: 'SUCCEEDED',
         requestedAt: submission.paidAt,
         verifiedAt: new Date(),
@@ -594,7 +666,7 @@ export class PaymentsService {
       await this.notifications.enqueueInTransaction(txn, {
           eventId: `PAYMENT_REJECTED:${submissionId}:${rejected.payerUserId}`,
           userId: rejected.payerUserId,
-          notificationType: 'PAYMENT_REJECTED',
+          notificationType: 'OFFLINE_PAYMENT_CORRECTION_REQUIRED',
           title: 'پرداخت تأیید نشد',
           message: 'رسید پرداخت نیاز به اصلاح دارد. دلیل امن در پنل قابل مشاهده است.',
           relatedEntityType: 'OFFLINE_PAYMENT_SUBMISSION',
@@ -615,6 +687,7 @@ export class PaymentsService {
 
   async listOfflineSubmissionsForAdmin() {
     return this.db.db.select().from(offlinePaymentSubmissions)
+      .where(ne(offlinePaymentSubmissions.status, 'DRAFT'))
       .orderBy(desc(offlinePaymentSubmissions.createdAt)).limit(200);
   }
 

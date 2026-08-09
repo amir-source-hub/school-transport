@@ -8,6 +8,16 @@ const transactionSchema = z.object({
   reference: z.string(),
   submittedAt: z.string(),
   status: z.string(),
+  paidAt: z.string().optional(),
+  payerName: z.string().nullable().optional(),
+  sourceCardLastFour: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
+  rejectionReason: z.string().nullable().optional(),
+  previousAttempts: z.number().optional(),
+  destinationSnapshot: z.object({
+    version: z.number(), bankName: z.string(), accountOwner: z.string(), cardNumber: z.string(),
+    iban: z.string().nullable().optional(), accountNumber: z.string().nullable().optional(),
+  }).optional(),
 });
 
 const scheduleItemSchema = z.object({
@@ -56,6 +66,11 @@ export async function configureOfflineDestination(input: {
   iban?: string; accountNumber?: string; instructions: string; confirmed: boolean;
 }) {
   await apiRequest('/admin/payments/offline-destination', { method: 'POST', body: input });
+}
+
+export async function getReceiptView(submissionId: string) {
+  const response = await apiRequest<{ viewUrl: string; expiresInSeconds: number }>(`/admin/payments/offline-submissions/${submissionId}/receipt`, { cache: 'no-store' });
+  return response.data;
 }
 
 export async function getAdminPayments(): Promise<{ payments: AdminPayment[] }> {

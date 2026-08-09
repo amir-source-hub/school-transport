@@ -1,5 +1,5 @@
 import { Type, Transform } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsDateString, IsInt, IsOptional, IsString, Length, Max, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsDateString, IsIn, IsInt, IsOptional, IsString, Length, Max, Min, ValidateNested } from 'class-validator';
 import { BadRequestException, createParamDecorator, ExecutionContext, Injectable, PipeTransform } from '@nestjs/common';
 import { normalizeIranianDigits } from '../../common/iranian-national-id';
 
@@ -67,6 +67,13 @@ export class RejectPaymentDto {
 export class ReviewPaymentDto {
   @IsInt() @Min(1)
   version!: number;
+}
+
+export class AuthorizeReceiptUploadDto {
+  @IsString() @IsIn(['image/jpeg', 'image/png'])
+  declaredMime!: 'image/jpeg' | 'image/png';
+  @IsInt() @Min(1) @Max(25 * 1024 * 1024)
+  declaredSize!: number;
 }
 
 @Injectable()

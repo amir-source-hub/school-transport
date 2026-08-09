@@ -7,12 +7,15 @@ const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
 const enrollmentApi = vi.hoisted(() => ({
   createGuidedEnrollment: vi.fn(),
   acceptGuidedContract: vi.fn(),
+  finalizeOnboarding: vi.fn(),
   cancelEnrollment: vi.fn(),
   acceptEnrollmentPrice: vi.fn(),
 }));
+const notificationsApi = vi.hoisted(() => ({ updateNotificationConsent: vi.fn() }));
 const paymentsApi = vi.hoisted(() => ({
   getOfflineDestination: vi.fn(),
   submitOfflinePayment: vi.fn(),
+  getOfflineSubmissions: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -20,6 +23,7 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('./enrollments-api', () => enrollmentApi);
 vi.mock('@/features/finance/payments-api', () => paymentsApi);
+vi.mock('@/features/notifications/notifications-api', () => notificationsApi);
 vi.mock('leaflet', () => ({}));
 
 const schools = [
@@ -116,6 +120,7 @@ describe('onboarding guided enrollment funnel', () => {
       accountNumber: null,
       instructions: 'پس از واریز، رسید را ثبت کنید.',
     });
+    paymentsApi.getOfflineSubmissions.mockResolvedValue([{ id: 'sub-1', paymentScheduleItemId: 'sch-1', status: 'PENDING_REVIEW', rejectionReason: null, submittedAt: new Date() }]);
   });
 
   it(
@@ -167,6 +172,12 @@ describe('onboarding guided enrollment funnel', () => {
       expect(screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' })).toBeEnabled();
       expect(screen.getByText(/ثبت‌نام فقط پس از تأیید مدیریت فعال می‌شود/)).toBeInTheDocument();
       expect(navigation.replace).not.toHaveBeenCalledWith('/student/dashboard');
+      await user.click(screen.getByRole('button', { name: 'بررسی تأیید رسید و فعال‌سازی پنل' }));
+      expect(enrollmentApi.finalizeOnboarding).not.toHaveBeenCalled();
+      paymentsApi.getOfflineSubmissions.mockResolvedValue([{ id: 'sub-1', paymentScheduleItemId: 'sch-1', status: 'APPROVED', rejectionReason: null, submittedAt: new Date() }]);
+      await user.click(screen.getByRole('button', { name: 'بررسی تأیید رسید و فعال‌سازی پنل' }));
+      await waitFor(() => expect(enrollmentApi.finalizeOnboarding).toHaveBeenCalledOnce());
+      expect(navigation.replace).toHaveBeenCalledWith('/student/dashboard');
     },
     30_000,
   );

@@ -61,8 +61,9 @@ export async function getOfflineDestination(mode: 'panel' | 'onboarding' = 'pane
   return offlineDestinationSchema.parse(response.data);
 }
 
-export async function getOfflineSubmissions() {
-  const response = await apiRequest<unknown>('/payments/offline-submissions', { cache: 'no-store' });
+export async function getOfflineSubmissions(mode: 'panel' | 'onboarding' = 'panel') {
+  const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
+  const response = await apiRequest<unknown>(`${prefix}/offline-submissions`, { cache: 'no-store' });
   return z.array(z.object({
     id: z.string(),
     paymentScheduleItemId: z.string(),
@@ -72,9 +73,23 @@ export async function getOfflineSubmissions() {
   })).parse(response.data);
 }
 
-export async function submitOfflinePayment(scheduleItemId: string, input: { paidAt: string; referenceNumber: string; description?: string; payerName?: string; sourceCardLastFour?: string }, mode: 'panel' | 'onboarding' = 'panel') {
+export async function submitOfflinePayment(scheduleItemId: string, input: { paidAt: string; referenceNumber: string; description?: string; payerName?: string; sourceCardLastFour?: string }, mode: 'panel' | 'onboarding' = 'panel', idempotencyKey = crypto.randomUUID()) {
   const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
-  await apiRequest(`${prefix}/${scheduleItemId}/offline-submissions`, { method: 'POST', body: input, headers: { 'Idempotency-Key': crypto.randomUUID() } });
+  const response = await apiRequest<{ submissionId: string }>(`${prefix}/${scheduleItemId}/offline-submissions`, { method: 'POST', body: input, headers: { 'Idempotency-Key': idempotencyKey } });
+  return response.data.submissionId;
+}
+
+export async function authorizeReceiptUpload(submissionId: string, file: File, mode: 'panel' | 'onboarding') {
+  const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
+  const response = await apiRequest<{ uploadUrl: string }>(`${prefix}/offline-submissions/${submissionId}/receipt/authorize`, {
+    method: 'POST', body: { declaredMime: file.type, declaredSize: file.size },
+  });
+  return response.data.uploadUrl;
+}
+
+export async function completeReceiptUpload(submissionId: string, mode: 'panel' | 'onboarding') {
+  const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
+  await apiRequest(`${prefix}/offline-submissions/${submissionId}/receipt/complete`, { method: 'POST' });
 }
 
 export async function startOnlinePayment(scheduleItemId: string) {
