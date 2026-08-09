@@ -96,7 +96,7 @@ describe('NotificationsService verification', () => {
     expect(returningRows).toEqual([]);
   });
 
-  it('marks all read without creating or deleting records', async () => {
+  it('marks all read only through the authenticated account scope', async () => {
     const { database, select, insert } = makeDb([]);
     const service = makeService(database);
     await expect(service.markAllRead('user-1')).resolves.toBeUndefined();
@@ -120,6 +120,23 @@ describe('NotificationsService verification', () => {
     });
     expect(view).not.toHaveProperty('readAt');
     expect(view).not.toHaveProperty('userId');
+  });
+
+  it('keeps the shared operational view bounded and stably ordered', async () => {
+    const { database, select } = makeDb([[item()], [{ value: 1 }]]);
+    const service = makeService(database);
+    await service.getSharedAdminEvents({
+      page: 2,
+      pageSize: 10,
+      type: 'LIMIT_REQUEST_CREATED',
+      status: 'SENT',
+      dateFrom: '2026-08-01',
+      dateTo: '2026-08-09',
+    });
+    const itemsQuery = select.mock.results[0].value;
+    expect(itemsQuery.orderBy).toHaveBeenCalledWith(expect.anything(), expect.anything());
+    expect(itemsQuery.limit).toHaveBeenCalledWith(10);
+    expect(itemsQuery.offset).toHaveBeenCalledWith(10);
   });
 
   it('counts only unread rows returned for the authenticated user', async () => {

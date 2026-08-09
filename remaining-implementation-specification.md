@@ -18,15 +18,11 @@
 
 ### Shared admin operational view
 
-- [ ] Define resolution behavior instead of showing an unlimited history of user notifications as “operational” work. **[NOT FINISHED]**
-  - Link actionable types to existing routes.
-  - Decide whether resolved underlying work is hidden, marked resolved, or retained for a bounded history.
-  - Do not create per-admin read state; all admins see the same data.
-- [ ] Add shared-view authorization, filter, route, stable-pagination, and concurrent-insert tests. **[NOT FINISHED]**
+- [ ] Replace offset paging in the shared operational view with cursor/snapshot paging and add a concurrent-insert test. The view is shared without per-admin read state, links to supported action routes, defaults to a documented 30-day bounded history, validates filters, and orders equal timestamps by ID. **[NOT FINISHED]**
 
 ### Student notification UI/API verification
 
-- [ ] Add IDOR tests for list, read-one, and read-all using different user accounts. **[NOT FINISHED]**
+- [ ] Add database-backed IDOR tests for notification list, read-one, and read-all using different user accounts. Unit coverage verifies not-found behavior and authenticated controller boundaries, but staging-equivalent row isolation remains unverified. **[NOT FINISHED]**
 - [ ] Test stable pagination with equal timestamps and concurrent inserts. **[NOT FINISHED]**
 - [ ] Add component/browser verification for loading, empty, error/retry, unread state, mark-one, mark-all, keyboard, screen reader, RTL, and mobile behavior. **[NOT FINISHED]**
 - [ ] Verify migration `0025_notification_read_state.sql` on a production-like snapshot and prove old queued outbox records remain compatible. **[BLOCKED — STAGING DATABASE]**

@@ -83,6 +83,9 @@ export default async function NotificationsPage({
       <div>
         <p className="text-sm font-bold text-primary">رویدادهای عملیاتی</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">اعلان‌ها</h1>
+        <p className="mt-1 text-xs text-muted">
+          پیش‌فرض این صف رویدادهای ۳۰ روز گذشته است؛ برای بازه دیگر از پالایش تاریخ استفاده کنید.
+        </p>
         {total > 0 && <p className="mt-1 text-xs text-muted">در مجموع {total} رویداد</p>}
       </div>
       <Card padding="md">

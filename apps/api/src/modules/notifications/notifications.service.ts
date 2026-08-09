@@ -29,6 +29,7 @@ export interface AdminNotificationListQuery extends NotificationListQuery {
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
+export const ADMIN_OPERATIONAL_HISTORY_DAYS = 30;
 
 function boundedPagination(query: NotificationListQuery): { page: number; pageSize: number } {
   const page = Math.max(DEFAULT_PAGE, query.page ?? DEFAULT_PAGE);
@@ -85,11 +86,7 @@ export class NotificationsService {
     };
   }
 
-  async updateConsent(
-    userId: string,
-    input: UpdateNotificationConsentDto,
-    ipAddress?: string,
-  ) {
+  async updateConsent(userId: string, input: UpdateNotificationConsentDto, ipAddress?: string) {
     const now = new Date();
     return this.db.db.transaction(async (txn) => {
       const [previous] = await txn
@@ -183,11 +180,14 @@ export class NotificationsService {
     ];
     if (query.type) filters.push(eq(notifications.notificationType, query.type));
     if (query.status) filters.push(eq(notifications.notificationStatus, query.status));
-    if (query.dateFrom) {
-      filters.push(sql`${notifications.createdAt} >= ${new Date(query.dateFrom)}`);
-    }
+    const dateFrom = query.dateFrom
+      ? new Date(query.dateFrom)
+      : new Date(Date.now() - ADMIN_OPERATIONAL_HISTORY_DAYS * 24 * 60 * 60 * 1_000);
+    filters.push(sql`${notifications.createdAt} >= ${dateFrom}`);
     if (query.dateTo) {
-      filters.push(sql`${notifications.createdAt} <= ${new Date(query.dateTo)}`);
+      const dateTo = new Date(query.dateTo);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(query.dateTo)) dateTo.setUTCHours(23, 59, 59, 999);
+      filters.push(sql`${notifications.createdAt} <= ${dateTo}`);
     }
     const where = and(...filters);
     const items = await this.db.db
