@@ -93,7 +93,7 @@ Tasks:
 - [ ] Verify signed URL expiry and tampering against the actual private Arvan bucket; local signing-unit coverage cannot prove vendor enforcement. **[BLOCKED — ARVAN CONFIGURATION]**
 - [ ] Verify canonical output is exactly 600×800 JPEG, sRGB, visually acceptable in the real card layout, and contains no EXIF/GPS. **[BLOCKED — CARD TEMPLATE/STAGING]**
 - Upload completion uses an optimistic status/version write so concurrent processors cannot both persist; a loser removes both its canonical output and raw input, persistence failure is marked for maintenance retry where possible, successful processing removes the raw object, stale approval is rejected when a newer pending upload exists, and approval supersedes the prior current photo. Archived-student cleanup remains retention-policy blocked, while approved-only card consumption remains card-template blocked.
-- [ ] Add real-browser enrollment/mobile verification for the photo field. Component tests now cover object-URL preview, measurable accessible progress, cancellation, removal before upload, retry/error text, Persian guidance, privacy navigation, and status announcements. **[NOT FINISHED]**
+- Playwright now verifies the real student photo field at 320 px and 768 px: touch file selection with a long Persian filename, browser blob preview, privacy-link destination, no horizontal overflow, the actual authorize/XHR-upload/complete sequence, visible queued-review status, and preview cleanup. Component tests additionally cover measurable accessible progress, cancellation, removal before upload, retry/error text, Persian guidance, and status announcements.
 
 ## 5. Existing admin bulk SMS — remaining verification
 

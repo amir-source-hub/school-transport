@@ -146,6 +146,65 @@ const server = createServer((request, response) => {
   if (url.pathname === '/api/v1/payments/offline-submissions/submission-1/receipt/complete') {
     return send(response, 200, { success: true, data: { completed: true } });
   }
+  if (
+    url.pathname === '/api/v1/students/student-photo-1' &&
+    request.headers.cookie?.includes('e2e-photo=1')
+  ) {
+    return send(response, 200, {
+      success: true,
+      data: {
+        id: 'student-photo-1',
+        userId: 'parent-1',
+        schoolId: 'school-1',
+        schoolName: 'مدرسه آزمایشی',
+        firstName: 'سارا',
+        lastName: 'احمدی',
+        nationalId: '0012345678',
+        birthDate: null,
+        gender: 'FEMALE',
+        grade: '5',
+        className: null,
+        isActive: true,
+      },
+    });
+  }
+  if (
+    url.pathname === '/api/v1/student-photos/current' &&
+    request.headers.cookie?.includes('e2e-photo=1')
+  ) {
+    return send(response, 200, { success: true, data: { items: [] } });
+  }
+  if (
+    url.pathname === '/api/v1/student-photos/uploads' &&
+    request.method === 'POST' &&
+    request.headers.cookie?.includes('e2e-photo=1')
+  ) {
+    return send(response, 200, {
+      success: true,
+      data: {
+        uploadId: 'photo-upload-1',
+        objectKey: 'student-photos/raw/photo-upload-1.png',
+        uploadUrl: `http://127.0.0.1:${port}/uploads/photo`,
+        expiresInSeconds: 300,
+        acceptedFormats: ['image/jpeg', 'image/png'],
+        maxBytes: 26214400,
+        status: 'AUTHORIZED',
+      },
+    });
+  }
+  if (url.pathname === '/api/v1/student-photos/uploads/photo-upload-1/complete') {
+    return send(response, 200, {
+      success: true,
+      data: {
+        uploadId: 'photo-upload-1',
+        studentId: 'student-photo-1',
+        status: 'PENDING_REVIEW',
+        rejectionCode: null,
+        createdAt: '2026-08-09T10:00:00.000Z',
+        updatedAt: '2026-08-09T10:00:01.000Z',
+      },
+    });
+  }
   if (emptyCollections.has(url.pathname)) {
     return send(response, 200, { success: true, data: [] });
   }
