@@ -147,6 +147,11 @@ export class StudentPhotosService {
       await this.markFailed(upload.id, 'TOO_LARGE', ip);
       throw new ValidationError('فایل بارگذاری‌شده از حد مجاز ۲۵ مگابایت بزرگ‌تر است.');
     }
+    if (head.size !== upload.declaredSize) {
+      await this.markFailed(upload.id, 'SIZE_MISMATCH', ip);
+      await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
+      throw new ValidationError('اندازه فایل بارگذاری‌شده با اندازه اعلام‌شده مطابقت ندارد.');
+    }
 
     let raw: Buffer;
     try {
@@ -157,6 +162,11 @@ export class StudentPhotosService {
         'عکس قابل خواندن نیست. دوباره بارگذاری کنید.',
         409,
       );
+    }
+    if (raw.length !== head.size) {
+      await this.markFailed(upload.id, 'SIZE_MISMATCH', ip);
+      await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
+      throw new ValidationError('اندازه فایل خوانده‌شده از ذخیره‌گاه معتبر نیست.');
     }
 
     await this.db.db

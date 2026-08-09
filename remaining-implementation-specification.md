@@ -89,7 +89,8 @@ Tasks:
 
 ### Photo verification
 
-- [ ] Test cross-account/student IDOR, ordinary-admin authorization, signed URL expiry/tampering, actual-vs-declared size, zero byte, mismatch, corrupt, renamed SVG/PDF, huge pixels/axis, extreme aspect, and valid JPEG/PNG. **[NOT FINISHED]**
+- Cross-account upload ownership returns uniform not-found behavior, controller metadata enforces separate account/onboarding/ordinary-admin boundaries, and completion now rejects declared-versus-HEAD mismatch before download plus HEAD-versus-read truncation before decode. The 45-test photo cluster covers zero-byte, oversized, corrupt, renamed SVG/PDF, huge pixels/axis, extreme aspect, active-upload limits, expired/missing uploads, and valid JPEG/PNG canonicalization to metadata-free sRGB JPEG.
+- [ ] Verify signed URL expiry and tampering against the actual private Arvan bucket; local signing-unit coverage cannot prove vendor enforcement. **[BLOCKED — ARVAN CONFIGURATION]**
 - [ ] Verify canonical output is exactly 600×800 JPEG, sRGB, visually acceptable in the real card layout, and contains no EXIF/GPS. **[BLOCKED — CARD TEMPLATE/STAGING]**
 - [ ] Test upload replacement races, stale approval, processing retries, rollback/orphan cleanup, archived students, and approved-only card use. **[NOT FINISHED]**
 - [ ] Add real-browser enrollment/mobile verification for the photo field. Component tests now cover object-URL preview, measurable accessible progress, cancellation, removal before upload, retry/error text, Persian guidance, privacy navigation, and status announcements. **[NOT FINISHED]**

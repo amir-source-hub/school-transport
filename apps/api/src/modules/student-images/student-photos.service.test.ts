@@ -245,13 +245,55 @@ describe('StudentPhotosService completeUpload', () => {
     );
   });
 
+  it('rejects declared-versus-stored size mismatch before downloading or decoding', async () => {
+    const store = storage({
+      headObject: vi.fn(async () => ({ size: 99, etag: 'etag' })),
+      getObject: vi.fn(),
+    });
+    const db = {
+      db: {
+        select: vi.fn(() => selectLimit([baseRow({ declaredSize: 100 })])),
+        update: vi.fn(() => updateSimple()),
+      },
+    } as unknown as DatabaseService;
+    const service = new StudentPhotosService(db, config(), notifications(), store, audit());
+
+    await expect(service.completeUpload('user-1', 'upload-1')).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
+    expect(store.getObject).not.toHaveBeenCalled();
+    expect(store.deleteObject).toHaveBeenCalledWith('student-photos/raw/raw-1.jpg');
+  });
+
+  it('rejects storage read truncation before image decoding', async () => {
+    const store = storage({
+      headObject: vi.fn(async () => ({ size: 100, etag: 'etag' })),
+      getObject: vi.fn(async () => Buffer.alloc(99)),
+    });
+    const db = {
+      db: {
+        select: vi.fn(() => selectLimit([baseRow({ declaredSize: 100 })])),
+        update: vi.fn(() => updateSimple()),
+      },
+    } as unknown as DatabaseService;
+    const service = new StudentPhotosService(db, config(), notifications(), store, audit());
+
+    await expect(service.completeUpload('user-1', 'upload-1')).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
+    expect(store.deleteObject).toHaveBeenCalledWith('student-photos/raw/raw-1.jpg');
+  });
+
   it('processes a valid image into PENDING_REVIEW', async () => {
     const png = await sharp({
       create: { width: 1200, height: 1600, channels: 3, background: '#336699' },
     })
       .png()
       .toBuffer();
-    const store = storage({ getObject: vi.fn(async () => png) });
+    const store = storage({
+      headObject: vi.fn(async () => ({ size: png.length, etag: 'etag' })),
+      getObject: vi.fn(async () => png),
+    });
     const updated = baseRow({
       status: 'PENDING_REVIEW',
       canonicalKey: 'student-photos/canonical/canon-1.jpg',
@@ -261,7 +303,7 @@ describe('StudentPhotosService completeUpload', () => {
     });
     const db = {
       db: {
-        select: vi.fn(() => selectLimit([baseRow()])),
+        select: vi.fn(() => selectLimit([baseRow({ declaredSize: png.length })])),
         update: vi
           .fn()
           .mockReturnValueOnce(updateSimple())
