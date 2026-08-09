@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
+import { asc } from 'drizzle-orm';
 import { DatabaseService } from '../../database/database.service';
+import { ValidationError } from '../../common/errors';
 import {
   contracts,
   familyAddresses,
@@ -17,6 +19,8 @@ import {
 import type { ReportPreviewSection } from './reports.dto';
 
 type CellValue = string | number | boolean | Date | null;
+
+export const REPORT_EXPORT_MAX_ROWS_PER_SOURCE = 10_000;
 
 export function neutralizeSpreadsheetFormula(value: CellValue): CellValue {
   if (typeof value !== 'string') return value;
@@ -41,18 +45,82 @@ export class ReportsService {
       transactionRows,
       contractRows,
     ] = await Promise.all([
-      this.db.db.select().from(users),
-      this.db.db.select().from(parents),
-      this.db.db.select().from(familyAddresses),
-      this.db.db.select().from(schools),
-      this.db.db.select().from(students),
-      this.db.db.select().from(serviceRegistrations),
-      this.db.db.select().from(registrationPrices),
-      this.db.db.select().from(paymentPlans),
-      this.db.db.select().from(paymentScheduleItems),
-      this.db.db.select().from(paymentTransactions),
-      this.db.db.select().from(contracts),
+      this.db.db
+        .select()
+        .from(users)
+        .orderBy(asc(users.id))
+        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
+      this.db.db
+        .select()
+        .from(parents)
+        .orderBy(asc(parents.id))
+        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
+      this.db.db
+        .select()
+        .from(familyAddresses)
+        .orderBy(asc(familyAddresses.id))
+        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
+      this.db.db
+        .select()
+        .from(schools)
+        .orderBy(asc(schools.id))
+        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
+      this.db.db
+        .select()
+        .from(students)
+        .orderBy(asc(students.id))
+        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
+      this.db.db
+        .select()
+        .from(serviceRegistrations)
+        .orderBy(asc(serviceRegistrations.id))
+        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
+      this.db.db
+        .select()
+        .from(registrationPrices)
+        .orderBy(asc(registrationPrices.id))
+        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
+      this.db.db
+        .select()
+        .from(paymentPlans)
+        .orderBy(asc(paymentPlans.id))
+        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
+      this.db.db
+        .select()
+        .from(paymentScheduleItems)
+        .orderBy(asc(paymentScheduleItems.id))
+        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
+      this.db.db
+        .select()
+        .from(paymentTransactions)
+        .orderBy(asc(paymentTransactions.id))
+        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
+      this.db.db
+        .select()
+        .from(contracts)
+        .orderBy(asc(contracts.id))
+        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
     ]);
+
+    if (
+      [
+        userRows,
+        parentRows,
+        addressRows,
+        schoolRows,
+        studentRows,
+        registrationRows,
+        priceRows,
+        planRows,
+        scheduleRows,
+        transactionRows,
+        contractRows,
+      ].some((rows) => rows.length > REPORT_EXPORT_MAX_ROWS_PER_SOURCE)
+    ) {
+      throw new ValidationError(
+        'گزارش برای خروجی هم‌زمان بیش از حد بزرگ است. بازه کوچک‌تری انتخاب کنید.',
+      );
+    }
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'سامانه سرویس مدارس';
@@ -396,7 +464,9 @@ export class ReportsService {
         .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0))
         .map((item) => {
           const plan = planRows.find((row) => row.id === item.paymentPlanId);
-          const price = plan ? priceRows.find((row) => row.id === plan.registrationPriceId) : undefined;
+          const price = plan
+            ? priceRows.find((row) => row.id === plan.registrationPriceId)
+            : undefined;
           const registration = price
             ? registrationRows.find((row) => row.id === price.registrationId)
             : undefined;
@@ -448,7 +518,9 @@ export class ReportsService {
 
     const total = rows.length;
     const start = (page - 1) * pageSize;
-    const moneyKeys = new Set(columns.filter((column) => column.kind === 'money').map(({ key }) => key));
+    const moneyKeys = new Set(
+      columns.filter((column) => column.kind === 'money').map(({ key }) => key),
+    );
     const totals = Object.fromEntries(
       [...moneyKeys].map((key) => [
         key,

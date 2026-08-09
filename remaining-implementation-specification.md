@@ -163,7 +163,7 @@ Receipt submitted, approved, and correction-required/rejected transitions are ca
 
 - [ ] Add PostgreSQL/Redis-backed integration, migration, queue-restart, HTTP-contract, and deployment-smoke tests to CI. **[NOT FINISHED]**
 - [ ] Verify transaction rollback, row locks, constraints, idempotency, authorization, outbox recovery, notification migration, feedback, broadcast, photo, and offline-payment flows against real services. **[NOT FINISHED]**
-- [ ] Bound every list/report/export with maximum page/range/row limits, stable ordering, and streamed/queued large output. **[NOT FINISHED]**
+- [ ] Finish the repository-wide list audit and move genuinely large exports to queued/streamed generation. Existing paged operational queues enforce validated maximum page sizes and stable ordering; comprehensive previews are capped at 50 rows per page, while the synchronous XLSX export now reads every source in stable ID order with a 10,000-row-per-source ceiling and fails closed before workbook construction when any source exceeds it. **[NOT FINISHED]**
 - [ ] Keep frontend/backend API contracts synchronized through generated or centrally validated schemas and CI drift detection. **[NOT FINISHED]**
 
 ### Infrastructure and release operations

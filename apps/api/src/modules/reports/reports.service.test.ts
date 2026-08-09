@@ -1,13 +1,17 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import type { DatabaseService } from '../../database/database.service';
-import { neutralizeSpreadsheetFormula, ReportsService } from './reports.service';
+import {
+  neutralizeSpreadsheetFormula,
+  REPORT_EXPORT_MAX_ROWS_PER_SOURCE,
+  ReportsService,
+} from './reports.service';
 import { schools, students } from '../../database/schemas';
 
 describe('ReportsService', () => {
   it('neutralizes spreadsheet formula injection without changing typed values', () => {
     expect(neutralizeSpreadsheetFormula('=HYPERLINK("https://attacker.invalid")')).toBe(
-      "'=HYPERLINK(\"https://attacker.invalid\")",
+      '\'=HYPERLINK("https://attacker.invalid")',
     );
     expect(neutralizeSpreadsheetFormula('  +1+1')).toBe("'  +1+1");
     expect(neutralizeSpreadsheetFormula('@SUM(A1:A2)')).toBe("'@SUM(A1:A2)");
@@ -18,7 +22,9 @@ describe('ReportsService', () => {
     const database = {
       db: {
         select: () => ({
-          from: async () => [],
+          from: () => ({
+            orderBy: () => ({ limit: async () => [] }),
+          }),
         }),
       },
     } as unknown as DatabaseService;
@@ -42,6 +48,25 @@ describe('ReportsService', () => {
     expect(workbook.getWorksheet('دانش‌آموزان')?.getCell('A1').value).toBe('شناسه دانش‌آموز');
     expect(workbook.getWorksheet('پرداخت‌ها')?.autoFilter).toBeTruthy();
     expect(report.byteLength).toBeGreaterThan(1_000);
+  });
+
+  it('fails closed before building an oversized in-memory workbook', async () => {
+    const oversized = Array.from({ length: REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1 }, (_, index) => ({
+      id: `row-${index}`,
+    }));
+    const database = {
+      db: {
+        select: () => ({
+          from: () => ({
+            orderBy: () => ({ limit: async () => oversized }),
+          }),
+        }),
+      },
+    } as unknown as DatabaseService;
+
+    await expect(new ReportsService(database).createComprehensiveWorkbook()).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
   });
 
   it('returns a bounded, ordered preview without sensitive student fields', async () => {
