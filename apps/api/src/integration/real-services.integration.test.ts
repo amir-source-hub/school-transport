@@ -240,4 +240,83 @@ describe.skipIf(!enabled)('real PostgreSQL/Redis integration', () => {
       await pool.query('delete from users where id = any($1::uuid[])', [[userA, userB]]);
     }
   });
+
+  it('allows only one current approved photo under concurrent PostgreSQL updates', async () => {
+    const userId = randomUUID();
+    const schoolId = randomUUID();
+    const studentId = randomUUID();
+    const photoA = randomUUID();
+    const photoB = randomUUID();
+    const approve = async (photoId: string) => {
+      const client = await pool.connect();
+      try {
+        await client.query('begin');
+        await client.query(
+          `update student_photo_uploads
+             set status = 'APPROVED', approved_at = now(), updated_at = now()
+           where id = $1`,
+          [photoId],
+        );
+        await client.query('commit');
+        return 'approved';
+      } catch (error) {
+        await client.query('rollback');
+        throw error;
+      } finally {
+        client.release();
+      }
+    };
+    try {
+      await pool.query('insert into users (id, username) values ($1, $2)', [
+        userId,
+        `photo-user-${userId}`,
+      ]);
+      await pool.query(
+        `insert into schools (id, name, province, city, address)
+         values ($1, 'integration school', 'Tehran', 'Tehran', 'integration')`,
+        [schoolId],
+      );
+      await pool.query(
+        `insert into students (id, user_id, school_id, first_name, last_name, national_id)
+         values ($1, $2, $3, 'photo', 'student', $4)`,
+        [studentId, userId, schoolId, userId.replaceAll('-', '').slice(0, 10)],
+      );
+      for (const [photoId, suffix] of [
+        [photoA, 'a'],
+        [photoB, 'b'],
+      ] as const) {
+        await pool.query(
+          `insert into student_photo_uploads
+             (id, account_user_id, student_id, raw_key, canonical_key, declared_mime,
+              declared_size, actual_mime, actual_size, width, height, checksum, status,
+              upload_authorization_expiry)
+           values ($1, $2, $3, $4, $5, 'image/jpeg', 100, 'image/jpeg', 100,
+                   600, 800, $6, 'PENDING_REVIEW', now() + interval '5 minutes')`,
+          [
+            photoId,
+            userId,
+            studentId,
+            `student-photos/raw/${suffix}.jpg`,
+            `student-photos/canonical/${suffix}.jpg`,
+            suffix.repeat(64),
+          ],
+        );
+      }
+
+      const outcomes = await Promise.allSettled([approve(photoA), approve(photoB)]);
+      expect(outcomes.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
+      expect(outcomes.filter(({ status }) => status === 'rejected')).toHaveLength(1);
+      const approved = await pool.query<{ count: string }>(
+        `select count(*) from student_photo_uploads
+         where student_id = $1 and status = 'APPROVED'`,
+        [studentId],
+      );
+      expect(approved.rows[0].count).toBe('1');
+    } finally {
+      await pool.query('delete from student_photo_uploads where student_id = $1', [studentId]);
+      await pool.query('delete from students where id = $1', [studentId]);
+      await pool.query('delete from schools where id = $1', [schoolId]);
+      await pool.query('delete from users where id = $1', [userId]);
+    }
+  });
 });
