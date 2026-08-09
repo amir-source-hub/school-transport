@@ -1,10 +1,19 @@
 import { Module } from '@nestjs/common';
-import { AdminStudentPhotosController, StudentPhotosController } from './student-photos.controller';
+import {
+  AdminStudentPhotosController,
+  OnboardingStudentPhotosController,
+  StudentPhotosController,
+} from './student-photos.controller';
 import { StudentPhotosService } from './student-photos.service';
+import { OnboardingGuard } from '../access-control/onboarding.guard';
 
 @Module({
-  controllers: [StudentPhotosController, AdminStudentPhotosController],
-  providers: [StudentPhotosService],
+  controllers: [
+    StudentPhotosController,
+    OnboardingStudentPhotosController,
+    AdminStudentPhotosController,
+  ],
+  providers: [StudentPhotosService, OnboardingGuard],
   exports: [StudentPhotosService],
 })
 export class StudentPhotosModule {}

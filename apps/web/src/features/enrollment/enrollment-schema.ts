@@ -66,11 +66,7 @@ export const guardianSchema = z
     relationshipType: z.enum(['FATHER', 'MOTHER', 'OTHER'], {
       message: 'نسبت باید پدر، مادر یا سایر باشد.',
     }),
-    relationshipDescription: z
-      .string()
-      .trim()
-      .max(100, 'حداکثر ۱۰۰ نویسه مجاز است.')
-      .optional(),
+    relationshipDescription: z.string().trim().max(100, 'حداکثر ۱۰۰ نویسه مجاز است.').optional(),
   })
   .superRefine((value, ctx) => {
     if (value.relationshipType === 'OTHER' && !value.relationshipDescription?.trim()) {
@@ -101,11 +97,7 @@ export const addressSchema = z.object({
   title: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
   province: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
   city: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
-  streetAddress: z
-    .string()
-    .trim()
-    .min(1, required)
-    .max(500, 'حداکثر ۵۰۰ نویسه مجاز است.'),
+  streetAddress: z.string().trim().min(1, required).max(500, 'حداکثر ۵۰۰ نویسه مجاز است.'),
   postalCode: z
     .string()
     .transform(normalizeNationalId)
@@ -127,6 +119,7 @@ export const serviceSchema = z.object({
 });
 
 export const guidedEnrollmentSchema = z.object({
+  studentPhotoUploadId: z.string().uuid().optional(),
   student: studentSchema,
   guardian: guardianSchema,
   father: parentContactSchema.nullable().optional(),

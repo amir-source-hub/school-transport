@@ -121,11 +121,14 @@ describe('PhotoUploadCard', () => {
     await user.click(screen.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }));
 
     await waitFor(() =>
-      expect(authorizePhotoUpload).toHaveBeenCalledWith({
-        studentId: 'student-1',
-        declaredMime: 'image/png',
-        declaredSize: 10_000,
-      }),
+      expect(authorizePhotoUpload).toHaveBeenCalledWith(
+        {
+          studentId: 'student-1',
+          declaredMime: 'image/png',
+          declaredSize: 10_000,
+        },
+        'panel',
+      ),
     );
     await waitFor(() =>
       expect(putPhotoObject).toHaveBeenCalledWith(
@@ -137,7 +140,7 @@ describe('PhotoUploadCard', () => {
         }),
       ),
     );
-    await waitFor(() => expect(completePhotoUpload).toHaveBeenCalledWith('upload-9'));
+    await waitFor(() => expect(completePhotoUpload).toHaveBeenCalledWith('upload-9', 'panel'));
     expect(await screen.findByText(/در صف بررسی قرار گرفت/)).toBeInTheDocument();
     expect(screen.getByText('در انتظار تایید')).toBeInTheDocument();
   });

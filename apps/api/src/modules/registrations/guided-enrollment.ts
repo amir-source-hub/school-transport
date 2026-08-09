@@ -40,6 +40,7 @@ export type EmergencyContactData = {
 };
 
 export type GuidedEnrollmentData = {
+  studentPhotoUploadId?: string;
   student: StudentEnrollmentData;
   guardian: GuardianEnrollmentData;
   homePhone: string;
@@ -197,10 +198,7 @@ export function normalizeAndValidateGuidedEnrollment(
     throw new ConflictError('INVALID_LOCATION', 'A valid map location is required.');
   }
   if (!serviceTypes.has(data.service.serviceType)) {
-    throw new ConflictError(
-      'INVALID_VEHICLE_TYPE',
-      'The selected vehicle type is not supported.',
-    );
+    throw new ConflictError('INVALID_VEHICLE_TYPE', 'The selected vehicle type is not supported.');
   }
   if (!paymentPlanTypes.has(data.service.paymentPlanType)) {
     throw new ConflictError(

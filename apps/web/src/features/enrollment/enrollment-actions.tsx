@@ -49,6 +49,7 @@ import {
 } from './enrollment-form-model';
 import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-schema';
 import { updateNotificationConsent } from '@/features/notifications/notifications-api';
+import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const vehicleOptions = [
@@ -99,7 +100,7 @@ export function CreateEnrollmentForm({
   const firstSchool = schools[0];
   const firstLevel = firstSchool?.educationOptions[0];
   const effectiveGuardianPhone =
-    guardianPhone ?? (mode === 'onboarding' ? getOnboardingState().phoneNumber ?? '' : '');
+    guardianPhone ?? (mode === 'onboarding' ? (getOnboardingState().phoneNumber ?? '') : '');
   const createInitialForm = () =>
     createEnrollmentFormState({
       schools,
@@ -117,6 +118,7 @@ export function CreateEnrollmentForm({
   const [paid, setPaid] = useState(false);
   const [optionalInAppConsent, setOptionalInAppConsent] = useState(false);
   const [optionalSmsConsent, setOptionalSmsConsent] = useState(false);
+  const [photoUploadId, setPhotoUploadId] = useState<string>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const [locationError, setLocationError] = useState<string>();
@@ -128,9 +130,24 @@ export function CreateEnrollmentForm({
     stepHeadingRef.current?.focus();
   }, [step]);
 
-  const fatherKeys: (keyof typeof form)[] = ['fatherFirst', 'fatherLast', 'fatherNationalId', 'fatherPhone'];
-  const motherKeys: (keyof typeof form)[] = ['motherFirst', 'motherLast', 'motherNationalId', 'motherPhone'];
-  const emergencyKeys: (keyof typeof form)[] = ['emergencyFirst', 'emergencyLast', 'emergencyRelationship', 'emergencyPhone'];
+  const fatherKeys: (keyof typeof form)[] = [
+    'fatherFirst',
+    'fatherLast',
+    'fatherNationalId',
+    'fatherPhone',
+  ];
+  const motherKeys: (keyof typeof form)[] = [
+    'motherFirst',
+    'motherLast',
+    'motherNationalId',
+    'motherPhone',
+  ];
+  const emergencyKeys: (keyof typeof form)[] = [
+    'emergencyFirst',
+    'emergencyLast',
+    'emergencyRelationship',
+    'emergencyPhone',
+  ];
   function sectionStarted(name: 'father' | 'mother' | 'emergency') {
     const keys = name === 'father' ? fatherKeys : name === 'mother' ? motherKeys : emergencyKeys;
     return keys.some((key) => String(form[key]).trim() !== '');
@@ -142,7 +159,10 @@ export function CreateEnrollmentForm({
     return null;
   }
 
-  function validateField(key: keyof typeof form, value: string | number | boolean): string | undefined {
+  function validateField(
+    key: keyof typeof form,
+    value: string | number | boolean,
+  ): string | undefined {
     const text = String(value).trim();
     const requiredFields: (keyof typeof form)[] = [
       'studentFirst',
@@ -168,11 +188,15 @@ export function CreateEnrollmentForm({
     }
     if (key === 'homePhone') {
       if (!text) return 'پر کردن این فیلد اجباری است';
-      return /^\d{8}$/.test(normalizeDigits(text)) ? undefined : 'شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.';
+      return /^\d{8}$/.test(normalizeDigits(text))
+        ? undefined
+        : 'شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.';
     }
     if (key === 'studentPhone') {
       if (!text) return undefined;
-      return /^\d{9}$/.test(normalizeDigits(text)) ? undefined : 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.';
+      return /^\d{9}$/.test(normalizeDigits(text))
+        ? undefined
+        : 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.';
     }
     if (
       ['studentNationalId', 'guardianNationalId', 'fatherNationalId', 'motherNationalId'].includes(
@@ -348,7 +372,10 @@ export function CreateEnrollmentForm({
           return `${key} نامعتبر است. فقط عدد و حداکثر ۲۰ رقم وارد کنید.`;
         }
       }
-      if (form.guardianRelationshipType === 'OTHER' && !form.guardianRelationshipDescription.trim()) {
+      if (
+        form.guardianRelationshipType === 'OTHER' &&
+        !form.guardianRelationshipDescription.trim()
+      ) {
         return 'شرح نسبت را وارد کنید.';
       }
       if (sectionStarted('father')) {
@@ -392,77 +419,76 @@ export function CreateEnrollmentForm({
     setPending(true);
     setError(undefined);
     try {
-      setResult(
-        await createGuidedEnrollment(
-          {
-            student: {
-              id: form.existingStudentId || undefined,
-              firstName: form.studentFirst,
-              lastName: form.studentLast,
-              nationalId: normalizeDigits(form.studentNationalId),
-              birthDate: form.birthDate || undefined,
-              gender: (form.gender || undefined) as StudentInput['gender'],
-              ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
-            },
-            guardian: {
-              firstName: form.guardianFirst,
-              lastName: form.guardianLast,
-              nationalId: normalizeDigits(form.guardianNationalId),
-              relationshipType:
-                form.guardianRelationshipType as GuardianInput['relationshipType'],
-              relationshipDescription:
-                form.guardianRelationshipType === 'OTHER'
-                  ? form.guardianRelationshipDescription || undefined
-                  : undefined,
-            },
-            father: sectionStarted('father')
-              ? {
-                  firstName: form.fatherFirst,
-                  lastName: form.fatherLast,
-                  nationalId: normalizeDigits(form.fatherNationalId),
-                  phoneNumber: normalizeDigits(form.fatherPhone),
-                }
-              : null,
-            mother: sectionStarted('mother')
-              ? {
-                  firstName: form.motherFirst,
-                  lastName: form.motherLast,
-                  nationalId: normalizeDigits(form.motherNationalId),
-                  phoneNumber: normalizeDigits(form.motherPhone),
-                }
-              : null,
-            emergencyContact: sectionStarted('emergency')
-              ? {
-                  firstName: form.emergencyFirst,
-                  lastName: form.emergencyLast,
-                  relationship: form.emergencyRelationship,
-                  phoneNumber: normalizeDigits(form.emergencyPhone),
-                }
-              : null,
-            homePhone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
-            address: {
-              title: form.addressTitle,
-              province: form.province,
-              city: form.city,
-              streetAddress: form.streetAddress,
-              postalCode: normalizeDigits(form.postalCode),
-              latitude: form.latitude,
-              longitude: form.longitude,
-            },
-            school: {
-              schoolId: form.schoolId,
-              educationLevel: form.educationLevel,
-              grade: form.grade,
-            },
-            service: {
-              serviceType: form.serviceType as ServiceInput['serviceType'],
-              paymentPlanType: form.paymentPlanType as ServiceInput['paymentPlanType'],
-              parentNotes: form.parentNotes || undefined,
-            },
+      const created = await createGuidedEnrollment(
+        {
+          studentPhotoUploadId: photoUploadId,
+          student: {
+            id: form.existingStudentId || undefined,
+            firstName: form.studentFirst,
+            lastName: form.studentLast,
+            nationalId: normalizeDigits(form.studentNationalId),
+            birthDate: form.birthDate || undefined,
+            gender: (form.gender || undefined) as StudentInput['gender'],
+            ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
           },
-          mode,
-        ),
+          guardian: {
+            firstName: form.guardianFirst,
+            lastName: form.guardianLast,
+            nationalId: normalizeDigits(form.guardianNationalId),
+            relationshipType: form.guardianRelationshipType as GuardianInput['relationshipType'],
+            relationshipDescription:
+              form.guardianRelationshipType === 'OTHER'
+                ? form.guardianRelationshipDescription || undefined
+                : undefined,
+          },
+          father: sectionStarted('father')
+            ? {
+                firstName: form.fatherFirst,
+                lastName: form.fatherLast,
+                nationalId: normalizeDigits(form.fatherNationalId),
+                phoneNumber: normalizeDigits(form.fatherPhone),
+              }
+            : null,
+          mother: sectionStarted('mother')
+            ? {
+                firstName: form.motherFirst,
+                lastName: form.motherLast,
+                nationalId: normalizeDigits(form.motherNationalId),
+                phoneNumber: normalizeDigits(form.motherPhone),
+              }
+            : null,
+          emergencyContact: sectionStarted('emergency')
+            ? {
+                firstName: form.emergencyFirst,
+                lastName: form.emergencyLast,
+                relationship: form.emergencyRelationship,
+                phoneNumber: normalizeDigits(form.emergencyPhone),
+              }
+            : null,
+          homePhone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
+          address: {
+            title: form.addressTitle,
+            province: form.province,
+            city: form.city,
+            streetAddress: form.streetAddress,
+            postalCode: normalizeDigits(form.postalCode),
+            latitude: form.latitude,
+            longitude: form.longitude,
+          },
+          school: {
+            schoolId: form.schoolId,
+            educationLevel: form.educationLevel,
+            grade: form.grade,
+          },
+          service: {
+            serviceType: form.serviceType as ServiceInput['serviceType'],
+            paymentPlanType: form.paymentPlanType as ServiceInput['paymentPlanType'],
+            parentNotes: form.parentNotes || undefined,
+          },
+        },
+        mode,
       );
+      setResult(created);
     } catch (caught) {
       setError(getApiErrorFeedback(caught).message);
     } finally {
@@ -527,7 +553,12 @@ export function CreateEnrollmentForm({
       )}
     </div>
   );
-  const prefixField = (key: keyof typeof form, label: string, prefix: string, maxDigits: number) => (
+  const prefixField = (
+    key: keyof typeof form,
+    label: string,
+    prefix: string,
+    maxDigits: number,
+  ) => (
     <div>
       <label htmlFor={`enrollment-${key}`} className="text-sm font-bold text-foreground">
         {label}
@@ -577,14 +608,34 @@ export function CreateEnrollmentForm({
     </div>
   );
   const fieldLabels: Partial<Record<keyof typeof form, string>> = {
-    studentFirst: 'نام دانش‌آموز', studentLast: 'نام خانوادگی دانش‌آموز', studentNationalId: 'کد ملی دانش‌آموز',
-    guardianFirst: 'نام سرپرست', guardianLast: 'نام خانوادگی سرپرست', guardianNationalId: 'کد ملی سرپرست',
-    guardianRelationshipType: 'نسبت سرپرست', guardianRelationshipDescription: 'شرح نسبت', guardianPhone: 'شماره همراه سرپرست',
-    homePhone: 'شماره تلفن منزل', studentPhone: 'شماره همراه دانش‌آموز',
-    fatherFirst: 'نام پدر', fatherLast: 'نام خانوادگی پدر', fatherNationalId: 'کد ملی پدر', fatherPhone: 'شماره همراه پدر',
-    motherFirst: 'نام مادر', motherLast: 'نام خانوادگی مادر', motherNationalId: 'کد ملی مادر', motherPhone: 'شماره همراه مادر',
-    emergencyFirst: 'نام تماس اضطراری', emergencyLast: 'نام خانوادگی تماس اضطراری', emergencyRelationship: 'نسبت تماس اضطراری', emergencyPhone: 'شماره همراه تماس اضطراری',
-    addressTitle: 'عنوان نشانی', province: 'استان', city: 'شهر', streetAddress: 'نشانی کامل', postalCode: 'کد پستی',
+    studentFirst: 'نام دانش‌آموز',
+    studentLast: 'نام خانوادگی دانش‌آموز',
+    studentNationalId: 'کد ملی دانش‌آموز',
+    guardianFirst: 'نام سرپرست',
+    guardianLast: 'نام خانوادگی سرپرست',
+    guardianNationalId: 'کد ملی سرپرست',
+    guardianRelationshipType: 'نسبت سرپرست',
+    guardianRelationshipDescription: 'شرح نسبت',
+    guardianPhone: 'شماره همراه سرپرست',
+    homePhone: 'شماره تلفن منزل',
+    studentPhone: 'شماره همراه دانش‌آموز',
+    fatherFirst: 'نام پدر',
+    fatherLast: 'نام خانوادگی پدر',
+    fatherNationalId: 'کد ملی پدر',
+    fatherPhone: 'شماره همراه پدر',
+    motherFirst: 'نام مادر',
+    motherLast: 'نام خانوادگی مادر',
+    motherNationalId: 'کد ملی مادر',
+    motherPhone: 'شماره همراه مادر',
+    emergencyFirst: 'نام تماس اضطراری',
+    emergencyLast: 'نام خانوادگی تماس اضطراری',
+    emergencyRelationship: 'نسبت تماس اضطراری',
+    emergencyPhone: 'شماره همراه تماس اضطراری',
+    addressTitle: 'عنوان نشانی',
+    province: 'استان',
+    city: 'شهر',
+    streetAddress: 'نشانی کامل',
+    postalCode: 'کد پستی',
   };
   const visibleErrorEntries = Object.entries(fieldErrors).filter(([, message]) => message);
   const validationSummary = visibleErrorEntries.length > 0 && (
@@ -593,7 +644,10 @@ export function CreateEnrollmentForm({
       <ul className="mt-2 space-y-1">
         {visibleErrorEntries.map(([key, message]) => (
           <li key={key}>
-            <a className="font-bold text-danger underline underline-offset-4" href={`#enrollment-${key}`}>
+            <a
+              className="font-bold text-danger underline underline-offset-4"
+              href={`#enrollment-${key}`}
+            >
               {fieldLabels[key as keyof typeof form] ?? key}: {message}
             </a>
           </li>
@@ -610,7 +664,11 @@ export function CreateEnrollmentForm({
             const number = index + 1;
             const done = number < step || Boolean(result);
             return (
-              <li key={label} aria-current={number === step ? 'step' : undefined} className="relative min-w-0 text-center">
+              <li
+                key={label}
+                aria-current={number === step ? 'step' : undefined}
+                className="relative min-w-0 text-center"
+              >
                 {index > 0 && (
                   <span
                     className={`absolute left-1/2 right-[-50%] top-5 h-px ${number <= step ? 'bg-primary' : 'bg-slate-200'}`}
@@ -632,7 +690,9 @@ export function CreateEnrollmentForm({
         </ol>
       </div>
       <div className="p-4 sm:p-8">
-        <h2 ref={stepHeadingRef} tabIndex={-1} className="sr-only">مرحله {step.toLocaleString('fa-IR')} از ۴: {stages[step - 1]}</h2>
+        <h2 ref={stepHeadingRef} tabIndex={-1} className="sr-only">
+          مرحله {step.toLocaleString('fa-IR')} از ۴: {stages[step - 1]}
+        </h2>
         {step === 1 && (
           <form noValidate onSubmit={next} className="space-y-7">
             {existingStudents.length > 0 && (
@@ -688,6 +748,21 @@ export function CreateEnrollmentForm({
                 </label>
               </div>
             </Section>
+            <Section title="عکس کارت سرویس">
+              <PhotoUploadCard
+                studentId={form.existingStudentId || undefined}
+                initialItems={[]}
+                mode={mode}
+                onUploadCompleted={(uploadId) => {
+                  if (!form.existingStudentId) setPhotoUploadId(uploadId);
+                }}
+              />
+              {photoUploadId && (
+                <p role="status" className="mt-3 text-sm font-bold text-success">
+                  عکس در پیش‌نویس ثبت‌نام نگهداری شد و پس از ساخت دانش‌آموز به او متصل می‌شود.
+                </p>
+              )}
+            </Section>
             <Section title="سرپرست">
               {defaults.guardian && (
                 <p className="mb-4 text-sm text-muted">
@@ -713,7 +788,9 @@ export function CreateEnrollmentForm({
                   />
                 </label>
                 {form.guardianRelationshipType === 'OTHER' && (
-                  <div className="lg:col-span-2">{field('guardianRelationshipDescription', 'شرح نسبت')}</div>
+                  <div className="lg:col-span-2">
+                    {field('guardianRelationshipDescription', 'شرح نسبت')}
+                  </div>
                 )}
                 <div className="sm:col-span-2 lg:col-span-4">
                   <label
@@ -772,7 +849,11 @@ export function CreateEnrollmentForm({
               </div>
             </Section>
             {validationSummary}
-            {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-danger">
+                {error}
+              </p>
+            )}
             <WizardFooter pending={pending} />
           </form>
         )}
@@ -824,14 +905,44 @@ export function CreateEnrollmentForm({
                 }
               />
               <div className="mt-3 grid gap-3 sm:grid-cols-2" aria-label="ورود دستی مختصات">
-                <label className="text-sm font-bold">عرض جغرافیایی<Input type="number" inputMode="decimal" dir="ltr" step="any" className="mt-1" value={form.latitude} onChange={(event) => set('latitude', Number(event.target.value))} onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))} /></label>
-                <label className="text-sm font-bold">طول جغرافیایی<Input type="number" inputMode="decimal" dir="ltr" step="any" className="mt-1" value={form.longitude} onChange={(event) => set('longitude', Number(event.target.value))} onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))} /></label>
+                <label className="text-sm font-bold">
+                  عرض جغرافیایی
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    dir="ltr"
+                    step="any"
+                    className="mt-1"
+                    value={form.latitude}
+                    onChange={(event) => set('latitude', Number(event.target.value))}
+                    onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))}
+                  />
+                </label>
+                <label className="text-sm font-bold">
+                  طول جغرافیایی
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    dir="ltr"
+                    step="any"
+                    className="mt-1"
+                    value={form.longitude}
+                    onChange={(event) => set('longitude', Number(event.target.value))}
+                    onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))}
+                  />
+                </label>
               </div>
-              <p className="mt-2 text-xs leading-6 text-muted">اگر نقشه با لمس، ماوس یا صفحه‌کلید در دسترس نیست، نشانی و مختصات را دستی وارد کنید.</p>
+              <p className="mt-2 text-xs leading-6 text-muted">
+                اگر نقشه با لمس، ماوس یا صفحه‌کلید در دسترس نیست، نشانی و مختصات را دستی وارد کنید.
+              </p>
               {locationError && <p className="mt-2 text-sm text-danger">{locationError}</p>}
             </div>
             {validationSummary}
-            {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-danger">
+                {error}
+              </p>
+            )}
             <WizardFooter onBack={() => setStep(1)} pending={pending} />
           </form>
         )}
@@ -921,10 +1032,7 @@ export function CreateEnrollmentForm({
               </p>
             </div>
             {capacityRemaining === 1 && !form.existingStudentId && (
-              <div
-                role="alert"
-                className="rounded-2xl border border-danger/30 bg-danger/5 p-5"
-              >
+              <div role="alert" className="rounded-2xl border border-danger/30 bg-danger/5 p-5">
                 <p className="font-black text-danger">مسئولیت ثبت این دانش‌آموز</p>
                 <p className="mt-2 text-sm leading-7 text-muted">
                   این دانش‌آموز آخرین جای ظرفیت حساب خانواده را تکمیل می‌کند. با ثبت او، مسئولیت
@@ -1064,14 +1172,23 @@ export function CreateEnrollmentForm({
               <legend className="px-2 text-sm font-black">رضایت اختیاری اطلاع‌رسانی</legend>
               <p className="text-xs leading-6 text-muted">
                 مایلم پیام‌های اختیاری درباره تغییرات سرویس و یادآوری‌های غیرالزامی را دریافت کنم.
-                این انتخاب از پنل قابل تغییر است و پیام‌های ضروری قرارداد، پرداخت و ایمنی را متوقف نمی‌کند.
+                این انتخاب از پنل قابل تغییر است و پیام‌های ضروری قرارداد، پرداخت و ایمنی را متوقف
+                نمی‌کند.
               </p>
               <label className="flex min-h-11 items-center gap-3">
-                <input type="checkbox" checked={optionalInAppConsent} onChange={(event) => setOptionalInAppConsent(event.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={optionalInAppConsent}
+                  onChange={(event) => setOptionalInAppConsent(event.target.checked)}
+                />
                 <span className="text-sm font-bold">داخل سامانه</span>
               </label>
               <label className="flex min-h-11 items-center gap-3">
-                <input type="checkbox" checked={optionalSmsConsent} onChange={(event) => setOptionalSmsConsent(event.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={optionalSmsConsent}
+                  onChange={(event) => setOptionalSmsConsent(event.target.checked)}
+                />
                 <span className="text-sm font-bold">پیامک</span>
               </label>
             </fieldset>
@@ -1168,7 +1285,13 @@ export function WizardFooter({
   return (
     <div className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-20 -mx-4 flex flex-col-reverse gap-2 border-t border-slate-100 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_-24px_rgba(15,23,42,.5)] backdrop-blur sm:mx-0 sm:flex-row sm:items-center sm:justify-between sm:px-0 lg:bottom-0">
       {onBack ? (
-        <Button className="w-full sm:w-auto" type="button" variant="ghost" onClick={onBack} disabled={pending}>
+        <Button
+          className="w-full sm:w-auto"
+          type="button"
+          variant="ghost"
+          onClick={onBack}
+          disabled={pending}
+        >
           <ChevronRight className="size-4" />
           مرحله قبل
         </Button>

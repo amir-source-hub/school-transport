@@ -10,12 +10,13 @@ import {
   paymentTransactions,
   contracts,
   emergencyContacts,
+  studentPhotoUploads,
   users,
 } from '../../database/schemas';
 import { students } from '../../database/schemas';
 import { familyAddresses, parents, schools } from '../../database/schemas';
 import { getTableColumns, sql } from 'drizzle-orm';
-import { eq, and, inArray, notInArray } from 'drizzle-orm';
+import { eq, and, inArray, isNull, notInArray } from 'drizzle-orm';
 import { ConflictError, NotFoundError } from '../../common/errors';
 import { withParentNationalIdConflict } from '../../common/parent-national-id-conflict';
 import { assertStudentCapacity } from '../../database/student-capacity';
@@ -212,7 +213,8 @@ export class RegistrationsService {
               existing.nationalId === section.nationalId &&
               existing.phoneNumber === section.phoneNumber &&
               (existing.homePhone ?? null) === (section.homePhone ?? null) &&
-              (!existing.relationshipType || existing.relationshipType === section.relationshipType);
+              (!existing.relationshipType ||
+                existing.relationshipType === section.relationshipType);
             if (!unchanged) {
               throw new ConflictError(
                 'PARENT_PROFILE_CHANGED',
@@ -291,6 +293,26 @@ export class RegistrationsService {
             grade: data.school.grade,
             className: data.school.educationLevel,
           });
+        }
+        if (data.studentPhotoUploadId) {
+          const [linkedPhoto] = await txn
+            .update(studentPhotoUploads)
+            .set({ studentId, updatedAt: new Date() })
+            .where(
+              and(
+                eq(studentPhotoUploads.id, data.studentPhotoUploadId),
+                eq(studentPhotoUploads.accountUserId, userId),
+                eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
+                isNull(studentPhotoUploads.studentId),
+              ),
+            )
+            .returning({ id: studentPhotoUploads.id });
+          if (!linkedPhoto) {
+            throw new ConflictError(
+              'PHOTO_LINK_FAILED',
+              'عکس پیش‌نویس قابل اتصال به این دانش‌آموز نیست. دوباره بارگذاری کنید.',
+            );
+          }
         }
         const registrationId = generateId();
         await txn.insert(serviceRegistrations).values({
@@ -565,9 +587,7 @@ export class RegistrationsService {
   async getEnrollmentsForAdminPage(query: AdminEnrollmentListQueryDto) {
     const rows = await this.materializeAdminRows();
     const expanded = expandRegistrationStatusGroup(query.status);
-    let items = expanded
-      ? rows.filter((row) => expanded.includes(row.registrationStatus))
-      : rows;
+    let items = expanded ? rows.filter((row) => expanded.includes(row.registrationStatus)) : rows;
 
     const search = query.q?.trim().toLocaleLowerCase('fa-IR');
     if (search) {
@@ -580,20 +600,22 @@ export class RegistrationsService {
 
     const direction = query.direction === 'asc' ? 1 : -1;
     items = [...items].sort((a, b) => {
-      const left = a[
-        query.sort === 'studentName'
-          ? 'studentName'
-          : query.sort === 'schoolName'
-            ? 'schoolName'
-            : 'createdAt'
-      ];
-      const right = b[
-        query.sort === 'studentName'
-          ? 'studentName'
-          : query.sort === 'schoolName'
-            ? 'schoolName'
-            : 'createdAt'
-      ];
+      const left =
+        a[
+          query.sort === 'studentName'
+            ? 'studentName'
+            : query.sort === 'schoolName'
+              ? 'schoolName'
+              : 'createdAt'
+        ];
+      const right =
+        b[
+          query.sort === 'studentName'
+            ? 'studentName'
+            : query.sort === 'schoolName'
+              ? 'schoolName'
+              : 'createdAt'
+        ];
       return direction * String(left).localeCompare(String(right), 'fa');
     });
 

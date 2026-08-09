@@ -49,12 +49,19 @@ export const photoViewUrlSchema = z.object({
 
 export type PhotoViewUrl = z.infer<typeof photoViewUrlSchema>;
 
-export async function authorizePhotoUpload(input: {
-  studentId?: string;
-  declaredMime: (typeof ACCEPTED_PHOTO_MIMES)[number];
-  declaredSize: number;
-}) {
-  const response = await apiRequest<unknown>('/student-photos/uploads', {
+export type PhotoUploadMode = 'panel' | 'onboarding';
+const photoBase = (mode: PhotoUploadMode) =>
+  mode === 'onboarding' ? '/onboarding/student-photos' : '/student-photos';
+
+export async function authorizePhotoUpload(
+  input: {
+    studentId?: string;
+    declaredMime: (typeof ACCEPTED_PHOTO_MIMES)[number];
+    declaredSize: number;
+  },
+  mode: PhotoUploadMode = 'panel',
+) {
+  const response = await apiRequest<unknown>(`${photoBase(mode)}/uploads`, {
     method: 'POST',
     body: input,
   });
@@ -90,11 +97,22 @@ export async function putPhotoObject(
   });
 }
 
-export async function completePhotoUpload(uploadId: string) {
-  const response = await apiRequest<unknown>(`/student-photos/uploads/${uploadId}/complete`, {
+export async function completePhotoUpload(uploadId: string, mode: PhotoUploadMode = 'panel') {
+  const response = await apiRequest<unknown>(`${photoBase(mode)}/uploads/${uploadId}/complete`, {
     method: 'POST',
   });
   return photoUploadViewSchema.parse(response.data);
+}
+
+export async function linkPhotoUpload(
+  uploadId: string,
+  studentId: string,
+  mode: PhotoUploadMode = 'panel',
+) {
+  await apiRequest(`${photoBase(mode)}/uploads/${uploadId}/link`, {
+    method: 'POST',
+    body: { studentId },
+  });
 }
 
 export async function getMyPhotoUploads(studentId?: string) {

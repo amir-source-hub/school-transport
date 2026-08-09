@@ -15,6 +15,7 @@ import {
   getPhotoViewUrl,
   putPhotoObject,
   type PhotoUploadView,
+  type PhotoUploadMode,
 } from './student-photos-api';
 
 const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
@@ -41,9 +42,13 @@ function isAcceptedMime(type: string): type is (typeof ACCEPTED_PHOTO_MIMES)[num
 export function PhotoUploadCard({
   studentId,
   initialItems,
+  mode = 'panel',
+  onUploadCompleted,
 }: {
-  studentId: string;
+  studentId?: string;
   initialItems: PhotoUploadView[];
+  mode?: PhotoUploadMode;
+  onUploadCompleted?: (uploadId: string) => void;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -101,11 +106,10 @@ export function PhotoUploadCard({
     setProgress(0);
     setMessage(undefined);
     try {
-      const authorization = await authorizePhotoUpload({
-        studentId,
-        declaredMime: selected.mime,
-        declaredSize: file.size,
-      });
+      const authorization = await authorizePhotoUpload(
+        { studentId, declaredMime: selected.mime, declaredSize: file.size },
+        mode,
+      );
       try {
         await putPhotoObject(authorization.uploadUrl, file, {
           signal: controller.signal,
@@ -119,8 +123,10 @@ export function PhotoUploadCard({
         setMessage('ارسال فایل به ذخیره‌گاه ناموفق بود. اتصال را بررسی و دوباره تلاش کنید.');
         return;
       }
-      await completePhotoUpload(authorization.uploadId);
-      setItems(await getMyPhotoUploads(studentId));
+      const completed = await completePhotoUpload(authorization.uploadId, mode);
+      onUploadCompleted?.(completed.uploadId);
+      if (mode === 'panel') setItems(await getMyPhotoUploads(studentId));
+      else setItems([completed]);
       removeSelection();
       setMessage('عکس کارت سرویس بارگذاری شد و در صف بررسی قرار گرفت.');
       router.refresh();

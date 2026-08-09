@@ -72,11 +72,7 @@ Tasks:
 
 ### Placement and enrollment lifecycle
 
-- [ ] Move/integrate the photo field into enrollment step one as requested. **[NOT FINISHED]**
-  - The current component is rendered only on `/student/students/[studentId]`, after a student already exists.
-  - Support account/onboarding-scoped authorization before a student ID exists, then transactionally link the upload to the created student.
-  - Preserve enrollment draft data and retry when storage is unavailable.
-  - Define the exact gate: enrollment may be saved while review is pending, but card readiness must require one current approved photo.
+- Enrollment step one now supports account/onboarding-scoped upload before a student exists, retains the selection and retry state on storage failure, and atomically links a completed pending upload inside the student/enrollment transaction. Enrollment may proceed while review is pending; the remaining approved-only card-readiness gate is tracked under card integration.
 
 ### Admin review and card integration
 
