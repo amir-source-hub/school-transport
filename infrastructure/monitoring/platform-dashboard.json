@@ -1,0 +1,48 @@
+{
+  "title": "School Transport Platform",
+  "uid": "school-transport-platform",
+  "schemaVersion": 39,
+  "tags": ["school-transport", "production"],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP requests by status",
+      "targets": [
+        { "expr": "sum(rate(school_transport_http_requests_total[5m])) by (status_class)" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP p95 latency",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(school_transport_http_duration_seconds_bucket[5m])) by (le))"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "PostgreSQL pool",
+      "targets": [{ "expr": "school_transport_database_pool_connections" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue outcomes",
+      "targets": [
+        { "expr": "sum(rate(school_transport_queue_jobs_total[5m])) by (queue, outcome)" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Notification backlog age",
+      "targets": [{ "expr": "school_transport_notification_queue_oldest_age_seconds" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Provider outcomes",
+      "targets": [
+        { "expr": "sum(rate(school_transport_message_outcomes_total[5m])) by (category, outcome)" }
+      ]
+    }
+  ]
+}

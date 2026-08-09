@@ -1,0 +1,28 @@
+groups:
+  - name: school-transport-platform
+    rules:
+      - alert: ApiServerErrorRateHigh
+        expr: sum(rate(school_transport_http_requests_total{status_class="5xx"}[5m])) / clamp_min(sum(rate(school_transport_http_requests_total[5m])), 0.001) > 0.01
+        for: 10m
+        labels: { severity: critical, owner: platform }
+        annotations: { summary: "API 5xx rate exceeds 1%" }
+      - alert: ApiLatencyHigh
+        expr: histogram_quantile(0.95, sum(rate(school_transport_http_duration_seconds_bucket[10m])) by (le)) > 0.75
+        for: 15m
+        labels: { severity: warning, owner: platform }
+        annotations: { summary: "API p95 latency exceeds 750ms" }
+      - alert: DatabaseUnavailable
+        expr: increase(school_transport_database_readiness_total{outcome="unavailable"}[5m]) > 0
+        for: 5m
+        labels: { severity: critical, owner: platform }
+        annotations: { summary: "PostgreSQL readiness failed" }
+      - alert: DatabasePoolWaiting
+        expr: school_transport_database_pool_connections{state="waiting"} > 5
+        for: 10m
+        labels: { severity: warning, owner: platform }
+        annotations: { summary: "PostgreSQL pool has sustained waiters" }
+      - alert: QueueFailuresHigh
+        expr: sum(rate(school_transport_queue_jobs_total{outcome="failed"}[15m])) by (queue) / clamp_min(sum(rate(school_transport_queue_jobs_total{outcome="completed"}[15m])) by (queue), 0.001) > 0.01
+        for: 15m
+        labels: { severity: critical, owner: platform }
+        annotations: { summary: "Queue failure rate exceeds 1% for {{ $labels.queue }}" }

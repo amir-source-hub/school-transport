@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { Job, Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import { ConfigService } from '../../config/config.service';
@@ -9,6 +9,7 @@ import { lt, and, eq } from 'drizzle-orm';
 import { InAppNotificationService } from '../notifications/in-app-notification.service';
 import { BroadcastsService } from '../../modules/broadcasts/broadcasts.service';
 import { StudentPhotosService } from '../../modules/student-images/student-photos.service';
+import { OperationalMetricsService } from '../metrics/operational-metrics.service';
 
 export const QUEUE_NAMES = {
   notifications: 'notification-delivery',
@@ -29,6 +30,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     private readonly notificationOutbox: InAppNotificationService,
     private readonly broadcasts: BroadcastsService,
     private readonly studentPhotos: StudentPhotosService,
+    @Optional() private readonly metrics?: OperationalMetricsService,
   ) {
     this.connection = new IORedis(config.redisUrl, {
       maxRetriesPerRequest: null,
@@ -70,6 +72,10 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
           connection: this.connection,
         }),
       );
+      for (const worker of this.workers) {
+        worker.on('completed', () => this.metrics?.recordQueue(worker.name, 'completed'));
+        worker.on('failed', () => this.metrics?.recordQueue(worker.name, 'failed'));
+      }
       this.logger.log('BullMQ workers started.');
       await this.queue(QUEUE_NAMES.maintenance).add(
         'purge-expired-auth-data',
@@ -126,6 +132,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       removeOnComplete: 500,
       removeOnFail: 1_000,
     });
+    this.metrics?.recordQueue(QUEUE_NAMES.notifications, 'enqueued');
   }
 
   async enqueueMaintenance(name: string, data: Record<string, unknown> = {}): Promise<void> {
@@ -139,6 +146,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       removeOnComplete: 100,
       removeOnFail: 500,
     });
+    this.metrics?.recordQueue(QUEUE_NAMES.maintenance, 'enqueued');
   }
 
   async onModuleDestroy(): Promise<void> {

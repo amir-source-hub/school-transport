@@ -29,6 +29,7 @@ import { S3Module } from './infrastructure/s3/s3.module';
 import { StudentPhotosModule } from './modules/student-images/student-photos.module';
 import { MetricsModule } from './infrastructure/metrics/metrics.module';
 import { MutationAuditInterceptor } from './common/mutation-audit.interceptor';
+import { HttpMetricsInterceptor } from './infrastructure/metrics/http-metrics.interceptor';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { MutationAuditInterceptor } from './common/mutation-audit.interceptor';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseMetadataInterceptor },
     { provide: APP_INTERCEPTOR, useClass: MutationAuditInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: HttpMetricsInterceptor },
     GracefulShutdownService,
   ],
 })

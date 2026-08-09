@@ -54,6 +54,7 @@ export class AppLogger implements LoggerService {
   private bindings(context?: string) {
     return {
       ...(this.requestContext.requestId ? { requestId: this.requestContext.requestId } : {}),
+      ...(this.requestContext.traceId ? { traceId: this.requestContext.traceId } : {}),
       ...(context ? { context } : {}),
     };
   }

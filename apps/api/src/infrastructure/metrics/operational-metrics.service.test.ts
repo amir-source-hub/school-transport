@@ -9,11 +9,22 @@ describe('OperationalMetricsService', () => {
     metrics.recordMessage('service_notification', 'dead_letter');
     metrics.setNotificationQueueAge(42);
     metrics.addBroadcastEstimatedSpend(12_000);
+    metrics.recordHttp('GET', '/api/v1/health', 200, 0.02);
+    metrics.recordQueue('maintenance', 'completed');
+    metrics.recordDatabase('ready');
+    metrics.registerDatabasePool(() => ({ total: 4, idle: 3, waiting: 0 }));
 
     const output = metrics.renderPrometheus();
     expect(output).toContain(
       'school_transport_message_outcomes_total{category="otp",outcome="accepted"} 1',
     );
+    expect(output).toContain(
+      'school_transport_http_requests_total{method="GET",route="/api/v1/health",status_class="2xx"} 1',
+    );
+    expect(output).toContain(
+      'school_transport_queue_jobs_total{queue="maintenance",outcome="completed"} 1',
+    );
+    expect(output).toContain('school_transport_database_pool_connections{state="idle"} 3');
     expect(output).toContain(
       'school_transport_message_outcomes_total{category="optional_notification",outcome="skipped_no_consent"} 1',
     );
