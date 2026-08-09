@@ -1,0 +1,1 @@
+ALTER TABLE "admin_users" DROP COLUMN IF EXISTS "is_super_admin";

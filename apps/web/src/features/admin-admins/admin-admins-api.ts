@@ -9,7 +9,6 @@ export const adminAccountSchema = z.object({
   phoneNumber: z.string(),
   email: z.string().nullable(),
   status: z.string(),
-  isSuperAdmin: z.boolean().default(false),
   lastLoginAt: z.coerce.date().nullable(),
 });
 

@@ -10,23 +10,7 @@
 - `.env` is ignored and its variable-name set matches root `.env.example`; secret values must never be committed or printed.
 - Current runtime roles remain `PARENT | ADMIN`. `PARENT` is the internal compatibility name for a student/guardian panel account.
 
-## 1. Finish removing the super-admin concept
-
-The request is for ordinary admins and student accounts only. `SuperAdminGuard` was removed, but the concept still exists in data and UI.
-
-- [ ] Add a forward migration removing `admin_users.is_super_admin` after removing all runtime dependencies. **[NOT FINISHED]**
-- [ ] Remove `isSuperAdmin` from:
-  - `apps/api/src/database/schemas/auth.schema.ts`
-  - `apps/api/src/modules/identity/application/auth.service.ts`
-  - `apps/api/src/database/seed.ts`
-  - `apps/web/src/features/admin-admins/admin-admins-api.ts`
-  - `apps/web/src/app/admin/admins/page.tsx`
-  - affected fixtures/tests.
-- [ ] Replace “cannot disable the final super-admin” with a documented ordinary-admin safety rule. Recommended: prevent disabling the final active admin account. **[NOT FINISHED]**
-- [ ] Rename broadcast test/copy references from “super-administrator” to “different active administrator”; retain dual approval. **[NOT FINISHED]**
-- [ ] Verify every admin endpoint uses authenticated `ADMIN` authorization and no hidden `isSuperAdmin` condition remains. **[NOT FINISHED]**
-
-## 2. Notification correctness gaps
+## 1. Notification correctness gaps
 
 ### Catalog and producers
 
@@ -60,7 +44,7 @@ The request is for ordinary admins and student accounts only. `SuperAdminGuard` 
 - [ ] Add component/browser verification for loading, empty, error/retry, unread state, mark-one, mark-all, keyboard, screen reader, RTL, and mobile behavior. **[NOT FINISHED]**
 - [ ] Verify migration `0025_notification_read_state.sql` on a production-like snapshot and prove old queued outbox records remain compatible. **[BLOCKED — STAGING DATABASE]**
 
-## 3. SMS operations and live Kavenegar verification
+## 2. SMS operations and live Kavenegar verification
 
 ### Metrics and alerts
 
@@ -95,7 +79,7 @@ Tasks:
 - [ ] Reverify two-minute expiry, single-use, resend cooldown, account/IP attempt limits, concurrent verification, generic enumeration-safe errors, and production-only adapter selection after metrics changes. **[NOT FINISHED]**
 - [ ] Verify the actual Kavenegar template and delivery with an approved number before marking production delivery verified. **[BLOCKED — EXTERNAL SEND]**
 
-## 4. Feedback verification gaps
+## 3. Feedback verification gaps
 
 - [ ] Add IDOR tests proving one student account cannot list, associate, or infer another account's feedback. **[NOT FINISHED]**
 - [ ] Test logged-out/student denial and ordinary-admin access for every admin feedback operation. **[NOT FINISHED]**
@@ -106,7 +90,7 @@ Tasks:
 - [ ] Verify feedback content never enters logs, traces, analytics, audits, or error payloads. **[NOT FINISHED]**
 - [ ] Add keyboard, focus, validation announcement, error recovery, duplicate-submit, long Persian/RTL, mobile/tablet, and screen-reader tests. **[NOT FINISHED]**
 
-## 5. Student card photo gaps
+## 4. Student card photo gaps
 
 ### Placement and enrollment lifecycle
 
@@ -149,14 +133,13 @@ Tasks:
 - [ ] Test upload replacement races, stale approval, processing retries, rollback/orphan cleanup, archived students, and approved-only card use. **[NOT FINISHED]**
 - [ ] Add enrollment/mobile/accessibility/browser tests for preview, progress, cancel, retry, Persian errors, privacy notice, and screen-reader announcements. **[NOT FINISHED]**
 
-## 6. Existing admin bulk SMS — remaining verification
+## 5. Existing admin bulk SMS — remaining verification
 
-- [ ] Update stale “super-administrator” terminology in tests/copy and verify any two different active admins can create/approve. **[NOT FINISHED]**
 - [ ] Add controller-level ordinary-admin authorization and student-denial tests. **[NOT FINISHED]**
 - [ ] Reverify audience/consent changes at dispatch, phone deduplication, Tehran scheduling, immutable approval snapshot, bounded skip-locked batching, idempotency, pause/resume/cancel, partial failure, and cost limits after notification changes. **[NOT FINISHED]**
 - [ ] Configure an approved test number and perform one controlled live test before production verification. **[BLOCKED — USER INPUT/EXTERNAL SEND]**
 
-## 7. Offline payments and temporary online-payment shutdown
+## 6. Offline payments and temporary online-payment shutdown
 
 ### Product behavior
 
@@ -228,7 +211,7 @@ Tasks:
 - [ ] Test onboarding: panel activation occurs only after an offline prepayment is approved—not merely submitted. **[NOT FINISHED]**
 - [ ] Test mobile receipt capture/upload, progress/cancel/retry, Persian errors, preview, long filenames, and network/storage failures. **[NOT FINISHED]**
 
-## 8. Contract and legal-text updates
+## 7. Contract and legal-text updates
 
 - [ ] Approve and version final Persian contract text for the offline-payment workflow. **[BLOCKED — PRODUCT/LEGAL INPUT]**
   - State that receipt submission is a claim awaiting review and is not proof of accepted payment.
@@ -238,7 +221,7 @@ Tasks:
 - [ ] Review notification-consent, photo privacy, payment-evidence privacy, retention/deletion, and SMS/OTP clauses together so product/legal wording is consistent. **[BLOCKED — PRODUCT/LEGAL INPUT]**
 - [ ] Update contract rendering, downloadable/print views, tests, and admin/student previews only after the Persian text is approved. **[BLOCKED — APPROVED TEXT]**
 
-## 9. Environment-file policy
+## 8. Environment-file policy
 
 - Production validation must continue rejecting console OTP, missing Kavenegar secrets when enabled, zero broadcast price/cap, mock payment, unsafe logging/seeding, and incomplete Arvan configuration.
 - [ ] Decide and document one supported local launch path for environment loading. **[NOT FINISHED]**
@@ -248,7 +231,7 @@ Tasks:
 - [ ] Document that the ignored root `.env` is for local values and deployment secrets must use the hosting secret manager. **[NOT FINISHED]**
 - [ ] Do not copy the local `.env` into container images, CI artifacts, logs, screenshots, or support bundles. **[NOT FINISHED]**
 
-## 10. Engineering, security, and operations backlog
+## 9. Engineering, security, and operations backlog
 
 ### Backend verification and CI
 
@@ -280,7 +263,7 @@ Tasks:
 - [ ] Enforce media/bundle/CLS/LCP/INP budgets and slow-network/cache behavior. **[NOT FINISHED]**
 - [ ] Complete abuse/security testing for sessions/OTP, CSRF/origins, IDOR, roles, XSS, injection, SSRF, uploads, rate/cost limits, secrets/logs, and error disclosure. **[NOT FINISHED]**
 
-## 11. Future phases
+## 10. Future phases
 
 ### Tutorial video
 
@@ -303,7 +286,7 @@ Tasks:
 - [ ] Confirm authenticated callback availability for the account/plan; otherwise use bounded official status polling or document provider acceptance as the available state. **[BLOCKED — PROVIDER CONFIRMATION]**
 - [ ] Add replay-safe idempotent callback/polling status mapping and tests if approved. **[BLOCKED — PROVIDER DECISION]**
 
-## 12. User inputs still required
+## 11. User inputs still required
 
 - [ ] Kavenegar sender confirmation; exact approved OTP template; current price per segment; campaign spend cap; alert recipient/system; consent/legal approval. **[BLOCKED — USER INPUT]**
 - [ ] Arvan endpoint, region, private bucket, scoped credentials, exact CORS origins, lifecycle/versioning choices, privacy/retention approval, and card template. **[BLOCKED — USER INPUT]**
@@ -311,13 +294,13 @@ Tasks:
 - [ ] Payment gateway selection, documentation, sandbox/merchant credentials, unit/callback/reconciliation/refund rules. **[BLOCKED — USER INPUT]**
 - [ ] Staging/production access and recorded Persian/product/legal/privacy/security approval. **[BLOCKED — EXTERNAL VERIFICATION]**
 
-## 13. Deployment and human approval gates
+## 12. Deployment and human approval gates
 
 - [ ] Verify legacy redirects/bookmarks, route metadata, sitemap, proxy/browser caches, map tiles/CSP, and stale Next.js Server Actions through an actual rolling deployment. **[BLOCKED — DEPLOYMENT]**
 - [ ] Run all forward migrations and recovery procedures against a sanitized production-like staging snapshot; record duration, locks, backup, restore, and compatibility evidence. **[BLOCKED — STAGING]**
 - [ ] Obtain final Persian-language, product, legal/privacy, security, and operations approval for user text, contracts, consent, photos, receipts, retention, and release. **[BLOCKED — EXTERNAL APPROVAL]**
 
-## 14. Final cleanup rule
+## 13. Final cleanup rule
 
 - [ ] After each implementation phase, remove its finished-and-verified task and subtasks from this file instead of checking them off permanently. **[ONGOING]**
 - [ ] Delete a root task file only when it contains no unfinished, blocked, unverified, or continuing operational requirement. **[ONGOING]**

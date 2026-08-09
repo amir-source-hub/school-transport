@@ -120,7 +120,7 @@ const campaign = {
 };
 
 describe('BroadcastsService workflow safeguards', () => {
-  it('requires approval by a different super-administrator identity', async () => {
+  it('requires approval by a different active administrator identity', async () => {
     const select = vi.fn(() => selectLimitChain([campaign]));
     const db = {
       db: {

@@ -1,6 +1,6 @@
 # Admin SMS broadcast operations
 
-Admin SMS campaigns are disabled by default and restricted to super-administrators. A campaign creator cannot approve their own campaign.
+Admin SMS campaigns are disabled by default and restricted to active administrators. A campaign creator cannot approve their own campaign.
 
 ## Enablement
 
@@ -18,9 +18,9 @@ Set the price from the current Kavenegar commercial agreement; it is an estimate
 
 ## Workflow
 
-1. A super-administrator previews the audience, Unicode segment count, and estimated cost.
+1. An active administrator previews the audience, Unicode segment count, and estimated cost.
 2. Submission freezes the draft for approval.
-3. A different super-administrator approves it. The server resolves active accounts with current `SMS` / `OPTIONAL_UPDATES` consent and stores an immutable content/audience/schedule snapshot.
+3. A different active administrator approves it. The server resolves active accounts with current `SMS` / `OPTIONAL_UPDATES` consent and stores an immutable content/audience/schedule snapshot.
 4. The worker claims recipients in bounded, skip-locked batches. It rechecks account status, phone ownership, and consent immediately before dispatch.
 5. Operators can pause, resume, or cancel unsent recipients. Expired campaigns are closed automatically.
 

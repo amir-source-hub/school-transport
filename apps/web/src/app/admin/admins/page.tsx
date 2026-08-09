@@ -40,14 +40,7 @@ export default async function AdminsPage() {
           <tbody>
             {admins.map((admin) => (
               <tr key={admin.id} className="border-b border-border last:border-0">
-                <td className="px-3 py-3 font-bold">
-                  {admin.username}
-                  {admin.isSuperAdmin && (
-                    <span className="mr-2">
-                      <Badge tone="info">فوق‌مدیر</Badge>
-                    </span>
-                  )}
-                </td>
+                <td className="px-3 py-3 font-bold">{admin.username}</td>
                 <td className="px-3 py-3">
                   {admin.firstName} {admin.lastName}
                 </td>

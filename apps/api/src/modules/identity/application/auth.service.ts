@@ -59,7 +59,6 @@ export class AuthService {
         phoneNumber: adminUsers.phoneNumber,
         email: adminUsers.email,
         status: adminUsers.status,
-        isSuperAdmin: adminUsers.isSuperAdmin,
         lastLoginAt: adminUsers.lastLoginAt,
         createdAt: adminUsers.createdAt,
       })
@@ -77,7 +76,6 @@ export class AuthService {
         phoneNumber: adminUsers.phoneNumber,
         email: adminUsers.email,
         status: adminUsers.status,
-        isSuperAdmin: adminUsers.isSuperAdmin,
         lastLoginAt: adminUsers.lastLoginAt,
         createdAt: adminUsers.createdAt,
       })
@@ -187,24 +185,19 @@ export class AuthService {
       const [target] = await this.db.db
         .select({
           id: adminUsers.id,
-          isSuperAdmin: adminUsers.isSuperAdmin,
           status: adminUsers.status,
         })
         .from(adminUsers)
         .where(eq(adminUsers.id, adminId))
         .limit(1);
       if (!target) throw new ValidationError('Administrator was not found.');
-      if (target.isSuperAdmin) {
-        const [activeSuper] = await this.db.db
+      if (target.status === 'ACTIVE') {
+        const [active] = await this.db.db
           .select({ count: sql<number>`count(*)::int` })
           .from(adminUsers)
-          .where(
-            and(eq(adminUsers.status, 'ACTIVE'), eq(adminUsers.isSuperAdmin, true)),
-          );
-        if (Number(activeSuper?.count ?? 0) <= 1) {
-          throw new ValidationError(
-            'You cannot disable the last active super administrator.',
-          );
+          .where(eq(adminUsers.status, 'ACTIVE'));
+        if (Number(active?.count ?? 0) <= 1) {
+          throw new ValidationError('You cannot disable the last active administrator.');
         }
       }
     }

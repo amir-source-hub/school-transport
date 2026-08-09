@@ -37,7 +37,6 @@ export const adminUsers = pgTable('admin_users', {
   phoneNumber: varchar('phone_number', { length: 20 }).notNull().unique(),
   status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
   passwordHash: varchar('password_hash', { length: 255 }),
-  isSuperAdmin: boolean('is_super_admin').notNull().default(false),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

@@ -58,7 +58,7 @@ before every provider change: <https://operations.osmfoundation.org/policies/til
 | --- | --- |
 | Admin credential/OTP attack | Argon2 password verification, generic failures, atomic hashed OTP/challenge consumption, account/IP throttles, two-minute expiry in `identity/**` |
 | Session theft/fixation/replay | HttpOnly cookies, Secure in production, SameSite, server-side live-session checks, refresh rotation and reuse revocation in `auth.guard.ts` and `auth.service.ts` |
-| Student/contract IDOR | Authenticated owner joins for parent routes; admin role guards; full records and reports require `SuperAdminGuard` |
+| Student/contract IDOR | Authenticated owner joins for parent routes; admin role guards; full records and reports require the authenticated `ADMIN` role |
 | Payment transition abuse | Scoped idempotency fingerprints, row locks, conditional transitions, transaction/audit coupling in `payments/**` |
 | Precise-location/identity leakage | No public location endpoints; granular admin access; redaction covers IDs, phones, addresses, coordinates, contracts, tokens, and payment references |
 | CSRF/XSS/request abuse | Trusted-origin checks, strict DTO validation, bounded bodies/timeouts, CSP/security headers, parameterized Drizzle queries, and rate limits |

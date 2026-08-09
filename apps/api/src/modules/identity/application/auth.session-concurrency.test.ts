@@ -80,7 +80,6 @@ describe('credential change session revocation', () => {
       phoneNumber: '09120000000',
       email: null,
       status: 'ACTIVE',
-      isSuperAdmin: true,
       lastLoginAt: null,
       createdAt: new Date(),
     };
