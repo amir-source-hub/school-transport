@@ -4,9 +4,9 @@ A Persian-first platform for managing school transport enrollment, contracts, an
 repository contains a public website, a parent portal, an administrative dashboard, and the API
 that supports them.
 
-> The project is under active development and currently uses development OTP and payment
-> providers. It is not ready for production deployment without configuring approved external
-> providers and production secrets.
+> The project is under active development. Online payment is intentionally disabled until a real
+> gateway is integrated and verified; local OTP may use the console adapter only in development.
+> Production still requires approved external providers and secret-manager configuration.
 
 ## What is included
 
@@ -18,7 +18,7 @@ that supports them.
 - Reuse of saved parent and family information for subsequent enrollments
 - Contract review and acceptance
 - Fixed prepayment followed by an admin-configured full or installment payment plan
-- Online payments and offline receipt submissions
+- Private offline receipt submissions (online payment is visibly disabled pending integration)
 - Jalali dates and RTL Persian interfaces
 - Payment, enrollment, contract, decision, and account notifications
 - Editable family profile, addresses, emergency contacts, and parent phone numbers
@@ -29,7 +29,7 @@ that supports them.
 - Enrollment review, correction, approval, and rejection workflows
 - Family, student, school, contract, and administrator management
 - Remaining-price and installment schedule configuration per student
-- Online payment history and offline payment approval or rejection
+- Offline receipt history, evidence review, approval, and rejection
 - Payment-derived enrollment statuses, including installment progress and full settlement
 - Contract and enrollment details in a unified view
 
@@ -200,10 +200,11 @@ pnpm --filter web test:e2e
 
 ## Payment development behavior
 
-Local development defaults to `PAYMENT_GATEWAY_PROVIDER=mock`. This provider is deterministic and
-exists only for development and automated testing. Offline payments are submitted by parents with
-a Jalali payment date and bank reference, then approved or rejected by an administrator. A pending
-offline receipt blocks duplicate submissions for the same installment until it is rejected.
+All runtime environments require `PAYMENT_GATEWAY_PROVIDER=none`; mock gateway behavior exists only
+inside isolated unit tests. The online choice remains disabled and every online API path fails
+closed. Offline payments use versioned administrator-managed destination details and a private,
+normalized receipt image. A submitted receipt does not count as payment until an administrator
+approves it; one draft/review claim is allowed per schedule item and rejected claims retain history.
 
 Payment plan status is derived from its schedule:
 

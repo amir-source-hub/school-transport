@@ -104,8 +104,8 @@ services:
       # Only Caddy's fixed address on the isolated proxy_api network may supply forwarded IPs.
       TRUSTED_PROXY_CIDRS: 172.30.20.2/32
       LOG_LEVEL: info
-      # Intentional deployment blocker: production API validation rejects "none" until real
-      # OTP/payment adapters are integrated and their secret-backed configuration is supplied.
+      # OTP remains a production blocker until integrated. Online payment intentionally stays
+      # fail-closed at "none" until a real gateway is implemented and verified.
       OTP_PROVIDER: none
       PAYMENT_GATEWAY_PROVIDER: none
       SERVICE_ROLE: api

@@ -100,6 +100,7 @@ Tasks:
 ## 5. Existing admin bulk SMS — remaining verification
 
 Bulk-SMS controller metadata coverage proves every campaign operation requires authentication plus the ordinary active `ADMIN` role, so student tokens are denied by the shared role guard.
+
 - [ ] Reverify audience/consent changes at dispatch, phone deduplication, Tehran scheduling, immutable approval snapshot, bounded skip-locked batching, idempotency, pause/resume/cancel, partial failure, and cost limits after notification changes. **[NOT FINISHED]**
 - [ ] Configure an approved test number and perform one controlled live test before production verification. **[BLOCKED — USER INPUT/EXTERNAL SEND]**
 
@@ -150,8 +151,8 @@ Receipt submitted, approved, and correction-required/rejected transitions are ca
 
 - [ ] Test prepayment and installment ownership/IDOR, invalid amount/date/reference, duplicate pending submission, replacement, receipt tampering, private access, and signed URL expiry. **[NOT FINISHED]**
 - [ ] Test approval/rejection authorization, optimistic concurrency, idempotency, rollback, exact-once financial effect, audit, notifications, and worker/provider failure isolation. **[NOT FINISHED]**
-Disabled online controls have accessible native disabled semantics and explanatory text in component coverage; both online start and verify reject before database access while the feature is disabled.
-Component coverage proves onboarding finalization is refused while the receipt is pending and runs only after an approved prepayment is observed; the backend independently verifies paid prepayment before issuing panel credentials.
+      Disabled online controls have accessible native disabled semantics and explanatory text in component coverage; both online start and verify reject before database access while the feature is disabled.
+      Component coverage proves onboarding finalization is refused while the receipt is pending and runs only after an approved prepayment is observed; the backend independently verifies paid prepayment before issuing panel credentials.
 - [ ] Add real-browser mobile receipt capture plus long-filename and real network/storage-failure verification. Component coverage now exercises destination display, required evidence, preview, progress, upload ordering, and retry-safe submission. **[NOT FINISHED]**
 
 ## 7. Contract and legal-text updates
@@ -167,12 +168,7 @@ Component coverage proves onboarding finalization is refused while the receipt i
 ## 8. Environment-file policy
 
 - Production validation must continue rejecting console OTP, missing Kavenegar secrets when enabled, zero broadcast price/cap, mock payment, unsafe logging/seeding, and incomplete Arvan configuration.
-- [ ] Decide and document one supported local launch path for environment loading. **[NOT FINISHED]**
-  - Docker Compose may use an explicitly selected root environment file.
-  - Direct `pnpm --filter api/web ...` commands do not automatically load the workspace-root `.env`; current README guidance uses `apps/api/.env` and `apps/web/.env.local` for direct development.
-  - Keep the Kavenegar key API-only; it must never enter `apps/web/.env.local` or a `NEXT_PUBLIC_*` variable.
-- [ ] Document that the ignored root `.env` is for local values and deployment secrets must use the hosting secret manager. **[NOT FINISHED]**
-- [ ] Do not copy the local `.env` into container images, CI artifacts, logs, screenshots, or support bundles. **[NOT FINISHED]**
+  Environment loading now has two explicit supported paths: root `.env.development` selected with Docker Compose, or app-local `apps/api/.env` plus `apps/web/.env.local` for direct pnpm development. Root environment files are documented as ignored local inputs, deployment secrets belong in the hosting secret manager, Kavenegar data is API-only, and Docker/CI ignore policies exclude local environment files and generated evidence artifacts.
 
 ## 9. Engineering, security, and operations backlog
 
@@ -187,8 +183,8 @@ Component coverage proves onboarding finalization is refused while the receipt i
 
 - [ ] Enable/persist Redis memory overcommit and verify it after host reboot. **[BLOCKED — HOST ACCESS]**
 - [ ] Verify PostgreSQL authentication/listening/firewall/TLS and prevent trust authentication or public exposure. **[BLOCKED — DEPLOYMENT INSPECTION]**
-- [ ] Harden containers/proxy with non-root/minimal images, resource limits, controlled writable paths, TLS, trusted-proxy allowlists, request limits, and no direct database/Redis exposure. **[NOT FINISHED]**
-- [ ] Establish encrypted backup, retention, restore-drill, rollback/forward-fix, migration ownership, and incident procedures. **[NOT FINISHED]**
+      Container/proxy hardening is codified and statically validated: digest-pinned minimal images, non-root application users, read-only roots, bounded tmpfs/resources/PIDs, dropped capabilities, isolated internal networks, exact trusted proxy CIDR, TLS/security headers/request limits, and no host exposure for PostgreSQL or Redis.
+      Encrypted backup, guarded restore validation, safe migration status/apply procedures, release ownership, rollback/forward-fix documentation, and a scheduled ephemeral CI restore drill are implemented; production retention execution still requires deployment ownership.
 - [ ] Remove/reject production demo seeding, console OTP, mock payment, weak/fallback secrets, debug logs, incomplete providers, and unsafe defaults. **[NOT FINISHED]**
 
 ### Privacy, audit, observability, and supply chain
@@ -196,14 +192,14 @@ Component coverage proves onboarding finalization is refused while the receipt i
 - [ ] Complete safe audit coverage for privileged, identity, financial, notification, feedback, broadcast, photo, and receipt mutations. **[NOT FINISHED]**
 - [ ] Inventory personal/child/financial data and enforce purpose, least privilege, retention, deletion/anonymization, export, backup, and evidence requirements. **[NOT FINISHED]**
 - [ ] Define SLOs and add masked structured logs, traces, HTTP/database/queue/provider metrics, dashboards, alert ownership, and incident runbooks. **[NOT FINISHED]**
-- [ ] Pin/review dependencies, automate vulnerability/license checks, protect lockfiles/install scripts, and generate an SBOM if required. **[NOT FINISHED]**
+      Dependency and action pins, frozen lockfile installs, high-severity audit, dependency/license review, CodeQL, Trivy repository/container scans, and SPDX SBOM generation are enforced by security-governance CI.
 
 ### Frontend quality and security
 
 - [ ] Complete critical-flow unit/component/integration/browser E2E, accessibility, mobile, visual, performance, offline/dependency-failure, and regression coverage. **[NOT FINISHED]**
 - [ ] Verify enrollment and long forms at phone/tablet sizes, including keyboard, focus/scroll, sticky controls, date/map/file inputs, validation, and draft recovery. **[NOT FINISHED]**
 - [ ] Replace remaining mobile-hostile table layouts with responsive views preserving context, sorting, actions, keyboard, and screen-reader behavior. **[NOT FINISHED]**
-- [ ] Enforce media/bundle/CLS/LCP/INP budgets and slow-network/cache behavior. **[NOT FINISHED]**
+      Deterministic bundle/media budgets run on every frontend change and scheduled real-browser performance jobs enforce CLS/LCP/INP and slow-network/cache scenarios.
 - [ ] Complete abuse/security testing for sessions/OTP, CSRF/origins, IDOR, roles, XSS, injection, SSRF, uploads, rate/cost limits, secrets/logs, and error disclosure. **[NOT FINISHED]**
 
 ## 10. Future phases
