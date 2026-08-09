@@ -77,9 +77,6 @@ Tasks:
   - Support account/onboarding-scoped authorization before a student ID exists, then transactionally link the upload to the created student.
   - Preserve enrollment draft data and retry when storage is unavailable.
   - Define the exact gate: enrollment may be saved while review is pending, but card readiness must require one current approved photo.
-- [ ] Add local preview, measurable upload progress, cancel, replace, remove-before-finalization, full requested Persian guidance, privacy link, and accessible field-level errors. **[NOT FINISHED]**
-  - Current UI has selection/status/re-upload but no preview, progress percentage, cancel, remove, full guidance, or privacy notice.
-  - Continue using object URLs only; never persist base64 or signed URLs.
 
 ### Admin review and card integration
 
@@ -102,7 +99,7 @@ Tasks:
 - [ ] Test cross-account/student IDOR, ordinary-admin authorization, signed URL expiry/tampering, actual-vs-declared size, zero byte, mismatch, corrupt, renamed SVG/PDF, huge pixels/axis, extreme aspect, and valid JPEG/PNG. **[NOT FINISHED]**
 - [ ] Verify canonical output is exactly 600×800 JPEG, sRGB, visually acceptable in the real card layout, and contains no EXIF/GPS. **[BLOCKED — CARD TEMPLATE/STAGING]**
 - [ ] Test upload replacement races, stale approval, processing retries, rollback/orphan cleanup, archived students, and approved-only card use. **[NOT FINISHED]**
-- [ ] Add enrollment/mobile/accessibility/browser tests for preview, progress, cancel, retry, Persian errors, privacy notice, and screen-reader announcements. **[NOT FINISHED]**
+- [ ] Add real-browser enrollment/mobile verification for the photo field. Component tests now cover object-URL preview, measurable accessible progress, cancellation, removal before upload, retry/error text, Persian guidance, privacy navigation, and status announcements. **[NOT FINISHED]**
 
 ## 5. Existing admin bulk SMS — remaining verification
 

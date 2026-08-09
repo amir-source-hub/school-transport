@@ -122,7 +122,7 @@ export default function AboutPage() {
         </PageContainer>
       </section>
 
-      <section className="surface-dark border-y border-white/10 py-16">
+      <section id="privacy" className="surface-dark scroll-mt-24 border-y border-white/10 py-16">
         <PageContainer>
           <div className="mx-auto max-w-3xl text-center">
             <Badge tone="info" className="bg-white/10 text-sun border-sun/20">

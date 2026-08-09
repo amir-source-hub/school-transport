@@ -61,15 +61,33 @@ export async function authorizePhotoUpload(input: {
   return authorizePhotoUploadSchema.parse(response.data);
 }
 
-export async function putPhotoObject(uploadUrl: string, file: File) {
-  const response = await fetch(uploadUrl, {
-    method: 'PUT',
-    body: file,
-    headers: { 'Content-Type': file.type },
+export async function putPhotoObject(
+  uploadUrl: string,
+  file: File,
+  options: { signal?: AbortSignal; onProgress?: (percent: number) => void } = {},
+) {
+  await new Promise<void>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    const abort = () => request.abort();
+    request.open('PUT', uploadUrl);
+    request.setRequestHeader('Content-Type', file.type);
+    request.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable)
+        options.onProgress?.(Math.round((event.loaded / event.total) * 100));
+    });
+    request.addEventListener('load', () => {
+      options.signal?.removeEventListener('abort', abort);
+      if (request.status >= 200 && request.status < 300) resolve();
+      else reject(new Error(`PHOTO_UPLOAD_HTTP_${request.status}`));
+    });
+    request.addEventListener('error', () => reject(new Error('PHOTO_UPLOAD_NETWORK')));
+    request.addEventListener('abort', () =>
+      reject(new DOMException('Upload cancelled', 'AbortError')),
+    );
+    options.signal?.addEventListener('abort', abort, { once: true });
+    if (options.signal?.aborted) abort();
+    else request.send(file);
   });
-  if (!response.ok) {
-    throw new Error(`PHOTO_UPLOAD_HTTP_${response.status}`);
-  }
 }
 
 export async function completePhotoUpload(uploadId: string) {
