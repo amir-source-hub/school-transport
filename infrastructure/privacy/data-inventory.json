@@ -1,0 +1,130 @@
+{
+  "version": "2026-08-10",
+  "policyStatus": "retention-and-erasure-periods-pending-legal-approval",
+  "controls": {
+    "leastPrivilege": "Role guards plus service-level ownership predicates; PostgreSQL is not exposed publicly.",
+    "export": "Authenticated scoped APIs and audited bounded XLSX administrative export; no unauthenticated bulk export.",
+    "backup": "Encrypted age backups, guarded restore target, weekly restore validation, and restricted deployment access.",
+    "evidence": "Correlation-linked minimized audit records and immutable financial/contract transition records.",
+    "deletion": "Operational archive/supersede controls exist; irreversible erasure and legal-hold schedules remain disabled until policy approval."
+  },
+  "collections": [
+    {
+      "name": "identity-security",
+      "tables": [
+        "users",
+        "admin_users",
+        "admin_auth_challenges",
+        "otp_requests",
+        "auth_sessions",
+        "onboarding_sessions"
+      ],
+      "subjects": ["parent", "administrator"],
+      "dataClasses": ["identity", "contact", "credential-metadata", "network-metadata"],
+      "purpose": "Account authentication, onboarding, session security, and administrator access control.",
+      "access": "Self/session owner and restricted identity administrators; secrets and OTP material are never returned or audited.",
+      "retention": "security-period-pending-legal-approval",
+      "deletion": "Session revocation and account disable/archive are enforced; final anonymization schedule is policy-blocked."
+    },
+    {
+      "name": "family-and-child-service",
+      "tables": [
+        "parents",
+        "family_addresses",
+        "emergency_contacts",
+        "students",
+        "student_limit_requests",
+        "schools"
+      ],
+      "subjects": ["parent", "child", "emergency-contact"],
+      "dataClasses": ["identity", "child", "contact", "precise-location", "education"],
+      "purpose": "Eligibility, safe pickup/drop-off, emergency contact, school assignment, and account capacity.",
+      "access": "Owning family and role-restricted administrators with uniform not-found ownership enforcement.",
+      "retention": "service-and-child-record-period-pending-legal-approval",
+      "deletion": "Student/archive and address activation controls prevent operational use; final child-record erasure is policy-blocked."
+    },
+    {
+      "name": "enrollment-pricing-contract",
+      "tables": [
+        "service_registrations",
+        "registration_snapshots",
+        "registration_reviews",
+        "registration_notes",
+        "registration_prices",
+        "contracts"
+      ],
+      "subjects": ["parent", "child"],
+      "dataClasses": ["child", "service", "financial", "contract-evidence"],
+      "purpose": "Service enrollment review, price acceptance, and immutable contract evidence.",
+      "access": "Owning family and enrollment/contract administrators; bounded histories and audited exports.",
+      "retention": "contract-and-dispute-period-pending-legal-approval",
+      "deletion": "Cancellation limits active processing; immutable accepted evidence awaits approved statutory schedule."
+    },
+    {
+      "name": "payments-and-receipts",
+      "tables": [
+        "payment_plans",
+        "payment_schedule_items",
+        "payment_transactions",
+        "offline_payment_destinations",
+        "offline_payment_submissions"
+      ],
+      "subjects": ["parent", "child", "payer", "administrator"],
+      "dataClasses": ["financial", "payment-reference", "receipt-image", "review-evidence"],
+      "purpose": "Payment scheduling, receipt review, exact-once financial finalization, disputes, and reconciliation.",
+      "access": "Owner/admin IDOR checks; private short-lived object URLs; immutable transaction rows; audit values exclude references.",
+      "retention": "financial-receipt-and-dispute-period-pending-legal-approval",
+      "deletion": "Raw evidence is deleted after canonicalization; accepted/rejected/disputed canonical cleanup is policy-blocked."
+    },
+    {
+      "name": "student-photos",
+      "tables": ["student_photo_uploads"],
+      "subjects": ["child"],
+      "dataClasses": ["child", "biometric-adjacent-image", "object-metadata"],
+      "purpose": "Human-reviewed service-card portrait selection only.",
+      "access": "Owning family and photo-review administrators through short-lived private URLs; approved-only downstream state.",
+      "retention": "photo-and-card-period-pending-legal-approval",
+      "deletion": "Raw/failed/superseded cleanup is enforced; archived/current approved retention awaits policy and card template."
+    },
+    {
+      "name": "notifications-and-consent",
+      "tables": ["notification_consents", "notifications", "notification_outbox"],
+      "subjects": ["parent", "administrator"],
+      "dataClasses": ["contact-preference", "message-metadata", "delivery-status"],
+      "purpose": "Required service notices, optional consented updates, delivery, read state, and retry evidence.",
+      "access": "Owner-scoped notification APIs and restricted operational administration; message bodies excluded from logs.",
+      "retention": "notification-operational-window-defined-consent-history-pending-legal-approval",
+      "deletion": "Operational admin history is bounded to 30 days; final consent/outbox deletion schedule awaits approval."
+    },
+    {
+      "name": "broadcasts",
+      "tables": ["sms_broadcasts", "sms_broadcast_recipients"],
+      "subjects": ["parent", "administrator"],
+      "dataClasses": ["campaign", "contact-routing", "delivery-status", "consent-evidence"],
+      "purpose": "Approved, budgeted, consent-filtered service communications.",
+      "access": "Restricted broadcast administrators; test sends and lifecycle changes are audited; recipient lists are bounded.",
+      "retention": "campaign-evidence-period-pending-legal-approval",
+      "deletion": "Cancellation stops delivery; recipient evidence cleanup awaits approved campaign/legal schedule."
+    },
+    {
+      "name": "feedback",
+      "tables": ["feedback_submissions"],
+      "subjects": ["parent", "administrator"],
+      "dataClasses": ["support-content", "safety-report", "response-metadata"],
+      "purpose": "Support, safety escalation, response, and service improvement.",
+      "access": "Submitter-scoped history and restricted administrator queue; response content is excluded from audit snapshots.",
+      "retention": "support-and-safety-period-pending-legal-approval",
+      "deletion": "Closure is enforced; erasure/anonymization schedule and safety/legal holds await approval."
+    },
+    {
+      "name": "audit-evidence",
+      "tables": ["audit_logs"],
+      "subjects": ["parent", "administrator"],
+      "dataClasses": ["actor-id", "operation-metadata", "network-metadata"],
+      "purpose": "Security, accountability, dispute evidence, and incident investigation.",
+      "access": "Restricted entity-scoped administrators; strict value allowlist and sensitive-field redaction.",
+      "retention": "audit-evidence-period-pending-legal-approval",
+      "deletion": "No product deletion endpoint; retention and legal-hold schedule awaits approval."
+    }
+  ]
+}
