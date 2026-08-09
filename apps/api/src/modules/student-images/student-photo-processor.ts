@@ -8,6 +8,7 @@ export interface PhotoProcessingConfig {
   outputWidth: number;
   outputHeight: number;
   jpegQuality: number;
+  processingTimeoutSeconds?: number;
 }
 
 export interface ProcessedPhoto {
@@ -80,6 +81,10 @@ export async function processStudentPhoto(
   if (Math.max(effWidth, effHeight) > config.maxAxis) {
     throw new PhotoValidationError('EXTREME_AXIS', 'The image exceeds the maximum axis length.');
   }
+  const aspect = Math.max(effWidth / effHeight, effHeight / effWidth);
+  if (aspect > 10) {
+    throw new PhotoValidationError('EXTREME_ASPECT_RATIO', 'The image aspect ratio is not supported.');
+  }
 
   let canonical: Buffer;
   try {
@@ -87,12 +92,14 @@ export async function processStudentPhoto(
       failOn: 'error',
       limitInputPixels: config.maxPixels + 1,
     })
+      .timeout({ seconds: config.processingTimeoutSeconds ?? 10 })
       .rotate()
       .resize(config.outputWidth, config.outputHeight, {
         fit: 'cover',
         position: 'centre',
       })
       .jpeg({ quality: config.jpegQuality, mozjpeg: true })
+      .toColorspace('srgb')
       .toBuffer();
   } catch {
     throw new PhotoValidationError('CORRUPT_IMAGE', 'The image could not be processed.');

@@ -79,6 +79,14 @@ describe('processStudentPhoto', () => {
     ).rejects.toMatchObject({ rejectionCode: 'EXTREME_AXIS' });
   });
 
+  it('rejects extreme aspect ratios and renamed non-image documents', async () => {
+    const strip = await makePng(2000, 100);
+    await expect(processStudentPhoto(strip, config)).rejects.toMatchObject({ rejectionCode: 'EXTREME_ASPECT_RATIO' });
+    for (const payload of [Buffer.from('%PDF-1.7'), Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')]) {
+      await expect(processStudentPhoto(payload, config)).rejects.toMatchObject({ rejectionCode: 'UNSUPPORTED_FORMAT' });
+    }
+  });
+
   it('produces a canonical JPEG at the configured output size', async () => {
     const png = await makePng(1200, 1600, 4);
     const result = await processStudentPhoto(png, config);
@@ -91,6 +99,8 @@ describe('processStudentPhoto', () => {
     expect(meta.format).toBe('jpeg');
     expect(meta.width).toBe(config.outputWidth);
     expect(meta.height).toBe(config.outputHeight);
+    expect(meta.space).toBe('srgb');
+    expect(meta.exif).toBeUndefined();
   });
 
   it('covers the source image into the card canvas', async () => {

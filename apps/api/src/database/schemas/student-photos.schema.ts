@@ -7,6 +7,7 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  check,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { users } from './auth.schema';
@@ -58,6 +59,10 @@ export const studentPhotoUploads = pgTable(
     studentIdx: index('idx_student_photos_student').on(table.studentId, table.status),
     reviewQueueIdx: index('idx_student_photos_review_queue').on(table.status, table.createdAt),
     cleanupIdx: index('idx_student_photos_cleanup').on(table.status, table.updatedAt),
+    validStatus: check('student_photos_valid_status', sql`${table.status} IN ('AUTHORIZED', 'UPLOADED', 'VALIDATING', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'FAILED', 'EXPIRED', 'SUPERSEDED')`),
+    positiveVersion: check('student_photos_positive_version', sql`${table.version} > 0`),
+    positiveDeclaredSize: check('student_photos_positive_declared_size', sql`${table.declaredSize} > 0`),
+    canonicalForReview: check('student_photos_canonical_for_review', sql`${table.status} NOT IN ('PENDING_REVIEW', 'APPROVED', 'REJECTED', 'SUPERSEDED') OR (${table.canonicalKey} IS NOT NULL AND ${table.checksum} IS NOT NULL AND ${table.width} = 600 AND ${table.height} = 800)`),
   }),
 );
 

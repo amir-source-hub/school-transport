@@ -86,9 +86,9 @@ Tasks:
   - Configure exact production/staging/local CORS origins, least privilege, TLS, at-rest protection, private listing/objects, lifecycle, versioning decision, and optional antivirus.
 - [ ] Approve the Persian privacy notice, retention/deletion policy, and physical card crop area/template. **[BLOCKED — USER/LEGAL INPUT]**
 - [ ] Verify the five-minute presigned PUT/GET behavior, CORS, anonymous denial, key scoping, and actual Arvan compatibility against staging. **[BLOCKED — ARVAN CONFIGURATION]**
-- [ ] Add explicit processing resource/time limits and stronger polyglot/decompression-bomb tests; a passing Sharp decode alone is insufficient evidence for every adversarial format. **[NOT FINISHED]**
+- [ ] Add process-level memory/concurrency isolation and crafted polyglot/decompression-bomb fixtures. Sharp processing now enforces byte, pixel, axis, aspect-ratio, decode-failure, and ten-second libvips operation limits; renamed SVG/PDF, corrupt, empty, oversized, huge-axis, huge-pixel, and extreme-aspect cases are covered. **[NOT FINISHED]**
 - [ ] Verify cleanup covers abandoned raw objects, failed processing, rejected originals, superseded versions, archived students, deletion requests, and all object versions when bucket versioning is enabled. **[NOT FINISHED]**
-- [ ] Add a database status constraint and database-backed concurrency proof for the one-current-approved-photo invariant. Account-scoped uploads are explicitly allowed but cannot be approved until transactionally linked, the partial unique index enforces one approved photo, domain transitions are checked, optimistic review versions are required, and stale approval is rejected when a newer pending photo exists. **[NOT FINISHED]**
+- [ ] Add a PostgreSQL-backed concurrent-approval proof for the one-current-approved-photo invariant. Database status/version/declared-size/canonical-shape constraints, the partial unique index, domain transitions, optimistic review versions, account-link requirement, and stale-newer-upload rejection are implemented and covered structurally/unit-wise. **[NOT FINISHED]**
 
 ### Photo verification
 
@@ -99,7 +99,7 @@ Tasks:
 
 ## 5. Existing admin bulk SMS — remaining verification
 
-- [ ] Add controller-level ordinary-admin authorization and student-denial tests. **[NOT FINISHED]**
+Bulk-SMS controller metadata coverage proves every campaign operation requires authentication plus the ordinary active `ADMIN` role, so student tokens are denied by the shared role guard.
 - [ ] Reverify audience/consent changes at dispatch, phone deduplication, Tehran scheduling, immutable approval snapshot, bounded skip-locked batching, idempotency, pause/resume/cancel, partial failure, and cost limits after notification changes. **[NOT FINISHED]**
 - [ ] Configure an approved test number and perform one controlled live test before production verification. **[BLOCKED — USER INPUT/EXTERNAL SEND]**
 

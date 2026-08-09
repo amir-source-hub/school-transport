@@ -27,7 +27,11 @@ CREATE TABLE IF NOT EXISTS "student_photo_uploads" (
   "superseded_at" timestamp with time zone,
   "failed_at" timestamp with time zone,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
-  "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+  "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+  CONSTRAINT "student_photos_valid_status" CHECK ("status" IN ('AUTHORIZED', 'UPLOADED', 'VALIDATING', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'FAILED', 'EXPIRED', 'SUPERSEDED')),
+  CONSTRAINT "student_photos_positive_version" CHECK ("version" > 0),
+  CONSTRAINT "student_photos_positive_declared_size" CHECK ("declared_size" > 0),
+  CONSTRAINT "student_photos_canonical_for_review" CHECK ("status" NOT IN ('PENDING_REVIEW', 'APPROVED', 'REJECTED', 'SUPERSEDED') OR ("canonical_key" IS NOT NULL AND "checksum" IS NOT NULL AND "width" = 600 AND "height" = 800))
 );
 
 --> statement-breakpoint
