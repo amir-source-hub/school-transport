@@ -7,6 +7,9 @@ import {
   index,
   uniqueIndex,
   check,
+  text,
+  boolean,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { registrationPrices } from './pricing.schema';
@@ -140,5 +143,75 @@ export const paymentTransactions = pgTable(
         sql`${table.paymentMethod} = 'MANUAL_ADMIN_ENTRY' AND ${table.transactionStatus} = 'CREATED'`,
       ),
     positiveAmount: check('payment_transactions_amount_positive', sql`${table.amount} > 0`),
+  }),
+);
+
+export const offlinePaymentDestinations = pgTable(
+  'offline_payment_destinations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    version: integer('version').notNull(),
+    accountOwner: varchar('account_owner', { length: 150 }).notNull(),
+    bankName: varchar('bank_name', { length: 100 }).notNull(),
+    cardNumber: varchar('card_number', { length: 16 }).notNull(),
+    iban: varchar('iban', { length: 26 }),
+    accountNumber: varchar('account_number', { length: 40 }),
+    instructions: text('instructions').notNull(),
+    isActive: boolean('is_active').notNull().default(true),
+    createdByAdminId: uuid('created_by_admin_id').notNull().references(() => adminUsers.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    versionIdx: uniqueIndex('idx_offline_destinations_version').on(table.version),
+    oneActiveIdx: uniqueIndex('idx_offline_destinations_one_active')
+      .on(table.isActive)
+      .where(sql`${table.isActive} = true`),
+    validCard: check('offline_destinations_card_digits', sql`${table.cardNumber} ~ '^[0-9]{16}$'`),
+  }),
+);
+
+export const offlinePaymentSubmissions = pgTable(
+  'offline_payment_submissions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    paymentScheduleItemId: uuid('payment_schedule_item_id').notNull().references(() => paymentScheduleItems.id),
+    paymentPlanId: uuid('payment_plan_id').notNull().references(() => paymentPlans.id),
+    payerUserId: uuid('payer_user_id').notNull().references(() => users.id),
+    destinationId: uuid('destination_id').notNull().references(() => offlinePaymentDestinations.id),
+    destinationSnapshot: jsonb('destination_snapshot').notNull(),
+    submittedAmount: integer('submitted_amount').notNull(),
+    paidAt: timestamp('paid_at', { withTimezone: true }).notNull(),
+    payerName: varchar('payer_name', { length: 150 }),
+    sourceCardLastFour: varchar('source_card_last_four', { length: 4 }),
+    referenceNumber: varchar('reference_number', { length: 100 }).notNull(),
+    note: text('note'),
+    receiptObjectKey: varchar('receipt_object_key', { length: 255 }),
+    receiptMime: varchar('receipt_mime', { length: 60 }),
+    receiptSize: integer('receipt_size'),
+    receiptChecksum: varchar('receipt_checksum', { length: 64 }),
+    status: varchar('status', { length: 30 }).notNull().default('PENDING_REVIEW'),
+    version: integer('version').notNull().default(1),
+    idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),
+    reviewerAdminId: uuid('reviewer_admin_id').references(() => adminUsers.id),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    rejectionReason: text('rejection_reason'),
+    transactionId: uuid('transaction_id').references(() => paymentTransactions.id),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    ownerIdx: index('idx_offline_submissions_owner').on(table.payerUserId, table.createdAt),
+    reviewIdx: index('idx_offline_submissions_review').on(table.status, table.createdAt),
+    idempotencyIdx: uniqueIndex('idx_offline_submissions_idempotency').on(table.payerUserId, table.idempotencyKey),
+    onePendingIdx: uniqueIndex('idx_offline_submissions_one_pending')
+      .on(table.paymentScheduleItemId)
+      .where(sql`${table.status} = 'PENDING_REVIEW'`),
+    oneApprovedIdx: uniqueIndex('idx_offline_submissions_one_approved')
+      .on(table.paymentScheduleItemId)
+      .where(sql`${table.status} = 'APPROVED'`),
+    positiveAmount: check('offline_submissions_amount_positive', sql`${table.submittedAmount} > 0`),
+    validLastFour: check('offline_submissions_last_four', sql`${table.sourceCardLastFour} IS NULL OR ${table.sourceCardLastFour} ~ '^[0-9]{4}$'`),
   }),
 );

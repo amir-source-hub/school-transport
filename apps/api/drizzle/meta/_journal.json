@@ -197,6 +197,13 @@
       "when": 1786500000000,
       "tag": "0027_drop_admin_users_is_super_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1786586400000,
+      "tag": "0028_offline_payment_workflow",
+      "breakpoints": true
     }
   ]
 }

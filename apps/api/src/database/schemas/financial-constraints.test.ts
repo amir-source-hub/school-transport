@@ -1,7 +1,13 @@
 import { getTableConfig } from 'drizzle-orm/pg-core';
 import { describe, expect, it } from 'vitest';
 import { registrationPrices } from './pricing.schema';
-import { paymentPlans, paymentScheduleItems, paymentTransactions } from './payments.schema';
+import {
+  offlinePaymentDestinations,
+  offlinePaymentSubmissions,
+  paymentPlans,
+  paymentScheduleItems,
+  paymentTransactions,
+} from './payments.schema';
 import { serviceRegistrations } from './registrations.schema';
 
 function constraintNames(table: Parameters<typeof getTableConfig>[0]) {
@@ -74,5 +80,26 @@ describe('documented financial database constraints', () => {
     expect(constraintNames(serviceRegistrations).indexes).toContain(
       'idx_registrations_one_active_student_year',
     );
+  });
+
+  it('versions one active payment destination and prevents duplicate receipt effects', () => {
+    expect(constraintNames(offlinePaymentDestinations)).toMatchObject({
+      checks: expect.arrayContaining(['offline_destinations_card_digits']),
+      indexes: expect.arrayContaining([
+        'idx_offline_destinations_version',
+        'idx_offline_destinations_one_active',
+      ]),
+    });
+    expect(constraintNames(offlinePaymentSubmissions)).toMatchObject({
+      checks: expect.arrayContaining([
+        'offline_submissions_amount_positive',
+        'offline_submissions_last_four',
+      ]),
+      indexes: expect.arrayContaining([
+        'idx_offline_submissions_idempotency',
+        'idx_offline_submissions_one_pending',
+        'idx_offline_submissions_one_approved',
+      ]),
+    });
   });
 });

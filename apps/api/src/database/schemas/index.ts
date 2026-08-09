@@ -13,6 +13,7 @@ export { registrationPrices } from './pricing.schema';
 export { paymentPlans } from './payments.schema';
 export { paymentScheduleItems } from './payments.schema';
 export { paymentTransactions } from './payments.schema';
+export { offlinePaymentDestinations, offlinePaymentSubmissions } from './payments.schema';
 export { contracts } from './contracts.schema';
 export { notifications, notificationOutbox } from './notifications.schema';
 export { notificationConsents } from './notifications.schema';
