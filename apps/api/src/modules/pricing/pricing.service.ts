@@ -8,6 +8,8 @@ import { InAppNotificationService } from '../../infrastructure/notifications/in-
 import { createPaymentPlanInTransaction, PaymentPlanType } from '../../database/payment-plan';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 
+export const REGISTRATION_PRICE_VERSION_LIMIT = 100;
+
 @Injectable()
 export class PricingService {
   constructor(
@@ -21,7 +23,8 @@ export class PricingService {
       .select()
       .from(registrationPrices)
       .where(eq(registrationPrices.registrationId, registrationId))
-      .orderBy(registrationPrices.versionNumber);
+      .orderBy(registrationPrices.versionNumber, registrationPrices.id)
+      .limit(REGISTRATION_PRICE_VERSION_LIMIT);
   }
 
   async getByRegistrationForFamily(registrationId: string, userId: string) {
@@ -36,8 +39,13 @@ export class PricingService {
   }
 
   async getLatest(registrationId: string) {
-    const prices = await this.getByRegistration(registrationId);
-    return prices.length > 0 ? prices[prices.length - 1] : null;
+    const [price] = await this.db.db
+      .select()
+      .from(registrationPrices)
+      .where(eq(registrationPrices.registrationId, registrationId))
+      .orderBy(desc(registrationPrices.versionNumber), desc(registrationPrices.id))
+      .limit(1);
+    return price ?? null;
   }
 
   async create(

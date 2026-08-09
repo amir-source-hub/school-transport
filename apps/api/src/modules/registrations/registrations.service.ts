@@ -39,6 +39,7 @@ import { expandRegistrationStatusGroup } from './registration-status-groups';
 import type { DatabaseTransaction } from '../../database/payment-plan';
 
 export const ADMIN_ENROLLMENT_MATERIALIZATION_LIMIT = 5_000;
+export const FAMILY_ENROLLMENT_HISTORY_LIMIT = 100;
 
 type AdminEnrollmentAudit = { adminId: string; ipAddress?: string };
 
@@ -574,7 +575,9 @@ export class RegistrationsService {
     return this.db.db
       .select()
       .from(serviceRegistrations)
-      .where(inArray(serviceRegistrations.studentId, studentIds));
+      .where(inArray(serviceRegistrations.studentId, studentIds))
+      .orderBy(desc(serviceRegistrations.createdAt), desc(serviceRegistrations.id))
+      .limit(FAMILY_ENROLLMENT_HISTORY_LIMIT);
   }
 
   async getAll() {

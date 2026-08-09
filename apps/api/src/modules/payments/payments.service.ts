@@ -34,6 +34,8 @@ const onlinePaymentResult = {
 };
 
 export const ADMIN_PAYMENT_PLAN_LIST_LIMIT = 1_000;
+export const FAMILY_PAYMENT_PLAN_LIST_LIMIT = 100;
+export const PAYMENT_TRANSACTION_HISTORY_LIMIT = 500;
 
 @Injectable()
 export class PaymentsService {
@@ -856,7 +858,7 @@ export class PaymentsService {
       .select()
       .from(offlinePaymentSubmissions)
       .where(eq(offlinePaymentSubmissions.payerUserId, userId))
-      .orderBy(desc(offlinePaymentSubmissions.createdAt))
+      .orderBy(desc(offlinePaymentSubmissions.createdAt), desc(offlinePaymentSubmissions.id))
       .limit(100);
   }
 
@@ -942,7 +944,9 @@ export class PaymentsService {
           eq(paymentTransactions.userId, userId),
           eq(paymentTransactions.paymentMethod, 'MANUAL_ADMIN_ENTRY'),
         ),
-      );
+      )
+      .orderBy(desc(paymentTransactions.createdAt), desc(paymentTransactions.id))
+      .limit(PAYMENT_TRANSACTION_HISTORY_LIMIT);
   }
 
   async getOverview(userId: string) {
@@ -960,7 +964,9 @@ export class PaymentsService {
         eq(serviceRegistrations.id, registrationPrices.registrationId),
       )
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
-      .where(eq(students.userId, userId));
+      .where(eq(students.userId, userId))
+      .orderBy(desc(paymentPlans.createdAt), desc(paymentPlans.id))
+      .limit(FAMILY_PAYMENT_PLAN_LIST_LIMIT);
 
     return Promise.all(
       plans.map(async ({ plan, ...student }) => {
@@ -973,7 +979,9 @@ export class PaymentsService {
           this.db.db
             .select()
             .from(paymentTransactions)
-            .where(eq(paymentTransactions.paymentPlanId, plan.id)),
+            .where(eq(paymentTransactions.paymentPlanId, plan.id))
+            .orderBy(desc(paymentTransactions.createdAt), desc(paymentTransactions.id))
+            .limit(PAYMENT_TRANSACTION_HISTORY_LIMIT),
         ]);
         return { plan, ...student, items, transactions };
       }),

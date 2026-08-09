@@ -32,6 +32,8 @@ export interface AdminChallengeResult {
   developmentCode?: string;
 }
 
+export const ADMIN_IDENTITY_LIST_LIMIT = 500;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -60,7 +62,8 @@ export class AuthService {
         createdAt: adminUsers.createdAt,
       })
       .from(adminUsers)
-      .orderBy(desc(adminUsers.createdAt));
+      .orderBy(desc(adminUsers.createdAt), desc(adminUsers.id))
+      .limit(ADMIN_IDENTITY_LIST_LIMIT);
   }
 
   async getAdmin(adminId: string) {

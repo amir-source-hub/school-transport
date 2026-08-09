@@ -32,6 +32,7 @@ import { buildAdminStudentArchiveWhere, buildAdminStudentOrderBy } from './stude
 
 export const MAX_STUDENTS_PER_GUARDIAN = 5;
 export const STUDENT_LIMIT_REQUEST_LIST_LIMIT = 500;
+export const FAMILY_LIMIT_REQUEST_HISTORY_LIMIT = 100;
 
 @Injectable()
 export class StudentsService {
@@ -357,7 +358,8 @@ export class StudentsService {
       .select()
       .from(studentLimitRequests)
       .where(eq(studentLimitRequests.userId, userId))
-      .orderBy(studentLimitRequests.createdAt);
+      .orderBy(desc(studentLimitRequests.createdAt), desc(studentLimitRequests.id))
+      .limit(FAMILY_LIMIT_REQUEST_HISTORY_LIMIT);
   }
 
   async createLimitRequest(userId: string, reason: string) {
