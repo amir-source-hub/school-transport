@@ -68,12 +68,8 @@ Tasks:
 
 ## 3. Feedback verification gaps
 
-- [ ] Add IDOR tests proving one student account cannot list, associate, or infer another account's feedback. **[NOT FINISHED]**
-- [ ] Test logged-out/student denial and ordinary-admin access for every admin feedback operation. **[NOT FINISHED]**
-- [ ] Test pagination/filter bounds, stable ordering, empty pages, and concurrent inserts. **[NOT FINISHED]**
-- [ ] Test optimistic concurrency: simultaneous response/close requests with one version allow exactly one state transition. **[NOT FINISHED]**
-- [ ] Test exactly-once feedback-response outbox creation/delivery across retries and concurrent attempts. **[NOT FINISHED]**
-- [ ] Verify feedback content never enters logs, traces, analytics, audits, or error payloads. **[NOT FINISHED]**
+- [ ] Add database-backed IDOR verification proving one student account cannot list or infer another account's feedback. Cross-account student association now returns the same not-found result without inserting feedback. **[NOT FINISHED]**
+- [ ] Add database-backed filter, empty-page, and concurrent-insert pagination tests. Service ordering is now stable by `created_at DESC, id DESC`, and DTO bounds are enforced. **[NOT FINISHED]**
 - [ ] Add keyboard, focus, validation announcement, error recovery, duplicate-submit, long Persian/RTL, mobile/tablet, and screen-reader tests. **[NOT FINISHED]**
 
 ## 4. Student card photo gaps

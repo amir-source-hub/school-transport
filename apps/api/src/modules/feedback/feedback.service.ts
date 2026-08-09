@@ -45,7 +45,7 @@ export class FeedbackService {
       .select()
       .from(feedbackSubmissions)
       .where(where)
-      .orderBy(desc(feedbackSubmissions.createdAt))
+      .orderBy(desc(feedbackSubmissions.createdAt), desc(feedbackSubmissions.id))
       .limit(query.pageSize)
       .offset((query.page - 1) * query.pageSize);
     const [{ value }] = await this.db.db
@@ -63,7 +63,7 @@ export class FeedbackService {
       .select()
       .from(feedbackSubmissions)
       .where(where)
-      .orderBy(desc(feedbackSubmissions.createdAt))
+      .orderBy(desc(feedbackSubmissions.createdAt), desc(feedbackSubmissions.id))
       .limit(query.pageSize)
       .offset((query.page - 1) * query.pageSize);
     const [{ value }] = await this.db.db
