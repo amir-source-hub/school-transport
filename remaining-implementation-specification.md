@@ -98,7 +98,7 @@ Tasks:
 
 Bulk-SMS controller metadata coverage proves every campaign operation requires authentication plus the ordinary active `ADMIN` role, so student tokens are denied by the shared role guard.
 
-- [ ] Reverify audience/consent changes at dispatch, phone deduplication, Tehran scheduling, immutable approval snapshot, bounded skip-locked batching, idempotency, pause/resume/cancel, partial failure, and cost limits after notification changes. **[NOT FINISHED]**
+- Broadcast regression coverage now reverifies audience/consent/account/phone eligibility at dispatch, normalized-phone deduplication, explicit Tehran-local-to-ISO scheduling, immutable approval snapshot and recalculated estimate, bounded skip-locked recipient claims with atomic attempt increments, stable provider idempotency keys, pause/resume/cancel transitions, transient retry versus permanent failure, dual approval, segment/recipient/spend caps, and privileged audit actions after the notification changes.
 - [ ] Configure an approved test number and perform one controlled live test before production verification. **[BLOCKED — USER INPUT/EXTERNAL SEND]**
 
 ## 6. Offline payments and temporary online-payment shutdown

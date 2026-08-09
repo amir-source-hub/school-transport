@@ -174,6 +174,38 @@ describe('BroadcastsService workflow safeguards', () => {
     });
   });
 
+  it('persists an immutable approval snapshot and recalculated audience estimate', async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const updateChain = trackedUpdateChain(updates, [{ ...campaign, status: 'SCHEDULED' }]);
+    const campaignSelect = selectLimitChain([campaign]);
+    const audienceSelect = database([]).db.select();
+    const select = vi.fn().mockReturnValueOnce(campaignSelect).mockReturnValueOnce(audienceSelect);
+    const audit = { record: vi.fn(), recordInTransaction: vi.fn() };
+    const db = {
+      db: {
+        transaction: vi.fn(async (callback: (txn: unknown) => Promise<unknown>) =>
+          callback({ select, update: vi.fn(() => updateChain), insert: vi.fn() }),
+        ),
+      },
+    } as unknown as DatabaseService;
+    const service = new BroadcastsService(db, config(), { send: vi.fn() } as never, audit as never);
+
+    await expect(service.approve(campaign.id, 'admin-2')).resolves.toMatchObject({
+      status: 'SCHEDULED',
+    });
+    expect(updates).toContainEqual(
+      expect.objectContaining({
+        status: 'SCHEDULED',
+        estimatedRecipients: 0,
+        approvedSnapshot: expect.objectContaining({
+          smsContent: campaign.smsContent,
+          scheduledAt: campaign.scheduledAt.toISOString(),
+          expiresAt: campaign.expiresAt.toISOString(),
+        }),
+      }),
+    );
+  });
+
   it('rechecks consent and account/phone eligibility before sending', async () => {
     const updates: Array<Record<string, unknown>> = [];
     const updateChain = trackedUpdateChain(updates);
@@ -231,6 +263,64 @@ describe('BroadcastsService workflow safeguards', () => {
     },
   );
 
+  it('claims recipients with a skip-locked row lock and increments attempts atomically', async () => {
+    const recipient = { id: 'recipient-1', attemptCount: 2 };
+    const selectChain = selectLimitChain([recipient]);
+    const updates: Array<Record<string, unknown>> = [];
+    const updateChain = trackedUpdateChain(updates, [{ ...recipient, attemptCount: 3 }]);
+    const transaction = vi.fn(async (callback: (txn: unknown) => Promise<unknown>) =>
+      callback({ select: vi.fn(() => selectChain), update: vi.fn(() => updateChain) }),
+    );
+    const service = new BroadcastsService(
+      { db: { transaction } } as unknown as DatabaseService,
+      config(),
+      { send: vi.fn() } as never,
+      { record: vi.fn(), recordInTransaction: vi.fn() } as never,
+    );
+
+    await expect(
+      (
+        service as unknown as {
+          claimRecipient: (broadcastId: string) => Promise<unknown>;
+        }
+      ).claimRecipient(campaign.id),
+    ).resolves.toMatchObject({ attemptCount: 3 });
+    expect(selectChain.for).toHaveBeenCalledWith('update', { skipLocked: true });
+    expect(updates).toContainEqual(
+      expect.objectContaining({ status: 'PROCESSING', attemptCount: 3 }),
+    );
+  });
+
+  it('uses a stable provider idempotency key and marks accepted delivery', async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const send = vi.fn(async () => ({ providerMessageId: 'provider-1' }));
+    const service = new BroadcastsService(
+      {
+        db: {
+          select: vi.fn(() => selectLimitChain([{ id: 'user-1' }])),
+          update: vi.fn(() => trackedUpdateChain(updates)),
+        },
+      } as unknown as DatabaseService,
+      config(),
+      { send } as never,
+      { record: vi.fn(), recordInTransaction: vi.fn() } as never,
+    );
+
+    await (
+      service as unknown as { deliver: (campaign: unknown, recipient: unknown) => Promise<void> }
+    ).deliver(
+      { ...campaign, status: 'PROCESSING' },
+      { id: 'recipient-1', userId: 'user-1', normalizedPhone: '09120000000', attemptCount: 1 },
+    );
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: `broadcast:${campaign.id}:user-1` }),
+    );
+    expect(updates).toContainEqual(
+      expect.objectContaining({ status: 'ACCEPTED', providerMessageId: 'provider-1' }),
+    );
+  });
+
   it('pauses an active campaign and records the privileged action', async () => {
     const updates: Array<Record<string, unknown>> = [];
     const updateChain = trackedUpdateChain(updates, [{ ...campaign, status: 'PAUSED' }]);
@@ -249,5 +339,23 @@ describe('BroadcastsService workflow safeguards', () => {
     expect(audit.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'SMS_BROADCAST_PAUSED' }),
     );
+  });
+
+  it.each([
+    ['resume', 'SCHEDULED', 'SMS_BROADCAST_RESUMED'],
+    ['cancel', 'CANCELLED', 'SMS_BROADCAST_CANCELLED'],
+  ] as const)('%s transitions state and audits the action', async (method, status, action) => {
+    const updates: Array<Record<string, unknown>> = [];
+    const updateChain = trackedUpdateChain(updates, [{ ...campaign, status }]);
+    const audit = { record: vi.fn(), recordInTransaction: vi.fn() };
+    const service = new BroadcastsService(
+      { db: { update: vi.fn(() => updateChain) } } as unknown as DatabaseService,
+      config(),
+      { send: vi.fn() } as never,
+      audit as never,
+    );
+
+    await expect(service[method](campaign.id, 'admin-2')).resolves.toMatchObject({ status });
+    expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ action }));
   });
 });
