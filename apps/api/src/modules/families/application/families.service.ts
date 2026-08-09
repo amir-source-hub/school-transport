@@ -8,7 +8,7 @@ import {
   students,
   schools,
 } from '../../../database/schemas';
-import { eq, and, ne } from 'drizzle-orm';
+import { eq, and, desc, inArray, ne } from 'drizzle-orm';
 import { NotFoundError, ConflictError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { normalizeIranianDigits } from '../../../common/iranian-national-id';
@@ -21,6 +21,8 @@ import {
 } from '../domain/family.types';
 import { parseEditableAddressFields } from '../domain/address-update';
 import { InAppNotificationService } from '../../../infrastructure/notifications/in-app-notification.service';
+
+export const ADMIN_FAMILY_LIST_LIMIT = 500;
 
 @Injectable()
 export class FamiliesService {
@@ -406,30 +408,46 @@ export class FamiliesService {
   }
 
   async getAllForAdmin() {
-    const [userRows, parentRows, studentRows] = await Promise.all([
-      this.db.db.select().from(users),
-      this.db.db.select().from(parents),
-      this.db.db.select().from(students),
+    const userRows = await this.db.db
+      .select()
+      .from(users)
+      .orderBy(desc(users.createdAt), desc(users.id))
+      .limit(ADMIN_FAMILY_LIST_LIMIT);
+    if (userRows.length === 0) return [];
+    const userIds = userRows.map((user) => user.id);
+    const [parentRows, studentRows] = await Promise.all([
+      this.db.db.select().from(parents).where(inArray(parents.userId, userIds)),
+      this.db.db.select().from(students).where(inArray(students.userId, userIds)),
     ]);
-    return userRows.map((user) => {
-      const familyParents = parentRows.filter((parent) => parent.userId === user.id);
-      const primary = familyParents.find((parent) => parent.isPrimaryContact) ?? familyParents[0];
-      return {
-        id: user.id,
-        username: primary?.lastName ?? user.username,
-        primaryPhone: primary?.phoneNumber ?? user.phoneNumber ?? null,
-        studentCount: studentRows.filter(
-          (student) => student.userId === user.id && student.isActive,
-        ).length,
-        status: user.accountStatus === 'ACTIVE' ? 'فعال' : 'غیرفعال',
-        createdAt: user.createdAt.toISOString(),
-      };
-    });
+    return userRows.map((user) => this.toAdminFamilySummary(user, parentRows, studentRows));
+  }
+
+  private toAdminFamilySummary(
+    user: typeof users.$inferSelect,
+    parentRows: (typeof parents.$inferSelect)[],
+    studentRows: (typeof students.$inferSelect)[],
+  ) {
+    const familyParents = parentRows.filter((parent) => parent.userId === user.id);
+    const primary = familyParents.find((parent) => parent.isPrimaryContact) ?? familyParents[0];
+    return {
+      id: user.id,
+      username: primary?.lastName ?? user.username,
+      primaryPhone: primary?.phoneNumber ?? user.phoneNumber ?? null,
+      studentCount: studentRows.filter((student) => student.userId === user.id && student.isActive)
+        .length,
+      status: user.accountStatus === 'ACTIVE' ? 'فعال' : 'غیرفعال',
+      createdAt: user.createdAt.toISOString(),
+    };
   }
 
   async getForAdmin(userId: string) {
-    const family = (await this.getAllForAdmin()).find(({ id }) => id === userId);
-    if (!family) throw new NotFoundError('Family', userId);
+    const [user] = await this.db.db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!user) throw new NotFoundError('Family', userId);
+    const [summaryParents, summaryStudents] = await Promise.all([
+      this.db.db.select().from(parents).where(eq(parents.userId, userId)),
+      this.db.db.select().from(students).where(eq(students.userId, userId)),
+    ]);
+    const family = this.toAdminFamilySummary(user, summaryParents, summaryStudents);
     const studentRows = await this.db.db
       .select({
         id: students.id,
