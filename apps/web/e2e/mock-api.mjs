@@ -6,7 +6,6 @@ const emptyCollections = new Set([
   '/api/v1/enrollments',
   '/api/v1/contracts',
   '/api/v1/payments',
-  '/api/v1/notifications',
   '/api/v1/admin/enrollments',
   '/api/v1/admin/contracts',
   '/api/v1/admin/payments',
@@ -322,6 +321,14 @@ const server = createServer((request, response) => {
         createdAt: '2026-08-09T10:00:00.000Z',
         updatedAt: '2026-08-09T10:00:01.000Z',
       },
+    });
+  }
+  if (url.pathname === '/api/v1/notifications') {
+    return send(response, 200, {
+      success: true,
+      data: [],
+      pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 1 },
+      meta: { snapshotAt: '2026-08-09T12:00:00.000Z' },
     });
   }
   if (emptyCollections.has(url.pathname)) {
