@@ -2,7 +2,9 @@ import 'reflect-metadata';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Pool } from 'pg';
 import IORedis from 'ioredis';
-import { Queue } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
+import { fork } from 'node:child_process';
+import { resolve } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { randomUUID } from 'node:crypto';
@@ -73,6 +75,73 @@ describe.skipIf(!enabled)('real PostgreSQL/Redis integration', () => {
       await second.close();
     }
   });
+
+  it('recovers an active BullMQ job after its worker process is terminated and restarted', async () => {
+    const queueName = `ci-process-restart-${process.pid}-${Date.now()}`;
+    const queue = new Queue(queueName, { connection: redis });
+    await queue.add('outbox-probe', { eventId: 'restart-event' }, { jobId: 'restart-job' });
+    const child = fork(
+      resolve(process.cwd(), 'src/integration/fixtures/bullmq-crash-worker.mjs'),
+      [queueName, redisUrl!],
+      { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] },
+    );
+    const replacementRedis = new IORedis(redisUrl!, { maxRetriesPerRequest: null });
+    let replacement: Worker | undefined;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Crash worker did not claim job')),
+          5_000,
+        );
+        child.once('message', (message) => {
+          if (message !== 'active') return;
+          clearTimeout(timeout);
+          resolve();
+        });
+        child.once('error', reject);
+        child.once('exit', (code) => {
+          clearTimeout(timeout);
+          reject(new Error(`Crash worker exited before claiming the job (${code ?? 'signal'})`));
+        });
+      });
+      const exited = new Promise<void>((resolveExit) => child.once('exit', () => resolveExit()));
+      child.kill('SIGKILL');
+      await exited;
+
+      replacement = new Worker(
+        queueName,
+        async (job) => ({ recoveredEventId: job.data.eventId as string }),
+        {
+          connection: replacementRedis,
+          lockDuration: 1_000,
+          stalledInterval: 500,
+          maxStalledCount: 1,
+        },
+      );
+      const result = await new Promise<{ recoveredEventId: string }>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Restarted worker did not recover job')),
+          10_000,
+        );
+        replacement!.once('completed', (_job, value) => {
+          clearTimeout(timeout);
+          resolve(value as { recoveredEventId: string });
+        });
+        replacement!.once('failed', (_job, error) => {
+          clearTimeout(timeout);
+          reject(error);
+        });
+      });
+      expect(result).toEqual({ recoveredEventId: 'restart-event' });
+      expect((await queue.getJob('restart-job'))?.finishedOn).toEqual(expect.any(Number));
+    } finally {
+      if (!child.killed) child.kill('SIGKILL');
+      await replacement?.close();
+      await replacementRedis.quit();
+      await queue.obliterate({ force: true });
+      await queue.close();
+    }
+  }, 20_000);
 
   it('boots the real Nest module graph and serves the liveness HTTP contract', async () => {
     const app = await NestFactory.create<NestFastifyApplication>(
