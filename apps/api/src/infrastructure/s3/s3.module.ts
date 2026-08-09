@@ -7,13 +7,20 @@ import { UnconfiguredS3Storage } from './unconfigured.s3-storage';
 @Global()
 @Module({
   providers: [
-    S3Client,
     UnconfiguredS3Storage,
     {
       provide: S3_CLIENT,
-      inject: [ConfigService, S3Client, UnconfiguredS3Storage],
-      useFactory: (config: ConfigService, client: S3Client, unconfigured: UnconfiguredS3Storage) =>
-        config.studentPhotosConfigured ? client : unconfigured,
+      inject: [ConfigService, UnconfiguredS3Storage],
+      useFactory: (config: ConfigService, unconfigured: UnconfiguredS3Storage) =>
+        config.studentPhotosConfigured
+          ? new S3Client({
+              endpoint: config.arvanS3Endpoint!,
+              region: config.arvanS3Region!,
+              bucket: config.arvanS3Bucket!,
+              accessKey: config.arvanS3AccessKey!,
+              secretKey: config.arvanS3SecretKey!,
+            })
+          : unconfigured,
     },
   ],
   exports: [S3_CLIENT],

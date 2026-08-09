@@ -13,7 +13,8 @@ import { registerSecurityHeaders } from './common/security-headers';
 import { AppLogger } from './common/logger';
 import fastifyCookie = require('@fastify/cookie');
 import { RequestContext } from './common/request-context';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
+import { createOpenApiDocument } from './openapi';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -47,14 +48,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   if (configService.apiDocsEnabled) {
-    const openApiConfig = new DocumentBuilder()
-      .setTitle('School Transport API')
-      .setDescription('Canonical REST contract for the school transport MVP.')
-      .setVersion('1.0.0')
-      .addBearerAuth()
-      .addCookieAuth('refresh_token')
-      .build();
-    const openApiDocument = SwaggerModule.createDocument(app, openApiConfig);
+    const openApiDocument = createOpenApiDocument(app);
     SwaggerModule.setup('api/docs', app, openApiDocument, {
       jsonDocumentUrl: 'api/v1/openapi.json',
     });

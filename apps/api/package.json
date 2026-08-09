@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "contract:generate": "nest build && node dist/openapi-contract.cli.js",
+    "contract:check": "node dist/openapi-contract.cli.js --check",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:runtime": "node --env-file=.env --import tsx src/database/migrate.ts",
