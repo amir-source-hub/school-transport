@@ -16,8 +16,8 @@ import {
 import { students } from '../../database/schemas';
 import { familyAddresses, parents, schools } from '../../database/schemas';
 import { getTableColumns, sql } from 'drizzle-orm';
-import { eq, and, inArray, isNull, notInArray } from 'drizzle-orm';
-import { ConflictError, NotFoundError } from '../../common/errors';
+import { eq, and, desc, inArray, isNull, notInArray } from 'drizzle-orm';
+import { ConflictError, NotFoundError, ValidationError } from '../../common/errors';
 import { withParentNationalIdConflict } from '../../common/parent-national-id-conflict';
 import { assertStudentCapacity } from '../../database/student-capacity';
 import { generateContractNumber, generateId } from '../../common/utils';
@@ -37,6 +37,8 @@ import { Inject } from '@nestjs/common';
 import type { AdminEnrollmentListQueryDto } from './registration.dto';
 import { expandRegistrationStatusGroup } from './registration-status-groups';
 import type { DatabaseTransaction } from '../../database/payment-plan';
+
+export const ADMIN_ENROLLMENT_MATERIALIZATION_LIMIT = 5_000;
 
 type AdminEnrollmentAudit = { adminId: string; ipAddress?: string };
 
@@ -639,8 +641,21 @@ export class RegistrationsService {
       })
       .from(serviceRegistrations)
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
-      .innerJoin(schools, eq(schools.id, students.schoolId));
-    const parentRows = await this.db.db.select().from(parents);
+      .innerJoin(schools, eq(schools.id, students.schoolId))
+      .orderBy(desc(serviceRegistrations.createdAt), desc(serviceRegistrations.id))
+      .limit(ADMIN_ENROLLMENT_MATERIALIZATION_LIMIT + 1);
+    if (rows.length > ADMIN_ENROLLMENT_MATERIALIZATION_LIMIT) {
+      throw new ValidationError(
+        'فهرست ثبت‌نام‌ها برای پردازش هم‌زمان بیش از حد بزرگ است؛ بازه یا فیلتر محدودتری لازم است.',
+      );
+    }
+    if (rows.length === 0) return [];
+    const familyIds = [...new Set(rows.map((row) => row.familyId))];
+    const registrationIds = rows.map((row) => row.id);
+    const parentRows = await this.db.db
+      .select()
+      .from(parents)
+      .where(inArray(parents.userId, familyIds));
     const paymentRows = await this.db.db
       .select({
         registrationId: registrationPrices.registrationId,
@@ -650,7 +665,12 @@ export class RegistrationsService {
       .from(registrationPrices)
       .innerJoin(paymentPlans, eq(paymentPlans.registrationPriceId, registrationPrices.id))
       .innerJoin(paymentScheduleItems, eq(paymentScheduleItems.paymentPlanId, paymentPlans.id))
-      .where(eq(registrationPrices.priceStatus, 'ACCEPTED'));
+      .where(
+        and(
+          eq(registrationPrices.priceStatus, 'ACCEPTED'),
+          inArray(registrationPrices.registrationId, registrationIds),
+        ),
+      );
 
     return rows.map((registration) => {
       const parent =
