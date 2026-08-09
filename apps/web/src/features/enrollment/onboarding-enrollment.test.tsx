@@ -10,11 +10,16 @@ const enrollmentApi = vi.hoisted(() => ({
   cancelEnrollment: vi.fn(),
   acceptEnrollmentPrice: vi.fn(),
 }));
+const paymentsApi = vi.hoisted(() => ({
+  getOfflineDestination: vi.fn(),
+  submitOfflinePayment: vi.fn(),
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: navigation.replace, refresh: navigation.refresh }),
 }));
 vi.mock('./enrollments-api', () => enrollmentApi);
+vi.mock('@/features/finance/payments-api', () => paymentsApi);
 vi.mock('leaflet', () => ({}));
 
 const schools = [
@@ -100,6 +105,16 @@ describe('onboarding guided enrollment funnel', () => {
       scheduleItemId: 'sch-1',
       prepaymentAmount: 4_000_000,
       contractText: 'متن قرارداد سرویس مدرسه.\nبندهای کافی برای اسکرول.'.repeat(5),
+    });
+    paymentsApi.getOfflineDestination.mockResolvedValue({
+      id: 'destination-1',
+      version: 1,
+      accountOwner: 'شرکت سرویس مدرسه',
+      bankName: 'بانک نمونه',
+      cardNumber: '6037991234567890',
+      iban: null,
+      accountNumber: null,
+      instructions: 'پس از واریز، رسید را ثبت کنید.',
     });
   });
 

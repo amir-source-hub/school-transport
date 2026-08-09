@@ -1,6 +1,6 @@
 import { ArgumentMetadata, BadRequestException, ValidationPipe } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
-import { ConfigureInstallmentsDto, IdempotencyKeyPipe, OfflinePaymentDto } from './payment-request.dto';
+import { ConfigureInstallmentsDto, ConfigureOfflineDestinationDto, IdempotencyKeyPipe, OfflinePaymentDto, RejectPaymentDto } from './payment-request.dto';
 import { AcceptPriceDto, CreatePriceDto } from '../pricing/pricing.dto';
 import { CreateSchoolDto, UpdateSchoolDto } from '../schools/school.dto';
 
@@ -29,9 +29,18 @@ describe('scoped transport contracts', () => {
   });
 
   it('validates payment references and bounded optional text', async () => {
-    const dto = await body({ paidAt: '2026-09-23T00:00:00.000Z', referenceNumber: '۱۲۳۴۵' }, OfflinePaymentDto);
+    const dto = await body({ paidAt: '2026-09-23T00:00:00.000Z', referenceNumber: '۱۲۳۴۵', sourceCardLastFour: '۱۲۳۴' }, OfflinePaymentDto);
     expect(dto.referenceNumber).toBe('12345');
+    expect(dto.sourceCardLastFour).toBe('1234');
     await expect(body({ paidAt: 'yesterday', referenceNumber: '' }, OfflinePaymentDto)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(body({ paidAt: '2026-09-23T00:00:00.000Z', referenceNumber: 'ok', sourceCardLastFour: '12345' }, OfflinePaymentDto)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('requires confirmed bounded destination updates and versioned rejection reasons', async () => {
+    await expect(body({ accountOwner: 'شرکت', bankName: 'بانک', cardNumber: '۶۰۳۷۹۹۱۲۳۴۵۶۷۸۹۰', instructions: 'راهنما', confirmed: true }, ConfigureOfflineDestinationDto)).resolves.toMatchObject({ cardNumber: '6037991234567890' });
+    await expect(body({ accountOwner: 'شرکت', bankName: 'بانک', cardNumber: '123', instructions: 'راهنما', confirmed: false }, ConfigureOfflineDestinationDto)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(body({ reason: 'نیازمند رسید خواناتر', version: 1 }, RejectPaymentDto)).resolves.toBeTruthy();
+    await expect(body({ reason: '', version: 0 }, RejectPaymentDto)).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('requires a bounded idempotency header', () => {

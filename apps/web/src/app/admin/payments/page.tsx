@@ -1,7 +1,8 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { getAdminPayments, getPaymentTone } from '@/features/admin-payments/admin-payments-api';
+import { getAdminOfflineDestination, getAdminPayments, getPaymentTone } from '@/features/admin-payments/admin-payments-api';
+import { OfflineDestinationForm } from '@/features/admin-payments/offline-destination-form';
 import {
   ApprovePaymentDialog,
   ConfigureInstallmentsDialog,
@@ -13,7 +14,7 @@ export const metadata = { title: 'پرداخت‌ها' };
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPaymentsPage() {
-  const { payments } = await getAdminPayments();
+  const [{ payments }, destination] = await Promise.all([getAdminPayments(), getAdminOfflineDestination()]);
   const allItems = payments.flatMap((payment) => [payment.prepayment, ...payment.installments]);
   const awaitingReview = allItems.filter(
     (item) => item.transaction?.status === 'در انتظار بررسی',
@@ -43,6 +44,11 @@ export default async function AdminPaymentsPage() {
           <p className="mt-2 text-2xl font-black text-success">{approved}</p>
         </Card>
       </section>
+      <Card>
+        <h2 className="mb-2 text-lg font-black">مقصد پرداخت آفلاین</h2>
+        <p className="mb-5 text-sm text-muted">هر تغییر یک نسخه جدید ایجاد می‌کند و رسیدهای قبلی به نسخه مقصد زمان ارسال وابسته می‌مانند.</p>
+        <OfflineDestinationForm current={destination} />
+      </Card>
       <div className="grid gap-4">
         {payments.map((payment) => {
           const prepaymentStatus = payment.prepayment.transaction?.status ?? 'پرداخت نشده';
@@ -96,8 +102,8 @@ export default async function AdminPaymentsPage() {
                 </dl>
                 {payment.prepayment.transaction?.status === 'در انتظار بررسی' && (
                   <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
-                    <ApprovePaymentDialog paymentId={payment.prepayment.transaction.id} />
-                    <RejectPaymentDialog paymentId={payment.prepayment.transaction.id} />
+                    <ApprovePaymentDialog paymentId={payment.prepayment.transaction.id} version={payment.prepayment.transaction.version} />
+                    <RejectPaymentDialog paymentId={payment.prepayment.transaction.id} version={payment.prepayment.transaction.version} />
                   </div>
                 )}
                 {canConfigure && (
@@ -142,8 +148,8 @@ export default async function AdminPaymentsPage() {
                           )}
                           {installment.transaction?.status === 'در انتظار بررسی' && (
                             <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
-                              <ApprovePaymentDialog paymentId={installment.transaction.id} />
-                              <RejectPaymentDialog paymentId={installment.transaction.id} />
+                              <ApprovePaymentDialog paymentId={installment.transaction.id} version={installment.transaction.version} />
+                              <RejectPaymentDialog paymentId={installment.transaction.id} version={installment.transaction.version} />
                             </div>
                           )}
                         </div>

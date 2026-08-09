@@ -84,6 +84,11 @@ describe('online payment idempotency', () => {
       payments.startOnlinePayment('schedule-1', 'user-1', 'request-123'),
     ).rejects.toMatchObject({ code: 'PAYMENT_GATEWAY_UNAVAILABLE', status: 503 });
     expect(touchedDatabase).toBe(false);
+
+    await expect(
+      payments.verifyOnlinePayment('transaction-1', 'user-1', 'authority'),
+    ).rejects.toMatchObject({ code: 'PAYMENT_GATEWAY_UNAVAILABLE', status: 503 });
+    expect(touchedDatabase).toBe(false);
   });
 
   it.each(['', '   ', 'short', 'bad key!', `a${'x'.repeat(128)}`])(

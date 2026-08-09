@@ -15,7 +15,7 @@ import {
   rejectPayment,
 } from '@/features/admin-payments/admin-payments-api';
 
-export function ApprovePaymentDialog({ paymentId }: { paymentId: string }) {
+export function ApprovePaymentDialog({ paymentId, version }: { paymentId: string; version: number }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export function ApprovePaymentDialog({ paymentId }: { paymentId: string }) {
     setLoading(true);
     setError(null);
     try {
-      await approvePayment(paymentId);
+      await approvePayment(paymentId, version);
       setOpen(false);
       router.refresh();
     } catch (e) {
@@ -180,7 +180,7 @@ export function ConfigureInstallmentsDialog({
   );
 }
 
-export function RejectPaymentDialog({ paymentId }: { paymentId: string }) {
+export function RejectPaymentDialog({ paymentId, version }: { paymentId: string; version: number }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
@@ -192,7 +192,7 @@ export function RejectPaymentDialog({ paymentId }: { paymentId: string }) {
     setLoading(true);
     setError(null);
     try {
-      await rejectPayment(paymentId);
+      await rejectPayment(paymentId, version, reason.trim());
       setOpen(false);
       setReason('');
       router.refresh();

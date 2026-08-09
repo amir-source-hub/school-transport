@@ -111,12 +111,7 @@ Online payment is now fail-closed until a real gateway is integrated: the only a
 
 ### Payment destination shown to students
 
-- [ ] Add centrally managed offline-payment destination settings. **[NOT FINISHED]**
-  - Minimum fields: account/card owner, bank name, card number, optional IBAN/account number, Persian instructions, active/versioned status, and update timestamp.
-  - Never hard-code destination details separately in multiple React components.
-  - Only active approved destination data may be returned to student accounts.
-  - Mask destination details in logs/audits where appropriate, but display the complete approved payment destination to the authenticated payer.
-  - Admin changes require confirmation, audit, validation, and optimistic concurrency; previous settings must remain attributable to receipts submitted against them.
+Central offline-payment destination settings are implemented with immutable versions, one active version, validation, explicit admin confirmation, optimistic concurrency, masked audit evidence, authenticated payer display, and an immutable destination snapshot on each submission.
 
 ### Student offline-payment submission
 
@@ -166,7 +161,7 @@ Online payment is now fail-closed until a real gateway is integrated: the only a
 
 - [ ] Test prepayment and installment ownership/IDOR, invalid amount/date/reference, duplicate pending submission, replacement, receipt tampering, private access, and signed URL expiry. **[NOT FINISHED]**
 - [ ] Test approval/rejection authorization, optimistic concurrency, idempotency, rollback, exact-once financial effect, audit, notifications, and worker/provider failure isolation. **[NOT FINISHED]**
-- [ ] Test that disabled online controls are keyboard/screen-reader understandable and every API online-payment path rejects safely. **[NOT FINISHED]**
+Disabled online controls have accessible native disabled semantics and explanatory text in component coverage; both online start and verify reject before database access while the feature is disabled.
 - [ ] Test onboarding: panel activation occurs only after an offline prepayment is approved—not merely submitted. **[NOT FINISHED]**
 - [ ] Test mobile receipt capture/upload, progress/cancel/retry, Persian errors, preview, long filenames, and network/storage failures. **[NOT FINISHED]**
 

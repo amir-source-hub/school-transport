@@ -1,5 +1,5 @@
 import { Type, Transform } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsDateString, IsInt, IsOptional, IsString, Length, Max, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsDateString, IsInt, IsOptional, IsString, Length, Max, Min, ValidateNested } from 'class-validator';
 import { BadRequestException, createParamDecorator, ExecutionContext, Injectable, PipeTransform } from '@nestjs/common';
 import { normalizeIranianDigits } from '../../common/iranian-national-id';
 
@@ -18,6 +18,29 @@ export class OfflinePaymentDto {
   referenceNumber!: string;
   @IsOptional() @IsString() @Length(1, 500)
   description?: string;
+  @IsOptional() @IsString() @Length(2, 150)
+  payerName?: string;
+  @IsOptional() @Transform(digits) @IsString() @Length(4, 4)
+  sourceCardLastFour?: string;
+}
+
+export class ConfigureOfflineDestinationDto {
+  @IsOptional() @IsInt() @Min(1)
+  expectedVersion?: number;
+  @IsString() @Length(2, 150)
+  accountOwner!: string;
+  @IsString() @Length(2, 100)
+  bankName!: string;
+  @Transform(digits) @IsString() @Length(16, 16)
+  cardNumber!: string;
+  @IsOptional() @Transform(digits) @IsString() @Length(26, 26)
+  iban?: string;
+  @IsOptional() @Transform(digits) @IsString() @Length(1, 40)
+  accountNumber?: string;
+  @IsString() @Length(2, 2000)
+  instructions!: string;
+  @IsBoolean()
+  confirmed!: boolean;
 }
 
 export class InstallmentItemDto {
@@ -35,8 +58,15 @@ export class ConfigureInstallmentsDto {
 }
 
 export class RejectPaymentDto {
-  @IsOptional() @IsString() @Length(1, 500)
-  reason?: string;
+  @IsString() @Length(3, 500)
+  reason!: string;
+  @IsInt() @Min(1)
+  version!: number;
+}
+
+export class ReviewPaymentDto {
+  @IsInt() @Min(1)
+  version!: number;
 }
 
 @Injectable()

@@ -2,7 +2,7 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
-import { getPayments } from '@/features/finance/payments-api';
+import { getOfflineSubmissions, getPayments } from '@/features/finance/payments-api';
 import { formatIrr } from '@/lib/formatters';
 import { formatJalaliDate } from '@/lib/formatters';
 import { OnlinePaymentButton } from '@/features/finance/online-payment-button';
@@ -11,17 +11,11 @@ export const metadata = { title: 'پرداخت‌ها' };
 export const dynamic = 'force-dynamic';
 
 export default async function PaymentsPage() {
-  const overviews = await getPayments();
+  const [overviews, offlineSubmissions] = await Promise.all([getPayments(), getOfflineSubmissions()]);
   const pendingOfflineItemIds = new Set(
-    overviews.flatMap(({ transactions }) =>
-      transactions
-        .filter(
-          (transaction) =>
-            transaction.paymentMethod === 'MANUAL_ADMIN_ENTRY' &&
-            transaction.transactionStatus === 'CREATED',
-        )
-        .map((transaction) => transaction.paymentScheduleItemId),
-    ),
+    offlineSubmissions
+      .filter((submission) => submission.status === 'PENDING_REVIEW')
+      .map((submission) => submission.paymentScheduleItemId),
   );
   const unpaid = overviews.flatMap(({ items, studentFirstName, studentLastName }) =>
     items
@@ -106,6 +100,21 @@ export default async function PaymentsPage() {
         <h2 className="mb-4 text-lg font-black">ثبت پرداخت آفلاین</h2>
         <OfflinePaymentForm items={unpaid} />
       </Card>
+      {offlineSubmissions.length > 0 && (
+        <Card>
+          <h2 className="mb-4 text-lg font-black">وضعیت رسیدهای آفلاین</h2>
+          <div className="space-y-3">
+            {offlineSubmissions.map((submission) => (
+              <div key={submission.id} className="rounded-xl border border-border p-4 text-sm">
+                <p className="font-bold">
+                  {submission.status === 'PENDING_REVIEW' ? 'در انتظار بررسی' : submission.status === 'APPROVED' ? 'تأییدشده' : 'نیازمند اصلاح'}
+                </p>
+                {submission.rejectionReason && <p className="mt-2 text-danger">{submission.rejectionReason}</p>}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

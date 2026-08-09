@@ -37,14 +37,44 @@ const overviewSchema = z.array(z.object({
 
 export type PaymentOverview = z.infer<typeof overviewSchema>[number];
 
+const offlineDestinationSchema = z.object({
+  id: z.string(),
+  version: z.number(),
+  accountOwner: z.string(),
+  bankName: z.string(),
+  cardNumber: z.string(),
+  iban: z.string().nullable(),
+  accountNumber: z.string().nullable(),
+  instructions: z.string(),
+});
+
+export type OfflineDestination = z.infer<typeof offlineDestinationSchema>;
+
 export async function getPayments() {
   const response = await apiRequest<unknown>('/payments', { cache: 'no-store' });
   return overviewSchema.parse(response.data);
 }
 
-export async function submitOfflinePayment(scheduleItemId: string, input: { paidAt: string; referenceNumber: string; description?: string }, mode: 'panel' | 'onboarding' = 'panel') {
+export async function getOfflineDestination(mode: 'panel' | 'onboarding' = 'panel') {
   const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
-  await apiRequest(`${prefix}/${scheduleItemId}/offline-submissions`, { method: 'POST', body: input });
+  const response = await apiRequest<unknown>(`${prefix}/offline-destination`, { cache: 'no-store' });
+  return offlineDestinationSchema.parse(response.data);
+}
+
+export async function getOfflineSubmissions() {
+  const response = await apiRequest<unknown>('/payments/offline-submissions', { cache: 'no-store' });
+  return z.array(z.object({
+    id: z.string(),
+    paymentScheduleItemId: z.string(),
+    status: z.string(),
+    rejectionReason: z.string().nullable(),
+    submittedAt: z.coerce.date(),
+  })).parse(response.data);
+}
+
+export async function submitOfflinePayment(scheduleItemId: string, input: { paidAt: string; referenceNumber: string; description?: string; payerName?: string; sourceCardLastFour?: string }, mode: 'panel' | 'onboarding' = 'panel') {
+  const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
+  await apiRequest(`${prefix}/${scheduleItemId}/offline-submissions`, { method: 'POST', body: input, headers: { 'Idempotency-Key': crypto.randomUUID() } });
 }
 
 export async function startOnlinePayment(scheduleItemId: string) {
