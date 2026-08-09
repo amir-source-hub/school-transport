@@ -51,6 +51,7 @@ import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
 import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
 import { getOfflineSubmissions } from '@/features/finance/payments-api';
 import { updateNotificationConsent } from '@/features/notifications/notifications-api';
+import { clearEnrollmentDraft, loadEnrollmentDraft, saveEnrollmentDraft } from './enrollment-draft';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const vehicleOptions = [
@@ -126,6 +127,32 @@ export function CreateEnrollmentForm({
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const submissionLockRef = useRef(false);
+  const draftHydratedRef = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      const draft = loadEnrollmentDraft(window.sessionStorage, mode);
+      if (draft) {
+        setForm((current) => ({ ...current, ...draft.values }));
+        setStep(draft.step);
+      }
+      draftHydratedRef.current = true;
+    });
+    return () => {
+      active = false;
+    };
+  }, [mode]);
+
+  useEffect(() => {
+    if (!draftHydratedRef.current || result) return;
+    saveEnrollmentDraft(window.sessionStorage, mode, step, form);
+  }, [form, mode, result, step]);
+
+  useEffect(() => {
+    if (result) clearEnrollmentDraft(window.sessionStorage, mode);
+  }, [mode, result]);
 
   useEffect(() => {
     stepHeadingRef.current?.focus();
@@ -1200,34 +1227,65 @@ export function CreateEnrollmentForm({
                   رسید را ارسال کنید. ثبت‌نام فقط پس از تأیید مدیریت فعال می‌شود.
                 </p>
               </div>
-              <div className="rounded-2xl border border-border p-4 text-right" aria-describedby="enrollment-online-unavailable">
-                <Button className="w-full" size="lg" disabled aria-disabled="true">پرداخت آنلاین</Button>
-                <p id="enrollment-online-unavailable" className="mt-2 text-xs text-muted">به‌زودی فعال می‌شود.</p>
+              <div
+                className="rounded-2xl border border-border p-4 text-right"
+                aria-describedby="enrollment-online-unavailable"
+              >
+                <Button className="w-full" size="lg" disabled aria-disabled="true">
+                  پرداخت آنلاین
+                </Button>
+                <p id="enrollment-online-unavailable" className="mt-2 text-xs text-muted">
+                  به‌زودی فعال می‌شود.
+                </p>
               </div>
             </div>
             <div className="mt-5 text-right">
               <OfflinePaymentForm
-                items={[{ id: result.scheduleItemId, label: 'پیش‌پرداخت ثبت‌نام — ۴٬۰۰۰٬۰۰۰ تومان' }]}
+                items={[
+                  { id: result.scheduleItemId, label: 'پیش‌پرداخت ثبت‌نام — ۴٬۰۰۰٬۰۰۰ تومان' },
+                ]}
                 mode={mode}
               />
             </div>
             {mode === 'onboarding' && (
-              <Button className="mt-4 w-full" variant="secondary" loading={pending} onClick={async () => {
-                if (submissionLockRef.current) return;
-                submissionLockRef.current = true; setPending(true); setError(undefined);
-                try {
-                  const submissions = await getOfflineSubmissions('onboarding');
-                  const approved = submissions.some((submission) => submission.paymentScheduleItemId === result.scheduleItemId && submission.status === 'APPROVED');
-                  if (!approved) { setError('رسید هنوز توسط مدیریت تأیید نشده است. پس از دریافت اعلان دوباره بررسی کنید.'); return; }
-                  await finalizeOnboarding();
-                  await Promise.all([
-                    updateNotificationConsent('IN_APP', optionalInAppConsent, 'ONBOARDING'),
-                    updateNotificationConsent('SMS', optionalSmsConsent, 'ONBOARDING'),
-                  ]);
-                  router.replace('/student/dashboard');
-                } catch (caught) { setError(getApiErrorFeedback(caught).message); }
-                finally { submissionLockRef.current = false; setPending(false); }
-              }}>بررسی تأیید رسید و فعال‌سازی پنل</Button>
+              <Button
+                className="mt-4 w-full"
+                variant="secondary"
+                loading={pending}
+                onClick={async () => {
+                  if (submissionLockRef.current) return;
+                  submissionLockRef.current = true;
+                  setPending(true);
+                  setError(undefined);
+                  try {
+                    const submissions = await getOfflineSubmissions('onboarding');
+                    const approved = submissions.some(
+                      (submission) =>
+                        submission.paymentScheduleItemId === result.scheduleItemId &&
+                        submission.status === 'APPROVED',
+                    );
+                    if (!approved) {
+                      setError(
+                        'رسید هنوز توسط مدیریت تأیید نشده است. پس از دریافت اعلان دوباره بررسی کنید.',
+                      );
+                      return;
+                    }
+                    await finalizeOnboarding();
+                    await Promise.all([
+                      updateNotificationConsent('IN_APP', optionalInAppConsent, 'ONBOARDING'),
+                      updateNotificationConsent('SMS', optionalSmsConsent, 'ONBOARDING'),
+                    ]);
+                    router.replace('/student/dashboard');
+                  } catch (caught) {
+                    setError(getApiErrorFeedback(caught).message);
+                  } finally {
+                    submissionLockRef.current = false;
+                    setPending(false);
+                  }
+                }}
+              >
+                بررسی تأیید رسید و فعال‌سازی پنل
+              </Button>
             )}
             {error && <p className="mt-3 text-sm text-danger">{error}</p>}
           </div>

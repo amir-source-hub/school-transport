@@ -50,6 +50,56 @@ const server = createServer((request, response) => {
       },
     });
   }
+  if (url.pathname === '/api/v1/notifications/unread-count') {
+    return send(response, 200, { success: true, data: { count: 0 } });
+  }
+  if (url.pathname === '/api/v1/students/limit-requests') {
+    return send(response, 200, { success: true, data: [] });
+  }
+  if (url.pathname === '/api/v1/schools' && request.headers.cookie?.includes('e2e-enrollment=1')) {
+    return send(response, 200, {
+      success: true,
+      data: [
+        {
+          id: 'school-1',
+          name: 'مدرسه آزمایشی',
+          schoolType: 'PUBLIC',
+          genderType: 'GIRLS',
+          province: 'تهران',
+          city: 'تهران',
+          district: null,
+          address: 'نشانی مدرسه',
+          phoneNumber: null,
+          educationOptions: [{ level: 'ابتدایی', grades: ['پنجم'] }],
+        },
+      ],
+    });
+  }
+  if (
+    url.pathname === '/api/v1/families/me' &&
+    request.headers.cookie?.includes('e2e-enrollment=1')
+  ) {
+    return send(response, 200, {
+      success: true,
+      data: {
+        id: 'family-1',
+        username: 'family',
+        mother: null,
+        father: null,
+        addresses: [],
+        emergencyContacts: [],
+      },
+    });
+  }
+  if (
+    url.pathname === '/api/v1/students/capacity' &&
+    request.headers.cookie?.includes('e2e-enrollment=1')
+  ) {
+    return send(response, 200, {
+      success: true,
+      data: { studentLimit: 2, activeStudentCount: 0, remaining: 2 },
+    });
+  }
   if (
     url.pathname === '/api/v1/admin/admins' &&
     request.headers.cookie?.includes('e2e-admin-data=1')
