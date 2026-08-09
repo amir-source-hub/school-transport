@@ -319,6 +319,38 @@ describe('StudentPhotosService completeUpload', () => {
       expect.any(Buffer),
       'image/jpeg',
     );
+    expect(store.deleteObject).toHaveBeenCalledWith('student-photos/raw/raw-1.jpg');
+  });
+
+  it('removes canonical and raw objects when final persistence loses the optimistic claim', async () => {
+    const png = await sharp({
+      create: { width: 1200, height: 1600, channels: 3, background: '#336699' },
+    })
+      .png()
+      .toBuffer();
+    const store = storage({
+      headObject: vi.fn(async () => ({ size: png.length, etag: 'etag' })),
+      getObject: vi.fn(async () => png),
+    });
+    const db = {
+      db: {
+        select: vi.fn(() => selectLimit([baseRow({ declaredSize: png.length })])),
+        update: vi
+          .fn()
+          .mockReturnValueOnce(updateSimple())
+          .mockReturnValueOnce(updateReturning([]))
+          .mockReturnValueOnce(updateSimple()),
+      },
+    } as unknown as DatabaseService;
+    const service = new StudentPhotosService(db, config(), notifications(), store, audit());
+
+    await expect(service.completeUpload('user-1', 'upload-1')).rejects.toMatchObject({
+      code: 'PHOTO_PROCESSING_CONFLICT',
+    });
+    expect(store.deleteObject).toHaveBeenCalledWith('student-photos/raw/raw-1.jpg');
+    expect(store.deleteObject).toHaveBeenCalledWith(
+      expect.stringMatching(/^student-photos\/canonical\/.+\.jpg$/),
+    );
   });
 
   it('marks a corrupt image as FAILED and removes the raw object', async () => {

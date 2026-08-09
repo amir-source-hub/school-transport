@@ -202,21 +202,43 @@ export class StudentPhotosService {
       );
     }
 
-    const [updated] = await this.db.db
-      .update(studentPhotoUploads)
-      .set({
-        status: 'PENDING_REVIEW',
-        canonicalKey,
-        actualMime: 'image/jpeg',
-        actualSize: processed.actualSize,
-        width: processed.width,
-        height: processed.height,
-        checksum: processed.checksum,
-        pendingReviewAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(studentPhotoUploads.id, upload.id))
-      .returning();
+    let updated: typeof studentPhotoUploads.$inferSelect | undefined;
+    try {
+      [updated] = await this.db.db
+        .update(studentPhotoUploads)
+        .set({
+          status: 'PENDING_REVIEW',
+          canonicalKey,
+          actualMime: 'image/jpeg',
+          actualSize: processed.actualSize,
+          width: processed.width,
+          height: processed.height,
+          checksum: processed.checksum,
+          pendingReviewAt: new Date(),
+          version: sql`${studentPhotoUploads.version} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(studentPhotoUploads.id, upload.id),
+            eq(studentPhotoUploads.status, 'VALIDATING'),
+            eq(studentPhotoUploads.version, upload.version),
+          ),
+        )
+        .returning();
+      if (!updated) throw new Error('Photo processing claim was lost.');
+    } catch {
+      await Promise.all([
+        this.storage.deleteObject(canonicalKey).catch(() => undefined),
+        this.storage.deleteObject(upload.rawKey).catch(() => undefined),
+      ]);
+      await this.markFailed(upload.id, 'PERSISTENCE_FAILED', ip).catch(() => undefined);
+      throw new ConflictError(
+        'PHOTO_PROCESSING_CONFLICT',
+        'وضعیت عکس هم‌زمان تغییر کرد. بارگذاری جدیدی انجام دهید.',
+      );
+    }
+    await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
     await this.audit.record({
       actorType: 'PARENT',
       actorId: userId,
