@@ -13,6 +13,7 @@ import * as schema from '../database/schemas';
 import { feedbackSubmissions, notifications, users } from '../database/schemas';
 import { NotificationsService } from '../modules/notifications/notifications.service';
 import { FeedbackService } from '../modules/feedback/feedback.service';
+import { PaymentsService } from '../modules/payments/payments.service';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const redisUrl = process.env.REDIS_URL;
@@ -317,6 +318,161 @@ describe.skipIf(!enabled)('real PostgreSQL/Redis integration', () => {
       await pool.query('delete from students where id = $1', [studentId]);
       await pool.query('delete from schools where id = $1', [schoolId]);
       await pool.query('delete from users where id = $1', [userId]);
+    }
+  });
+
+  it('enforces offline-payment ownership, one active claim, and exact-once concurrent approval', async () => {
+    const ownerId = randomUUID();
+    const foreignId = randomUUID();
+    const adminId = randomUUID();
+    const schoolId = randomUUID();
+    const studentId = randomUUID();
+    const registrationId = randomUUID();
+    const priceId = randomUUID();
+    const planId = randomUUID();
+    const itemId = randomUUID();
+    const installmentId = randomUUID();
+    const destinationId = randomUUID();
+    const service = new PaymentsService(
+      database,
+      {} as never,
+      { enqueueInTransaction: async () => 'integration-event' } as never,
+      { record: async () => undefined, recordInTransaction: async () => undefined } as never,
+    );
+    const input = (key: string) => ({
+      paidAt: new Date(Date.now() - 60_000).toISOString(),
+      referenceNumber: `reference-${key}`,
+      idempotencyKey: key,
+    });
+    try {
+      await pool.query(`insert into users (id, username) values ($1, $2), ($3, $4)`, [
+        ownerId,
+        `payment-owner-${ownerId}`,
+        foreignId,
+        `payment-foreign-${foreignId}`,
+      ]);
+      await pool.query(
+        `insert into admin_users (id, username, first_name, last_name, phone_number)
+         values ($1, $2, 'integration', 'admin', $3)`,
+        [adminId, `payment-admin-${adminId}`, `09${adminId.replaceAll('-', '').slice(0, 9)}`],
+      );
+      await pool.query(
+        `insert into schools (id, name, province, city, address)
+         values ($1, 'payment school', 'Tehran', 'Tehran', 'integration')`,
+        [schoolId],
+      );
+      await pool.query(
+        `insert into students (id, user_id, school_id, first_name, last_name, national_id)
+         values ($1, $2, $3, 'payment', 'student', $4)`,
+        [studentId, ownerId, schoolId, ownerId.replaceAll('-', '').slice(0, 10)],
+      );
+      await pool.query(
+        `insert into service_registrations
+           (id, student_id, academic_year, service_type, registration_status)
+         values ($1, $2, '1405-1406', 'ROUND_TRIP', 'APPROVED')`,
+        [registrationId, studentId],
+      );
+      await pool.query(
+        `insert into registration_prices
+           (id, registration_id, total_amount, prepayment_amount, installment_count, price_status)
+         values ($1, $2, 2000, 1000, 1, 'ACCEPTED')`,
+        [priceId, registrationId],
+      );
+      await pool.query(
+        `insert into payment_plans
+           (id, registration_price_id, plan_type, total_amount, prepayment_amount,
+            remaining_installment_amount, installment_count)
+         values ($1, $2, 'ADMIN_CONFIGURED', 2000, 1000, 1000, 1)`,
+        [planId, priceId],
+      );
+      await pool.query(
+        `insert into payment_schedule_items
+           (id, payment_plan_id, item_type, sequence_number, amount)
+         values ($1, $2, 'PREPAYMENT', 0, 1000),
+                ($3, $2, 'INSTALLMENT', 1, 1000)`,
+        [itemId, planId, installmentId],
+      );
+      await pool.query(
+        `insert into offline_payment_destinations
+           (id, version, account_owner, bank_name, card_number, instructions,
+            created_by_admin_id)
+         values ($1, 900001, 'integration', 'integration bank', '1234567890123456',
+                 'integration only', $2)`,
+        [destinationId, adminId],
+      );
+
+      await expect(
+        service.createOfflineSubmission(itemId, foreignId, input('foreign-key')),
+      ).rejects.toMatchObject({ status: 404 });
+      await expect(
+        service.createOfflineSubmission(installmentId, foreignId, input('foreign-installment')),
+      ).rejects.toMatchObject({ status: 404 });
+
+      const duplicate = await Promise.allSettled([
+        service.createOfflineSubmission(itemId, ownerId, input('concurrent-a')),
+        service.createOfflineSubmission(itemId, ownerId, input('concurrent-b')),
+      ]);
+      expect(duplicate.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
+      expect(duplicate.filter(({ status }) => status === 'rejected')).toHaveLength(1);
+      const submissionId = duplicate.find(
+        (result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled',
+      )!.value;
+      const replayKey = await pool.query<{ idempotency_key: string }>(
+        'select idempotency_key from offline_payment_submissions where id = $1',
+        [submissionId],
+      );
+      await expect(
+        service.createOfflineSubmission(itemId, ownerId, input(replayKey.rows[0].idempotency_key)),
+      ).resolves.toBe(submissionId);
+
+      await pool.query(
+        `update offline_payment_submissions
+         set status = 'PENDING_REVIEW', receipt_object_key = 'payment-receipts/canonical/integration.jpg',
+             receipt_checksum = $2, receipt_mime = 'image/jpeg', receipt_size = 100,
+             receipt_width = 600, receipt_height = 800
+         where id = $1`,
+        [submissionId, 'a'.repeat(64)],
+      );
+      const approvals = await Promise.allSettled([
+        service.approveOfflinePayment(submissionId, adminId, 1),
+        service.approveOfflinePayment(submissionId, adminId, 1),
+      ]);
+      expect(approvals.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
+      expect(approvals.filter(({ status }) => status === 'rejected')).toHaveLength(1);
+      const financial = await pool.query<{
+        transaction_count: string;
+        item_status: string;
+        paid_amount: number;
+      }>(
+        `select count(t.id)::text as transaction_count, i.item_status, i.paid_amount
+         from payment_schedule_items i
+         left join payment_transactions t on t.payment_schedule_item_id = i.id
+         where i.id = $1
+         group by i.item_status, i.paid_amount`,
+        [itemId],
+      );
+      expect(financial.rows[0]).toEqual({
+        transaction_count: '1',
+        item_status: 'PAID',
+        paid_amount: 1000,
+      });
+    } finally {
+      await pool.query('delete from payment_transactions where payment_schedule_item_id = $1', [
+        itemId,
+      ]);
+      await pool.query(
+        'delete from offline_payment_submissions where payment_schedule_item_id = $1',
+        [itemId],
+      );
+      await pool.query('delete from payment_schedule_items where payment_plan_id = $1', [planId]);
+      await pool.query('delete from payment_plans where id = $1', [planId]);
+      await pool.query('delete from registration_prices where id = $1', [priceId]);
+      await pool.query('delete from service_registrations where id = $1', [registrationId]);
+      await pool.query('delete from students where id = $1', [studentId]);
+      await pool.query('delete from offline_payment_destinations where id = $1', [destinationId]);
+      await pool.query('delete from schools where id = $1', [schoolId]);
+      await pool.query('delete from admin_users where id = $1', [adminId]);
+      await pool.query('delete from users where id = any($1::uuid[])', [[ownerId, foreignId]]);
     }
   });
 });
