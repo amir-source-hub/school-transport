@@ -184,6 +184,13 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     primaryHeading: 'اعلان‌ها',
   },
   {
+    path: '/student/feedback',
+    audience: 'parent',
+    title: 'انتقادات و پیشنهادات',
+    description: 'ثبت و پیگیری پیام‌ها و پاسخ مدیریت.',
+    primaryHeading: 'انتقادات و پیشنهادات',
+  },
+  {
     path: '/student/payments',
     audience: 'parent',
     title: 'پرداخت‌ها و اقساط',
@@ -261,6 +268,13 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     title: 'اعلان‌ها',
     description: 'مدیریت اعلان‌های عملیاتی سامانه.',
     primaryHeading: 'اعلان‌ها',
+  },
+  {
+    path: '/admin/feedback',
+    audience: 'admin',
+    title: 'انتقادات و پیشنهادات',
+    description: 'رسیدگی به پیام‌های کاربران.',
+    primaryHeading: 'انتقادات و پیشنهادات',
   },
   {
     path: '/admin/notifications/broadcasts',

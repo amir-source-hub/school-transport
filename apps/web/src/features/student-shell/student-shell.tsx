@@ -11,6 +11,7 @@ import {
   Plus,
   UserRound,
   WalletCards,
+  MessageSquareText,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -43,6 +44,7 @@ const navGroups = [
       { href: '/student/contracts', label: 'قراردادها', icon: FileText },
       { href: '/student/payments', label: 'پرداخت‌ها', icon: WalletCards },
       { href: '/student/profile', label: 'اطلاعات خانواده', icon: UserRound },
+      { href: '/student/feedback', label: 'انتقادات و پیشنهادات', icon: MessageSquareText },
     ],
   },
 ] as const;

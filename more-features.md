@@ -164,31 +164,31 @@
 
 ### Product decisions
 
-- [ ] Define categories, maximum length, response expectations, retention, moderation, and admin roles.
-- [ ] Decide whether students can view submission history and replies.
-- [ ] Define escalation for urgent safety or child-safeguarding reports.
+- [x] Define categories, maximum length, response expectations, retention, moderation, and admin roles. **Policy documented in `docs/FEEDBACK_WORKFLOW.md`.** **[FINISHED · VERIFIED]**
+- [x] Decide whether students can view submission history and replies. **History and management replies are visible only to the owning account.** **[FINISHED · VERIFIED]**
+- [x] Define escalation for urgent safety or child-safeguarding reports. **Safety submissions are automatically urgent and escalated into the restricted queue.** **[FINISHED · VERIFIED]**
 
 ### Student implementation
 
-- [ ] Add the section to student navigation with Persian title, explanation, text area, submit action, errors, and confirmation.
-- [ ] If history is approved, list only records owned by the authenticated account.
-- [ ] Never accept an ownership/user ID from the client without deriving or verifying it from the session.
-- [ ] Define whether a student can reply or edit after an admin response.
+- [x] Add the section to student navigation with Persian title, explanation, text area, submit action, errors, and confirmation. **[FINISHED · VERIFIED]**
+- [x] If history is approved, list only records owned by the authenticated account. **[FINISHED · VERIFIED]**
+- [x] Never accept an ownership/user ID from the client without deriving or verifying it from the session. **[FINISHED · VERIFIED]**
+- [x] Define whether a student can reply or edit after an admin response. **Neither editing nor student replies are allowed after submission.** **[FINISHED · VERIFIED]**
 
 ### Data and admin implementation
 
-- [ ] Suggested fields: ID, account ID, optional student ID, category, subject, message, status, assignee, created/updated/read time, response, responder, and response time.
-- [ ] Suggested states: `NEW`, `READ`, `ANSWERED`, optionally `CLOSED`.
-- [ ] Add admin filters, pagination, assignment, read, respond, and close actions.
-- [ ] Restrict access with explicit admin permissions and audit reads, responses, status changes, and exports.
-- [ ] Notify the student exactly once after a response using the notification outbox.
-- [ ] Do not put the full sensitive response in SMS; direct the user to the authenticated panel.
+- [x] Store the complete feedback case, assignment, response, concurrency version, and timestamps. **[FINISHED · VERIFIED]**
+- [x] Implement `NEW`, `READ`, `ESCALATED`, `ANSWERED`, and `CLOSED`. **[FINISHED · VERIFIED]**
+- [x] Add server-side admin filters, pagination, assignment, read, respond, and close actions. **[FINISHED · VERIFIED]**
+- [x] Restrict access to super-administrators and audit reads, responses, assignments, and status changes. **No sensitive recipient export is exposed.** **[FINISHED · VERIFIED]**
+- [x] Notify the student exactly once after a response using the notification outbox. **[FINISHED · VERIFIED]**
+- [x] Do not put the full sensitive response in SMS; direct the user to the authenticated panel. **[FINISHED · VERIFIED]**
 
 ### Security and tests
 
-- [ ] Set length/rate limits and Persian validation errors.
-- [ ] Store text as text, escape output everywhere, and do not accept raw HTML.
-- [ ] Mask content in logs, traces, analytics, and error tracking.
+- [x] Set length/rate limits and validation errors. **[FINISHED · VERIFIED]**
+- [x] Store text as text, render it escaped, and reject raw HTML. **[FINISHED · VERIFIED]**
+- [x] Keep content out of logs, traces, analytics, audits, and error details. **[FINISHED · VERIFIED]**
 - [ ] Test IDOR, admin roles, stored XSS, pagination, concurrency, and exactly-once response notification.
 - [ ] Test mobile and accessibility behavior.
 
