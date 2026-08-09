@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { schools } from '../../database/schemas';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import type { SchoolEducationOption } from '../../database/schemas/schools.schema';
+
+export const SCHOOL_LIST_LIMIT = 500;
 
 @Injectable()
 export class SchoolsService {
@@ -12,7 +14,11 @@ export class SchoolsService {
 
   async getAll(includeInactive = false) {
     if (includeInactive) {
-      return this.db.db.select().from(schools);
+      return this.db.db
+        .select()
+        .from(schools)
+        .orderBy(asc(schools.name), asc(schools.id))
+        .limit(SCHOOL_LIST_LIMIT);
     }
     return this.db.db
       .select({
@@ -28,7 +34,9 @@ export class SchoolsService {
         educationOptions: schools.educationOptions,
       })
       .from(schools)
-      .where(eq(schools.isActive, true));
+      .where(eq(schools.isActive, true))
+      .orderBy(asc(schools.name), asc(schools.id))
+      .limit(SCHOOL_LIST_LIMIT);
   }
 
   async getById(id: string) {

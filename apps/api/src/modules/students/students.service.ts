@@ -14,7 +14,7 @@ import {
   students,
   users,
 } from '../../database/schemas';
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { eq, and, sql, desc, inArray } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -28,12 +28,10 @@ import { assertStudentCapacity, getStudentCapacity } from '../../database/studen
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import type { AdminStudentListQueryDto } from './student-list.dto';
 import type { AdminUpdateStudentDto } from './student.dto';
-import {
-  buildAdminStudentArchiveWhere,
-  buildAdminStudentOrderBy,
-} from './student-list.sort';
+import { buildAdminStudentArchiveWhere, buildAdminStudentOrderBy } from './student-list.sort';
 
 export const MAX_STUDENTS_PER_GUARDIAN = 5;
+export const STUDENT_LIMIT_REQUEST_LIST_LIMIT = 500;
 
 @Injectable()
 export class StudentsService {
@@ -169,8 +167,7 @@ export class StudentsService {
 
   async getStudentsForAdminPage(query: AdminStudentListQueryDto) {
     const { archive, sort, direction, page, pageSize } = query;
-    const archiveFilter =
-      buildAdminStudentArchiveWhere(archive) ?? sql`1 = 1`;
+    const archiveFilter = buildAdminStudentArchiveWhere(archive) ?? sql`1 = 1`;
     const [countRow] = await this.db.db
       .select({ total: sql<number>`count(*)::int` })
       .from(students)
@@ -215,10 +212,7 @@ export class StudentsService {
 
     const [parentRows, addressRows, emergencyRows, registrationRows] = await Promise.all([
       this.db.db.select().from(parents).where(eq(parents.userId, student.userId)),
-      this.db.db
-        .select()
-        .from(familyAddresses)
-        .where(eq(familyAddresses.userId, student.userId)),
+      this.db.db.select().from(familyAddresses).where(eq(familyAddresses.userId, student.userId)),
       this.db.db
         .select()
         .from(emergencyContacts)
@@ -258,7 +252,7 @@ export class StudentsService {
           .limit(1);
         plan = planRow ?? null;
       }
-      let scheduleItems: typeof paymentScheduleItems.$inferSelect[] = [];
+      let scheduleItems: (typeof paymentScheduleItems.$inferSelect)[] = [];
       if (plan) {
         scheduleItems = await this.db.db
           .select()
@@ -380,10 +374,7 @@ export class StudentsService {
         .select({ id: studentLimitRequests.id })
         .from(studentLimitRequests)
         .where(
-          and(
-            eq(studentLimitRequests.userId, userId),
-            eq(studentLimitRequests.status, 'PENDING'),
-          ),
+          and(eq(studentLimitRequests.userId, userId), eq(studentLimitRequests.status, 'PENDING')),
         )
         .limit(1);
       if (pending) {
@@ -435,14 +426,18 @@ export class StudentsService {
       })
       .from(studentLimitRequests)
       .innerJoin(users, eq(users.id, studentLimitRequests.userId))
-      .orderBy(studentLimitRequests.createdAt);
+      .orderBy(desc(studentLimitRequests.createdAt), desc(studentLimitRequests.id))
+      .limit(STUDENT_LIMIT_REQUEST_LIST_LIMIT);
 
-    const parentRows = await this.db.db.select().from(parents);
+    if (rows.length === 0) return [];
+    const parentRows = await this.db.db
+      .select()
+      .from(parents)
+      .where(inArray(parents.userId, [...new Set(rows.map((request) => request.userId))]));
     return rows.map((request) => {
       const familyParent =
-        parentRows.find(
-          (parent) => parent.userId === request.userId && parent.isPrimaryContact,
-        ) ?? parentRows.find((parent) => parent.userId === request.userId);
+        parentRows.find((parent) => parent.userId === request.userId && parent.isPrimaryContact) ??
+        parentRows.find((parent) => parent.userId === request.userId);
       return {
         ...request,
         familyName: familyParent
@@ -577,13 +572,8 @@ export class StudentsService {
   ) {
     const current = await this.getById(studentId);
 
-    const expectedUpdatedAt = data.expectedUpdatedAt
-      ? new Date(data.expectedUpdatedAt)
-      : null;
-    if (
-      expectedUpdatedAt &&
-      current.updatedAt.toISOString() !== expectedUpdatedAt.toISOString()
-    ) {
+    const expectedUpdatedAt = data.expectedUpdatedAt ? new Date(data.expectedUpdatedAt) : null;
+    if (expectedUpdatedAt && current.updatedAt.toISOString() !== expectedUpdatedAt.toISOString()) {
       throw new ConflictError(
         'STUDENT_CONCURRENT_MODIFIED',
         'This student was modified by another admin. Refresh the page and try again.',
@@ -599,10 +589,7 @@ export class StudentsService {
 
     const editable = parseAdminEditableStudentFields(payload);
 
-    if (
-      editable.nationalId !== undefined &&
-      editable.nationalId !== current.nationalId
-    ) {
+    if (editable.nationalId !== undefined && editable.nationalId !== current.nationalId) {
       const duplicate = await this.db.db
         .select({ id: students.id })
         .from(students)
