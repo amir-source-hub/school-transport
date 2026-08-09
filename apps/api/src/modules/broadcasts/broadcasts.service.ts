@@ -1,5 +1,5 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { and, asc, count, eq, inArray, lte, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { AppError, ConflictError, NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -19,6 +19,7 @@ import { smsSegmentCount } from './sms-segments';
 import { OperationalMetricsService } from '../../infrastructure/metrics/operational-metrics.service';
 
 const MAX_ATTEMPTS = 5;
+export const BROADCAST_LIST_LIMIT = 200;
 
 @Injectable()
 export class BroadcastsService {
@@ -34,7 +35,9 @@ export class BroadcastsService {
     const campaigns = await this.db.db
       .select()
       .from(smsBroadcasts)
-      .orderBy(asc(smsBroadcasts.createdAt));
+      .orderBy(desc(smsBroadcasts.createdAt), desc(smsBroadcasts.id))
+      .limit(BROADCAST_LIST_LIMIT);
+    if (campaigns.length === 0) return [];
     const counts = await this.db.db
       .select({
         broadcastId: smsBroadcastRecipients.broadcastId,
@@ -42,6 +45,12 @@ export class BroadcastsService {
         value: count(),
       })
       .from(smsBroadcastRecipients)
+      .where(
+        inArray(
+          smsBroadcastRecipients.broadcastId,
+          campaigns.map((campaign) => campaign.id),
+        ),
+      )
       .groupBy(smsBroadcastRecipients.broadcastId, smsBroadcastRecipients.status);
     return campaigns.map((campaign) => ({
       ...campaign,

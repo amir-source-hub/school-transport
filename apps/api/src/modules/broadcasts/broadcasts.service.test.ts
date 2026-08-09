@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ConfigService } from '../../config/config.service';
 import type { DatabaseService } from '../../database/database.service';
 import { KavenegarProviderError } from '../../infrastructure/sms/kavenegar.client';
-import { BroadcastsService } from './broadcasts.service';
+import { BROADCAST_LIST_LIMIT, BroadcastsService } from './broadcasts.service';
 
 function database(rows: unknown[]): DatabaseService {
   const chain = {
@@ -22,6 +22,38 @@ const input = {
   expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
   featureEnabled: true,
 };
+
+describe('BroadcastsService list', () => {
+  it('returns a newest-first bounded campaign window and scopes delivery counts to it', async () => {
+    const campaigns = [{ id: 'campaign-2' }, { id: 'campaign-1' }];
+    const counts = [{ broadcastId: 'campaign-2', status: 'SENT', value: 3 }];
+    const campaignLimit = vi.fn(async () => campaigns);
+    const campaignOrderBy = vi.fn(() => ({ limit: campaignLimit }));
+    const countGroupBy = vi.fn(async () => counts);
+    const countWhere = vi.fn(() => ({ groupBy: countGroupBy }));
+    const db = {
+      db: {
+        select: vi
+          .fn()
+          .mockReturnValueOnce({ from: () => ({ orderBy: campaignOrderBy }) })
+          .mockReturnValueOnce({ from: () => ({ where: countWhere }) }),
+      },
+    } as unknown as DatabaseService;
+    const service = new BroadcastsService(
+      db,
+      config(),
+      { send: vi.fn() } as never,
+      { record: vi.fn(), recordInTransaction: vi.fn() } as never,
+    );
+
+    await expect(service.list()).resolves.toEqual([
+      { id: 'campaign-2', deliveryCounts: { SENT: 3 } },
+      { id: 'campaign-1', deliveryCounts: {} },
+    ]);
+    expect(campaignLimit).toHaveBeenCalledWith(BROADCAST_LIST_LIMIT);
+    expect(countWhere).toHaveBeenCalledOnce();
+  });
+});
 
 function config(overrides: Partial<ConfigService> = {}) {
   return {
