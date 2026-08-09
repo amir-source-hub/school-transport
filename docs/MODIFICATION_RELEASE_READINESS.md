@@ -1,6 +1,6 @@
 # Modification release readiness
 
-This runbook is the operational companion to `modifications.md`. Release owners must record the
+This runbook is the operational companion to `remaining-implementation-specification.md`. Release owners must record the
 release identifier, reviewers, timestamps, and evidence links in the deployment record.
 
 ## Approved product policies
