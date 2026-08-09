@@ -63,7 +63,7 @@ Tasks:
 
 - [ ] Add database-backed IDOR verification proving one student account cannot list or infer another account's feedback. Cross-account student association now returns the same not-found result without inserting feedback. **[NOT FINISHED]**
 - [ ] Add database-backed filter, empty-page, and concurrent-insert pagination tests. Service ordering is now stable by `created_at DESC, id DESC`, and DTO bounds are enforced. **[NOT FINISHED]**
-- [ ] Add keyboard, focus, validation announcement, error recovery, duplicate-submit, long Persian/RTL, mobile/tablet, and screen-reader tests. **[NOT FINISHED]**
+- Feedback UI component coverage now verifies keyboard-native labeled controls, required/minimum validation semantics, live success/error announcements, recovery/retry, immediate duplicate-submit guards, inert hostile content, long Persian wrapping, and responsive action layout. The tests also exposed and fixed an async form-target lifetime failure and a same-tick double-submit race. Real-device/browser coverage remains part of the cross-cutting release verification section.
 
 ## 4. Student card photo gaps
 

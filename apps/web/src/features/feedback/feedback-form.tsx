@@ -1,5 +1,5 @@
 'use client';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,27 +19,36 @@ export function FeedbackForm() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [msg, setMsg] = useState<string>();
+  const [failed, setFailed] = useState(false);
+  const pendingRef = useRef(false);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setPending(true);
-    const f = new FormData(e.currentTarget);
+    setFailed(false);
+    setMsg(undefined);
+    const form = e.currentTarget;
+    const f = new FormData(form);
     try {
       await createFeedback({
         category: String(f.get('category')),
         subject: String(f.get('subject')),
         message: String(f.get('message')),
       });
-      e.currentTarget.reset();
+      form.reset();
       setMsg('پیام شما ثبت شد.');
       router.refresh();
     } catch (error) {
+      setFailed(true);
       setMsg(getApiErrorFeedback(error).message);
     } finally {
+      pendingRef.current = false;
       setPending(false);
     }
   }
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} className="space-y-4" aria-busy={pending}>
       <label className="block space-y-2">
         <span className="text-sm font-bold">دسته‌بندی</span>
         <select
@@ -68,7 +77,7 @@ export function FeedbackForm() {
         ثبت پیام
       </Button>
       {msg && (
-        <p role="status" className="text-sm text-muted">
+        <p role={failed ? 'alert' : 'status'} aria-live="polite" className="text-sm text-muted">
           {msg}
         </p>
       )}
