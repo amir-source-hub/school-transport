@@ -38,7 +38,7 @@ jobs:
         run: |
           if [[ "$EVENT_NAME" == "workflow_dispatch" || "$EVENT_NAME" == "schedule" ]] ||
              ! git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
-               apps/web packages package.json pnpm-lock.yaml pnpm-workspace.yaml \
+               apps/web apps/api/openapi.json packages package.json pnpm-lock.yaml pnpm-workspace.yaml \
                turbo.json .prettierignore .prettierrc.json .env.example \
                .github/workflows/frontend-ci.yml; then
             echo "web=true" >> "$GITHUB_OUTPUT"
@@ -84,6 +84,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter web lint
+      - run: pnpm --filter web contract:check
       - run: pnpm --filter web typecheck
       - run: pnpm --filter web test
       - run: pnpm --filter web build

@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "contract:generate": "openapi-typescript ../api/openapi.json -o src/generated/api-contract.ts",
+    "contract:check": "pnpm contract:generate && git diff --exit-code -- src/generated/api-contract.ts",
     "performance:check": "node scripts/check-performance-budgets.mjs",
     "performance:browser": "node scripts/run-browser-performance-audit.mjs",
     "format": "prettier --write . --ignore-path ../../.prettierignore",
@@ -55,6 +57,7 @@
     "eslint-config-next": "16.2.11",
     "jsdom": "^29.1.1",
     "msw": "^2.15.0",
+    "openapi-typescript": "^7.13.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^1.6.1"
