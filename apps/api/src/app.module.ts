@@ -27,12 +27,14 @@ import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { S3Module } from './infrastructure/s3/s3.module';
 import { StudentPhotosModule } from './modules/student-images/student-photos.module';
+import { MetricsModule } from './infrastructure/metrics/metrics.module';
 
 @Module({
   imports: [
     LoggingModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     ConfigModule,
+    MetricsModule,
     DatabaseModule,
     SmsModule,
     S3Module,

@@ -72,11 +72,13 @@ describe('notification transactional outbox', () => {
       const chain = {
         from: vi.fn(),
         where: vi.fn(),
+        orderBy: vi.fn(),
         for: vi.fn(),
         limit: vi.fn(async () => rows),
       };
       chain.from.mockReturnValue(chain);
       chain.where.mockReturnValue(chain);
+      chain.orderBy.mockReturnValue(chain);
       chain.for.mockReturnValue(chain);
       return chain;
     });

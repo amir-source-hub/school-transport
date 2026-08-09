@@ -17,7 +17,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const reply = ctx.getResponse<FastifyReply>();
 
     if (exception instanceof AppError) {
-      this.logger.warn(exception.message, exception.code);
+      this.logger.warn(
+        { event: 'application_error', code: exception.code, status: exception.status },
+        'GlobalExceptionFilter',
+      );
       return reply.status(exception.status).send({
         success: false,
         error: {
@@ -49,7 +52,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
       }
 
-      this.logger.warn(message, 'HttpException');
+      this.logger.warn({ event: 'http_exception', status }, 'GlobalExceptionFilter');
       return reply.status(status).send({
         success: false,
         error: {
@@ -80,8 +83,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     this.logger.error(
-      'Unhandled exception',
-      exception instanceof Error ? exception.stack : undefined,
+      { event: 'unhandled_exception', errorType: safeErrorType(exception) },
+      undefined,
       'GlobalExceptionFilter',
     );
     return reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -93,4 +96,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       meta: { requestId: this.requestContext.requestId },
     });
   }
+}
+
+function safeErrorType(error: unknown) {
+  if (!(error instanceof Error)) return 'UnknownError';
+  return /^[A-Za-z][A-Za-z0-9]*$/.test(error.name) ? error.name : 'Error';
 }

@@ -3,6 +3,7 @@ import type { ConfigService } from '../../config/config.service';
 import type { DatabaseService } from '../../database/database.service';
 import { SmsNotificationService } from './sms-notification.service';
 import type { SmsProvider } from './sms-provider.port';
+import { OperationalMetricsService } from '../metrics/operational-metrics.service';
 
 function databaseWith(rows: unknown[][]): DatabaseService {
   const queue = [...rows];
@@ -28,24 +29,31 @@ const config = { smsProvider: 'kavenegar' } as ConfigService;
 describe('SmsNotificationService', () => {
   it('re-checks optional SMS consent at dispatch time', async () => {
     const smsProvider = provider();
+    const metrics = new OperationalMetricsService();
     const service = new SmsNotificationService(
       databaseWith([[{ phoneNumber: '09121234567' }], [{ granted: false }]]),
       config,
       smsProvider.adapter,
+      metrics,
     );
 
     await expect(
       service.dispatch({ eventId: 'event-1', userId: 'user-1', notificationType: 'WELCOME' }),
     ).resolves.toEqual({ status: 'SKIPPED_NO_CONSENT', purpose: 'OPTIONAL_UPDATES' });
     expect(smsProvider.send).not.toHaveBeenCalled();
+    expect(metrics.renderPrometheus()).toContain(
+      'category="optional_notification",outcome="skipped_no_consent"',
+    );
   });
 
   it('sends an optional SMS only after current consent is granted', async () => {
     const smsProvider = provider();
+    const metrics = new OperationalMetricsService();
     const service = new SmsNotificationService(
       databaseWith([[{ phoneNumber: '09121234567' }], [{ granted: true }]]),
       config,
       smsProvider.adapter,
+      metrics,
     );
 
     await expect(
@@ -60,14 +68,19 @@ describe('SmsNotificationService', () => {
       providerMessageId: '42',
     });
     expect(smsProvider.send).toHaveBeenCalledOnce();
+    expect(metrics.renderPrometheus()).toContain(
+      'category="optional_notification",outcome="accepted"',
+    );
   });
 
   it('sends required service notices independently of optional consent', async () => {
     const smsProvider = provider();
+    const metrics = new OperationalMetricsService();
     const service = new SmsNotificationService(
       databaseWith([[{ phoneNumber: '09121234567' }]]),
       config,
       smsProvider.adapter,
+      metrics,
     );
 
     await expect(
@@ -78,5 +91,8 @@ describe('SmsNotificationService', () => {
       }),
     ).resolves.toMatchObject({ status: 'SENT', purpose: 'SERVICE_NOTICE' });
     expect(smsProvider.send).toHaveBeenCalledOnce();
+    expect(metrics.renderPrometheus()).toContain(
+      'category="service_notification",outcome="accepted"',
+    );
   });
 });

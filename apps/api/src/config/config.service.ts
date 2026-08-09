@@ -75,6 +75,7 @@ const envSchema = z
         }
       }),
     LOG_LEVEL: z.string().default('debug'),
+    METRICS_BEARER_TOKEN: z.string().min(32).optional(),
     OTP_PROVIDER: z.enum(['console', 'kavenegar', 'none']).default('none'),
     SMS_PROVIDER: z.enum(['kavenegar', 'none']).default('none'),
     KAVEHNEGAR_API_KEY: z.string().trim().optional(),
@@ -194,6 +195,8 @@ const envSchema = z
     }
     if (env.LOG_LEVEL === 'debug')
       issue('LOG_LEVEL', 'Debug logging is not permitted in production.');
+    if (!env.METRICS_BEARER_TOKEN)
+      issue('METRICS_BEARER_TOKEN', 'Production requires a metrics scrape token.');
     if (env.SEED_DEMO_DATA) issue('SEED_DEMO_DATA', 'Demo seeding is not permitted in production.');
   });
 
@@ -301,6 +304,9 @@ export class ConfigService implements OnApplicationShutdown {
   get logLevel(): string {
     return this.env.LOG_LEVEL;
   }
+  get metricsBearerToken(): string | undefined {
+    return this.env.METRICS_BEARER_TOKEN;
+  }
   get otpProvider(): 'console' | 'kavenegar' | 'none' {
     return this.env.OTP_PROVIDER;
   }
@@ -393,10 +399,10 @@ export class ConfigService implements OnApplicationShutdown {
   get studentPhotosConfigured(): boolean {
     return Boolean(
       this.env.ARVAN_S3_ENDPOINT &&
-        this.env.ARVAN_S3_REGION &&
-        this.env.ARVAN_S3_BUCKET &&
-        this.env.ARVAN_S3_ACCESS_KEY &&
-        this.env.ARVAN_S3_SECRET_KEY,
+      this.env.ARVAN_S3_REGION &&
+      this.env.ARVAN_S3_BUCKET &&
+      this.env.ARVAN_S3_ACCESS_KEY &&
+      this.env.ARVAN_S3_SECRET_KEY,
     );
   }
   get serviceRole(): 'api' | 'worker' {

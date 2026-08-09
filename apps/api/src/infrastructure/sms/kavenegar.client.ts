@@ -69,8 +69,9 @@ export class KavenegarClient {
         body,
         signal: AbortSignal.timeout(this.config.kavenegarTimeoutMs),
       });
-    } catch {
-      throw new KavenegarProviderError(503, true);
+    } catch (error) {
+      const timeout = error instanceof Error && error.name === 'TimeoutError';
+      throw new KavenegarProviderError(timeout ? 408 : 503, true);
     }
     let payload: KavenegarResponse;
     try {

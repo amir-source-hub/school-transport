@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, lte, or } from 'drizzle-orm';
+import { and, asc, eq, lte, or } from 'drizzle-orm';
 import { AppLogger } from '../../common/logger';
 import { generateId } from '../../common/utils';
 import { DatabaseService } from '../../database/database.service';
@@ -7,6 +7,9 @@ import type { DatabaseTransaction } from '../../database/payment-plan';
 import { notificationOutbox, notifications } from '../../database/schemas';
 import { KavenegarProviderError } from '../sms/kavenegar.client';
 import { SmsNotificationService } from '../sms/sms-notification.service';
+import { OperationalMetricsService } from '../metrics/operational-metrics.service';
+import { Optional } from '@nestjs/common';
+import { notificationPurpose } from './notification.catalog';
 
 export type InAppNotification = {
   eventId?: string;
@@ -27,6 +30,7 @@ export class InAppNotificationService {
     private readonly db: DatabaseService,
     private readonly logger: AppLogger,
     private readonly sms: SmsNotificationService,
+    @Optional() private readonly metrics?: OperationalMetricsService,
   ) {}
 
   async enqueueInTransaction(txn: DatabaseTransaction, data: InAppNotification): Promise<string> {
@@ -61,12 +65,24 @@ export class InAppNotificationService {
     let delivered = 0;
     for (let index = 0; index < limit; index += 1) {
       const event = await this.claimNext();
-      if (!event) break;
+      if (!event) {
+        this.metrics?.setNotificationQueueAge(0);
+        break;
+      }
+      this.metrics?.setNotificationQueueAge(
+        (Date.now() - new Date(event.createdAt).getTime()) / 1_000,
+      );
       try {
         await this.deliver(event);
         delivered += 1;
       } catch (error) {
-        await this.recordFailure(event.id, event.eventId, event.attemptCount, error);
+        await this.recordFailure(
+          event.id,
+          event.eventId,
+          event.notificationType,
+          event.attemptCount,
+          error,
+        );
       }
     }
     return delivered;
@@ -92,6 +108,7 @@ export class InAppNotificationService {
             ),
           ),
         )
+        .orderBy(asc(notificationOutbox.createdAt), asc(notificationOutbox.id))
         .for('update', { skipLocked: true })
         .limit(1);
       if (!event) return null;
@@ -170,6 +187,7 @@ export class InAppNotificationService {
   private async recordFailure(
     id: string,
     eventId: string,
+    notificationType: string,
     attemptCount: number,
     error: unknown,
   ): Promise<void> {
@@ -187,6 +205,12 @@ export class InAppNotificationService {
         updatedAt: new Date(),
       })
       .where(eq(notificationOutbox.id, id));
+    const category =
+      notificationPurpose(notificationType) === 'OPTIONAL_UPDATES'
+        ? 'optional_notification'
+        : 'service_notification';
+    if (retry.status === 'DEAD') this.metrics?.recordMessage(category, 'dead_letter');
+    else this.metrics?.recordMessage(category, 'retry');
     if (retry.status === 'DEAD')
       this.logger.error(`Notification outbox event ${eventId} moved to dead-letter state.`);
     else this.logger.warn(`Notification outbox event ${eventId} scheduled for retry.`);

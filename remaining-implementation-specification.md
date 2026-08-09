@@ -14,7 +14,7 @@
 
 ### Catalog and producers
 
-- [ ] Define the intended account-security notification events and their safe content/dispatch rules before adding producers. Enrollment review/approval/rejection/correction, payment-plan readiness, feedback responses, photo decisions, onboarding account creation, and capacity-request decisions now have direct producer assertions; a catalog contract fails when any retained type lacks a production producer. **[NOT FINISHED]**
+- Enrollment review/approval/rejection/correction, payment-plan readiness, feedback responses, photo decisions, onboarding account creation, and capacity-request decisions have direct producer assertions; a catalog contract fails when a retained type lacks a production producer. The account-security boundary is documented: requested OTPs are already the security channel, while administrator credential changes revoke sessions and remain privileged audit events rather than being misrouted through parent notifications.
 
 ### Shared admin operational view
 
@@ -31,11 +31,8 @@
 
 ### Metrics and alerts
 
-- [ ] Add low-cardinality metrics for accepted, rejected, timeout, transient/permanent failure, skipped-no-consent, retry, dead-letter, and queue age. **[NOT STARTED]**
-- [ ] Separate OTP, service notification, optional notification, test broadcast, and broadcast-campaign metrics without phone/user/message/API-key labels. **[NOT STARTED]**
-- [ ] Add provider latency and configurable alerts for failure/timeout rates, dead-letter/backlog growth, OTP spikes, campaign volume, and estimated spend. **[NOT STARTED]**
-- [ ] Add alert cooldown/deduplication and document dashboard ownership, credential rotation, disable-provider, retry/dead-letter recovery, and incident response. **[NOT STARTED]**
-- [ ] Verify all logs/metrics/traces mask phone numbers and exclude OTPs, API keys, provider payloads, SMS bodies, feedback content, and signed URLs. **[NOT FINISHED]**
+- The protected Prometheus endpoint exposes fixed-category outcomes for OTP, service/optional notifications, test broadcasts, and campaigns; provider latency, retry/dead-letter, queue age, OTP rate limits, campaign volume, and aggregate estimated spend are covered without personal/message/credential labels. Versioned alert rules cover timeout/failure rates, backlog/dead letters, OTP spikes, campaign volume, and spend. `docs/OBSERVABILITY.md` assigns ownership and documents Alertmanager cooldown/deduplication, credential rotation, provider disablement, recovery, and incident handling.
+- Logging verification removed development phone/OTP output and changed exception logging to code/status/error-type metadata rather than raw user-controlled messages or stacks. Regression tests prohibit feedback/phone and signed-URL/token leakage. No tracing exporter is configured; future exporters must preserve the same allowlist boundary.
 
 ### Local configuration status
 
@@ -53,13 +50,13 @@ Tasks:
 - [ ] Add the server's outbound IP to Kavenegar security settings if delivery reconciliation through `LatestOutbox`/`SelectOutbox` is required; the current read-only reconciliation attempt returns `407`. **[BLOCKED — KAVENEGAR ACCOUNT]**
 - [ ] Create/approve the exact VerifyLookup template configured by `KAVEHNEGAR_OTP_TEMPLATE`; status `424` must no longer occur. **[BLOCKED — KAVENEGAR ACCOUNT]**
 - [ ] After both account settings are corrected, rerun one ordinary SMS and one OTP send to the locally configured approved test number and confirm handset receipt. **[BLOCKED — PROVIDER CONFIGURATION]**
-- [ ] Record provider message ID/status without logging the number, key, OTP, or message body. **[NOT FINISHED]**
+- Provider message IDs/statuses are persisted in notification/broadcast delivery records for reconciliation; dispatch logging contains no phone, API key, OTP, provider payload, or message body.
 
 ### OTP verification
 
-- [ ] Add safe OTP send/failure/timeout/rate-limit metrics and alerts. **[NOT STARTED]**
+- OTP accepted, timeout, transient/permanent failure, rejection, and rate-limit outcomes plus provider latency are emitted with the single fixed `otp` category; alert rules cover OTP rate-limit spikes and provider failure/timeout rates.
 - [ ] Obtain final product/legal approval that requested OTP/security messages do not depend on optional marketing consent. **[BLOCKED — APPROVAL]**
-- [ ] Reverify two-minute expiry, single-use, resend cooldown, account/IP attempt limits, concurrent verification, generic enumeration-safe errors, and production-only adapter selection after metrics changes. **[NOT FINISHED]**
+- Two-minute expiry, single-use, resend cooldown, account/IP attempt limits, concurrent parent/admin verification, generic errors, production provider selection, and safe metric hooks were reverified by the focused OTP concurrency, onboarding, configuration, and delivery suites after instrumentation.
 - [ ] Verify the actual Kavenegar template and delivery with an approved number before marking production delivery verified. **[BLOCKED — EXTERNAL SEND]**
 
 ## 3. Feedback verification gaps

@@ -5,12 +5,9 @@ import { KavenegarClient } from '../../../infrastructure/sms/kavenegar.client';
 
 @Injectable()
 export class ConsoleOtpDelivery implements OtpDelivery {
-  async send(input: { phoneNumber: string; purpose: string; code: string }): Promise<void> {
-    // Explicitly development-only. The module never selects this adapter in production.
-    console.warn(
-      `[DEV OTP] phone=${input.phoneNumber} purpose=${input.purpose} code=${input.code}`,
-    );
-  }
+  // Explicitly development-only. AuthService returns the code in its development response;
+  // delivery must not duplicate phone numbers or OTP values into process logs.
+  async send(_input: { phoneNumber: string; purpose: string; code: string }): Promise<void> {}
 }
 
 @Injectable()

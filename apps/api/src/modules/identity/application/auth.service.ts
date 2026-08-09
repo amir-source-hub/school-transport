@@ -17,17 +17,13 @@ import {
 import { AuthenticationError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
-import {
-  AuthTokens,
-  LoginResult,
-  OtpResult,
-  VerifyAuthOtpResult,
-} from '../domain/auth.types';
+import { AuthTokens, LoginResult, OtpResult, VerifyAuthOtpResult } from '../domain/auth.types';
 import { JwtPayload } from '../../../common/authentication.types';
 import { OTP_DELIVERY, OtpDelivery } from './otp-delivery.port';
 import { AUDIT_PORT, AuditPort } from '../../../common/audit.port';
 import { InAppNotificationService } from '../../../infrastructure/notifications/in-app-notification.service';
 import { OnboardingService } from './onboarding.service';
+import { OperationalMetricsService } from '../../../infrastructure/metrics/operational-metrics.service';
 
 export interface AdminChallengeResult {
   challengeId: string;
@@ -47,6 +43,7 @@ export class AuthService {
     private readonly notifications: InAppNotificationService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Optional() private readonly onboarding?: OnboardingService,
+    @Optional() private readonly metrics?: OperationalMetricsService,
   ) {}
 
   async getAdmins() {
@@ -391,8 +388,7 @@ export class AuthService {
     password: string,
     requestIp?: string,
   ): Promise<AdminChallengeResult> {
-    const genericError = () =>
-      new AuthenticationError('The username or password is incorrect.');
+    const genericError = () => new AuthenticationError('The username or password is incorrect.');
 
     const records = await this.db.db
       .select({
@@ -437,8 +433,7 @@ export class AuthService {
     context?: SessionContext,
     rememberMe = false,
   ): Promise<LoginResult> {
-    const genericError = () =>
-      new AuthenticationError('The username or password is incorrect.');
+    const genericError = () => new AuthenticationError('The username or password is incorrect.');
     const challengeHash = this.hashToken(challengeId);
 
     let admin: { id: string; username: string; phoneNumber: string } | undefined;
@@ -521,9 +516,7 @@ export class AuthService {
 
   async refreshTokens(
     refreshToken: string,
-  ): Promise<
-    AuthTokens & { role: 'PARENT' | 'ADMIN'; remembered: boolean }
-  > {
+  ): Promise<AuthTokens & { role: 'PARENT' | 'ADMIN'; remembered: boolean }> {
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
         secret: this.config.jwtSecret,
@@ -605,6 +598,7 @@ export class AuthService {
             ),
           );
         if (recentFromIp.length >= 10) {
+          this.metrics?.recordMessage('otp', 'rate_limited');
           throw new ValidationError('Too many verification codes requested. Please try later.');
         }
       }
@@ -624,6 +618,7 @@ export class AuthService {
       if (recent[0]) {
         const elapsed = (Date.now() - new Date(recent[0].createdAt).getTime()) / 1000;
         if (elapsed < this.config.otpResendCooldownSeconds) {
+          this.metrics?.recordMessage('otp', 'rate_limited');
           throw new ValidationError(
             `Please wait ${Math.ceil(this.config.otpResendCooldownSeconds - elapsed)} seconds before requesting a new code.`,
           );
@@ -655,9 +650,23 @@ export class AuthService {
       return { id, code, expiresAt };
     });
 
+    const deliveryStartedAt = performance.now();
     try {
       await this.otpDelivery.send({ phoneNumber, purpose, code: created.code });
+      this.metrics?.recordMessage(
+        'otp',
+        'accepted',
+        (performance.now() - deliveryStartedAt) / 1_000,
+      );
     } catch (error) {
+      const outcome =
+        error instanceof Error && 'providerStatus' in error && error.providerStatus === 408
+          ? 'timeout'
+          : error instanceof Error && 'transient' in error && error.transient === false
+            ? 'permanent_failure'
+            : 'transient_failure';
+      this.metrics?.recordMessage('otp', outcome, (performance.now() - deliveryStartedAt) / 1_000);
+      if (outcome === 'permanent_failure') this.metrics?.recordMessage('otp', 'rejected');
       await this.db.db
         .update(otpRequests)
         .set({ invalidatedAt: new Date() })
@@ -691,6 +700,7 @@ export class AuthService {
       throw new ValidationError('No valid OTP request found. Please request a new code.');
     }
     if (outcome === 'TOO_MANY_ATTEMPTS') {
+      this.metrics?.recordMessage('otp', 'rate_limited');
       throw new ValidationError('Too many failed attempts. Please request a new code.');
     }
     if (outcome === 'EXPIRED') {

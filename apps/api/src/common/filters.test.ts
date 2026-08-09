@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ArgumentsHost } from '@nestjs/common';
 import { GlobalExceptionFilter } from './filters';
+import { AppError } from './errors';
 
 describe('GlobalExceptionFilter database errors', () => {
   it('returns a safe response and logs only sanitized structured diagnostics', () => {
@@ -38,5 +39,37 @@ describe('GlobalExceptionFilter database errors', () => {
     expect(logged).not.toContain('secret_schema');
     expect(logged).not.toContain('0012345678');
     expect(logger.error).not.toHaveBeenCalled();
+  });
+});
+
+describe('GlobalExceptionFilter privacy-safe logging', () => {
+  it('does not log application messages that may contain user-provided content', () => {
+    const send = vi.fn();
+    const status = vi.fn(() => ({ send }));
+    const logger = { warn: vi.fn(), error: vi.fn() };
+    const host = {
+      switchToHttp: () => ({ getResponse: () => ({ status }) }),
+    } as unknown as ArgumentsHost;
+    const filter = new GlobalExceptionFilter(logger as never, { requestId: 'request-1' } as never);
+    filter.catch(new AppError('INVALID_FEEDBACK', 'private feedback body 09121234567', 400), host);
+    const logged = JSON.stringify(logger.warn.mock.calls);
+    expect(logged).toContain('INVALID_FEEDBACK');
+    expect(logged).not.toContain('private feedback body');
+    expect(logged).not.toContain('09121234567');
+  });
+
+  it('does not log raw unhandled error messages or stacks', () => {
+    const send = vi.fn();
+    const status = vi.fn(() => ({ send }));
+    const logger = { warn: vi.fn(), error: vi.fn() };
+    const host = {
+      switchToHttp: () => ({ getResponse: () => ({ status }) }),
+    } as unknown as ArgumentsHost;
+    const filter = new GlobalExceptionFilter(logger as never, { requestId: 'request-1' } as never);
+    filter.catch(new Error('https://signed.example/private?token=secret'), host);
+    const logged = JSON.stringify(logger.error.mock.calls);
+    expect(logged).toContain('unhandled_exception');
+    expect(logged).not.toContain('signed.example');
+    expect(logged).not.toContain('secret');
   });
 });

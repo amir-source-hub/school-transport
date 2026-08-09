@@ -9,6 +9,7 @@ const production = {
   OTP_PROVIDER: 'none',
   PAYMENT_GATEWAY_PROVIDER: 'none',
   LOG_LEVEL: 'info',
+  METRICS_BEARER_TOKEN: 'metrics-token-with-more-than-32-characters',
   SEED_DEMO_DATA: 'false',
 };
 
@@ -32,6 +33,7 @@ describe('production configuration', () => {
     ['OTP_PROVIDER', 'console'],
     ['PAYMENT_GATEWAY_PROVIDER', 'mock'],
     ['LOG_LEVEL', 'debug'],
+    ['METRICS_BEARER_TOKEN', 'short'],
     ['SEED_DEMO_DATA', 'true'],
   ])('rejects unsafe production %s', (name, value) => {
     expect(

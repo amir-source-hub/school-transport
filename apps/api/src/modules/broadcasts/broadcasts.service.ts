@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { and, asc, count, eq, inArray, lte, sql } from 'drizzle-orm';
 import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { AppError, ConflictError, NotFoundError } from '../../common/errors';
@@ -16,6 +16,7 @@ import { KavenegarProviderError } from '../../infrastructure/sms/kavenegar.clien
 import { SMS_PROVIDER, type SmsProvider } from '../../infrastructure/sms/sms-provider.port';
 import type { CreateBroadcastDto } from './broadcast.dto';
 import { smsSegmentCount } from './sms-segments';
+import { OperationalMetricsService } from '../../infrastructure/metrics/operational-metrics.service';
 
 const MAX_ATTEMPTS = 5;
 
@@ -26,6 +27,7 @@ export class BroadcastsService {
     private readonly config: ConfigService,
     @Inject(SMS_PROVIDER) private readonly sms: SmsProvider,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Optional() private readonly metrics?: OperationalMetricsService,
   ) {}
 
   async list() {
@@ -152,16 +154,14 @@ export class BroadcastsService {
       )
         throw new AppError('BROADCAST_COST_LIMIT', 'هزینه برآوردی از سقف مجاز بیشتر است.', 400);
       if (recipients.length)
-        await txn
-          .insert(smsBroadcastRecipients)
-          .values(
-            recipients.map((recipient) => ({
-              id: generateId(),
-              broadcastId: id,
-              userId: recipient.id,
-              normalizedPhone: recipient.phoneNumber,
-            })),
-          );
+        await txn.insert(smsBroadcastRecipients).values(
+          recipients.map((recipient) => ({
+            id: generateId(),
+            broadcastId: id,
+            userId: recipient.id,
+            normalizedPhone: recipient.phoneNumber,
+          })),
+        );
       const now = new Date();
       const [approved] = await txn
         .update(smsBroadcasts)
@@ -194,6 +194,7 @@ export class BroadcastsService {
         newValues: { status: 'SCHEDULED' },
         ipAddress,
       });
+      this.metrics?.addBroadcastEstimatedSpend(estimatedCostRial);
       return approved;
     });
   }
@@ -207,12 +208,24 @@ export class BroadcastsService {
         403,
       );
     const campaign = await this.get(id);
-    const result = await this.sms.send({
-      phoneNumber,
-      message: campaign.smsContent,
-      idempotencyKey: `broadcast-test:${id}:${generateId()}`,
-      correlationId: id,
-    });
+    const startedAt = performance.now();
+    let result;
+    try {
+      result = await this.sms.send({
+        phoneNumber,
+        message: campaign.smsContent,
+        idempotencyKey: `broadcast-test:${id}:${generateId()}`,
+        correlationId: id,
+      });
+      this.metrics?.recordMessage(
+        'test_broadcast',
+        'accepted',
+        (performance.now() - startedAt) / 1_000,
+      );
+    } catch (error) {
+      this.recordProviderFailure('test_broadcast', error, startedAt);
+      throw error;
+    }
     await this.audit.record({
       actorType: 'ADMIN',
       actorId: adminId,
@@ -406,9 +419,11 @@ export class BroadcastsService {
       )
       .limit(1);
     if (!eligible) {
+      this.metrics?.recordMessage('broadcast_campaign', 'skipped_no_consent');
       await this.finishRecipient(recipient.id, 'SKIPPED_NO_CONSENT');
       return;
     }
+    const startedAt = performance.now();
     try {
       const result = await this.sms.send({
         phoneNumber: recipient.normalizedPhone,
@@ -425,6 +440,11 @@ export class BroadcastsService {
           updatedAt: new Date(),
         })
         .where(eq(smsBroadcastRecipients.id, recipient.id));
+      this.metrics?.recordMessage(
+        'broadcast_campaign',
+        'accepted',
+        (performance.now() - startedAt) / 1_000,
+      );
     } catch (error) {
       const permanent = error instanceof KavenegarProviderError && !error.transient;
       const dead = permanent || recipient.attemptCount >= MAX_ATTEMPTS;
@@ -439,7 +459,26 @@ export class BroadcastsService {
           updatedAt: new Date(),
         })
         .where(eq(smsBroadcastRecipients.id, recipient.id));
+      this.recordProviderFailure('broadcast_campaign', error, startedAt);
+      this.metrics?.recordMessage('broadcast_campaign', dead ? 'dead_letter' : 'retry');
     }
+  }
+
+  private recordProviderFailure(
+    category: 'test_broadcast' | 'broadcast_campaign',
+    error: unknown,
+    startedAt: number,
+  ) {
+    const outcome =
+      error instanceof KavenegarProviderError
+        ? error.providerStatus === 408
+          ? 'timeout'
+          : error.transient
+            ? 'transient_failure'
+            : 'permanent_failure'
+        : 'transient_failure';
+    this.metrics?.recordMessage(category, outcome, (performance.now() - startedAt) / 1_000);
+    if (outcome === 'permanent_failure') this.metrics?.recordMessage(category, 'rejected');
   }
 
   private async finishRecipient(id: string, status: string) {
