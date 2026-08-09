@@ -24,6 +24,7 @@ import { InAppNotificationModule } from './infrastructure/notifications/in-app-n
 import { ReportsModule } from './modules/reports/reports.module';
 import { SmsModule } from './infrastructure/sms/sms.module';
 import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
+import { FeedbackModule } from './modules/feedback/feedback.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
     NotificationsModule,
     AuditModule,
     BroadcastsModule,
+    FeedbackModule,
     HealthModule,
     QueueModule,
     ReportsModule,

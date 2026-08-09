@@ -169,6 +169,13 @@
       "when": 1786222000000,
       "tag": "0023_broadcast_cost_bigint",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786300000000,
+      "tag": "0024_feedback_workflow",
+      "breakpoints": true
     }
   ]
 }
