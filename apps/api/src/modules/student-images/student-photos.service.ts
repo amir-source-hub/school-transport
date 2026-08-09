@@ -9,11 +9,8 @@ import { students, studentPhotoUploads } from '../../database/schemas';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import { S3_CLIENT, type S3Storage } from '../../infrastructure/s3/s3-storage.port';
 import { assertStudentPhotoTransition, type StudentPhotoStatus } from './student-photo-lifecycle';
-import {
-  PhotoValidationError,
-  processStudentPhoto,
-  type ProcessedPhoto,
-} from './student-photo-processor';
+import { PhotoValidationError, type ProcessedPhoto } from './student-photo-processor';
+import { processStudentPhotoIsolated } from './isolated-photo-processor';
 import type {
   AdminPhotoListQueryDto,
   AuthorizePhotoUploadDto,
@@ -181,7 +178,7 @@ export class StudentPhotosService {
 
     let processed: ProcessedPhoto;
     try {
-      processed = await processStudentPhoto(raw, this.photoConfig());
+      processed = await processStudentPhotoIsolated(raw, this.photoConfig());
     } catch (error) {
       const code =
         error instanceof PhotoValidationError ? error.rejectionCode : 'PROCESSING_FAILED';
