@@ -16,6 +16,9 @@ import { generateId, generateContractNumber } from '../../common/utils';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 
+export const FAMILY_CONTRACT_LIST_LIMIT = 100;
+export const ADMIN_CONTRACT_LIST_LIMIT = 500;
+
 @Injectable()
 export class ContractsService {
   constructor(
@@ -38,7 +41,9 @@ export class ContractsService {
       .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, contracts.registrationId))
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
       .innerJoin(registrationPrices, eq(registrationPrices.id, contracts.registrationPriceId))
-      .where(eq(students.userId, userId));
+      .where(eq(students.userId, userId))
+      .orderBy(desc(contracts.createdAt), desc(contracts.id))
+      .limit(FAMILY_CONTRACT_LIST_LIMIT);
     return result;
   }
 
@@ -54,7 +59,9 @@ export class ContractsService {
       .from(contracts)
       .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, contracts.registrationId))
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
-      .innerJoin(registrationPrices, eq(registrationPrices.id, contracts.registrationPriceId));
+      .innerJoin(registrationPrices, eq(registrationPrices.id, contracts.registrationPriceId))
+      .orderBy(desc(contracts.createdAt), desc(contracts.id))
+      .limit(ADMIN_CONTRACT_LIST_LIMIT);
 
     if (contractRows.length === 0) return [];
 
