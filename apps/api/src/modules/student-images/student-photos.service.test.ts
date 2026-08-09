@@ -105,11 +105,16 @@ function storage(overrides: Partial<Record<keyof S3Storage, unknown>> = {}): S3S
 }
 
 function notifications() {
-  return { enqueueInTransaction: vi.fn(async () => undefined) } as unknown as InAppNotificationService;
+  return {
+    enqueueInTransaction: vi.fn(async () => undefined),
+  } as unknown as InAppNotificationService;
 }
 
 function audit() {
-  return { record: vi.fn(async () => undefined), recordInTransaction: vi.fn(async () => undefined) } as unknown as AuditPort;
+  return {
+    record: vi.fn(async () => undefined),
+    recordInTransaction: vi.fn(async () => undefined),
+  } as unknown as AuditPort;
 }
 
 describe('StudentPhotosService authorizeUpload', () => {
@@ -138,7 +143,10 @@ describe('StudentPhotosService authorizeUpload', () => {
     const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
 
     await expect(
-      service.authorizeUpload('user-1', { declaredMime: 'image/png', declaredSize: 25 * 1024 * 1024 }),
+      service.authorizeUpload('user-1', {
+        declaredMime: 'image/png',
+        declaredSize: 25 * 1024 * 1024,
+      }),
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
@@ -205,9 +213,11 @@ describe('StudentPhotosService completeUpload', () => {
   });
 
   it('fails the upload when the object never reached storage', async () => {
-    const store = storage({ headObject: vi.fn(async () => {
-      throw new Error('Not Found');
-    }) });
+    const store = storage({
+      headObject: vi.fn(async () => {
+        throw new Error('Not Found');
+      }),
+    });
     const db = {
       db: {
         select: vi.fn(() => selectLimit([baseRow()])),
@@ -230,7 +240,9 @@ describe('StudentPhotosService completeUpload', () => {
     } as unknown as DatabaseService;
     const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
 
-    await expect(service.completeUpload('user-1', 'upload-1')).rejects.toBeInstanceOf(NotFoundError);
+    await expect(service.completeUpload('user-1', 'upload-1')).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
   });
 
   it('processes a valid image into PENDING_REVIEW', async () => {
@@ -295,7 +307,10 @@ describe('StudentPhotosService approve', () => {
     });
     const approved = { ...pending, status: 'APPROVED' };
     const txn = {
-      select: vi.fn(() => selectLimit([pending])),
+      select: vi
+        .fn()
+        .mockReturnValueOnce(selectLimit([pending]))
+        .mockReturnValueOnce(selectLimit([])),
       update: vi
         .fn()
         .mockReturnValueOnce(updateSimple())
@@ -310,7 +325,7 @@ describe('StudentPhotosService approve', () => {
     const auditLog = audit();
     const service = new StudentPhotosService(db, config(), notice, storage(), auditLog);
 
-    const result = await service.approve('admin-1', 'upload-1');
+    const result = await service.approve('admin-1', 'upload-1', 1);
     expect(result.status).toBe('APPROVED');
     expect(notice.enqueueInTransaction).toHaveBeenCalledWith(
       txn,
@@ -322,7 +337,10 @@ describe('StudentPhotosService approve', () => {
   it('raises ConflictError when the row was already reviewed', async () => {
     const pending = baseRow({ status: 'PENDING_REVIEW', canonicalKey: 'canonical/c.jpg' });
     const txn = {
-      select: vi.fn(() => selectLimit([pending])),
+      select: vi
+        .fn()
+        .mockReturnValueOnce(selectLimit([pending]))
+        .mockReturnValueOnce(selectLimit([])),
       update: vi.fn(() => updateReturning([])),
     };
     const db = {
@@ -330,19 +348,42 @@ describe('StudentPhotosService approve', () => {
     } as unknown as DatabaseService;
     const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
 
-    await expect(service.approve('admin-1', 'upload-1')).rejects.toMatchObject({
+    await expect(service.approve('admin-1', 'upload-1', 1)).rejects.toMatchObject({
       code: 'PHOTO_CHANGED',
     });
   });
 
-  it('rejects approving a photo that is not pending review', async () => {
-    const txn = { select: vi.fn(() => selectLimit([baseRow({ status: 'REJECTED' })])), update: vi.fn() };
+  it('rejects stale approval when a newer pending photo exists', async () => {
+    const pending = baseRow({ status: 'PENDING_REVIEW', canonicalKey: 'canonical/old.jpg' });
+    const txn = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(selectLimit([pending]))
+        .mockReturnValueOnce(selectLimit([{ id: 'newer-upload' }])),
+      update: vi.fn(),
+    };
     const db = {
       db: { transaction: vi.fn(async (cb: (t: unknown) => unknown) => cb(txn)) },
     } as unknown as DatabaseService;
     const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
 
-    await expect(service.approve('admin-1', 'upload-1')).rejects.toBeInstanceOf(ValidationError);
+    await expect(service.approve('admin-1', 'upload-1', 1)).rejects.toMatchObject({
+      code: 'PHOTO_SUPERSEDED',
+    });
+    expect(txn.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects approving a photo that is not pending review', async () => {
+    const txn = {
+      select: vi.fn(() => selectLimit([baseRow({ status: 'REJECTED' })])),
+      update: vi.fn(),
+    };
+    const db = {
+      db: { transaction: vi.fn(async (cb: (t: unknown) => unknown) => cb(txn)) },
+    } as unknown as DatabaseService;
+    const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
+
+    await expect(service.approve('admin-1', 'upload-1', 1)).rejects.toBeInstanceOf(ValidationError);
   });
 });
 
@@ -361,7 +402,7 @@ describe('StudentPhotosService reject', () => {
     const auditLog = audit();
     const service = new StudentPhotosService(db, config(), notice, storage(), auditLog);
 
-    const result = await service.reject('admin-1', 'upload-1', { reason: 'BLURRED' });
+    const result = await service.reject('admin-1', 'upload-1', { reason: 'BLURRED', version: 1 });
     expect(result.status).toBe('REJECTED');
     expect(notice.enqueueInTransaction).toHaveBeenCalledWith(
       txn,
@@ -380,7 +421,9 @@ describe('StudentPhotosService reject', () => {
     } as unknown as DatabaseService;
     const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
 
-    await expect(service.reject('admin-1', 'upload-1', { reason: 'BLURRED' })).rejects.toMatchObject({
+    await expect(
+      service.reject('admin-1', 'upload-1', { reason: 'BLURRED', version: 1 }),
+    ).rejects.toMatchObject({
       code: 'PHOTO_CHANGED',
     });
   });
@@ -391,7 +434,11 @@ describe('StudentPhotosService cleanupExpired', () => {
     const expirable = baseRow({ id: 'exp-1', status: 'AUTHORIZED' });
     const stalled = baseRow({ id: 'stall-1', status: 'UPLOADED' });
     const removable = baseRow({ id: 'old-1', status: 'REJECTED' });
-    const canonicalRemovable = baseRow({ id: 'old-c-1', status: 'SUPERSEDED', canonicalKey: 'canonical/x.jpg' });
+    const canonicalRemovable = baseRow({
+      id: 'old-c-1',
+      status: 'SUPERSEDED',
+      canonicalKey: 'canonical/x.jpg',
+    });
     const db = {
       db: {
         select: vi
@@ -411,4 +458,3 @@ describe('StudentPhotosService cleanupExpired', () => {
     expect(store.deleteObject).toHaveBeenCalledWith('canonical/x.jpg');
   });
 });
-

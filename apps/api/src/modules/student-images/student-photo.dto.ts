@@ -25,7 +25,11 @@ export class LinkPhotoUploadDto {
   @IsUUID() studentId!: string;
 }
 
-export class RejectPhotoUploadDto {
+export class ReviewPhotoUploadDto {
+  @Type(() => Number) @IsInt() @Min(1) version!: number;
+}
+
+export class RejectPhotoUploadDto extends ReviewPhotoUploadDto {
   @IsIn(STANDARD_REJECTION_REASONS) reason!: (typeof STANDARD_REJECTION_REASONS)[number];
   @IsOptional() @IsString() @Length(2, 500) detail?: string;
 }
@@ -34,13 +38,6 @@ export class AdminPhotoListQueryDto {
   @Type(() => Number) @IsInt() @Min(1) page = 1;
   @Type(() => Number) @IsInt() @Min(5) @Max(50) pageSize = 10;
   @IsOptional()
-  @IsIn([
-    'PENDING_REVIEW',
-    'APPROVED',
-    'REJECTED',
-    'FAILED',
-    'EXPIRED',
-    'SUPERSEDED',
-  ])
+  @IsIn(['PENDING_REVIEW', 'APPROVED', 'REJECTED', 'FAILED', 'EXPIRED', 'SUPERSEDED'])
   status?: string;
 }

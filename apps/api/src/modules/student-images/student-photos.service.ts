@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import { ConfigService } from '../../config/config.service';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -74,10 +74,9 @@ export class StudentPhotosService {
       );
     }
     if (input.declaredSize > this.config.studentPhotoMaxBytes) {
-      throw new ValidationError(
-        'حجم فایل از حد مجاز بیشتر است. حداکثر ۲۵ مگابایت.',
-        { declaredSize: ['حداکثر ۲۵ مگابایت مجاز است.'] },
-      );
+      throw new ValidationError('حجم فایل از حد مجاز بیشتر است. حداکثر ۲۵ مگابایت.', {
+        declaredSize: ['حداکثر ۲۵ مگابایت مجاز است.'],
+      });
     }
     const extension = input.declaredMime === 'image/png' ? '.png' : '.jpg';
     const rawKey = keyOfPrefix(RAW_PREFIX, extension);
@@ -138,7 +137,11 @@ export class StudentPhotosService {
     try {
       head = await this.storage.headObject(upload.rawKey);
     } catch {
-      throw new AppError('PHOTO_UPLOAD_MISSING', 'عکس به ذخیره‌گاه نرسیده است. دوباره بارگذاری کنید.', 409);
+      throw new AppError(
+        'PHOTO_UPLOAD_MISSING',
+        'عکس به ذخیره‌گاه نرسیده است. دوباره بارگذاری کنید.',
+        409,
+      );
     }
     if (head.size > this.config.studentPhotoMaxBytes) {
       await this.markFailed(upload.id, 'TOO_LARGE', ip);
@@ -149,19 +152,29 @@ export class StudentPhotosService {
     try {
       raw = await this.storage.getObject(upload.rawKey);
     } catch {
-      throw new AppError('PHOTO_UPLOAD_MISSING', 'عکس قابل خواندن نیست. دوباره بارگذاری کنید.', 409);
+      throw new AppError(
+        'PHOTO_UPLOAD_MISSING',
+        'عکس قابل خواندن نیست. دوباره بارگذاری کنید.',
+        409,
+      );
     }
 
     await this.db.db
       .update(studentPhotoUploads)
-      .set({ status: 'VALIDATING', uploadedAt: new Date(), validatingAt: new Date(), updatedAt: new Date() })
+      .set({
+        status: 'VALIDATING',
+        uploadedAt: new Date(),
+        validatingAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(studentPhotoUploads.id, upload.id));
 
     let processed: ProcessedPhoto;
     try {
       processed = await processStudentPhoto(raw, this.photoConfig());
     } catch (error) {
-      const code = error instanceof PhotoValidationError ? error.rejectionCode : 'PROCESSING_FAILED';
+      const code =
+        error instanceof PhotoValidationError ? error.rejectionCode : 'PROCESSING_FAILED';
       await this.markFailed(upload.id, code, ip);
       await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
       throw new ValidationError('عکس بارگذاری‌شده معتبر نیست و در صف بررسی قرار نمی‌گیرد.');
@@ -172,7 +185,11 @@ export class StudentPhotosService {
       await this.storage.putObject(canonicalKey, processed.canonical, 'image/jpeg');
     } catch {
       await this.markFailed(upload.id, 'STORAGE_UNAVAILABLE', ip);
-      throw new AppError('PHOTO_STORAGE_UNAVAILABLE', 'ذخیره عکس پردازش‌شده ناموفق بود. دوباره تلاش کنید.', 503);
+      throw new AppError(
+        'PHOTO_STORAGE_UNAVAILABLE',
+        'ذخیره عکس پردازش‌شده ناموفق بود. دوباره تلاش کنید.',
+        503,
+      );
     }
 
     const [updated] = await this.db.db
@@ -271,7 +288,6 @@ export class StudentPhotosService {
         student: {
           firstName: students.firstName,
           lastName: students.lastName,
-          nationalId: students.nationalId,
         },
       })
       .from(studentPhotoUploads)
@@ -287,9 +303,7 @@ export class StudentPhotosService {
     return {
       items: rows.map(({ upload, student }) => ({
         ...this.toAdminView(upload),
-        student: student
-          ? { firstName: student.firstName, lastName: student.lastName, nationalId: student.nationalId }
-          : null,
+        student: student ? { firstName: student.firstName, lastName: student.lastName } : null,
       })),
       total: Number(value),
       page: query.page,
@@ -317,12 +331,15 @@ export class StudentPhotosService {
     return {
       uploadId: upload.id,
       status: upload.status,
-      viewUrl: this.storage.presignGet(upload.canonicalKey, this.config.studentPhotoViewUrlTtlSeconds),
+      viewUrl: this.storage.presignGet(
+        upload.canonicalKey,
+        this.config.studentPhotoViewUrlTtlSeconds,
+      ),
       expiresInSeconds: this.config.studentPhotoViewUrlTtlSeconds,
     };
   }
 
-  async approve(adminId: string, uploadId: string, ip?: string) {
+  async approve(adminId: string, uploadId: string, version: number, ip?: string) {
     const now = new Date();
     const approved = await this.db.db.transaction(async (txn) => {
       const [upload] = await txn
@@ -333,6 +350,21 @@ export class StudentPhotosService {
       if (!upload) throw new NotFoundError('Student photo upload');
       assertStudentPhotoTransition(upload.status as StudentPhotoStatus, 'APPROVED');
       if (!upload.canonicalKey) throw new ValidationError('The photo has no canonical image.');
+      if (!upload.studentId) {
+        throw new ConflictError('PHOTO_NOT_LINKED', 'عکس هنوز به دانش‌آموز متصل نشده است.');
+      }
+      const [newer] = await txn
+        .select({ id: studentPhotoUploads.id })
+        .from(studentPhotoUploads)
+        .where(
+          and(
+            eq(studentPhotoUploads.studentId, upload.studentId),
+            eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
+            gt(studentPhotoUploads.createdAt, upload.createdAt),
+          ),
+        )
+        .limit(1);
+      if (newer) throw new ConflictError('PHOTO_SUPERSEDED', 'عکس جدیدتری برای بررسی ثبت شده است.');
       if (upload.studentId) {
         await txn
           .update(studentPhotoUploads)
@@ -349,6 +381,7 @@ export class StudentPhotosService {
         .update(studentPhotoUploads)
         .set({
           status: 'APPROVED',
+          version: version + 1,
           reviewerAdminId: adminId,
           reviewedAt: now,
           approvedAt: now,
@@ -358,6 +391,7 @@ export class StudentPhotosService {
           and(
             eq(studentPhotoUploads.id, upload.id),
             eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
+            eq(studentPhotoUploads.version, version),
           ),
         )
         .returning();
@@ -399,6 +433,7 @@ export class StudentPhotosService {
         .update(studentPhotoUploads)
         .set({
           status: 'REJECTED',
+          version: input.version + 1,
           rejectionCode: input.reason,
           rejectionDetail: input.detail ?? null,
           reviewerAdminId: adminId,
@@ -410,6 +445,7 @@ export class StudentPhotosService {
           and(
             eq(studentPhotoUploads.id, upload.id),
             eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
+            eq(studentPhotoUploads.version, input.version),
           ),
         )
         .returning();
@@ -458,7 +494,9 @@ export class StudentPhotosService {
             expirable.map((row) => row.id),
           ),
         );
-      await Promise.all(expirable.map((row) => this.storage.deleteObject(row.rawKey).catch(() => undefined)));
+      await Promise.all(
+        expirable.map((row) => this.storage.deleteObject(row.rawKey).catch(() => undefined)),
+      );
     }
 
     const stalled = await this.db.db
@@ -467,10 +505,7 @@ export class StudentPhotosService {
       .where(
         and(
           eq(studentPhotoUploads.status, 'UPLOADED'),
-          lt(
-            studentPhotoUploads.updatedAt,
-            new Date(now.getTime() - UPLOADED_STALL_MS),
-          ),
+          lt(studentPhotoUploads.updatedAt, new Date(now.getTime() - UPLOADED_STALL_MS)),
         ),
       );
     if (stalled.length > 0) {
@@ -483,7 +518,9 @@ export class StudentPhotosService {
             stalled.map((row) => row.id),
           ),
         );
-      await Promise.all(stalled.map((row) => this.storage.deleteObject(row.rawKey).catch(() => undefined)));
+      await Promise.all(
+        stalled.map((row) => this.storage.deleteObject(row.rawKey).catch(() => undefined)),
+      );
     }
 
     const removable = await this.db.db

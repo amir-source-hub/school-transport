@@ -20,6 +20,7 @@ import {
   AuthorizePhotoUploadDto,
   LinkPhotoUploadDto,
   RejectPhotoUploadDto,
+  ReviewPhotoUploadDto,
 } from './student-photo.dto';
 import { StudentPhotosService } from './student-photos.service';
 
@@ -30,10 +31,7 @@ export class StudentPhotosController {
 
   @Post('uploads')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  async authorize(
-    @Req() req: AuthenticatedRequest,
-    @Body() body: AuthorizePhotoUploadDto,
-  ) {
+  async authorize(@Req() req: AuthenticatedRequest, @Body() body: AuthorizePhotoUploadDto) {
     return successResponse(await this.service.authorizeUpload(req.user.id, body, req.ip));
   }
 
@@ -75,16 +73,17 @@ export class AdminStudentPhotosController {
   }
 
   @Get(':id/view-url')
-  async viewUrl(
-    @Req() req: AuthenticatedRequest,
-    @Param('id', new ParseUUIDPipe()) id: string,
-  ) {
+  async viewUrl(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
     return successResponse(await this.service.getAdminViewUrl(req.user.id, id, req.ip));
   }
 
   @Post(':id/approve')
-  async approve(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
-    return successResponse(await this.service.approve(req.user.id, id, req.ip));
+  async approve(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: ReviewPhotoUploadDto,
+  ) {
+    return successResponse(await this.service.approve(req.user.id, id, body.version, req.ip));
   }
 
   @Post(':id/reject')

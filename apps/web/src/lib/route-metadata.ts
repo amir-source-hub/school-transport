@@ -332,6 +332,13 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     description: 'مشاهده و مدیریت دانش‌آموزان.',
     primaryHeading: 'دانش‌آموزان',
   },
+  {
+    path: '/admin/student-photos',
+    audience: 'admin',
+    title: 'بررسی عکس کارت سرویس',
+    description: 'بررسی ایمن عکس‌های کارت سرویس دانش‌آموزان.',
+    primaryHeading: 'بررسی عکس کارت سرویس',
+  },
 ] as const;
 
 export function metadataFor(path: string): Metadata {

@@ -83,11 +83,8 @@ Tasks:
 
 ### Admin review and card integration
 
-- [ ] Build an admin photo-review page and navigation entry. **[NOT STARTED]**
-  - Show the shared pending queue, canonical image via short-lived authorized URL, minimum student context, prior approved version, and card-layout preview.
-  - Add approve/reject actions, standard Persian rejection reasons, optional safe detail, optimistic concurrency, audit, filters, and pagination.
+- [ ] Add the approved physical card-layout preview to the admin photo-review page after the template/crop area is supplied. The shared queue, short-lived canonical preview, minimal student context, filters, pagination, standard Persian rejection reasons, safe detail, optimistic version checks, audit, and navigation are implemented. **[BLOCKED — CARD TEMPLATE]**
 - [ ] Connect only the current approved canonical photo to the actual student-card generation/export path. **[NOT STARTED]**
-- [ ] Add student panel and safe SMS notifications for approval/rejection and prove the catalog types have real producers. **[NOT FINISHED]**
 
 ### Storage and processing hardening
 
@@ -98,11 +95,7 @@ Tasks:
 - [ ] Verify the five-minute presigned PUT/GET behavior, CORS, anonymous denial, key scoping, and actual Arvan compatibility against staging. **[BLOCKED — ARVAN CONFIGURATION]**
 - [ ] Add explicit processing resource/time limits and stronger polyglot/decompression-bomb tests; a passing Sharp decode alone is insufficient evidence for every adversarial format. **[NOT FINISHED]**
 - [ ] Verify cleanup covers abandoned raw objects, failed processing, rejected originals, superseded versions, archived students, deletion requests, and all object versions when bucket versioning is enabled. **[NOT FINISHED]**
-- [ ] Resolve migration/data-model risks:
-  - define behavior for account-scoped pre-enrollment uploads (`student_id IS NULL`);
-  - enforce valid status values and transition invariants at the database/domain boundary;
-  - prove exactly one current approved photo under replacement concurrency;
-  - ensure stale review cannot approve a superseded upload. **[NOT FINISHED]**
+- [ ] Add a database status constraint and database-backed concurrency proof for the one-current-approved-photo invariant. Account-scoped uploads are explicitly allowed but cannot be approved until transactionally linked, the partial unique index enforces one approved photo, domain transitions are checked, optimistic review versions are required, and stale approval is rejected when a newer pending photo exists. **[NOT FINISHED]**
 
 ### Photo verification
 
