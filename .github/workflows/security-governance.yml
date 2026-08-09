@@ -34,6 +34,8 @@ jobs:
         run: node infrastructure/privacy/assert-data-inventory.mjs
       - name: Enforce monitoring, SLO, and incident-response coverage
         run: node infrastructure/monitoring/assert-monitoring.mjs
+      - name: Enforce executable abuse-test coverage
+        run: node infrastructure/security/assert-abuse-test-matrix.mjs
       - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
         with:
           fail-on-severity: high

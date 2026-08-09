@@ -182,7 +182,8 @@ const server = createServer((request, response) => {
           channel: 'IN_APP',
           purpose: 'SERVICE_NOTICE',
           title: 'ثبت‌نام تأیید شد',
-          message: 'پیام آزمایشی طولانی برای بررسی شکست صحیح متن در نمایشگر باریک و راست‌به‌چپ.',
+          message:
+            'پیام آزمایشی <img src=x onerror="window.__e2eXss=true"> <script>window.__e2eXss=true</script>',
           relatedEntityType: 'REGISTRATION',
           relatedEntityId: null,
           notificationStatus: 'SENT',

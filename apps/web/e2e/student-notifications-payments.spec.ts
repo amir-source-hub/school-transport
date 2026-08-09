@@ -14,6 +14,11 @@ test('notification page is RTL, keyboard-readable, and overflow-free on real vie
   await expect(page.getByRole('heading', { name: 'اعلان‌ها' })).toBeVisible();
   await expect(page.getByText('خوانده‌نشده')).toBeVisible();
   await expect(page.getByRole('button', { name: 'خواندم' })).toBeEnabled();
+  await expect(page.getByText(/<img src=x onerror=/)).toBeVisible();
+  expect(
+    await page.evaluate(() => (window as typeof window & { __e2eXss?: boolean }).__e2eXss),
+  ).toBeUndefined();
+  await expect(page.locator('img[src="x"]')).toHaveCount(0);
   await page.getByRole('link', { name: 'مشاهده جزئیات' }).focus();
   await expect(page.getByRole('link', { name: 'مشاهده جزئیات' })).toBeFocused();
   const layout = await page.evaluate(() => ({

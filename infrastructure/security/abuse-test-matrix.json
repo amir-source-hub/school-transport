@@ -1,0 +1,87 @@
+{
+  "version": "2026-08-10",
+  "categories": [
+    {
+      "category": "sessions-otp",
+      "evidence": [
+        "apps/api/src/modules/identity/application/auth.session-concurrency.test.ts",
+        "apps/api/src/modules/identity/application/auth.otp-concurrency.test.ts"
+      ],
+      "requiredText": ["refresh token", "consumes a correct code only once", "brute-force"]
+    },
+    {
+      "category": "csrf-origins",
+      "evidence": ["apps/api/src/modules/access-control/trusted-origin.guard.test.ts"],
+      "requiredText": ["exact configured origin", "referrer origin"]
+    },
+    {
+      "category": "idor",
+      "evidence": [
+        "apps/api/src/integration/real-services.integration.test.ts",
+        "apps/api/src/modules/access-control/authorization.guards.test.ts"
+      ],
+      "requiredText": ["IDOR boundaries", "cross-family access", "offline-payment ownership"]
+    },
+    {
+      "category": "roles",
+      "evidence": [
+        "apps/api/src/modules/access-control/authorization.guards.test.ts",
+        "apps/api/src/modules/student-images/student-photos.controller.test.ts"
+      ],
+      "requiredText": ["parent access to admin routes", "ordinary-admin boundaries"]
+    },
+    {
+      "category": "xss",
+      "evidence": [
+        "apps/web/e2e/student-notifications-payments.spec.ts",
+        "apps/web/src/lib/security-headers.test.ts"
+      ],
+      "requiredText": ["__e2eXss", "Content-Security-Policy"]
+    },
+    {
+      "category": "injection",
+      "evidence": [
+        "apps/api/src/modules/reports/reports.service.test.ts",
+        "apps/api/src/common/remaining-transport-contracts.test.ts"
+      ],
+      "requiredText": ["formula injection", "rejects unknown or malformed"]
+    },
+    {
+      "category": "ssrf",
+      "evidence": ["apps/web/src/app/api/map-tiles/[z]/[x]/[y]/route.test.ts"],
+      "requiredText": [
+        "outside the selected zoom tile grid without contacting upstream",
+        "https://tile.openstreetmap.org"
+      ]
+    },
+    {
+      "category": "uploads",
+      "evidence": [
+        "apps/api/src/modules/student-images/isolated-photo-processor.test.ts",
+        "apps/api/src/modules/payments/receipt-image-processor.test.ts"
+      ],
+      "requiredText": ["polyglots", "compressed high-pixel", "rejects"]
+    },
+    {
+      "category": "rate-cost-limits",
+      "evidence": [
+        "apps/api/src/modules/identity/application/auth.otp-concurrency.test.ts",
+        "apps/api/src/modules/broadcasts/broadcasts.service.test.ts"
+      ],
+      "requiredText": ["cooldown", "campaign spend cap", "deduplicates"]
+    },
+    {
+      "category": "secrets-logs",
+      "evidence": [
+        "apps/api/src/common/sensitive-data.test.ts",
+        "apps/api/src/modules/identity/infrastructure/otp-delivery.test.ts"
+      ],
+      "requiredText": ["redacts", "does not write the phone number or OTP"]
+    },
+    {
+      "category": "error-disclosure",
+      "evidence": ["apps/api/src/common/filters.test.ts", "apps/web/src/lib/api-client.test.ts"],
+      "requiredText": ["does not log raw", "safe typed error"]
+    }
+  ]
+}
