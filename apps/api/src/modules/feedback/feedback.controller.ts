@@ -16,7 +16,6 @@ import type { AuthenticatedRequest } from '../../common/http-request';
 import { paginatedResponse, successResponse } from '../../common/response';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
-import { SuperAdminGuard } from '../access-control/super-admin.guard';
 import {
   AssignFeedbackDto,
   CreateFeedbackDto,
@@ -41,7 +40,7 @@ export class FeedbackController {
     return paginatedResponse(r.items, q.page, q.pageSize, r.total);
   }
 }
-@UseGuards(AuthGuard, RolesGuard, SuperAdminGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')
 @Controller('admin/feedback')
 export class AdminFeedbackController {

@@ -143,6 +143,14 @@ export class OnboardingService {
         relatedEntityType: 'USER',
         relatedEntityId: userId,
       });
+      await this.notifications.enqueueInTransaction(txn, {
+        eventId: `WELCOME:${userId}`,
+        userId,
+        notificationType: 'WELCOME',
+        title: 'به پنل خانواده خوش آمدید',
+        message:
+          'از این بخش می‌توانید ثبت‌نام، تصمیم‌های مدیریت، قراردادها، پرداخت‌ها و سررسیدها را دنبال کنید.',
+      });
     });
   }
 

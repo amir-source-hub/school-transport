@@ -58,7 +58,7 @@ export default async function StudentDashboardPage() {
     ];
     const recentEvents = [
       ...(nextItem?.dueDate ? [`سررسید پرداخت بعدی: ${formatJalaliDate(nextItem.dueDate)}`] : []),
-      ...notifications.map((item) => item.message),
+      ...notifications.items.map((item) => item.message),
       ...lifecycleEvents,
     ].filter((event, index, items) => items.indexOf(event) === index);
     return {

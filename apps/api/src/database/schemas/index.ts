@@ -23,3 +23,4 @@ export { studentLimitRequests } from './student-limit-requests.schema';
 export { auditLogs } from './audit.schema';
 export { smsBroadcasts, smsBroadcastRecipients } from './broadcasts.schema';
 export { feedbackSubmissions } from './feedback.schema';
+export { studentPhotoUploads } from './student-photos.schema';

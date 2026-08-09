@@ -8,7 +8,6 @@ import { AdminCreateStudentDto, AdminUpdateStudentDto, ArchiveStudentDto, Create
 import { CreateLimitRequestDto, RejectLimitRequestDto } from './student-limit-request.dto';
 import { AdminStudentListQueryDto } from './student-list.dto';
 import { AuthenticatedRequest } from '../../common/http-request';
-import { SuperAdminGuard } from '../access-control/super-admin.guard';
 
 @UseGuards(AuthGuard)
 @Controller('students')
@@ -93,7 +92,6 @@ export class AdminStudentsController {
   }
 
   @Get(':studentId')
-  @UseGuards(SuperAdminGuard)
   async getById(@Param('studentId', new ParseUUIDPipe()) studentId: string) {
     return successResponse(await this.studentsService.getForAdmin(studentId));
   }
@@ -133,7 +131,6 @@ export class AdminStudentsController {
   }
 
   @Patch(':studentId')
-  @UseGuards(SuperAdminGuard)
   async update(
     @Req() req: AuthenticatedRequest,
     @Param('studentId', new ParseUUIDPipe()) studentId: string,

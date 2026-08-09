@@ -176,6 +176,20 @@
       "when": 1786300000000,
       "tag": "0024_feedback_workflow",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786340000000,
+      "tag": "0025_notification_read_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786420000000,
+      "tag": "0026_student_photo_uploads",
+      "breakpoints": true
     }
   ]
 }

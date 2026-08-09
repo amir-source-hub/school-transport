@@ -9,6 +9,7 @@ import {
   uniqueIndex,
   integer,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { users } from './auth.schema';
 
 export const NOTIFICATION_CONSENT_TEXT_VERSION = '2026-08-08.v1';
@@ -62,6 +63,7 @@ export const notifications = pgTable(
     notificationStatus: varchar('notification_status', { length: 20 }).notNull().default('PENDING'),
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     sentAt: timestamp('sent_at', { withTimezone: true }),
+    readAt: timestamp('read_at', { withTimezone: true }),
     failureReason: text('failure_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -71,6 +73,20 @@ export const notifications = pgTable(
     statusIdx: index('idx_notifications_status').on(table.notificationStatus),
     eventIdx: uniqueIndex('idx_notifications_event').on(table.eventId),
     providerMessageIdx: index('idx_notifications_provider_message').on(table.providerMessageId),
+    userChannelCreatedIdx: index('idx_notifications_user_channel_created').on(
+      table.userId,
+      table.channel,
+      table.createdAt,
+      table.id,
+    ),
+    userChannelUnreadIdx: index('idx_notifications_user_channel_unread')
+      .on(table.userId, table.channel)
+      .where(sql`read_at is null`),
+    channelStatusCreatedIdx: index('idx_notifications_channel_status_created').on(
+      table.channel,
+      table.notificationStatus,
+      table.createdAt,
+    ),
   }),
 );
 

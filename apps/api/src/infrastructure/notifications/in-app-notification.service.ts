@@ -123,6 +123,8 @@ export class InAppNotificationService {
           message: event.message,
           relatedEntityType: event.relatedEntityType,
           relatedEntityId: event.relatedEntityId,
+          notificationStatus: 'SENT',
+          sentAt: new Date(),
         })
         .onConflictDoNothing({ target: notifications.eventId });
     });

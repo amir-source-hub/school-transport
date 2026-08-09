@@ -25,6 +25,8 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { SmsModule } from './infrastructure/sms/sms.module';
 import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+import { S3Module } from './infrastructure/s3/s3.module';
+import { StudentPhotosModule } from './modules/student-images/student-photos.module';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
     ConfigModule,
     DatabaseModule,
     SmsModule,
+    S3Module,
     InAppNotificationModule,
     IdentityModule,
     FamiliesModule,
@@ -47,6 +50,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
     AuditModule,
     BroadcastsModule,
     FeedbackModule,
+    StudentPhotosModule,
     HealthModule,
     QueueModule,
     ReportsModule,

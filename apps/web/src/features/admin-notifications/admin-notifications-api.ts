@@ -1,26 +1,44 @@
 import { z } from 'zod';
 import { apiRequest } from '@/lib/api-client';
 
-export const notificationSchema = z.object({
-  id: z.string(), title: z.string(), message: z.string(), type: z.string(),
-  readAt: z.string().nullable(), createdAt: z.string(),
+export const adminNotificationSchema = z.object({
+  id: z.string(),
+  eventId: z.string().nullable(),
+  notificationType: z.string(),
+  title: z.string(),
+  message: z.string(),
+  notificationStatus: z.string(),
+  eventTime: z.coerce.date(),
+  route: z.string().nullable(),
 });
-export type AdminNotification = z.infer<typeof notificationSchema>;
+export type AdminNotification = z.infer<typeof adminNotificationSchema>;
 
-const rawSchema = z.object({
-  id: z.string(), title: z.string(), message: z.string(), notificationType: z.string(),
-  notificationStatus: z.string(), sentAt: z.coerce.date().nullable(), createdAt: z.coerce.date(),
+const listSchema = z.object({
+  items: z.array(adminNotificationSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
 });
+export type AdminNotificationList = z.infer<typeof listSchema>;
 
-export async function getAdminNotifications() {
-  const response = await apiRequest<unknown>('/admin/notifications', { cache: 'no-store' });
-  const notifications = z.array(rawSchema).parse(response.data).map((item) => ({
-    id: item.id,
-    title: item.title,
-    message: item.message,
-    type: item.notificationType.includes('PAYMENT') ? 'warning' : 'info',
-    readAt: item.notificationStatus === 'PENDING' ? null : item.sentAt?.toISOString() ?? item.createdAt.toISOString(),
-    createdAt: item.createdAt.toISOString(),
-  }));
-  return { notifications };
+export async function getAdminNotifications(params: {
+  page?: number;
+  pageSize?: number;
+  type?: string;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+} = {}) {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.pageSize) query.set('pageSize', String(params.pageSize));
+  if (params.type) query.set('type', params.type);
+  if (params.status) query.set('status', params.status);
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+  const suffix = query.size > 0 ? `?${query.toString()}` : '';
+  const response = await apiRequest<unknown>(`/admin/notifications${suffix}`, {
+    cache: 'no-store',
+  });
+  return listSchema.parse(response.data);
 }

@@ -8,6 +8,7 @@ import { authSessions, otpRequests, onboardingSessions } from '../../database/sc
 import { lt, and, eq } from 'drizzle-orm';
 import { InAppNotificationService } from '../notifications/in-app-notification.service';
 import { BroadcastsService } from '../../modules/broadcasts/broadcasts.service';
+import { StudentPhotosService } from '../../modules/student-images/student-photos.service';
 
 export const QUEUE_NAMES = {
   notifications: 'notification-delivery',
@@ -27,6 +28,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     private readonly database: DatabaseService,
     private readonly notificationOutbox: InAppNotificationService,
     private readonly broadcasts: BroadcastsService,
+    private readonly studentPhotos: StudentPhotosService,
   ) {
     this.connection = new IORedis(config.redisUrl, {
       maxRetriesPerRequest: null,
@@ -95,6 +97,16 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
         {
           jobId: 'scheduled-sms-broadcasts',
           repeat: { every: 5_000 },
+          removeOnComplete: 30,
+          removeOnFail: 100,
+        },
+      );
+      await this.queue(QUEUE_NAMES.maintenance).add(
+        'cleanup-student-photos',
+        {},
+        {
+          jobId: 'scheduled-student-photo-cleanup',
+          repeat: { every: 30 * 60 * 1_000 },
           removeOnComplete: 30,
           removeOnFail: 100,
         },
@@ -184,6 +196,11 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     }
     if (job.name === 'dispatch-sms-broadcasts') {
       await this.broadcasts.dispatchAvailable();
+      return;
+    }
+    if (job.name === 'cleanup-student-photos') {
+      await this.studentPhotos.cleanupExpired();
+      this.logger.log('Cleaned up expired and superseded student photos.');
       return;
     }
     this.logger.log(`Processed maintenance job ${job.name}.`);

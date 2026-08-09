@@ -1,12 +1,57 @@
-import { Controller, Get, Post, Patch, Param, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  UseGuards,
+  Req,
+  ParseUUIDPipe,
+  Query,
+} from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { AuthGuard } from '../access-control/auth.guard';
-import { successResponse } from '../../common/response';
+import { paginatedResponse, successResponse } from '../../common/response';
 import { Roles } from '../../common/decorators';
 import { RolesGuard } from '../access-control/roles.guard';
 import { AuthenticatedRequest } from '../../common/http-request';
 import { Body } from '@nestjs/common';
 import { UpdateNotificationConsentDto } from './notification-consent.dto';
+import { Type } from 'class-transformer';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+
+export class NotificationListQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  pageSize?: number;
+}
+
+export class AdminNotificationListQueryDto extends NotificationListQueryDto {
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  dateFrom?: string;
+
+  @IsOptional()
+  @IsString()
+  dateTo?: string;
+}
 
 @UseGuards(AuthGuard)
 @Controller('notifications')
@@ -14,9 +59,9 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  async getAll(@Req() req: AuthenticatedRequest) {
-    const list = await this.notificationsService.getByUser(req.user.id);
-    return successResponse(list);
+  async getAll(@Req() req: AuthenticatedRequest, @Query() query: NotificationListQueryDto) {
+    const result = await this.notificationsService.getByUser(req.user.id, query);
+    return paginatedResponse(result.items, result.page, result.pageSize, result.total);
   }
 
   @Get('unread-count')
@@ -60,7 +105,8 @@ export class AdminNotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  async getAll() {
-    return successResponse(await this.notificationsService.getAll());
+  async getAll(@Req() req: AuthenticatedRequest, @Query() query: AdminNotificationListQueryDto) {
+    const result = await this.notificationsService.getSharedAdminEvents(query);
+    return paginatedResponse(result.items, result.page, result.pageSize, result.total);
   }
 }

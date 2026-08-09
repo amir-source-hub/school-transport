@@ -1,18 +1,70 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { notificationConsents, notifications } from '../../database/schemas';
-import { eq, and, desc, inArray } from 'drizzle-orm';
-import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
+import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { Inject } from '@nestjs/common';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { UpdateNotificationConsentDto } from './notification-consent.dto';
 import { NOTIFICATION_CONSENT_TEXT_VERSION } from '../../database/schemas/notifications.schema';
+import {
+  adminOperationalRoute,
+  notificationCatalog,
+  notificationRoute,
+  type NotificationContext,
+  type NotificationType,
+} from '../../infrastructure/notifications/notification.catalog';
+
+export interface NotificationListQuery {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AdminNotificationListQuery extends NotificationListQuery {
+  type?: string;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 50;
+
+function boundedPagination(query: NotificationListQuery): { page: number; pageSize: number } {
+  const page = Math.max(DEFAULT_PAGE, query.page ?? DEFAULT_PAGE);
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, query.pageSize ?? DEFAULT_PAGE_SIZE));
+  return { page, pageSize };
+}
+
+function toNotificationView(row: typeof notifications.$inferSelect) {
+  const context: NotificationContext = {
+    relatedEntityType: row.relatedEntityType,
+    relatedEntityId: row.relatedEntityId,
+    userId: row.userId,
+  };
+  return {
+    id: row.id,
+    eventId: row.eventId,
+    notificationType: row.notificationType,
+    channel: row.channel,
+    purpose: row.purpose,
+    title: row.title,
+    message: row.message,
+    relatedEntityType: row.relatedEntityType,
+    relatedEntityId: row.relatedEntityId,
+    notificationStatus: row.notificationStatus,
+    readAt: row.readAt,
+    sentAt: row.sentAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    route: notificationRoute(row.notificationType, context),
+  };
+}
 
 @Injectable()
 export class NotificationsService {
   constructor(
     private readonly db: DatabaseService,
-    private readonly outbox: InAppNotificationService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
@@ -98,51 +150,79 @@ export class NotificationsService {
     });
   }
 
-  async getByUser(userId: string) {
-    let items = await this.db.db
+  async getByUser(userId: string, query: NotificationListQuery = {}) {
+    const { page, pageSize } = boundedPagination(query);
+    const where = and(eq(notifications.userId, userId), eq(notifications.channel, 'IN_APP'));
+    const items = await this.db.db
       .select()
       .from(notifications)
-      .where(and(eq(notifications.userId, userId), eq(notifications.channel, 'IN_APP')))
-      .orderBy(desc(notifications.createdAt));
-    if (items.length === 0) {
-      await this.outbox.create({
-        eventId: `WELCOME:${userId}`,
-        userId,
-        notificationType: 'WELCOME',
-        title: 'به پنل خانواده خوش آمدید',
-        message:
-          'از این بخش می‌توانید ثبت‌نام، تصمیم‌های مدیریت، قراردادها، پرداخت‌ها و سررسیدها را دنبال کنید.',
-      });
-      items = await this.db.db
-        .select()
-        .from(notifications)
-        .where(and(eq(notifications.userId, userId), eq(notifications.channel, 'IN_APP')))
-        .orderBy(desc(notifications.createdAt));
-    }
-    return items;
+      .where(where)
+      .orderBy(desc(notifications.createdAt), desc(notifications.id))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+    const [{ value }] = await this.db.db
+      .select({ value: count() })
+      .from(notifications)
+      .where(where);
+    return {
+      items: items.map(toNotificationView),
+      total: Number(value),
+      page,
+      pageSize,
+    };
   }
 
-  async getAll() {
-    return this.db.db
+  async getSharedAdminEvents(query: AdminNotificationListQuery = {}) {
+    const { page, pageSize } = boundedPagination(query);
+    const adminTypes = Object.entries(notificationCatalog)
+      .filter(([, entry]) => entry.adminOperational)
+      .map(([type]) => type as NotificationType);
+    const filters = [
+      eq(notifications.channel, 'IN_APP'),
+      inArray(notifications.notificationType, adminTypes),
+    ];
+    if (query.type) filters.push(eq(notifications.notificationType, query.type));
+    if (query.status) filters.push(eq(notifications.notificationStatus, query.status));
+    if (query.dateFrom) {
+      filters.push(sql`${notifications.createdAt} >= ${new Date(query.dateFrom)}`);
+    }
+    if (query.dateTo) {
+      filters.push(sql`${notifications.createdAt} <= ${new Date(query.dateTo)}`);
+    }
+    const where = and(...filters);
+    const items = await this.db.db
       .select()
       .from(notifications)
-      .where(
-        and(
-          eq(notifications.channel, 'IN_APP'),
-          inArray(notifications.notificationType, [
-            'ACCOUNT_REGISTERED',
-            'ADMIN_STUDENT_ADDED',
-            'ENROLLMENT_CREATED',
-            'PAYMENT_SUCCEEDED',
-            'PAYMENT_APPROVED',
-            'PAYMENT_REJECTED',
-            'PAYMENT_PLAN_READY',
-            'CONTRACT_ACCEPTED',
-            'CONTRACT_REJECTED',
-          ]),
-        ),
-      )
-      .orderBy(desc(notifications.createdAt));
+      .where(where)
+      .orderBy(desc(notifications.createdAt), desc(notifications.id))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+    const [{ value }] = await this.db.db
+      .select({ value: count() })
+      .from(notifications)
+      .where(where);
+    return {
+      items: items.map((row) => {
+        const context: NotificationContext = {
+          relatedEntityType: row.relatedEntityType,
+          relatedEntityId: row.relatedEntityId,
+          userId: row.userId,
+        };
+        return {
+          id: row.id,
+          eventId: row.eventId,
+          notificationType: row.notificationType,
+          title: row.title,
+          message: row.message,
+          notificationStatus: row.notificationStatus,
+          eventTime: row.createdAt,
+          route: adminOperationalRoute(row.notificationType, context),
+        };
+      }),
+      total: Number(value),
+      page,
+      pageSize,
+    };
   }
 
   async getUnreadCount(userId: string) {
@@ -153,35 +233,37 @@ export class NotificationsService {
         and(
           eq(notifications.userId, userId),
           eq(notifications.channel, 'IN_APP'),
-          eq(notifications.notificationStatus, 'PENDING'),
+          sql`${notifications.readAt} is null`,
         ),
       );
-
     return { unreadCount: result.length };
   }
 
   async markRead(notificationId: string, userId: string) {
-    await this.db.db
+    const [updated] = await this.db.db
       .update(notifications)
-      .set({ notificationStatus: 'SENT', sentAt: new Date() })
+      .set({ readAt: new Date(), updatedAt: new Date() })
       .where(
         and(
           eq(notifications.id, notificationId),
           eq(notifications.userId, userId),
           eq(notifications.channel, 'IN_APP'),
         ),
-      );
+      )
+      .returning();
+    if (!updated) throw new NotFoundException('Notification not found.');
+    return updated;
   }
 
   async markAllRead(userId: string) {
     await this.db.db
       .update(notifications)
-      .set({ notificationStatus: 'SENT', sentAt: new Date() })
+      .set({ readAt: new Date(), updatedAt: new Date() })
       .where(
         and(
           eq(notifications.userId, userId),
           eq(notifications.channel, 'IN_APP'),
-          eq(notifications.notificationStatus, 'PENDING'),
+          sql`${notifications.readAt} is null`,
         ),
       );
   }

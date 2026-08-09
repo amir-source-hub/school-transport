@@ -4,12 +4,11 @@ import type { AuthenticatedRequest } from '../../common/http-request';
 import { successResponse } from '../../common/response';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
-import { SuperAdminGuard } from '../access-control/super-admin.guard';
 import { CreateBroadcastDto, TestBroadcastDto } from './broadcast.dto';
 import { BroadcastsService } from './broadcasts.service';
 
 @Controller('admin/broadcasts')
-@UseGuards(AuthGuard, RolesGuard, SuperAdminGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')
 export class BroadcastsController {
   constructor(private readonly broadcasts: BroadcastsService) {}

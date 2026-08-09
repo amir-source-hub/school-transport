@@ -1,6 +1,8 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Card } from '@/components/ui/card';
 import { ArchiveStudentButton } from '@/features/students/archive-student-button';
+import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
+import { getMyPhotoUploads } from '@/features/student-photos/student-photos-api';
 import { StudentForm } from '@/features/students/student-form';
 import { getStudent } from '@/features/students/students-api';
 import { metadataFor } from '@/lib/route-metadata';
@@ -10,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function StudentPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
-  const student = await getStudent(studentId);
+  const [student, photos] = await Promise.all([getStudent(studentId), getMyPhotoUploads(studentId)]);
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -32,6 +34,9 @@ export default async function StudentPage({ params }: { params: Promise<{ studen
           student={student}
           schools={[{ id: student.schoolId, name: student.schoolName }]}
         />
+      </Card>
+      <Card>
+        <PhotoUploadCard studentId={student.id} initialItems={photos} />
       </Card>
       <div className="flex justify-end">
         <ArchiveStudentButton id={student.id} />

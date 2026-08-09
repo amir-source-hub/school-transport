@@ -93,6 +93,25 @@ const envSchema = z
     SMS_BROADCAST_MAX_COST_RIAL: z.coerce.number().int().min(0).default(0),
     SMS_BROADCAST_TEST_NUMBERS: z.string().default(''),
     PAYMENT_GATEWAY_PROVIDER: z.enum(['mock', 'none']).default('none'),
+    ARVAN_S3_ENDPOINT: z.string().trim().optional(),
+    ARVAN_S3_REGION: z.string().trim().optional(),
+    ARVAN_S3_BUCKET: z.string().trim().optional(),
+    ARVAN_S3_ACCESS_KEY: z.string().trim().optional(),
+    ARVAN_S3_SECRET_KEY: z.string().trim().optional(),
+    STUDENT_PHOTO_UPLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(30).max(1800).default(300),
+    STUDENT_PHOTO_VIEW_URL_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(300),
+    STUDENT_PHOTO_MAX_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1024)
+      .max(50 * 1024 * 1024)
+      .default(26_214_400),
+    STUDENT_PHOTO_MAX_PIXELS: z.coerce.number().int().min(100_000).default(12_500_000),
+    STUDENT_PHOTO_MAX_AXIS: z.coerce.number().int().min(1_000).max(16_000).default(8_000),
+    STUDENT_PHOTO_OUTPUT_WIDTH: z.coerce.number().int().min(200).max(1_000).default(600),
+    STUDENT_PHOTO_OUTPUT_HEIGHT: z.coerce.number().int().min(200).max(1_200).default(800),
+    STUDENT_PHOTO_JPEG_QUALITY: z.coerce.number().int().min(60).max(95).default(85),
+    STUDENT_PHOTO_MAX_ACTIVE_UPLOADS: z.coerce.number().int().min(1).max(20).default(3),
     SERVICE_ROLE: z.enum(['api', 'worker']).default('api'),
     AUTH_SESSION_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
     SEED_DEMO_DATA: z
@@ -151,6 +170,27 @@ const envSchema = z
     }
     if (env.PAYMENT_GATEWAY_PROVIDER === 'mock')
       issue('PAYMENT_GATEWAY_PROVIDER', 'Mock payments are development-only.');
+    const arvanValues = [
+      env.ARVAN_S3_ENDPOINT,
+      env.ARVAN_S3_REGION,
+      env.ARVAN_S3_BUCKET,
+      env.ARVAN_S3_ACCESS_KEY,
+      env.ARVAN_S3_SECRET_KEY,
+    ];
+    const anyArvanSet = arvanValues.some((value) => value);
+    if (anyArvanSet && !arvanValues.every(Boolean)) {
+      issue(
+        'ARVAN_S3_ENDPOINT',
+        'All five ARVAN_S3_* values must be set together for student photo storage.',
+      );
+    }
+    if (env.ARVAN_S3_ENDPOINT) {
+      try {
+        new URL(env.ARVAN_S3_ENDPOINT);
+      } catch {
+        issue('ARVAN_S3_ENDPOINT', 'ARVAN_S3_ENDPOINT must be a valid HTTPS endpoint.');
+      }
+    }
     if (env.SERVICE_ROLE === 'api' && env.OTP_PROVIDER === 'none') {
       issue('OTP_PROVIDER', 'Production API startup requires an integrated OTP provider.');
     }
@@ -315,6 +355,57 @@ export class ConfigService implements OnApplicationShutdown {
   }
   get paymentGatewayProvider(): 'mock' | 'none' {
     return this.env.PAYMENT_GATEWAY_PROVIDER;
+  }
+  get arvanS3Endpoint(): string | undefined {
+    return this.env.ARVAN_S3_ENDPOINT;
+  }
+  get arvanS3Region(): string | undefined {
+    return this.env.ARVAN_S3_REGION;
+  }
+  get arvanS3Bucket(): string | undefined {
+    return this.env.ARVAN_S3_BUCKET;
+  }
+  get arvanS3AccessKey(): string | undefined {
+    return this.env.ARVAN_S3_ACCESS_KEY;
+  }
+  get arvanS3SecretKey(): string | undefined {
+    return this.env.ARVAN_S3_SECRET_KEY;
+  }
+  get studentPhotoUploadUrlTtlSeconds(): number {
+    return this.env.STUDENT_PHOTO_UPLOAD_URL_TTL_SECONDS;
+  }
+  get studentPhotoViewUrlTtlSeconds(): number {
+    return this.env.STUDENT_PHOTO_VIEW_URL_TTL_SECONDS;
+  }
+  get studentPhotoMaxBytes(): number {
+    return this.env.STUDENT_PHOTO_MAX_BYTES;
+  }
+  get studentPhotoMaxPixels(): number {
+    return this.env.STUDENT_PHOTO_MAX_PIXELS;
+  }
+  get studentPhotoMaxAxis(): number {
+    return this.env.STUDENT_PHOTO_MAX_AXIS;
+  }
+  get studentPhotoOutputWidth(): number {
+    return this.env.STUDENT_PHOTO_OUTPUT_WIDTH;
+  }
+  get studentPhotoOutputHeight(): number {
+    return this.env.STUDENT_PHOTO_OUTPUT_HEIGHT;
+  }
+  get studentPhotoJpegQuality(): number {
+    return this.env.STUDENT_PHOTO_JPEG_QUALITY;
+  }
+  get studentPhotoMaxActiveUploads(): number {
+    return this.env.STUDENT_PHOTO_MAX_ACTIVE_UPLOADS;
+  }
+  get studentPhotosConfigured(): boolean {
+    return Boolean(
+      this.env.ARVAN_S3_ENDPOINT &&
+        this.env.ARVAN_S3_REGION &&
+        this.env.ARVAN_S3_BUCKET &&
+        this.env.ARVAN_S3_ACCESS_KEY &&
+        this.env.ARVAN_S3_SECRET_KEY,
+    );
   }
   get serviceRole(): 'api' | 'worker' {
     return this.env.SERVICE_ROLE;
