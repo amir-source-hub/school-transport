@@ -1,9 +1,21 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { notificationCatalog } from './notification.catalog';
 
 describe('notification catalog contracts', () => {
+  it('retains only notification types referenced by a production producer', () => {
+    const modulesRoot = resolve(process.cwd(), 'src/modules');
+    const productionSources = collectTypeScriptFiles(modulesRoot)
+      .filter((path) => !path.endsWith('.test.ts'))
+      .map((path) => readFileSync(path, 'utf8'))
+      .join('\n');
+
+    for (const type of Object.keys(notificationCatalog)) {
+      expect(productionSources, `Missing production producer for ${type}`).toContain(`'${type}'`);
+    }
+  });
+
   it('uses only routes declared by the web route metadata', () => {
     const metadata = readFileSync(
       resolve(process.cwd(), '../web/src/lib/route-metadata.ts'),
@@ -43,3 +55,11 @@ describe('notification catalog contracts', () => {
     }
   });
 });
+
+function collectTypeScriptFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) return collectTypeScriptFiles(path);
+    return entry.isFile() && entry.name.endsWith('.ts') ? [path] : [];
+  });
+}

@@ -14,9 +14,7 @@
 
 ### Catalog and producers
 
-- [ ] Verify every catalog entry has a real producer or remove it. **[NOT FINISHED]**
-  - Search all outbox creation sites; distinguish production events from seed fixtures.
-  - Add producer tests for enrollment review/approval/rejection/correction, payment reminders if retained, photo decisions, feedback responses, and account security events.
+- [ ] Add behavioral producer tests for enrollment review/approval/rejection/correction, payment-plan readiness, feedback responses, and account security events. A catalog contract now fails when any retained type lacks a production producer, and photo decision producers already have direct service tests. **[NOT FINISHED]**
 
 ### Shared admin operational view
 
@@ -72,7 +70,6 @@ Tasks:
 
 - [ ] Add IDOR tests proving one student account cannot list, associate, or infer another account's feedback. **[NOT FINISHED]**
 - [ ] Test logged-out/student denial and ordinary-admin access for every admin feedback operation. **[NOT FINISHED]**
-- [ ] Expand stored-XSS coverage across DTOs and both React rendering contexts, including encoded/tag-like and mixed-direction payloads. **[NOT FINISHED]**
 - [ ] Test pagination/filter bounds, stable ordering, empty pages, and concurrent inserts. **[NOT FINISHED]**
 - [ ] Test optimistic concurrency: simultaneous response/close requests with one version allow exactly one state transition. **[NOT FINISHED]**
 - [ ] Test exactly-once feedback-response outbox creation/delivery across retries and concurrent attempts. **[NOT FINISHED]**
