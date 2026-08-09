@@ -11,7 +11,7 @@ import {
   offlinePaymentDestinations,
   offlinePaymentSubmissions,
 } from '../../database/schemas';
-import { eq, and, inArray, desc, max, ne } from 'drizzle-orm';
+import { eq, and, count, inArray, desc, max, ne } from 'drizzle-orm';
 import { AppError, NotFoundError, ConflictError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
@@ -52,21 +52,28 @@ export class PaymentsService {
       .orderBy(desc(offlinePaymentDestinations.version))
       .limit(1);
     if (!destination && !includeInactive) {
-      throw new AppError('OFFLINE_DESTINATION_UNAVAILABLE', 'Offline payment details are not configured.', 503);
+      throw new AppError(
+        'OFFLINE_DESTINATION_UNAVAILABLE',
+        'Offline payment details are not configured.',
+        503,
+      );
     }
     return destination ?? null;
   }
 
-  async configureOfflineDestination(adminId: string, input: {
-    expectedVersion?: number;
-    accountOwner: string;
-    bankName: string;
-    cardNumber: string;
-    iban?: string;
-    accountNumber?: string;
-    instructions: string;
-    confirmed: boolean;
-  }) {
+  async configureOfflineDestination(
+    adminId: string,
+    input: {
+      expectedVersion?: number;
+      accountOwner: string;
+      bankName: string;
+      cardNumber: string;
+      iban?: string;
+      accountNumber?: string;
+      instructions: string;
+      confirmed: boolean;
+    },
+  ) {
     if (!input.confirmed) throw new ValidationError('Confirmation is required.');
     if (!/^\d{16}$/.test(input.cardNumber) || (input.iban && !/^IR\d{24}$/i.test(input.iban))) {
       throw new ValidationError('Card number or IBAN is invalid.');
@@ -79,31 +86,52 @@ export class PaymentsService {
         .for('update')
         .limit(1);
       if (current && input.expectedVersion !== current.version) {
-        throw new ConflictError('STALE_PAYMENT_DESTINATION', 'Payment destination changed. Refresh and confirm again.');
+        throw new ConflictError(
+          'STALE_PAYMENT_DESTINATION',
+          'Payment destination changed. Refresh and confirm again.',
+        );
       }
       if (!current && input.expectedVersion !== undefined) {
-        throw new ConflictError('STALE_PAYMENT_DESTINATION', 'Payment destination changed. Refresh and confirm again.');
+        throw new ConflictError(
+          'STALE_PAYMENT_DESTINATION',
+          'Payment destination changed. Refresh and confirm again.',
+        );
       }
-      const [{ value: highest }] = await txn.select({ value: max(offlinePaymentDestinations.version) }).from(offlinePaymentDestinations);
+      const [{ value: highest }] = await txn
+        .select({ value: max(offlinePaymentDestinations.version) })
+        .from(offlinePaymentDestinations);
       if (current) {
-        await txn.update(offlinePaymentDestinations).set({ isActive: false, updatedAt: new Date() }).where(eq(offlinePaymentDestinations.id, current.id));
+        await txn
+          .update(offlinePaymentDestinations)
+          .set({ isActive: false, updatedAt: new Date() })
+          .where(eq(offlinePaymentDestinations.id, current.id));
       }
-      const [created] = await txn.insert(offlinePaymentDestinations).values({
-        id: generateId(),
-        version: Number(highest ?? 0) + 1,
-        accountOwner: input.accountOwner.trim(),
-        bankName: input.bankName.trim(),
-        cardNumber: input.cardNumber,
-        iban: input.iban?.toUpperCase() ?? null,
-        accountNumber: input.accountNumber?.trim() ?? null,
-        instructions: input.instructions.trim(),
-        createdByAdminId: adminId,
-      }).returning();
+      const [created] = await txn
+        .insert(offlinePaymentDestinations)
+        .values({
+          id: generateId(),
+          version: Number(highest ?? 0) + 1,
+          accountOwner: input.accountOwner.trim(),
+          bankName: input.bankName.trim(),
+          cardNumber: input.cardNumber,
+          iban: input.iban?.toUpperCase() ?? null,
+          accountNumber: input.accountNumber?.trim() ?? null,
+          instructions: input.instructions.trim(),
+          createdByAdminId: adminId,
+        })
+        .returning();
       await this.audit?.recordInTransaction(txn, {
-        actorType: 'ADMIN', actorId: adminId, action: 'OFFLINE_DESTINATION_UPDATED',
-        entityType: 'OFFLINE_PAYMENT_DESTINATION', entityId: created.id,
+        actorType: 'ADMIN',
+        actorId: adminId,
+        action: 'OFFLINE_DESTINATION_UPDATED',
+        entityType: 'OFFLINE_PAYMENT_DESTINATION',
+        entityId: created.id,
         previousValues: current ? { id: current.id, version: current.version } : undefined,
-        newValues: { version: created.version, bankName: created.bankName, cardNumber: `************${created.cardNumber.slice(-4)}` },
+        newValues: {
+          version: created.version,
+          bankName: created.bankName,
+          cardNumber: `************${created.cardNumber.slice(-4)}`,
+        },
       });
       return created;
     });
@@ -426,9 +454,18 @@ export class PaymentsService {
       .onConflictDoNothing()
       .returning({ id: offlinePaymentSubmissions.id });
     if (!created) {
-      const [replay] = await this.db.db.select({ id: offlinePaymentSubmissions.id, paymentScheduleItemId: offlinePaymentSubmissions.paymentScheduleItemId })
+      const [replay] = await this.db.db
+        .select({
+          id: offlinePaymentSubmissions.id,
+          paymentScheduleItemId: offlinePaymentSubmissions.paymentScheduleItemId,
+        })
         .from(offlinePaymentSubmissions)
-        .where(and(eq(offlinePaymentSubmissions.payerUserId, userId), eq(offlinePaymentSubmissions.idempotencyKey, data.idempotencyKey)))
+        .where(
+          and(
+            eq(offlinePaymentSubmissions.payerUserId, userId),
+            eq(offlinePaymentSubmissions.idempotencyKey, data.idempotencyKey),
+          ),
+        )
         .limit(1);
       if (replay?.paymentScheduleItemId === scheduleItemId) return replay.id;
       throw new ConflictError(
@@ -439,38 +476,91 @@ export class PaymentsService {
     return id;
   }
 
-  async authorizeReceiptUpload(submissionId: string, userId: string, input: { declaredMime: 'image/jpeg' | 'image/png'; declaredSize: number }) {
-    if (!this.storage || !this.config) throw new AppError('RECEIPT_STORAGE_UNAVAILABLE', 'Receipt storage is not configured.', 503);
-    const [submission] = await this.db.db.select().from(offlinePaymentSubmissions)
-      .where(and(eq(offlinePaymentSubmissions.id, submissionId), eq(offlinePaymentSubmissions.payerUserId, userId))).limit(1);
+  async authorizeReceiptUpload(
+    submissionId: string,
+    userId: string,
+    input: { declaredMime: 'image/jpeg' | 'image/png'; declaredSize: number },
+  ) {
+    if (!this.storage || !this.config)
+      throw new AppError('RECEIPT_STORAGE_UNAVAILABLE', 'Receipt storage is not configured.', 503);
+    const [submission] = await this.db.db
+      .select()
+      .from(offlinePaymentSubmissions)
+      .where(
+        and(
+          eq(offlinePaymentSubmissions.id, submissionId),
+          eq(offlinePaymentSubmissions.payerUserId, userId),
+        ),
+      )
+      .limit(1);
     if (!submission) throw new NotFoundError('Offline payment submission');
-    if (submission.status !== 'DRAFT') throw new ConflictError('RECEIPT_NOT_DRAFT', 'Only a draft receipt can be uploaded.');
-    if (input.declaredSize > this.config.studentPhotoMaxBytes) throw new ValidationError('Receipt image is too large.');
+    if (submission.status !== 'DRAFT')
+      throw new ConflictError('RECEIPT_NOT_DRAFT', 'Only a draft receipt can be uploaded.');
+    if (input.declaredSize > this.config.studentPhotoMaxBytes)
+      throw new ValidationError('Receipt image is too large.');
     const extension = input.declaredMime === 'image/png' ? '.png' : '.jpg';
     const key = `payment-receipts/raw/${generateId()}${extension}`;
-    const uploadUrl = this.storage.presignPut(key, input.declaredMime, this.config.studentPhotoUploadUrlTtlSeconds);
-    await this.db.db.update(offlinePaymentSubmissions).set({ receiptObjectKey: key, receiptMime: input.declaredMime, receiptSize: input.declaredSize, updatedAt: new Date() })
-      .where(and(eq(offlinePaymentSubmissions.id, submissionId), eq(offlinePaymentSubmissions.status, 'DRAFT')));
-    return { uploadUrl, expiresInSeconds: this.config.studentPhotoUploadUrlTtlSeconds, maxBytes: this.config.studentPhotoMaxBytes };
+    const uploadUrl = this.storage.presignPut(
+      key,
+      input.declaredMime,
+      this.config.studentPhotoUploadUrlTtlSeconds,
+    );
+    await this.db.db
+      .update(offlinePaymentSubmissions)
+      .set({
+        receiptObjectKey: key,
+        receiptMime: input.declaredMime,
+        receiptSize: input.declaredSize,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(offlinePaymentSubmissions.id, submissionId),
+          eq(offlinePaymentSubmissions.status, 'DRAFT'),
+        ),
+      );
+    return {
+      uploadUrl,
+      expiresInSeconds: this.config.studentPhotoUploadUrlTtlSeconds,
+      maxBytes: this.config.studentPhotoMaxBytes,
+    };
   }
 
   async completeReceiptUpload(submissionId: string, userId: string) {
-    if (!this.storage || !this.config) throw new AppError('RECEIPT_STORAGE_UNAVAILABLE', 'Receipt storage is not configured.', 503);
-    const [submission] = await this.db.db.select().from(offlinePaymentSubmissions)
-      .where(and(eq(offlinePaymentSubmissions.id, submissionId), eq(offlinePaymentSubmissions.payerUserId, userId))).limit(1);
+    if (!this.storage || !this.config)
+      throw new AppError('RECEIPT_STORAGE_UNAVAILABLE', 'Receipt storage is not configured.', 503);
+    const [submission] = await this.db.db
+      .select()
+      .from(offlinePaymentSubmissions)
+      .where(
+        and(
+          eq(offlinePaymentSubmissions.id, submissionId),
+          eq(offlinePaymentSubmissions.payerUserId, userId),
+        ),
+      )
+      .limit(1);
     if (!submission) throw new NotFoundError('Offline payment submission');
     if (submission.status === 'PENDING_REVIEW') return submission;
-    if (submission.status !== 'DRAFT' || !submission.receiptObjectKey) throw new ConflictError('RECEIPT_NOT_AUTHORIZED', 'Authorize and upload a receipt first.');
+    if (submission.status !== 'DRAFT' || !submission.receiptObjectKey)
+      throw new ConflictError('RECEIPT_NOT_AUTHORIZED', 'Authorize and upload a receipt first.');
     const rawKey = submission.receiptObjectKey;
     const head = await this.storage.headObject(rawKey).catch(() => null);
-    if (!head || head.size !== submission.receiptSize || head.size > this.config.studentPhotoMaxBytes) {
+    if (
+      !head ||
+      head.size !== submission.receiptSize ||
+      head.size > this.config.studentPhotoMaxBytes
+    ) {
       throw new ValidationError('Uploaded receipt size does not match the declared file.');
     }
     const raw = await this.storage.getObject(rawKey).catch(() => null);
     if (!raw) throw new AppError('RECEIPT_UPLOAD_MISSING', 'Receipt image could not be read.', 409);
     let processed;
     try {
-      processed = await processReceiptImage(raw, { maxBytes: this.config.studentPhotoMaxBytes, maxPixels: this.config.studentPhotoMaxPixels, maxAxis: this.config.studentPhotoMaxAxis });
+      processed = await processReceiptImage(raw, {
+        maxBytes: this.config.studentPhotoMaxBytes,
+        maxPixels: this.config.studentPhotoMaxPixels,
+        maxAxis: this.config.studentPhotoMaxAxis,
+      });
       if (processed.sourceMime !== submission.receiptMime) throw new Error('MIME_MISMATCH');
     } catch {
       await this.storage.deleteObject(rawKey).catch(() => undefined);
@@ -481,17 +571,36 @@ export class PaymentsService {
     let updated;
     try {
       [updated] = await this.db.db.transaction(async (txn) => {
-        const [saved] = await txn.update(offlinePaymentSubmissions).set({
-        receiptObjectKey: canonicalKey, receiptMime: processed.mime, receiptSize: processed.size,
-        receiptWidth: processed.width, receiptHeight: processed.height, receiptChecksum: processed.checksum,
-        status: 'PENDING_REVIEW', submittedAt: new Date(), updatedAt: new Date(),
-      }).where(and(eq(offlinePaymentSubmissions.id, submissionId), eq(offlinePaymentSubmissions.status, 'DRAFT'))).returning();
-        if (!saved) throw new ConflictError('RECEIPT_NOT_DRAFT', 'Receipt state changed while uploading.');
+        const [saved] = await txn
+          .update(offlinePaymentSubmissions)
+          .set({
+            receiptObjectKey: canonicalKey,
+            receiptMime: processed.mime,
+            receiptSize: processed.size,
+            receiptWidth: processed.width,
+            receiptHeight: processed.height,
+            receiptChecksum: processed.checksum,
+            status: 'PENDING_REVIEW',
+            submittedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(offlinePaymentSubmissions.id, submissionId),
+              eq(offlinePaymentSubmissions.status, 'DRAFT'),
+            ),
+          )
+          .returning();
+        if (!saved)
+          throw new ConflictError('RECEIPT_NOT_DRAFT', 'Receipt state changed while uploading.');
         await this.notifications.enqueueInTransaction(txn, {
-        eventId: `OFFLINE_PAYMENT_SUBMITTED:${submissionId}:${userId}`, userId,
-        notificationType: 'OFFLINE_PAYMENT_SUBMITTED', title: 'رسید پرداخت ارسال شد',
-        message: 'رسید شما برای بررسی مدیریت ثبت شد. ارسال رسید به معنی تأیید پرداخت نیست.',
-        relatedEntityType: 'OFFLINE_PAYMENT_SUBMISSION', relatedEntityId: submissionId,
+          eventId: `OFFLINE_PAYMENT_SUBMITTED:${submissionId}:${userId}`,
+          userId,
+          notificationType: 'OFFLINE_PAYMENT_SUBMITTED',
+          title: 'رسید پرداخت ارسال شد',
+          message: 'رسید شما برای بررسی مدیریت ثبت شد. ارسال رسید به معنی تأیید پرداخت نیست.',
+          relatedEntityType: 'OFFLINE_PAYMENT_SUBMISSION',
+          relatedEntityId: submissionId,
         });
         return [saved];
       });
@@ -504,12 +613,24 @@ export class PaymentsService {
   }
 
   async getReceiptView(submissionId: string, actorId: string, admin = false) {
-    if (!this.storage || !this.config) throw new AppError('RECEIPT_STORAGE_UNAVAILABLE', 'Receipt storage is not configured.', 503);
+    if (!this.storage || !this.config)
+      throw new AppError('RECEIPT_STORAGE_UNAVAILABLE', 'Receipt storage is not configured.', 503);
     const filters = [eq(offlinePaymentSubmissions.id, submissionId)];
     if (!admin) filters.push(eq(offlinePaymentSubmissions.payerUserId, actorId));
-    const [submission] = await this.db.db.select().from(offlinePaymentSubmissions).where(and(...filters)).limit(1);
-    if (!submission?.receiptObjectKey || submission.status === 'DRAFT') throw new NotFoundError('Receipt');
-    return { viewUrl: this.storage.presignGet(submission.receiptObjectKey, this.config.studentPhotoViewUrlTtlSeconds), expiresInSeconds: this.config.studentPhotoViewUrlTtlSeconds };
+    const [submission] = await this.db.db
+      .select()
+      .from(offlinePaymentSubmissions)
+      .where(and(...filters))
+      .limit(1);
+    if (!submission?.receiptObjectKey || submission.status === 'DRAFT')
+      throw new NotFoundError('Receipt');
+    return {
+      viewUrl: this.storage.presignGet(
+        submission.receiptObjectKey,
+        this.config.studentPhotoViewUrlTtlSeconds,
+      ),
+      expiresInSeconds: this.config.studentPhotoViewUrlTtlSeconds,
+    };
   }
 
   async approveOfflinePayment(submissionId: string, adminId: string, version: number) {
@@ -537,10 +658,18 @@ export class PaymentsService {
       if (item.itemStatus === 'PAID') {
         throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Schedule item already paid.');
       }
-      const [lockedPlan] = await txn.select({ id: paymentPlans.id }).from(paymentPlans)
-        .where(eq(paymentPlans.id, submission.paymentPlanId)).for('update').limit(1);
+      const [lockedPlan] = await txn
+        .select({ id: paymentPlans.id })
+        .from(paymentPlans)
+        .where(eq(paymentPlans.id, submission.paymentPlanId))
+        .for('update')
+        .limit(1);
       if (!lockedPlan) throw new NotFoundError('Payment plan');
-      if (submission.submittedAmount !== item.amount) throw new ConflictError('OFFLINE_PAYMENT_AMOUNT_MISMATCH', 'Submitted amount does not match the schedule item.');
+      if (submission.submittedAmount !== item.amount)
+        throw new ConflictError(
+          'OFFLINE_PAYMENT_AMOUNT_MISMATCH',
+          'Submitted amount does not match the schedule item.',
+        );
       const transactionId = generateId();
       await txn.insert(paymentTransactions).values({
         id: transactionId,
@@ -554,9 +683,29 @@ export class PaymentsService {
         verifiedAt: new Date(),
         recordedByAdminId: adminId,
       });
-      const [approved] = await txn.update(offlinePaymentSubmissions).set({ status: 'APPROVED', version: version + 1, reviewerAdminId: adminId, reviewedAt: new Date(), transactionId, updatedAt: new Date() })
-        .where(and(eq(offlinePaymentSubmissions.id, submissionId), eq(offlinePaymentSubmissions.status, 'PENDING_REVIEW'), eq(offlinePaymentSubmissions.version, version))).returning();
-      if (!approved) throw new ConflictError('OFFLINE_PAYMENT_NOT_PENDING', 'Receipt review changed concurrently.');
+      const [approved] = await txn
+        .update(offlinePaymentSubmissions)
+        .set({
+          status: 'APPROVED',
+          version: version + 1,
+          reviewerAdminId: adminId,
+          reviewedAt: new Date(),
+          transactionId,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(offlinePaymentSubmissions.id, submissionId),
+            eq(offlinePaymentSubmissions.status, 'PENDING_REVIEW'),
+            eq(offlinePaymentSubmissions.version, version),
+          ),
+        )
+        .returning();
+      if (!approved)
+        throw new ConflictError(
+          'OFFLINE_PAYMENT_NOT_PENDING',
+          'Receipt review changed concurrently.',
+        );
       await txn
         .update(paymentScheduleItems)
         .set({
@@ -610,21 +759,34 @@ export class PaymentsService {
       }
 
       await this.notifications.enqueueInTransaction(txn, {
-          eventId: `PAYMENT_APPROVED:${submissionId}:${submission.payerUserId}`,
-          userId: submission.payerUserId,
-          notificationType: 'PAYMENT_APPROVED',
-          title: 'پرداخت تأیید شد',
-          message: 'وضعیت پرداخت شما توسط مدیریت تأیید شد. جزئیات در پنل قابل مشاهده است.',
-          relatedEntityType: 'OFFLINE_PAYMENT_SUBMISSION',
-          relatedEntityId: submissionId,
+        eventId: `PAYMENT_APPROVED:${submissionId}:${submission.payerUserId}`,
+        userId: submission.payerUserId,
+        notificationType: 'PAYMENT_APPROVED',
+        title: 'پرداخت تأیید شد',
+        message: 'وضعیت پرداخت شما توسط مدیریت تأیید شد. جزئیات در پنل قابل مشاهده است.',
+        relatedEntityType: 'OFFLINE_PAYMENT_SUBMISSION',
+        relatedEntityId: submissionId,
       });
-      await this.audit?.recordInTransaction(txn, { actorType: 'ADMIN', actorId: adminId, action: 'OFFLINE_PAYMENT_APPROVED', entityType: 'OFFLINE_PAYMENT_SUBMISSION', entityId: submissionId, previousValues: { status: submission.status, version }, newValues: { status: 'APPROVED', transactionId } });
+      await this.audit?.recordInTransaction(txn, {
+        actorType: 'ADMIN',
+        actorId: adminId,
+        action: 'OFFLINE_PAYMENT_APPROVED',
+        entityType: 'OFFLINE_PAYMENT_SUBMISSION',
+        entityId: submissionId,
+        previousValues: { status: submission.status, version },
+        newValues: { status: 'APPROVED', transactionId },
+      });
       return approved;
     });
     return result;
   }
 
-  async rejectOfflinePayment(submissionId: string, adminId: string, reason: string, version: number) {
+  async rejectOfflinePayment(
+    submissionId: string,
+    adminId: string,
+    reason: string,
+    version: number,
+  ) {
     await this.db.db.transaction(async (txn) => {
       const [pending] = await txn
         .select()
@@ -664,15 +826,23 @@ export class PaymentsService {
         );
       }
       await this.notifications.enqueueInTransaction(txn, {
-          eventId: `PAYMENT_REJECTED:${submissionId}:${rejected.payerUserId}`,
-          userId: rejected.payerUserId,
-          notificationType: 'OFFLINE_PAYMENT_CORRECTION_REQUIRED',
-          title: 'پرداخت تأیید نشد',
-          message: 'رسید پرداخت نیاز به اصلاح دارد. دلیل امن در پنل قابل مشاهده است.',
-          relatedEntityType: 'OFFLINE_PAYMENT_SUBMISSION',
-          relatedEntityId: submissionId,
+        eventId: `PAYMENT_REJECTED:${submissionId}:${rejected.payerUserId}`,
+        userId: rejected.payerUserId,
+        notificationType: 'OFFLINE_PAYMENT_CORRECTION_REQUIRED',
+        title: 'پرداخت تأیید نشد',
+        message: 'رسید پرداخت نیاز به اصلاح دارد. دلیل امن در پنل قابل مشاهده است.',
+        relatedEntityType: 'OFFLINE_PAYMENT_SUBMISSION',
+        relatedEntityId: submissionId,
       });
-      await this.audit?.recordInTransaction(txn, { actorType: 'ADMIN', actorId: adminId, action: 'OFFLINE_PAYMENT_REJECTED', entityType: 'OFFLINE_PAYMENT_SUBMISSION', entityId: submissionId, previousValues: { status: pending.status, version }, newValues: { status: 'REJECTED', reason: reason.trim() } });
+      await this.audit?.recordInTransaction(txn, {
+        actorType: 'ADMIN',
+        actorId: adminId,
+        action: 'OFFLINE_PAYMENT_REJECTED',
+        entityType: 'OFFLINE_PAYMENT_SUBMISSION',
+        entityId: submissionId,
+        previousValues: { status: pending.status, version },
+        newValues: { status: 'REJECTED', reason: reason.trim() },
+      });
       return rejected;
     });
 
@@ -680,15 +850,85 @@ export class PaymentsService {
   }
 
   async listOfflineSubmissions(userId: string) {
-    return this.db.db.select().from(offlinePaymentSubmissions)
+    return this.db.db
+      .select()
+      .from(offlinePaymentSubmissions)
       .where(eq(offlinePaymentSubmissions.payerUserId, userId))
-      .orderBy(desc(offlinePaymentSubmissions.createdAt)).limit(100);
+      .orderBy(desc(offlinePaymentSubmissions.createdAt))
+      .limit(100);
   }
 
-  async listOfflineSubmissionsForAdmin() {
-    return this.db.db.select().from(offlinePaymentSubmissions)
-      .where(ne(offlinePaymentSubmissions.status, 'DRAFT'))
-      .orderBy(desc(offlinePaymentSubmissions.createdAt)).limit(200);
+  async listOfflineSubmissionsForAdmin(
+    query: {
+      status?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+      itemType?: 'PREPAYMENT' | 'INSTALLMENT';
+      page?: number;
+      pageSize?: number;
+    } = {},
+  ) {
+    const page = Math.max(1, query.page ?? 1);
+    const pageSize = Math.min(50, Math.max(1, query.pageSize ?? 20));
+    const filters = [ne(offlinePaymentSubmissions.status, 'DRAFT')];
+    if (query.status) filters.push(eq(offlinePaymentSubmissions.status, query.status));
+    if (query.itemType) filters.push(eq(paymentScheduleItems.itemType, query.itemType));
+    const where = and(...filters);
+    const rows = await this.db.db
+      .select({
+        submission: offlinePaymentSubmissions,
+        itemType: paymentScheduleItems.itemType,
+        sequenceNumber: paymentScheduleItems.sequenceNumber,
+        expectedAmount: paymentScheduleItems.amount,
+        dueDate: paymentScheduleItems.dueDate,
+        studentId: students.id,
+        studentFirstName: students.firstName,
+        studentLastName: students.lastName,
+      })
+      .from(offlinePaymentSubmissions)
+      .innerJoin(
+        paymentScheduleItems,
+        eq(paymentScheduleItems.id, offlinePaymentSubmissions.paymentScheduleItemId),
+      )
+      .innerJoin(paymentPlans, eq(paymentPlans.id, offlinePaymentSubmissions.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(where)
+      .orderBy(desc(offlinePaymentSubmissions.createdAt), desc(offlinePaymentSubmissions.id))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+    const [{ value }] = await this.db.db
+      .select({ value: count() })
+      .from(offlinePaymentSubmissions)
+      .innerJoin(
+        paymentScheduleItems,
+        eq(paymentScheduleItems.id, offlinePaymentSubmissions.paymentScheduleItemId),
+      )
+      .where(where);
+    const payerIds = [...new Set(rows.map(({ submission }) => submission.payerUserId))];
+    const familyRows = payerIds.length
+      ? await this.db.db.select().from(parents).where(inArray(parents.userId, payerIds))
+      : [];
+    return {
+      items: rows.map(({ submission, ...context }) => {
+        const family =
+          familyRows.find(
+            (candidate) =>
+              candidate.userId === submission.payerUserId && candidate.isPrimaryContact,
+          ) ?? familyRows.find((candidate) => candidate.userId === submission.payerUserId);
+        return {
+          ...submission,
+          ...context,
+          studentName: `${context.studentFirstName} ${context.studentLastName}`,
+          familyName: family ? `${family.firstName} ${family.lastName}` : '—',
+        };
+      }),
+      total: Number(value),
+      page,
+      pageSize,
+    };
   }
 
   async getPayments(userId: string) {
@@ -826,23 +1066,25 @@ export class PaymentsService {
             paidAmount: item.paidAmount,
             paidAt: item.paidAt?.toISOString() ?? null,
             paid: item.itemStatus === 'PAID',
-            transaction: review ?? (latestTransaction
-              ? {
-                  id: latestTransaction.id,
-                  version: 1,
-                  submittedAmount: latestTransaction.amount,
-                  reference: latestTransaction.gatewayTransactionId ?? '—',
-                  submittedAt:
-                    latestTransaction.verifiedAt?.toISOString() ??
-                    latestTransaction.requestedAt.toISOString(),
-                  status:
-                    latestTransaction.transactionStatus === 'SUCCEEDED'
-                      ? 'تأییدشده'
-                      : latestTransaction.transactionStatus === 'FAILED'
-                        ? 'ردشده'
-                        : 'در انتظار بررسی',
-                }
-              : null),
+            transaction:
+              review ??
+              (latestTransaction
+                ? {
+                    id: latestTransaction.id,
+                    version: 1,
+                    submittedAmount: latestTransaction.amount,
+                    reference: latestTransaction.gatewayTransactionId ?? '—',
+                    submittedAt:
+                      latestTransaction.verifiedAt?.toISOString() ??
+                      latestTransaction.requestedAt.toISOString(),
+                    status:
+                      latestTransaction.transactionStatus === 'SUCCEEDED'
+                        ? 'تأییدشده'
+                        : latestTransaction.transactionStatus === 'FAILED'
+                          ? 'ردشده'
+                          : 'در انتظار بررسی',
+                  }
+                : null),
           };
         };
         const parent =

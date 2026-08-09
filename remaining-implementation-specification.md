@@ -124,7 +124,7 @@ Receipt images use the private vendor-neutral S3 boundary under separate `paymen
 ### Data model and API
 
 - The explicit `offline_payment_submissions` model preserves payer, plan/item, exact amount/date/reference, source-card suffix, private canonical evidence metadata, immutable destination snapshot/version, review state/version, reviewer/reason, transaction link, idempotency, and audit timestamps. Database constraints allow only one active submission and one approval per schedule item. Student/onboarding endpoints cover destination, draft creation, upload authorization/completion, own history, correction after rejection, and scoped receipt views; `MANUAL_ADMIN_ENTRY` remains a distinct privileged cash/manual source.
-- [ ] Add filter and cursor/page controls to the admin submission-history endpoint; it is currently bounded to 200 non-draft rows. **[NOT FINISHED]**
+- The admin submission-history endpoint now validates status/item-type filters, caps pages at 50 rows, uses stable `created_at DESC, id DESC` ordering, returns a total, and enriches each row with schedule, student, and primary-family context. The responsive admin queue preserves filters across pagination and exposes private preview plus versioned review actions only for pending receipts; API and component regressions cover bounded/empty pages and filter preservation.
 
 ### Admin review and financial finalization
 

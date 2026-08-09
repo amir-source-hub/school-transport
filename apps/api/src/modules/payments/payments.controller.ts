@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Roles } from '../../common/decorators';
 import { AuthenticatedRequest } from '../../common/http-request';
 import { successResponse } from '../../common/response';
@@ -13,6 +23,7 @@ import {
   OfflinePaymentDto,
   RejectPaymentDto,
   ReviewPaymentDto,
+  AdminOfflinePaymentListQueryDto,
   VerifyOnlinePaymentDto,
 } from './payment-request.dto';
 import { PaymentsService } from './payments.service';
@@ -38,33 +49,68 @@ export class PaymentsController {
   }
 
   @Post(':scheduleItemId/online/start')
-  async startOnline(@Req() req: AuthenticatedRequest, @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string, @IdempotencyKey() idempotencyKey: string) {
-    return successResponse(await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey));
+  async startOnline(
+    @Req() req: AuthenticatedRequest,
+    @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string,
+    @IdempotencyKey() idempotencyKey: string,
+  ) {
+    return successResponse(
+      await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey),
+    );
   }
 
   @Post(':txId/online/verify')
-  async verifyOnline(@Req() req: AuthenticatedRequest, @Param('txId', new ParseUUIDPipe()) txId: string, @Body() dto: VerifyOnlinePaymentDto) {
-    return successResponse(await this.paymentsService.verifyOnlinePayment(txId, req.user.id, dto.gatewayTransactionId));
+  async verifyOnline(
+    @Req() req: AuthenticatedRequest,
+    @Param('txId', new ParseUUIDPipe()) txId: string,
+    @Body() dto: VerifyOnlinePaymentDto,
+  ) {
+    return successResponse(
+      await this.paymentsService.verifyOnlinePayment(txId, req.user.id, dto.gatewayTransactionId),
+    );
   }
 
   @Post(':scheduleItemId/offline-submissions')
-  async offlineSubmission(@Req() req: AuthenticatedRequest, @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string, @Body() dto: OfflinePaymentDto, @IdempotencyKey() idempotencyKey: string) {
-    const submissionId = await this.paymentsService.createOfflineSubmission(scheduleItemId, req.user.id, { ...dto, idempotencyKey });
+  async offlineSubmission(
+    @Req() req: AuthenticatedRequest,
+    @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string,
+    @Body() dto: OfflinePaymentDto,
+    @IdempotencyKey() idempotencyKey: string,
+  ) {
+    const submissionId = await this.paymentsService.createOfflineSubmission(
+      scheduleItemId,
+      req.user.id,
+      { ...dto, idempotencyKey },
+    );
     return successResponse({ submissionId });
   }
 
   @Post('offline-submissions/:submissionId/receipt/authorize')
-  async authorizeReceipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string, @Body() dto: AuthorizeReceiptUploadDto) {
-    return successResponse(await this.paymentsService.authorizeReceiptUpload(submissionId, req.user.id, dto));
+  async authorizeReceipt(
+    @Req() req: AuthenticatedRequest,
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+    @Body() dto: AuthorizeReceiptUploadDto,
+  ) {
+    return successResponse(
+      await this.paymentsService.authorizeReceiptUpload(submissionId, req.user.id, dto),
+    );
   }
 
   @Post('offline-submissions/:submissionId/receipt/complete')
-  async completeReceipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string) {
-    return successResponse(await this.paymentsService.completeReceiptUpload(submissionId, req.user.id));
+  async completeReceipt(
+    @Req() req: AuthenticatedRequest,
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+  ) {
+    return successResponse(
+      await this.paymentsService.completeReceiptUpload(submissionId, req.user.id),
+    );
   }
 
   @Get('offline-submissions/:submissionId/receipt')
-  async receipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string) {
+  async receipt(
+    @Req() req: AuthenticatedRequest,
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+  ) {
     return successResponse(await this.paymentsService.getReceiptView(submissionId, req.user.id));
   }
 }
@@ -85,29 +131,61 @@ export class OnboardingPaymentsController {
   }
 
   @Post(':scheduleItemId/online/start')
-  async startOnline(@Req() req: AuthenticatedRequest, @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string, @IdempotencyKey() idempotencyKey: string) {
-    return successResponse(await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey));
+  async startOnline(
+    @Req() req: AuthenticatedRequest,
+    @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string,
+    @IdempotencyKey() idempotencyKey: string,
+  ) {
+    return successResponse(
+      await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey),
+    );
   }
 
   @Post(':txId/online/verify')
-  async verifyOnline(@Req() req: AuthenticatedRequest, @Param('txId', new ParseUUIDPipe()) txId: string, @Body() dto: VerifyOnlinePaymentDto) {
-    return successResponse(await this.paymentsService.verifyOnlinePayment(txId, req.user.id, dto.gatewayTransactionId));
+  async verifyOnline(
+    @Req() req: AuthenticatedRequest,
+    @Param('txId', new ParseUUIDPipe()) txId: string,
+    @Body() dto: VerifyOnlinePaymentDto,
+  ) {
+    return successResponse(
+      await this.paymentsService.verifyOnlinePayment(txId, req.user.id, dto.gatewayTransactionId),
+    );
   }
 
   @Post(':scheduleItemId/offline-submissions')
-  async offlineSubmission(@Req() req: AuthenticatedRequest, @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string, @Body() dto: OfflinePaymentDto, @IdempotencyKey() idempotencyKey: string) {
-    const submissionId = await this.paymentsService.createOfflineSubmission(scheduleItemId, req.user.id, { ...dto, idempotencyKey });
+  async offlineSubmission(
+    @Req() req: AuthenticatedRequest,
+    @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string,
+    @Body() dto: OfflinePaymentDto,
+    @IdempotencyKey() idempotencyKey: string,
+  ) {
+    const submissionId = await this.paymentsService.createOfflineSubmission(
+      scheduleItemId,
+      req.user.id,
+      { ...dto, idempotencyKey },
+    );
     return successResponse({ submissionId });
   }
 
   @Post('offline-submissions/:submissionId/receipt/authorize')
-  async authorizeReceipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string, @Body() dto: AuthorizeReceiptUploadDto) {
-    return successResponse(await this.paymentsService.authorizeReceiptUpload(submissionId, req.user.id, dto));
+  async authorizeReceipt(
+    @Req() req: AuthenticatedRequest,
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+    @Body() dto: AuthorizeReceiptUploadDto,
+  ) {
+    return successResponse(
+      await this.paymentsService.authorizeReceiptUpload(submissionId, req.user.id, dto),
+    );
   }
 
   @Post('offline-submissions/:submissionId/receipt/complete')
-  async completeReceipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string) {
-    return successResponse(await this.paymentsService.completeReceiptUpload(submissionId, req.user.id));
+  async completeReceipt(
+    @Req() req: AuthenticatedRequest,
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+  ) {
+    return successResponse(
+      await this.paymentsService.completeReceiptUpload(submissionId, req.user.id),
+    );
   }
 }
 
@@ -128,32 +206,62 @@ export class AdminPaymentsController {
   }
 
   @Post('offline-destination')
-  async configureOfflineDestination(@Req() req: AuthenticatedRequest, @Body() dto: ConfigureOfflineDestinationDto) {
-    return successResponse(await this.paymentsService.configureOfflineDestination(req.user.id, dto));
+  async configureOfflineDestination(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ConfigureOfflineDestinationDto,
+  ) {
+    return successResponse(
+      await this.paymentsService.configureOfflineDestination(req.user.id, dto),
+    );
   }
 
   @Get('offline-submissions')
-  async offlineSubmissions() {
-    return successResponse(await this.paymentsService.listOfflineSubmissionsForAdmin());
+  async offlineSubmissions(@Query() query: AdminOfflinePaymentListQueryDto) {
+    return successResponse(await this.paymentsService.listOfflineSubmissionsForAdmin(query));
   }
 
   @Get('offline-submissions/:submissionId/receipt')
-  async receipt(@Req() req: AuthenticatedRequest, @Param('submissionId', new ParseUUIDPipe()) submissionId: string) {
-    return successResponse(await this.paymentsService.getReceiptView(submissionId, req.user.id, true));
+  async receipt(
+    @Req() req: AuthenticatedRequest,
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+  ) {
+    return successResponse(
+      await this.paymentsService.getReceiptView(submissionId, req.user.id, true),
+    );
   }
 
   @Post('plans/:planId/installments')
-  async configureInstallments(@Param('planId', new ParseUUIDPipe()) planId: string, @Body() dto: ConfigureInstallmentsDto) {
+  async configureInstallments(
+    @Param('planId', new ParseUUIDPipe()) planId: string,
+    @Body() dto: ConfigureInstallmentsDto,
+  ) {
     return successResponse(await this.paymentsService.configureInstallments(planId, dto.items));
   }
 
   @Post('offline-submissions/:submissionId/approve')
-  async approve(@Param('submissionId', new ParseUUIDPipe()) submissionId: string, @Req() req: AuthenticatedRequest, @Body() dto: ReviewPaymentDto) {
-    return successResponse(await this.paymentsService.approveOfflinePayment(submissionId, req.user.id, dto.version));
+  async approve(
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ReviewPaymentDto,
+  ) {
+    return successResponse(
+      await this.paymentsService.approveOfflinePayment(submissionId, req.user.id, dto.version),
+    );
   }
 
   @Post('offline-submissions/:submissionId/reject')
-  async reject(@Param('submissionId', new ParseUUIDPipe()) submissionId: string, @Req() req: AuthenticatedRequest, @Body() dto: RejectPaymentDto) {
-    return successResponse(await this.paymentsService.rejectOfflinePayment(submissionId, req.user.id, dto.reason, dto.version));
+  async reject(
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: RejectPaymentDto,
+  ) {
+    return successResponse(
+      await this.paymentsService.rejectOfflinePayment(
+        submissionId,
+        req.user.id,
+        dto.reason,
+        dto.version,
+      ),
+    );
   }
 }
