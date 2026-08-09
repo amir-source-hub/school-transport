@@ -37,7 +37,13 @@ describe('student notification page states', () => {
   });
 
   it('renders the empty state without read actions', async () => {
-    vi.mocked(getNotifications).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+    vi.mocked(getNotifications).mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      snapshotAt: '2026-08-09T12:00:00.000Z',
+    });
     render(await NotificationsPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText(/اعلانی برای حساب شما ثبت نشده است/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'خواندن همه' })).not.toBeInTheDocument();
@@ -48,6 +54,7 @@ describe('student notification page states', () => {
       total: 1,
       page: 1,
       pageSize: 20,
+      snapshotAt: '2026-08-09T12:00:00.000Z',
       items: [
         {
           id: 'notification-1',

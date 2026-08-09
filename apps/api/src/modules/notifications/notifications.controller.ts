@@ -48,6 +48,10 @@ export class NotificationListQueryDto {
   @Min(1)
   @Max(50)
   pageSize?: number;
+
+  @IsOptional()
+  @IsDateString({ strict: true })
+  snapshotAt?: string;
 }
 
 export class AdminNotificationListQueryDto extends NotificationListQueryDto {
@@ -85,7 +89,9 @@ export class NotificationsController {
   @Get()
   async getAll(@Req() req: AuthenticatedRequest, @Query() query: NotificationListQueryDto) {
     const result = await this.notificationsService.getByUser(req.user.id, query);
-    return paginatedResponse(result.items, result.page, result.pageSize, result.total);
+    return paginatedResponse(result.items, result.page, result.pageSize, result.total, {
+      snapshotAt: result.snapshotAt,
+    });
   }
 
   @Get('unread-count')

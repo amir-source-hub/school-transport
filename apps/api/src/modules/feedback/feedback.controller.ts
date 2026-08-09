@@ -37,7 +37,9 @@ export class FeedbackController {
   }
   @Get() async mine(@Req() req: AuthenticatedRequest, @Query() q: FeedbackQueryDto) {
     const r = await this.service.listMine(req.user.id, q);
-    return paginatedResponse(r.items, q.page, q.pageSize, r.total);
+    return paginatedResponse(r.items, q.page, q.pageSize, r.total, {
+      snapshotAt: r.snapshotAt,
+    });
   }
 }
 @UseGuards(AuthGuard, RolesGuard)
@@ -47,7 +49,9 @@ export class AdminFeedbackController {
   constructor(private readonly service: FeedbackService) {}
   @Get() async list(@Req() req: AuthenticatedRequest, @Query() q: FeedbackQueryDto) {
     const r = await this.service.listAdmin(q, req.user.id, req.ip);
-    return paginatedResponse(r.items, q.page, q.pageSize, r.total);
+    return paginatedResponse(r.items, q.page, q.pageSize, r.total, {
+      snapshotAt: r.snapshotAt,
+    });
   }
   @Patch(':id/read') async read(
     @Req() r: AuthenticatedRequest,

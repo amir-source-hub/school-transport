@@ -22,8 +22,8 @@
 
 ### Student notification UI/API verification
 
-- [ ] Add database-backed IDOR tests for notification list, read-one, and read-all using different user accounts. Unit coverage verifies not-found behavior and authenticated controller boundaries, but staging-equivalent row isolation remains unverified. **[NOT FINISHED]**
-- [ ] Test stable pagination with equal timestamps and concurrent inserts. **[NOT FINISHED]**
+- The PostgreSQL CI integration gate inserts two real accounts and verifies notification list, read-one, and read-all remain scoped to the authenticated account, including uniform not-found behavior for a foreign notification.
+- User notification pagination now carries an immutable `snapshotAt` through API metadata and web navigation, filters both rows and counts to that snapshot, and uses `created_at DESC, id DESC`; the PostgreSQL gate proves deterministic equal-timestamp ordering and that a concurrent later insert neither duplicates nor shifts page two.
 - [ ] Add real-browser verification for notification RTL/mobile layout and screen-reader output. Component coverage now verifies loading, empty, unread state, mark-one, mark-all, keyboard activation, accessible alerts, retry readiness, duplicate-submit prevention, links, and responsive wrapping. **[NOT FINISHED]**
 - [ ] Verify migration `0025_notification_read_state.sql` on a production-like snapshot and prove old queued outbox records remain compatible. **[BLOCKED — STAGING DATABASE]**
 
@@ -61,8 +61,8 @@ Tasks:
 
 ## 3. Feedback verification gaps
 
-- [ ] Add database-backed IDOR verification proving one student account cannot list or infer another account's feedback. Cross-account student association now returns the same not-found result without inserting feedback. **[NOT FINISHED]**
-- [ ] Add database-backed filter, empty-page, and concurrent-insert pagination tests. Service ordering is now stable by `created_at DESC, id DESC`, and DTO bounds are enforced. **[NOT FINISHED]**
+- The PostgreSQL CI integration gate proves one account lists only its own feedback while a foreign account's submission remains absent; cross-account student association already returns the same not-found result without insertion.
+- Feedback list/count queries now share an immutable `snapshotAt`, retain stable `created_at DESC, id DESC` ordering, and expose the snapshot in response metadata. PostgreSQL coverage verifies combined status/category filters, empty pages, and exclusion of a concurrent later insert from both rows and totals.
 - Feedback UI component coverage now verifies keyboard-native labeled controls, required/minimum validation semantics, live success/error announcements, recovery/retry, immediate duplicate-submit guards, inert hostile content, long Persian wrapping, and responsive action layout. The tests also exposed and fixed an async form-target lifetime failure and a same-tick double-submit race. Real-device/browser coverage remains part of the cross-cutting release verification section.
 
 ## 4. Student card photo gaps

@@ -32,11 +32,14 @@ export function NotificationsSkeleton() {
 export default async function NotificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; snapshotAt?: string }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1);
-  const [list, settings] = await Promise.all([getNotifications(page), getNotificationSettings()]);
+  const [list, settings] = await Promise.all([
+    getNotifications(page, 20, params.snapshotAt),
+    getNotificationSettings(),
+  ]);
   const { items, total, pageSize } = list;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -99,7 +102,10 @@ export default async function NotificationsPage({
                 className="flex items-center justify-between gap-3"
               >
                 {page > 1 ? (
-                  <ButtonLink href={`/student/notifications?page=${page - 1}`} variant="secondary">
+                  <ButtonLink
+                    href={`/student/notifications?page=${page - 1}&snapshotAt=${encodeURIComponent(list.snapshotAt)}`}
+                    variant="secondary"
+                  >
                     قبلی
                   </ButtonLink>
                 ) : (
@@ -109,7 +115,10 @@ export default async function NotificationsPage({
                   صفحه {page} از {totalPages}
                 </span>
                 {page < totalPages ? (
-                  <ButtonLink href={`/student/notifications?page=${page + 1}`} variant="secondary">
+                  <ButtonLink
+                    href={`/student/notifications?page=${page + 1}&snapshotAt=${encodeURIComponent(list.snapshotAt)}`}
+                    variant="secondary"
+                  >
                     بعدی
                   </ButtonLink>
                 ) : (

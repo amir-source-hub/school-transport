@@ -25,14 +25,23 @@ export const notificationListSchema = z.object({
   total: z.number(),
   page: z.number(),
   pageSize: z.number(),
+  snapshotAt: z.string(),
 });
 export type NotificationList = z.infer<typeof notificationListSchema>;
 
-export async function getNotifications(page = 1, pageSize = 20) {
-  const response = await apiRequest<unknown>(`/notifications?page=${page}&pageSize=${pageSize}`, {
+export async function getNotifications(page = 1, pageSize = 20, snapshotAt?: string) {
+  const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (snapshotAt) query.set('snapshotAt', snapshotAt);
+  const response = await apiRequest<unknown>(`/notifications?${query}`, {
     cache: 'no-store',
   });
-  return notificationListSchema.parse(response.data);
+  return notificationListSchema.parse({
+    items: response.data,
+    total: response.pagination?.totalItems,
+    page: response.pagination?.page,
+    pageSize: response.pagination?.pageSize,
+    snapshotAt: response.meta?.snapshotAt,
+  });
 }
 export async function markNotificationRead(id: string) {
   await apiRequest(`/notifications/${id}/read`, { method: 'PATCH' });

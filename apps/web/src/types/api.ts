@@ -1,4 +1,4 @@
-export type ApiMeta = { requestId?: string };
+export type ApiMeta = { requestId?: string; snapshotAt?: string };
 
 export type ApiPagination = {
   page: number;

@@ -101,6 +101,7 @@ describe('FeedbackService security and concurrency', () => {
     await expect(service.listMine('user-1', { page: 1, pageSize: 10 })).resolves.toEqual({
       items: [feedback],
       total: 1,
+      snapshotAt: expect.any(String),
     });
     expect(orderBy).toHaveBeenCalledWith(expect.anything(), expect.anything());
   });

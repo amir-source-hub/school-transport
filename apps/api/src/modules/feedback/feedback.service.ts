@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, sql } from 'drizzle-orm';
+import { and, count, desc, eq, lte, sql } from 'drizzle-orm';
 import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { ConflictError, NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -40,7 +40,11 @@ export class FeedbackService {
     return saved;
   }
   async listMine(userId: string, query: FeedbackQueryDto) {
-    const where = eq(feedbackSubmissions.userId, userId);
+    const snapshotAt = query.snapshotAt ? new Date(query.snapshotAt) : new Date();
+    const where = and(
+      eq(feedbackSubmissions.userId, userId),
+      lte(feedbackSubmissions.createdAt, snapshotAt),
+    );
     const items = await this.db.db
       .select()
       .from(feedbackSubmissions)
@@ -52,10 +56,12 @@ export class FeedbackService {
       .select({ value: count() })
       .from(feedbackSubmissions)
       .where(where);
-    return { items, total: Number(value) };
+    return { items, total: Number(value), snapshotAt: snapshotAt.toISOString() };
   }
   async listAdmin(query: FeedbackQueryDto, adminId: string, ip?: string) {
     const filters = [];
+    const snapshotAt = query.snapshotAt ? new Date(query.snapshotAt) : new Date();
+    filters.push(lte(feedbackSubmissions.createdAt, snapshotAt));
     if (query.status) filters.push(eq(feedbackSubmissions.status, query.status));
     if (query.category) filters.push(eq(feedbackSubmissions.category, query.category));
     const where = filters.length ? and(...filters) : sql`true`;
@@ -77,7 +83,7 @@ export class FeedbackService {
       entityType: 'FEEDBACK',
       ipAddress: ip,
     });
-    return { items, total: Number(value) };
+    return { items, total: Number(value), snapshotAt: snapshotAt.toISOString() };
   }
   async markRead(id: string, adminId: string, version: number, ip?: string) {
     return this.transition(

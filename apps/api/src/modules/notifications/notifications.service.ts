@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { notificationConsents, notifications } from '../../database/schemas';
-import { and, count, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, lt, lte, or, sql } from 'drizzle-orm';
 import { Inject } from '@nestjs/common';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { UpdateNotificationConsentDto } from './notification-consent.dto';
@@ -17,6 +17,7 @@ import {
 export interface NotificationListQuery {
   page?: number;
   pageSize?: number;
+  snapshotAt?: string;
 }
 
 export interface AdminNotificationListQuery extends NotificationListQuery {
@@ -179,7 +180,12 @@ export class NotificationsService {
 
   async getByUser(userId: string, query: NotificationListQuery = {}) {
     const { page, pageSize } = boundedPagination(query);
-    const where = and(eq(notifications.userId, userId), eq(notifications.channel, 'IN_APP'));
+    const snapshotAt = query.snapshotAt ? new Date(query.snapshotAt) : new Date();
+    const where = and(
+      eq(notifications.userId, userId),
+      eq(notifications.channel, 'IN_APP'),
+      lte(notifications.createdAt, snapshotAt),
+    );
     const items = await this.db.db
       .select()
       .from(notifications)
@@ -196,6 +202,7 @@ export class NotificationsService {
       total: Number(value),
       page,
       pageSize,
+      snapshotAt: snapshotAt.toISOString(),
     };
   }
 

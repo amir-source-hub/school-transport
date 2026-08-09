@@ -5,7 +5,14 @@ import IORedis from 'ioredis';
 import { Queue } from 'bullmq';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import { randomUUID } from 'node:crypto';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { AppModule } from '../app.module';
+import type { DatabaseService } from '../database/database.service';
+import * as schema from '../database/schemas';
+import { feedbackSubmissions, notifications, users } from '../database/schemas';
+import { NotificationsService } from '../modules/notifications/notifications.service';
+import { FeedbackService } from '../modules/feedback/feedback.service';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const redisUrl = process.env.REDIS_URL;
@@ -14,10 +21,12 @@ const enabled = Boolean(databaseUrl && redisUrl);
 describe.skipIf(!enabled)('real PostgreSQL/Redis integration', () => {
   let pool: Pool;
   let redis: IORedis;
+  let database: DatabaseService;
 
   beforeAll(() => {
     pool = new Pool({ connectionString: databaseUrl, max: 2 });
     redis = new IORedis(redisUrl!, { maxRetriesPerRequest: null });
+    database = { db: drizzle(pool, { schema }) } as unknown as DatabaseService;
   });
 
   afterAll(async () => {
@@ -78,6 +87,157 @@ describe.skipIf(!enabled)('real PostgreSQL/Redis integration', () => {
       expect(response.json()).toMatchObject({ status: 'ok' });
     } finally {
       await app.close();
+    }
+  });
+
+  it('enforces notification IDOR boundaries and snapshot-stable equal-time pagination', async () => {
+    const userA = randomUUID();
+    const userB = randomUUID();
+    const firstId = randomUUID();
+    const secondId = randomUUID();
+    const foreignId = randomUUID();
+    const insertedLaterId = randomUUID();
+    const equalTime = new Date('2026-08-09T12:00:00.000Z');
+    const audit = { record: async () => undefined, recordInTransaction: async () => undefined };
+    const service = new NotificationsService(database, audit as never);
+    try {
+      await database.db.insert(users).values([
+        { id: userA, username: `notification-a-${userA}` },
+        { id: userB, username: `notification-b-${userB}` },
+      ]);
+      await database.db.insert(notifications).values([
+        {
+          id: firstId,
+          userId: userA,
+          notificationType: 'ENROLLMENT_APPROVED',
+          title: 'first',
+          message: 'first',
+          createdAt: equalTime,
+        },
+        {
+          id: secondId,
+          userId: userA,
+          notificationType: 'ENROLLMENT_APPROVED',
+          title: 'second',
+          message: 'second',
+          createdAt: equalTime,
+        },
+        {
+          id: foreignId,
+          userId: userB,
+          notificationType: 'ENROLLMENT_APPROVED',
+          title: 'foreign',
+          message: 'foreign',
+          createdAt: equalTime,
+        },
+      ]);
+
+      const pageOne = await service.getByUser(userA, { page: 1, pageSize: 1 });
+      const expectedOrder = [firstId, secondId].sort().reverse();
+      expect(pageOne.items.map(({ id }) => id)).toEqual(expectedOrder.slice(0, 1));
+      expect(pageOne.total).toBe(2);
+      await expect(service.markRead(foreignId, userA)).rejects.toMatchObject({ status: 404 });
+
+      await database.db.insert(notifications).values({
+        id: insertedLaterId,
+        userId: userA,
+        notificationType: 'ENROLLMENT_APPROVED',
+        title: 'later',
+        message: 'later',
+        createdAt: new Date(Date.parse(pageOne.snapshotAt) + 1_000),
+      });
+      const pageTwo = await service.getByUser(userA, {
+        page: 2,
+        pageSize: 1,
+        snapshotAt: pageOne.snapshotAt,
+      });
+      expect(pageTwo.items.map(({ id }) => id)).toEqual(expectedOrder.slice(1));
+      expect(pageTwo.total).toBe(2);
+
+      await service.markAllRead(userA);
+      const foreignRead = await pool.query<{ read_at: Date | null }>(
+        'select read_at from notifications where id = $1',
+        [foreignId],
+      );
+      expect(foreignRead.rows[0].read_at).toBeNull();
+    } finally {
+      await pool.query('delete from notifications where user_id = any($1::uuid[])', [
+        [userA, userB],
+      ]);
+      await pool.query('delete from users where id = any($1::uuid[])', [[userA, userB]]);
+    }
+  });
+
+  it('enforces feedback IDOR, filters, empty pages, and snapshot-stable inserts', async () => {
+    const userA = randomUUID();
+    const userB = randomUUID();
+    const feedbackA = randomUUID();
+    const feedbackB = randomUUID();
+    const later = randomUUID();
+    const service = new FeedbackService(
+      database,
+      {} as never,
+      { record: async () => undefined, recordInTransaction: async () => undefined } as never,
+    );
+    try {
+      await database.db.insert(users).values([
+        { id: userA, username: `feedback-a-${userA}` },
+        { id: userB, username: `feedback-b-${userB}` },
+      ]);
+      await database.db.insert(feedbackSubmissions).values([
+        {
+          id: feedbackA,
+          userId: userA,
+          category: 'SAFETY',
+          subject: 'safety issue',
+          message: 'a sufficiently long safety message',
+          status: 'ESCALATED',
+          priority: 'URGENT',
+        },
+        {
+          id: feedbackB,
+          userId: userB,
+          category: 'APP',
+          subject: 'foreign issue',
+          message: 'a sufficiently long foreign message',
+        },
+      ]);
+
+      const mine = await service.listMine(userA, { page: 1, pageSize: 5 } as never);
+      expect(mine.items.map(({ id }) => id)).toEqual([feedbackA]);
+      expect(mine.total).toBe(1);
+      const filtered = await service.listAdmin(
+        { page: 1, pageSize: 5, status: 'ESCALATED', category: 'SAFETY' } as never,
+        randomUUID(),
+      );
+      expect(filtered.items.map(({ id }) => id)).toEqual([feedbackA]);
+      const empty = await service.listMine(userA, {
+        page: 2,
+        pageSize: 5,
+        snapshotAt: mine.snapshotAt,
+      } as never);
+      expect(empty.items).toEqual([]);
+
+      await database.db.insert(feedbackSubmissions).values({
+        id: later,
+        userId: userA,
+        category: 'APP',
+        subject: 'later issue',
+        message: 'a sufficiently long later message',
+        createdAt: new Date(Date.parse(mine.snapshotAt) + 1_000),
+      });
+      const stable = await service.listMine(userA, {
+        page: 1,
+        pageSize: 5,
+        snapshotAt: mine.snapshotAt,
+      } as never);
+      expect(stable.items.map(({ id }) => id)).toEqual([feedbackA]);
+      expect(stable.total).toBe(1);
+    } finally {
+      await pool.query('delete from feedback_submissions where user_id = any($1::uuid[])', [
+        [userA, userB],
+      ]);
+      await pool.query('delete from users where id = any($1::uuid[])', [[userA, userB]]);
     }
   });
 });

@@ -10,6 +10,7 @@ export interface ApiResponse<T = unknown> {
   };
   meta?: {
     requestId?: string;
+    snapshotAt?: string;
   };
   pagination?: {
     page: number;
@@ -19,7 +20,10 @@ export interface ApiResponse<T = unknown> {
   };
 }
 
-export function successResponse<T>(data: T, meta?: { requestId?: string }): ApiResponse<T> {
+export function successResponse<T>(
+  data: T,
+  meta?: { requestId?: string; snapshotAt?: string },
+): ApiResponse<T> {
   return { success: true, data, meta };
 }
 
@@ -28,7 +32,7 @@ export function paginatedResponse<T>(
   page: number,
   pageSize: number,
   totalItems: number,
-  meta?: { requestId?: string },
+  meta?: { requestId?: string; snapshotAt?: string },
 ): ApiResponse<T[]> {
   return {
     success: true,
