@@ -123,22 +123,12 @@ Receipt images use the private vendor-neutral S3 boundary under separate `paymen
 
 ### Data model and API
 
-- [ ] Replace the current reference-only `MANUAL_ADMIN_ENTRY` model with an explicit student-submitted offline-payment workflow, while preserving legitimate admin-recorded cash/manual entries as a distinguishable privileged source. **[NOT FINISHED]**
-  - Suggested concepts: `payment_submissions` or receipt/evidence fields linked to immutable `payment_transactions` and one `payment_schedule_item`.
-  - Store payer account, plan/item, submitted amount/date/reference, safe source-card suffix, receipt object metadata, destination-settings snapshot/version, status, submit/review timestamps, reviewer, rejection reason, optimistic version, idempotency key, and audit timestamps.
-  - States: `DRAFT` if required, `PENDING_REVIEW`, `APPROVED`, `REJECTED`, `WITHDRAWN`, `SUPERSEDED`.
-  - Add constraints preventing more than one active pending submission per schedule item and preventing one approved item from increasing paid totals twice.
-  - Student endpoints: destination/details, create upload authorization, complete receipt upload, submit metadata, list own submissions/status, replace after rejection, and authorized short-lived receipt view.
-  - Admin endpoints: filtered/paginated pending/history list, details/receipt view, approve, reject, and destination-setting management.
+- The explicit `offline_payment_submissions` model preserves payer, plan/item, exact amount/date/reference, source-card suffix, private canonical evidence metadata, immutable destination snapshot/version, review state/version, reviewer/reason, transaction link, idempotency, and audit timestamps. Database constraints allow only one active submission and one approval per schedule item. Student/onboarding endpoints cover destination, draft creation, upload authorization/completion, own history, correction after rejection, and scoped receipt views; `MANUAL_ADMIN_ENTRY` remains a distinct privileged cash/manual source.
+- [ ] Add filter and cursor/page controls to the admin submission-history endpoint; it is currently bounded to 200 non-draft rows. **[NOT FINISHED]**
 
 ### Admin review and financial finalization
 
-- [ ] Add a complete admin receipt-review queue for prepayments and installments. **[NOT FINISHED]**
-  - Show student/account context, expected versus submitted amount, plan/item, due date, payment date, reference, receipt preview, previous attempts, and destination snapshot.
-  - Allow every active admin to approve/reject; require a Persian rejection reason and confirmation.
-  - Approval must lock submission, schedule item, plan, and relevant transaction rows; atomically create/finalize the immutable transaction, update paid totals/item/plan/lifecycle state, audit, and enqueue notifications.
-  - Rejection changes only the submission state, audits the decision, and notifies the student; it never mutates paid totals.
-  - Concurrent/repeated approval must be idempotent and exactly one approval may affect financial totals.
+- The admin payment view reviews both prepayments and installments with student/family context, expected/submitted amounts, plan/item/due/payment dates, reference, private receipt preview, prior-attempt count, and destination snapshot. Active admins can confirm approval or give a bounded Persian rejection reason. Approval locks the submission/item/plan, creates one immutable `OFFLINE_RECEIPT` transaction, updates item/plan/enrollment state, audits, and enqueues notification in the transaction; rejection changes only the submission and enqueues audited correction guidance.
 
 ### Offline-payment notifications
 
@@ -147,7 +137,7 @@ Receipt submitted, approved, and correction-required/rejected transitions are ca
 ### Offline-payment verification
 
 - [ ] Test prepayment and installment ownership/IDOR, invalid amount/date/reference, duplicate pending submission, replacement, receipt tampering, private access, and signed URL expiry. **[NOT FINISHED]**
-- [ ] Test approval/rejection authorization, optimistic concurrency, idempotency, rollback, exact-once financial effect, audit, notifications, and worker/provider failure isolation. **[NOT FINISHED]**
+- [ ] Add PostgreSQL-backed concurrent approval/rollback proof for the exact-once financial effect. Controller guards cover ordinary-admin authorization; direct transaction tests now cover stale/repeated version rejection, amount mismatch, immutable transaction creation, item/plan/enrollment updates, rejection isolation, audit/outbox calls, and propagation of outbox failure for rollback. Provider delivery remains outside the financial transaction and is covered by outbox retry/dead-letter tests. **[NOT FINISHED]**
       Disabled online controls have accessible native disabled semantics and explanatory text in component coverage; both online start and verify reject before database access while the feature is disabled.
       Component coverage proves onboarding finalization is refused while the receipt is pending and runs only after an approved prepayment is observed; the backend independently verifies paid prepayment before issuing panel credentials.
 - [ ] Add real-browser mobile receipt capture plus long-filename and real network/storage-failure verification. Component coverage now exercises destination display, required evidence, preview, progress, upload ordering, and retry-safe submission. **[NOT FINISHED]**
