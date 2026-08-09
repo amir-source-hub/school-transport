@@ -62,10 +62,10 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @school-transport/api db:migrate:runtime
       - run: pnpm --filter @school-transport/api lint
       - run: pnpm --filter @school-transport/api typecheck
       - run: pnpm --filter @school-transport/api test
       - run: pnpm --filter @school-transport/api build
       - run: pnpm --filter @school-transport/api contract:check
-      - run: pnpm --filter @school-transport/api db:migrate:runtime
       - run: pnpm audit --audit-level high
