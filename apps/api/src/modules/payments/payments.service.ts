@@ -33,6 +33,8 @@ const onlinePaymentResult = {
   requestedAt: paymentTransactions.requestedAt,
 };
 
+export const ADMIN_PAYMENT_PLAN_LIST_LIMIT = 1_000;
+
 @Injectable()
 export class PaymentsService {
   constructor(
@@ -993,7 +995,9 @@ export class PaymentsService {
         serviceRegistrations,
         eq(serviceRegistrations.id, registrationPrices.registrationId),
       )
-      .innerJoin(students, eq(students.id, serviceRegistrations.studentId));
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .orderBy(desc(paymentPlans.createdAt), desc(paymentPlans.id))
+      .limit(ADMIN_PAYMENT_PLAN_LIST_LIMIT);
 
     if (plans.length === 0) return [];
 
@@ -1017,7 +1021,10 @@ export class PaymentsService {
             .select()
             .from(offlinePaymentSubmissions)
             .where(inArray(offlinePaymentSubmissions.paymentScheduleItemId, itemIds));
-    const parentRows = await this.db.db.select().from(parents);
+    const parentRows = await this.db.db
+      .select()
+      .from(parents)
+      .where(inArray(parents.userId, [...new Set(plans.map(({ userId }) => userId))]));
 
     return plans
       .map(({ plan, studentId, studentFirstName, studentLastName, userId }) => {
