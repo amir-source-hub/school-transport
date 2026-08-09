@@ -18,7 +18,13 @@ import { AuthenticatedRequest } from '../../common/http-request';
 import { Body } from '@nestjs/common';
 import { UpdateNotificationConsentDto } from './notification-consent.dto';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsDateString, IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { notificationCatalog } from '../../infrastructure/notifications/notification.catalog';
+
+const ADMIN_OPERATIONAL_TYPES = Object.entries(notificationCatalog)
+  .filter(([, entry]) => entry.adminOperational)
+  .map(([type]) => type);
+const NOTIFICATION_STATUSES = ['PENDING', 'SENT', 'FAILED'] as const;
 
 export class NotificationListQueryDto {
   @IsOptional()
@@ -37,19 +43,19 @@ export class NotificationListQueryDto {
 
 export class AdminNotificationListQueryDto extends NotificationListQueryDto {
   @IsOptional()
-  @IsString()
+  @IsIn(ADMIN_OPERATIONAL_TYPES)
   type?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(NOTIFICATION_STATUSES)
   status?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString({ strict: true })
   dateFrom?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString({ strict: true })
   dateTo?: string;
 }
 

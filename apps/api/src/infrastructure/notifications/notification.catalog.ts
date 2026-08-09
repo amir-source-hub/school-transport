@@ -56,13 +56,12 @@ export type NotificationContext = {
 };
 
 const STUDENT = '/student/dashboard';
-const FINANCE = '/student/finance';
+const FINANCE = '/student/payments';
 const CONTRACTS = '/student/contracts';
 const STUDENTS = '/student/students';
 const NOTIFICATIONS = '/student/notifications';
 
 const studentRoute = (_context: NotificationContext) => STUDENT;
-const noRoute = () => null;
 
 export const notificationCatalog: Record<NotificationType, NotificationCatalogEntry> = {
   ACCOUNT_REGISTERED: {
@@ -79,9 +78,9 @@ export const notificationCatalog: Record<NotificationType, NotificationCatalogEn
   WELCOME: {
     audience: 'STUDENT_ACCOUNT',
     purpose: 'OPTIONAL_UPDATES',
-    channels: ['IN_APP'],
-    smsMessage: 'ثمین گشت: به پنل خانواده خوش آمدید.',
-    inAppTitle: 'به پنل خانواده خوش آمدید',
+    channels: ['IN_APP', 'SMS'],
+    smsMessage: 'ثمین گشت: به پنل دانش‌آموزی خوش آمدید.',
+    inAppTitle: 'به پنل دانش‌آموزی خوش آمدید',
     inAppMessage:
       'از این بخش می‌توانید ثبت‌نام، تصمیم‌های مدیریت، قراردادها، پرداخت‌ها و سررسیدها را دنبال کنید.',
     route: studentRoute,
@@ -90,34 +89,34 @@ export const notificationCatalog: Record<NotificationType, NotificationCatalogEn
   PROFILE_UPDATED: {
     audience: 'STUDENT_ACCOUNT',
     purpose: 'OPTIONAL_UPDATES',
-    channels: ['IN_APP'],
+    channels: ['IN_APP', 'SMS'],
     smsMessage: 'ثمین گشت: اطلاعات حساب شما به‌روزرسانی شد. جزئیات را در پنل امن مشاهده کنید.',
     inAppTitle: 'به‌روزرسانی اطلاعات حساب',
     inAppMessage: 'مشخصات حساب شما با موفقیت به‌روزرسانی شد.',
     relatedEntityType: 'PARENT',
-    route: noRoute,
+    route: () => '/student/profile',
     exactlyOnce: false,
   },
   ADDRESS_UPDATED: {
     audience: 'STUDENT_ACCOUNT',
     purpose: 'OPTIONAL_UPDATES',
-    channels: ['IN_APP'],
+    channels: ['IN_APP', 'SMS'],
     smsMessage: 'ثمین گشت: آدرس سرویس شما به‌روزرسانی شد. جزئیات را در پنل امن مشاهده کنید.',
     inAppTitle: 'به‌روزرسانی آدرس',
-    inAppMessage: 'آدرس خانواده با موفقیت به‌روزرسانی شد.',
+    inAppMessage: 'آدرس سرویس با موفقیت به‌روزرسانی شد.',
     relatedEntityType: 'FAMILY_ADDRESS',
-    route: noRoute,
+    route: () => '/student/profile',
     exactlyOnce: false,
   },
   EMERGENCY_CONTACT_UPDATED: {
     audience: 'STUDENT_ACCOUNT',
     purpose: 'OPTIONAL_UPDATES',
-    channels: ['IN_APP'],
+    channels: ['IN_APP', 'SMS'],
     smsMessage: 'ثمین گشت: مخاطب اضطراری شما به‌روزرسانی شد. جزئیات را در پنل امن مشاهده کنید.',
     inAppTitle: 'به‌روزرسانی مخاطب اضطراری',
     inAppMessage: 'مخاطب اضطراری با موفقیت به‌روزرسانی شد.',
     relatedEntityType: 'EMERGENCY_CONTACT',
-    route: noRoute,
+    route: () => '/student/profile',
     exactlyOnce: false,
   },
   ADMIN_STUDENT_ADDED: {
@@ -179,7 +178,7 @@ export const notificationCatalog: Record<NotificationType, NotificationCatalogEn
     route: studentRoute,
     exactlyOnce: false,
     adminOperational: {
-      route: () => '/admin/enrollments',
+      route: () => '/admin/registrations',
       hidesWhenResolved: false,
     },
   },
@@ -238,7 +237,7 @@ export const notificationCatalog: Record<NotificationType, NotificationCatalogEn
     route: studentRoute,
     exactlyOnce: false,
     adminOperational: {
-      route: () => '/admin/pricing',
+      route: () => '/admin/registrations',
       hidesWhenResolved: false,
     },
   },
@@ -366,7 +365,8 @@ export const notificationCatalog: Record<NotificationType, NotificationCatalogEn
     channels: ['IN_APP', 'SMS'],
     smsMessage: 'ثمین گشت: عکس کارت سرویس دانش‌آموز نیازمند بارگذاری مجدد است.',
     inAppTitle: 'بررسی مجدد عکس کارت سرویس',
-    inAppMessage: 'عکس کارت سرویس دانش‌آموز تایید نشد. برای ادامه بارگذاری، عکس جدیدی بارگذاری کنید.',
+    inAppMessage:
+      'عکس کارت سرویس دانش‌آموز تایید نشد. برای ادامه بارگذاری، عکس جدیدی بارگذاری کنید.',
     relatedEntityType: 'STUDENT_PHOTO',
     route: () => STUDENTS,
     exactlyOnce: true,
@@ -396,8 +396,10 @@ export function notificationAudience(type: string): NotificationAudience {
 }
 
 export function notificationSmsMessage(type: string): string {
-  return notificationEntry(type)?.smsMessage ??
-    'ثمین گشت: اعلان جدیدی برای حساب شما ثبت شد. جزئیات را در پنل امن مشاهده کنید.';
+  return (
+    notificationEntry(type)?.smsMessage ??
+    'ثمین گشت: اعلان جدیدی برای حساب شما ثبت شد. جزئیات را در پنل امن مشاهده کنید.'
+  );
 }
 
 export function notificationRoute(type: string, context: NotificationContext): string | null {
@@ -408,9 +410,6 @@ export function isAdminOperational(type: string): boolean {
   return Boolean(notificationEntry(type)?.adminOperational);
 }
 
-export function adminOperationalRoute(
-  type: string,
-  context: NotificationContext,
-): string | null {
+export function adminOperationalRoute(type: string, context: NotificationContext): string | null {
   return notificationEntry(type)?.adminOperational?.route(context) ?? null;
 }

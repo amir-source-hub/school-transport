@@ -14,23 +14,12 @@
 
 ### Catalog and producers
 
-- [ ] Make every retained user notification eligible for both panel and SMS as requested, subject to purpose/consent. **[NOT FINISHED]**
-  - `WELCOME`, `PROFILE_UPDATED`, `ADDRESS_UPDATED`, and `EMERGENCY_CONTACT_UPDATED` currently declare only `IN_APP` in `notification.catalog.ts` even though SMS-safe text exists.
-  - Keep optional messages disabled without current channel-specific consent.
-  - `ADMIN_BROADCAST` remains in-app when in-app content is selected; campaign SMS is sent through the broadcast recipient workflow.
 - [ ] Verify every catalog entry has a real producer or remove it. **[NOT FINISHED]**
   - Search all outbox creation sites; distinguish production events from seed fixtures.
   - Add producer tests for enrollment review/approval/rejection/correction, payment reminders if retained, photo decisions, feedback responses, and account security events.
-- [ ] Correct invalid operational links in `notification.catalog.ts`. **[NOT FINISHED]**
-  - `/admin/enrollments` does not exist; use `/admin/registrations` or the specific registration route.
-  - `/admin/pricing` does not exist; link to the actual pricing/registration workflow.
-  - Add a route-contract test so catalog links must match supported route metadata/pages.
-- [ ] Review Persian catalog content. Several entries still say “خانواده” although the visible product terminology is student panel. **[NOT FINISHED]**
-- [ ] Ensure detailed/sensitive data remains in the authenticated panel and SMS excludes national ID, child/address data, financial amount, contract/feedback content, and signed URLs. **[NOT FINISHED]**
 
 ### Shared admin operational view
 
-- [ ] Add the promised type/status/date filters to the shared admin notification view and API. **[NOT FINISHED]**
 - [ ] Define resolution behavior instead of showing an unlimited history of user notifications as “operational” work. **[NOT FINISHED]**
   - Link actionable types to existing routes.
   - Decide whether resolved underlying work is hidden, marked resolved, or retained for a bounded history.

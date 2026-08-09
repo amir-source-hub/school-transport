@@ -47,12 +47,28 @@ function AdminNotificationsSkeleton() {
 export default async function NotificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    type?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1);
-  const list = await getAdminNotifications({ page, pageSize: 20 });
-  const { items, total, totalPages: totalPagesRaw } = {
+  const filters = {
+    type: params.type || undefined,
+    status: params.status || undefined,
+    dateFrom: params.dateFrom || undefined,
+    dateTo: params.dateTo || undefined,
+  };
+  const list = await getAdminNotifications({ page, pageSize: 20, ...filters });
+  const {
+    items,
+    total,
+    totalPages: totalPagesRaw,
+  } = {
     items: list.items,
     total: list.total,
     totalPages: Math.ceil(list.total / list.pageSize),
@@ -69,6 +85,70 @@ export default async function NotificationsPage({
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">اعلان‌ها</h1>
         {total > 0 && <p className="mt-1 text-xs text-muted">در مجموع {total} رویداد</p>}
       </div>
+      <Card padding="md">
+        <form className="grid gap-3 md:grid-cols-5" aria-label="پالایش رویدادهای عملیاتی">
+          <label className="text-sm font-bold">
+            نوع
+            <select
+              name="type"
+              defaultValue={filters.type ?? ''}
+              className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2"
+            >
+              <option value="">همه نوع‌ها</option>
+              <option value="LIMIT_REQUEST_CREATED">درخواست افزایش ظرفیت</option>
+              <option value="ENROLLMENT_CREATED">ثبت‌نام جدید</option>
+              <option value="PRICE_OFFERED">قیمت‌گذاری</option>
+              <option value="PAYMENT_APPROVED">پرداخت</option>
+              <option value="CONTRACT_READY">قرارداد</option>
+            </select>
+          </label>
+          <label className="text-sm font-bold">
+            وضعیت
+            <select
+              name="status"
+              defaultValue={filters.status ?? ''}
+              className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2"
+            >
+              <option value="">همه وضعیت‌ها</option>
+              <option value="PENDING">در انتظار</option>
+              <option value="SENT">ارسال‌شده</option>
+              <option value="FAILED">ناموفق</option>
+            </select>
+          </label>
+          <label className="text-sm font-bold">
+            از تاریخ
+            <input
+              name="dateFrom"
+              type="date"
+              defaultValue={filters.dateFrom ?? ''}
+              className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2"
+            />
+          </label>
+          <label className="text-sm font-bold">
+            تا تاریخ
+            <input
+              name="dateTo"
+              type="date"
+              defaultValue={filters.dateTo ?? ''}
+              className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2"
+            />
+          </label>
+          <div className="flex items-end gap-2">
+            <button
+              className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white"
+              type="submit"
+            >
+              اعمال
+            </button>
+            <Link
+              href="/admin/notifications"
+              className="rounded-xl border border-border px-4 py-2 text-sm font-bold"
+            >
+              پاک‌کردن
+            </Link>
+          </div>
+        </form>
+      </Card>
       <Suspense fallback={<AdminNotificationsSkeleton />}>
         {items.length === 0 ? (
           <Card padding="md">
@@ -99,10 +179,13 @@ export default async function NotificationsPage({
               </Card>
             ))}
             {totalPages > 1 && (
-              <nav aria-label="صفحه‌بندی رویدادها" className="flex items-center justify-between gap-3">
+              <nav
+                aria-label="صفحه‌بندی رویدادها"
+                className="flex items-center justify-between gap-3"
+              >
                 {page > 1 ? (
                   <ButtonLink
-                    href={`/admin/notifications?page=${page - 1}`}
+                    href={`/admin/notifications?${new URLSearchParams({ ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)), page: String(page - 1) }).toString()}`}
                     variant="secondary"
                   >
                     قبلی
@@ -114,7 +197,10 @@ export default async function NotificationsPage({
                   صفحه {page} از {totalPages}
                 </span>
                 {page < totalPages ? (
-                  <ButtonLink href={`/admin/notifications?page=${page + 1}`} variant="secondary">
+                  <ButtonLink
+                    href={`/admin/notifications?${new URLSearchParams({ ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)), page: String(page + 1) }).toString()}`}
+                    variant="secondary"
+                  >
                     بعدی
                   </ButtonLink>
                 ) : (
