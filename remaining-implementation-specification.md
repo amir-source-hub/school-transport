@@ -74,7 +74,7 @@ Tasks:
 ### Admin review and card integration
 
 - [ ] Add the approved physical card-layout preview to the admin photo-review page after the template/crop area is supplied. The shared queue, short-lived canonical preview, minimal student context, filters, pagination, standard Persian rejection reasons, safe detail, optimistic version checks, audit, and navigation are implemented. **[BLOCKED — CARD TEMPLATE]**
-- [ ] Connect only the current approved canonical photo to the actual student-card generation/export path. **[NOT STARTED]**
+- [ ] Connect only the current approved canonical photo to the actual student-card generation/export path after the approved physical card template and crop area define that path. No card generator/export surface exists in the repository yet, so an integration cannot be implemented or verified without inventing the blocked product artifact. **[BLOCKED — CARD TEMPLATE]**
 
 ### Storage and processing hardening
 
@@ -84,7 +84,7 @@ Tasks:
 - [ ] Approve the Persian privacy notice, retention/deletion policy, and physical card crop area/template. **[BLOCKED — USER/LEGAL INPUT]**
 - [ ] Verify the five-minute presigned PUT/GET behavior, CORS, anonymous denial, key scoping, and actual Arvan compatibility against staging. **[BLOCKED — ARVAN CONFIGURATION]**
 - [ ] Add process-level memory/concurrency isolation and crafted polyglot/decompression-bomb fixtures. Sharp processing now enforces byte, pixel, axis, aspect-ratio, decode-failure, and ten-second libvips operation limits; renamed SVG/PDF, corrupt, empty, oversized, huge-axis, huge-pixel, and extreme-aspect cases are covered. **[NOT FINISHED]**
-- [ ] Verify cleanup covers abandoned raw objects, failed processing, rejected originals, superseded versions, archived students, deletion requests, and all object versions when bucket versioning is enabled. **[NOT FINISHED]**
+- Expired upload authorizations and stalled processing are transitioned to terminal states and their raw objects are deleted; retained rejected/failed/expired/superseded raw objects and rejected/superseded canonical objects are deleted after bounded retention windows, with deletion failures isolated for retry on the next sweep. Archived-student, deletion-request, and versioned-object behavior cannot be finalized until the retention/deletion policy and Arvan bucket versioning choice are approved. **[BLOCKED — RETENTION/ARVAN POLICY]**
 - [ ] Add a PostgreSQL-backed concurrent-approval proof for the one-current-approved-photo invariant. Database status/version/declared-size/canonical-shape constraints, the partial unique index, domain transitions, optimistic review versions, account-link requirement, and stale-newer-upload rejection are implemented and covered structurally/unit-wise. **[NOT FINISHED]**
 
 ### Photo verification
@@ -172,7 +172,7 @@ Receipt submitted, approved, and correction-required/rejected transitions are ca
 - [ ] Verify PostgreSQL authentication/listening/firewall/TLS and prevent trust authentication or public exposure. **[BLOCKED — DEPLOYMENT INSPECTION]**
       Container/proxy hardening is codified and statically validated: digest-pinned minimal images, non-root application users, read-only roots, bounded tmpfs/resources/PIDs, dropped capabilities, isolated internal networks, exact trusted proxy CIDR, TLS/security headers/request limits, and no host exposure for PostgreSQL or Redis.
       Encrypted backup, guarded restore validation, safe migration status/apply procedures, release ownership, rollback/forward-fix documentation, and a scheduled ephemeral CI restore drill are implemented; production retention execution still requires deployment ownership.
-- [ ] Remove/reject production demo seeding, console OTP, mock payment, weak/fallback secrets, debug logs, incomplete providers, and unsafe defaults. **[NOT FINISHED]**
+- Production configuration rejects demo seeding, console or absent request-time OTP delivery, mock payment at schema level, weak/fallback JWT secrets, credential-less PostgreSQL/Redis, debug logging, missing metrics authentication, incomplete Arvan configuration, incomplete Kavenegar credentials/template, and enabled broadcasts without a real provider, current price, and finite spend cap. Development-only behavior remains explicitly separated and covered by configuration tests.
 
 ### Privacy, audit, observability, and supply chain
 
