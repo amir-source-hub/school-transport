@@ -28,6 +28,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
 import { S3Module } from './infrastructure/s3/s3.module';
 import { StudentPhotosModule } from './modules/student-images/student-photos.module';
 import { MetricsModule } from './infrastructure/metrics/metrics.module';
+import { MutationAuditInterceptor } from './common/mutation-audit.interceptor';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { MetricsModule } from './infrastructure/metrics/metrics.module';
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseMetadataInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: MutationAuditInterceptor },
     GracefulShutdownService,
   ],
 })

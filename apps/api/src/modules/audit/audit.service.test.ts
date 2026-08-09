@@ -3,7 +3,7 @@ import { allowlistedAuditValues } from './audit.service';
 import { serializeSafeAuditValues } from '../../common/sensitive-data';
 
 describe('audit value allowlist', () => {
-  it('keeps student fields and drops unrelated keys', () => {
+  it('keeps operational student fields and drops direct child identifiers', () => {
     expect(
       allowlistedAuditValues({
         firstName: 'علی',
@@ -18,18 +18,12 @@ describe('audit value allowlist', () => {
         userId: 'should be dropped',
       }),
     ).toEqual({
-      firstName: 'علی',
-      lastName: 'احمدی',
-      nationalId: '0499370899',
       grade: 'سوم',
-      className: 'دبستان',
-      gender: 'MALE',
-      birthDate: '2012-04-03',
       schoolId: '00000000-0000-4000-8000-000000000001',
     });
   });
 
-  it('serializes before/after values with the national id masked', () => {
+  it('never admits direct identifiers into before/after values', () => {
     const serialized = serializeSafeAuditValues(
       allowlistedAuditValues({
         firstName: 'علی',
@@ -37,7 +31,7 @@ describe('audit value allowlist', () => {
         grade: 'سوم',
       }),
     );
-    expect(serialized).toBe('{"firstName":"علی","nationalId":"[REDACTED]","grade":"سوم"}');
+    expect(serialized).toBe('{"grade":"سوم"}');
   });
 
   it('returns undefined for non-object values', () => {

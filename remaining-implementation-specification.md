@@ -180,7 +180,7 @@ Receipt submitted, approved, and correction-required/rejected transitions are ca
 
 ### Privacy, audit, observability, and supply chain
 
-- [ ] Complete safe audit coverage for privileged, identity, financial, notification, feedback, broadcast, photo, and receipt mutations. **[NOT FINISHED]**
+- Domain-specific transactional audits cover privileged administrator, contract, enrollment, pricing, payment/receipt, notification-consent, feedback, broadcast, and student-photo transitions. A global authenticated mutation backstop now records every successful POST/PUT/PATCH/DELETE with actor, route-derived entity class, UUID parameter, IP, and correlation ID while never reading request/response bodies; failed requests are not recorded and audit-storage failure cannot corrupt an already committed command. Audit snapshots use a strict operational allowlist that excludes child names, national ID, birth date, gender, class, payment references, contact/location data, secrets, OTPs, and receipt content.
 - [ ] Inventory personal/child/financial data and enforce purpose, least privilege, retention, deletion/anonymization, export, backup, and evidence requirements. **[NOT FINISHED]**
 - [ ] Define SLOs and add masked structured logs, traces, HTTP/database/queue/provider metrics, dashboards, alert ownership, and incident runbooks. **[NOT FINISHED]**
       Dependency and action pins, frozen lockfile installs, high-severity audit, dependency/license review, CodeQL, Trivy repository/container scans, and SPDX SBOM generation are enforced by security-governance CI.

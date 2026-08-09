@@ -28,20 +28,13 @@ const ALLOWED_VALUE_FIELDS = new Set([
   'scheduleItemId',
   'status',
   'isActive',
-  'firstName',
-  'lastName',
-  'nationalId',
-  'birthDate',
-  'gender',
   'grade',
-  'className',
   'schoolId',
   'educationLevel',
   'contractVersion',
   'signerRole',
   'signerReason',
   'signerSource',
-  'referenceNumber',
   'familyId',
   'channel',
   'purpose',
@@ -59,10 +52,7 @@ export class AuditService implements AuditPort {
     await this.recordInTransaction(this.db.db, data);
   }
 
-  async recordInTransaction(
-    transaction: unknown,
-    data: AuditRecord,
-  ) {
+  async recordInTransaction(transaction: unknown, data: AuditRecord) {
     const writer = transaction as Pick<DatabaseService['db'], 'insert'>;
     await writer.insert(auditLogs).values({
       id: generateId(),
@@ -99,7 +89,5 @@ export class AuditService implements AuditPort {
 
 export function allowlistedAuditValues(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-  return Object.fromEntries(
-    Object.entries(value).filter(([key]) => ALLOWED_VALUE_FIELDS.has(key)),
-  );
+  return Object.fromEntries(Object.entries(value).filter(([key]) => ALLOWED_VALUE_FIELDS.has(key)));
 }
