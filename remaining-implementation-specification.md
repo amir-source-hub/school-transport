@@ -190,7 +190,7 @@ Receipt submitted, approved, and correction-required/rejected transitions are ca
 
 - [ ] Complete critical-flow unit/component/integration/browser E2E, accessibility, mobile, visual, performance, offline/dependency-failure, and regression coverage. **[NOT FINISHED]**
 - [ ] Verify enrollment and long forms at phone/tablet sizes, including keyboard, focus/scroll, sticky controls, date/map/file inputs, validation, and draft recovery. **[NOT FINISHED]**
-- [ ] Replace remaining mobile-hostile table layouts with responsive views preserving context, sorting, actions, keyboard, and screen-reader behavior. **[NOT FINISHED]**
+- All data-table surfaces now have a bounded responsive strategy: student and report pages already paired desktop tables with mobile cards, registration cards preserve filters/sorting and detail actions, and administrator/account plus dashboard recent-enrollment tables now expose contextual phone cards while retaining keyboard-scrollable labeled tables at tablet/desktop widths. Playwright verifies populated long-content admin lists at 320 px and 768 px, preserved actions/context, correct viewport-specific landmarks, and zero document-level horizontal overflow.
       Deterministic bundle/media budgets run on every frontend change and scheduled real-browser performance jobs enforce CLS/LCP/INP and slow-network/cache scenarios.
 - [ ] Complete abuse/security testing for sessions/OTP, CSRF/origins, IDOR, roles, XSS, injection, SSRF, uploads, rate/cost limits, secrets/logs, and error disclosure. **[NOT FINISHED]**
 

@@ -145,8 +145,37 @@ export default async function AdminDashboardPage() {
               همه
             </ButtonLink>
           </div>
+          <div className="grid gap-3 md:hidden" aria-label="ثبت‌نام‌های اخیر">
+            {recentEnrollments.map((item) => (
+              <article key={item.id} className="rounded-lg border border-border/50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-bold">{item.studentName}</p>
+                    <p className="mt-1 break-all text-xs text-muted" dir="ltr">
+                      {item.trackingCode}
+                    </p>
+                  </div>
+                  <Badge
+                    tone={
+                      item.status === 'نیازمند اصلاح'
+                        ? 'danger'
+                        : item.status === 'در انتظار قیمت'
+                          ? 'warning'
+                          : 'info'
+                    }
+                  >
+                    {item.status}
+                  </Badge>
+                </div>
+                <p className="mt-3 text-sm text-muted">
+                  <span className="font-bold text-foreground">اقدام بعدی: </span>
+                  {item.nextAction}
+                </p>
+              </article>
+            ))}
+          </div>
           <div
-            className="overflow-x-auto"
+            className="hidden overflow-x-auto md:block"
             role="region"
             aria-label="جدول ثبت‌نام‌های اخیر"
             tabIndex={0}

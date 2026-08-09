@@ -1,9 +1,6 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
-import {
-  getAdminAccounts,
-  getCurrentAdminAccount,
-} from '@/features/admin-admins/admin-admins-api';
+import { getAdminAccounts, getCurrentAdminAccount } from '@/features/admin-admins/admin-admins-api';
 import { AdminAccountAction } from '@/features/admin-admins/admin-account-action';
 import { AdminAccountForm } from '@/features/admin-admins/admin-account-form';
 import { formatJalaliDateTime } from '@/lib/formatters';
@@ -26,7 +23,43 @@ export default async function AdminsPage() {
         </div>
         <AdminAccountForm />
       </div>
-      <div className="overflow-x-auto" role="region" aria-label="فهرست مدیران" tabIndex={0}>
+      <div className="grid gap-3 md:hidden" aria-label="فهرست مدیران">
+        {admins.map((admin) => (
+          <section key={admin.id} className="rounded-xl border border-border bg-surface p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="break-all font-black">{admin.username}</h2>
+                <p className="mt-1 text-sm text-muted">
+                  {admin.firstName} {admin.lastName}
+                </p>
+              </div>
+              <Badge tone={admin.status === 'ACTIVE' ? 'success' : 'neutral'}>
+                {admin.status === 'ACTIVE' ? 'فعال' : 'غیرفعال'}
+              </Badge>
+            </div>
+            <dl className="mt-4 text-sm">
+              <dt className="text-muted">آخرین ورود</dt>
+              <dd className="mt-1 font-bold">
+                {admin.lastLoginAt ? formatJalaliDateTime(admin.lastLoginAt) : '—'}
+              </dd>
+            </dl>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <AdminAccountForm admin={admin} />
+              <AdminAccountAction
+                id={admin.id}
+                active={admin.status === 'ACTIVE'}
+                isSelf={admin.id === current.id}
+              />
+            </div>
+          </section>
+        ))}
+      </div>
+      <div
+        className="hidden overflow-x-auto md:block"
+        role="region"
+        aria-label="جدول مدیران"
+        tabIndex={0}
+      >
         <table className="w-full min-w-[35rem] text-right text-sm">
           <thead>
             <tr className="border-b border-border text-muted">

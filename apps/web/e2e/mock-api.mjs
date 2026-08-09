@@ -51,6 +51,74 @@ const server = createServer((request, response) => {
     });
   }
   if (
+    url.pathname === '/api/v1/admin/admins' &&
+    request.headers.cookie?.includes('e2e-admin-data=1')
+  ) {
+    return send(response, 200, {
+      success: true,
+      data: [
+        {
+          id: '00000000-0000-4000-8000-000000000201',
+          username: 'administrator-with-a-very-long-username',
+          firstName: 'مدیر',
+          lastName: 'آزمایشی',
+          phoneNumber: '09120000000',
+          email: null,
+          status: 'ACTIVE',
+          lastLoginAt: '2026-08-09T10:00:00.000Z',
+        },
+      ],
+    });
+  }
+  if (
+    url.pathname === '/api/v1/admin/admins/me' &&
+    request.headers.cookie?.includes('e2e-admin-data=1')
+  ) {
+    return send(response, 200, {
+      success: true,
+      data: {
+        id: '00000000-0000-4000-8000-000000000201',
+        username: 'administrator-with-a-very-long-username',
+        firstName: 'مدیر',
+        lastName: 'آزمایشی',
+        phoneNumber: '09120000000',
+        email: null,
+        status: 'ACTIVE',
+        lastLoginAt: '2026-08-09T10:00:00.000Z',
+      },
+    });
+  }
+  if (
+    url.pathname === '/api/v1/admin/enrollments' &&
+    request.headers.cookie?.includes('e2e-admin-data=1')
+  ) {
+    return send(response, 200, {
+      success: true,
+      data: [
+        {
+          id: '00000000-0000-4000-8000-000000000301',
+          studentId: 'student-1',
+          studentName: 'دانش‌آموز با نام طولانی آزمایشی',
+          familyName: 'خانواده آزمایشی',
+          familyId: 'family-1',
+          schoolId: 'school-1',
+          schoolName: 'مدرسه آزمایشی',
+          registrationStatus: 'SUBMITTED',
+          paidInstallmentCount: 0,
+          installmentCount: 0,
+          createdAt: '2026-08-09T10:00:00.000Z',
+        },
+      ],
+      pagination: { page: 1, pageSize: 500, totalItems: 1, totalPages: 1 },
+    });
+  }
+  if (
+    /^\/api\/v1\/admin\/enrollments\/[^/]+\/pricing$/.test(url.pathname) &&
+    request.headers.cookie?.includes('e2e-admin-data=1')
+  ) {
+    return send(response, 200, { success: true, data: [] });
+  }
+  if (
     url.pathname === '/api/v1/notifications' &&
     request.headers.cookie?.includes('e2e-notifications=1')
   ) {
