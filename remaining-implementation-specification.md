@@ -14,7 +14,7 @@
 
 ### Catalog and producers
 
-- [ ] Add behavioral producer tests for enrollment review/approval/rejection/correction and define the intended account-security events. Payment-plan readiness, feedback responses, photo decisions, onboarding account creation, and capacity-request decisions now have direct producer assertions; a catalog contract fails when any retained type lacks a production producer. **[NOT FINISHED]**
+- [ ] Define the intended account-security notification events and their safe content/dispatch rules before adding producers. Enrollment review/approval/rejection/correction, payment-plan readiness, feedback responses, photo decisions, onboarding account creation, and capacity-request decisions now have direct producer assertions; a catalog contract fails when any retained type lacks a production producer. **[NOT FINISHED]**
 
 ### Shared admin operational view
 
