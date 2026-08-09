@@ -4,7 +4,7 @@ export { expect };
 
 export const test = base.extend<{ pageHealth: void }>({
   pageHealth: [
-    async ({ page }, use) => {
+    async ({ page }, use, testInfo) => {
       const failures: string[] = [];
       page.on('console', (message) => {
         if (message.type() !== 'error') return;
@@ -19,7 +19,14 @@ export const test = base.extend<{ pageHealth: void }>({
       });
 
       await use();
-      expect(failures, 'Unexpected browser console/page/network failures').toEqual([]);
+      const allowedFailures = testInfo.annotations
+        .filter(({ type }) => type === 'allowed-browser-failure')
+        .map(({ description }) => description)
+        .filter((description): description is string => Boolean(description));
+      const unexpectedFailures = failures.filter(
+        (failure) => !allowedFailures.some((allowed) => failure.includes(allowed)),
+      );
+      expect(unexpectedFailures, 'Unexpected browser console/page/network failures').toEqual([]);
     },
     { auto: true },
   ],

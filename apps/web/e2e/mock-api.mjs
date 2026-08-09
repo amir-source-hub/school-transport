@@ -15,8 +15,9 @@ const emptyCollections = new Set([
 function send(response, status, data) {
   response.writeHead(status, {
     'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Correlation-Id',
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers':
+      'Authorization, Content-Type, X-Correlation-Id, Idempotency-Key',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Origin': response.req.headers.origin ?? '*',
     'Content-Type': 'application/json; charset=utf-8',
   });
@@ -37,6 +38,113 @@ const server = createServer((request, response) => {
     }
     const role = request.headers.cookie?.includes('e2e-role=ADMIN') ? 'ADMIN' : 'PARENT';
     return send(response, 200, { success: true, data: { user: { role } } });
+  }
+  if (url.pathname === '/api/v1/notifications/settings') {
+    return send(response, 200, {
+      success: true,
+      data: {
+        textVersion: 'e2e-v1',
+        consentText: 'متن رضایت آزمایشی',
+        serviceNotices: { inApp: true, sms: true, configurable: false },
+        optionalUpdates: { inApp: false, sms: false },
+      },
+    });
+  }
+  if (
+    url.pathname === '/api/v1/notifications' &&
+    request.headers.cookie?.includes('e2e-notifications=1')
+  ) {
+    return send(response, 200, {
+      success: true,
+      data: [
+        {
+          id: '00000000-0000-4000-8000-000000000101',
+          eventId: 'e2e-event',
+          notificationType: 'ENROLLMENT_APPROVED',
+          channel: 'IN_APP',
+          purpose: 'SERVICE_NOTICE',
+          title: 'ثبت‌نام تأیید شد',
+          message: 'پیام آزمایشی طولانی برای بررسی شکست صحیح متن در نمایشگر باریک و راست‌به‌چپ.',
+          relatedEntityType: 'REGISTRATION',
+          relatedEntityId: null,
+          notificationStatus: 'SENT',
+          readAt: null,
+          sentAt: '2026-08-09T10:00:00.000Z',
+          createdAt: '2026-08-09T10:00:00.000Z',
+          updatedAt: '2026-08-09T10:00:00.000Z',
+          route: '/student/dashboard',
+        },
+      ],
+      pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+      meta: { snapshotAt: '2026-08-09T12:00:00.000Z' },
+    });
+  }
+  if (url.pathname === '/api/v1/payments' && request.headers.cookie?.includes('e2e-payments=1')) {
+    return send(response, 200, {
+      success: true,
+      data: [
+        {
+          plan: {
+            id: 'plan-1',
+            totalAmount: 1000,
+            prepaymentAmount: 1000,
+            remainingInstallmentAmount: 0,
+            installmentCount: 1,
+            planStatus: 'PENDING',
+            planType: 'FULL',
+          },
+          studentId: 'student-1',
+          studentFirstName: 'سارا',
+          studentLastName: 'احمدی',
+          items: [
+            {
+              id: 'item-1',
+              itemType: 'PREPAYMENT',
+              sequenceNumber: 0,
+              amount: 1000,
+              dueDate: null,
+              itemStatus: 'PENDING',
+              paidAmount: 0,
+            },
+          ],
+          transactions: [],
+        },
+      ],
+    });
+  }
+  if (url.pathname === '/api/v1/payments/offline-submissions' && request.method === 'GET') {
+    return send(response, 200, { success: true, data: [] });
+  }
+  if (url.pathname === '/api/v1/payments/offline-destination') {
+    return send(response, 200, {
+      success: true,
+      data: {
+        id: 'destination-1',
+        version: 1,
+        accountOwner: 'ثمین گشت',
+        bankName: 'بانک آزمایشی',
+        cardNumber: '1234567890123456',
+        iban: null,
+        accountNumber: null,
+        instructions: 'فقط برای آزمون مرورگر',
+      },
+    });
+  }
+  if (url.pathname === '/api/v1/payments/item-1/offline-submissions' && request.method === 'POST') {
+    return send(response, 200, { success: true, data: { submissionId: 'submission-1' } });
+  }
+  if (url.pathname === '/api/v1/payments/offline-submissions/submission-1/receipt/authorize') {
+    const failure = request.headers.cookie?.includes('e2e-receipt-failure=1');
+    return send(response, 200, {
+      success: true,
+      data: { uploadUrl: `http://127.0.0.1:${port}/uploads/${failure ? 'failure' : 'receipt'}` },
+    });
+  }
+  if (url.pathname.startsWith('/uploads/') && request.method === 'PUT') {
+    return send(response, url.pathname.endsWith('/failure') ? 503 : 200, { ok: true });
+  }
+  if (url.pathname === '/api/v1/payments/offline-submissions/submission-1/receipt/complete') {
+    return send(response, 200, { success: true, data: { completed: true } });
   }
   if (emptyCollections.has(url.pathname)) {
     return send(response, 200, { success: true, data: [] });

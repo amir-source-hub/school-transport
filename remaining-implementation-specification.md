@@ -24,7 +24,7 @@
 
 - The PostgreSQL CI integration gate inserts two real accounts and verifies notification list, read-one, and read-all remain scoped to the authenticated account, including uniform not-found behavior for a foreign notification.
 - User notification pagination now carries an immutable `snapshotAt` through API metadata and web navigation, filters both rows and counts to that snapshot, and uses `created_at DESC, id DESC`; the PostgreSQL gate proves deterministic equal-timestamp ordering and that a concurrent later insert neither duplicates nor shifts page two.
-- [ ] Add real-browser verification for notification RTL/mobile layout and screen-reader output. Component coverage now verifies loading, empty, unread state, mark-one, mark-all, keyboard activation, accessible alerts, retry readiness, duplicate-submit prevention, links, and responsive wrapping. **[NOT FINISHED]**
+- Playwright now verifies the populated notification page in Chromium plus 320 px phone and 768 px tablet viewports: document direction is RTL, unread status and detail/mark-read controls are exposed by role/name, keyboard focus reaches the detail link, and the page has no horizontal overflow. Component coverage additionally verifies loading, empty, mark-all, accessible alerts, retry readiness, duplicate-submit prevention, and responsive wrapping.
 - [ ] Verify migration `0025_notification_read_state.sql` on a production-like snapshot and prove old queued outbox records remain compatible. **[BLOCKED — STAGING DATABASE]**
 
 ## 2. SMS operations and live Kavenegar verification
@@ -142,7 +142,7 @@ Receipt submitted, approved, and correction-required/rejected transitions are ca
 - The same PostgreSQL fixture promotes the winning receipt to review and races two production approval transactions. Row locks/version predicates yield one success and one conflict; the final query proves exactly one immutable transaction and one fully paid schedule item. Unit transaction tests separately prove amount mismatch, plan/enrollment updates, rejection isolation, audit/outbox calls, and outbox-failure rollback; provider delivery remains outside the financial transaction.
       Disabled online controls have accessible native disabled semantics and explanatory text in component coverage; both online start and verify reject before database access while the feature is disabled.
       Component coverage proves onboarding finalization is refused while the receipt is pending and runs only after an approved prepayment is observed; the backend independently verifies paid prepayment before issuing panel credentials.
-- [ ] Add real-browser mobile receipt capture plus long-filename and real network/storage-failure verification. Component coverage now exercises destination display, required evidence, preview, progress, upload ordering, and retry-safe submission. **[NOT FINISHED]**
+- Playwright now exercises mobile receipt capture at 320 px and 768 px with a very long Persian filename, blob preview, no horizontal overflow, the real browser XHR/presigned-upload sequence, an HTTP 503 storage response, visible retry guidance, and a re-enabled submit action. The run also fixed CSP blob-preview and upload-preflight contracts; component coverage additionally exercises destination display, required evidence, progress, upload ordering, and retry-safe submission.
 
 ## 7. Contract and legal-text updates
 

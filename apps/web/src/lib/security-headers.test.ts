@@ -15,7 +15,7 @@ describe('createSecurityHeaders', () => {
       "frame-src 'self' https://www.google.com",
     );
     expect(headerMap.get('Content-Security-Policy')).toContain(
-      "connect-src 'self' https://api.example.test",
+      "connect-src 'self' https://api.example.test blob:",
     );
     expect(headerMap.get('Strict-Transport-Security')).toBe('max-age=31536000; includeSubDomains');
     expect(headerMap.get('X-Content-Type-Options')).toBe('nosniff');

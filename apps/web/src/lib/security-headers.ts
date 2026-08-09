@@ -18,7 +18,7 @@ const getApiOrigin = (apiBaseUrl?: string) => {
 
 const createContentSecurityPolicy = ({ apiBaseUrl, production }: SecurityHeaderOptions) => {
   const apiOrigin = getApiOrigin(apiBaseUrl);
-  const connectSources = ["'self'", apiOrigin];
+  const connectSources = ["'self'", apiOrigin, 'blob:'];
 
   if (!production) {
     connectSources.push('ws:', 'wss:');
