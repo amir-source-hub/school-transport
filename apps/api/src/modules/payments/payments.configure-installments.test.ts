@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PaymentsService } from './payments.service';
 
 function harness(plan: any) {
+  const enqueueInTransaction = vi.fn(async () => undefined);
   const db = {
     select: () => ({
       from: () => ({
@@ -30,9 +31,16 @@ function harness(plan: any) {
       return work(txn);
     },
   };
-  return new PaymentsService({ db } as never, {} as never, {
-    enqueueInTransaction: async () => undefined,
-  } as never);
+  return {
+    payments: new PaymentsService(
+      { db } as never,
+      {} as never,
+      {
+        enqueueInTransaction,
+      } as never,
+    ),
+    enqueueInTransaction,
+  };
 }
 
 const plan = {
@@ -44,17 +52,27 @@ const plan = {
 
 describe('configure installment dates', () => {
   it('accepts strictly increasing dates after the plan start', async () => {
-    const payments = harness(plan);
+    const { payments, enqueueInTransaction } = harness(plan);
     await expect(
       payments.configureInstallments('plan-1', [
         { amount: 500_000, dueDate: '2026-09-23T00:00:00.000Z' },
         { amount: 500_000, dueDate: '2026-10-23T00:00:00.000Z' },
       ]),
     ).resolves.toMatchObject({ planId: 'plan-1', totalAmount: 2_000_000, installmentCount: 2 });
+    expect(enqueueInTransaction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: 'PAYMENT_PLAN_READY:plan-1:user-1',
+        userId: 'user-1',
+        notificationType: 'PAYMENT_PLAN_READY',
+        relatedEntityType: 'PAYMENT_PLAN',
+        relatedEntityId: 'plan-1',
+      }),
+    );
   });
 
   it('rejects an unordered due date with a per-row Persian error', async () => {
-    const payments = harness(plan);
+    const { payments } = harness(plan);
     await expect(
       payments.configureInstallments('plan-1', [
         { amount: 500_000, dueDate: '2026-10-23T00:00:00.000Z' },
@@ -69,7 +87,7 @@ describe('configure installment dates', () => {
   });
 
   it('rejects duplicate due dates', async () => {
-    const payments = harness(plan);
+    const { payments } = harness(plan);
     await expect(
       payments.configureInstallments('plan-1', [
         { amount: 500_000, dueDate: '2026-09-23T00:00:00.000Z' },
@@ -84,7 +102,7 @@ describe('configure installment dates', () => {
   });
 
   it('rejects a due date before the plan start', async () => {
-    const payments = harness(plan);
+    const { payments } = harness(plan);
     await expect(
       payments.configureInstallments('plan-1', [
         { amount: 500_000, dueDate: '2026-07-23T00:00:00.000Z' },
