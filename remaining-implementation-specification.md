@@ -24,7 +24,7 @@
 
 - [ ] Add database-backed IDOR tests for notification list, read-one, and read-all using different user accounts. Unit coverage verifies not-found behavior and authenticated controller boundaries, but staging-equivalent row isolation remains unverified. **[NOT FINISHED]**
 - [ ] Test stable pagination with equal timestamps and concurrent inserts. **[NOT FINISHED]**
-- [ ] Add component/browser verification for loading, empty, error/retry, unread state, mark-one, mark-all, keyboard, screen reader, RTL, and mobile behavior. **[NOT FINISHED]**
+- [ ] Add real-browser verification for notification RTL/mobile layout and screen-reader output. Component coverage now verifies loading, empty, unread state, mark-one, mark-all, keyboard activation, accessible alerts, retry readiness, duplicate-submit prevention, links, and responsive wrapping. **[NOT FINISHED]**
 - [ ] Verify migration `0025_notification_read_state.sql` on a production-like snapshot and prove old queued outbox records remain compatible. **[BLOCKED — STAGING DATABASE]**
 
 ## 2. SMS operations and live Kavenegar verification

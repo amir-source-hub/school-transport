@@ -13,7 +13,7 @@ import { Suspense } from 'react';
 export const metadata = { title: 'اعلان‌ها' };
 export const dynamic = 'force-dynamic';
 
-function NotificationsSkeleton() {
+export function NotificationsSkeleton() {
   return (
     <div className="space-y-3" aria-busy="true" aria-label="در حال بارگذاری اعلان‌ها">
       {[1, 2, 3].map((item) => (
@@ -94,7 +94,10 @@ export default async function NotificationsPage({
               );
             })}
             {totalPages > 1 && (
-              <nav aria-label="صفحه‌بندی اعلان‌ها" className="flex items-center justify-between gap-3">
+              <nav
+                aria-label="صفحه‌بندی اعلان‌ها"
+                className="flex items-center justify-between gap-3"
+              >
                 {page > 1 ? (
                   <ButtonLink href={`/student/notifications?page=${page - 1}`} variant="secondary">
                     قبلی
