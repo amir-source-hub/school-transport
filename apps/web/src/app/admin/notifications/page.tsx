@@ -48,7 +48,8 @@ export default async function NotificationsPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    page?: string;
+    cursor?: string;
+    snapshotAt?: string;
     type?: string;
     status?: string;
     dateFrom?: string;
@@ -56,24 +57,19 @@ export default async function NotificationsPage({
   }>;
 }) {
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1);
   const filters = {
     type: params.type || undefined,
     status: params.status || undefined,
     dateFrom: params.dateFrom || undefined,
     dateTo: params.dateTo || undefined,
   };
-  const list = await getAdminNotifications({ page, pageSize: 20, ...filters });
-  const {
-    items,
-    total,
-    totalPages: totalPagesRaw,
-  } = {
-    items: list.items,
-    total: list.total,
-    totalPages: Math.ceil(list.total / list.pageSize),
-  };
-  const totalPages = Math.max(1, totalPagesRaw);
+  const list = await getAdminNotifications({
+    cursor: params.cursor,
+    snapshotAt: params.snapshotAt,
+    pageSize: 20,
+    ...filters,
+  });
+  const { items, total } = list;
 
   return (
     <div className="space-y-6">
@@ -181,34 +177,18 @@ export default async function NotificationsPage({
                 )}
               </Card>
             ))}
-            {totalPages > 1 && (
-              <nav
-                aria-label="صفحه‌بندی رویدادها"
-                className="flex items-center justify-between gap-3"
-              >
-                {page > 1 ? (
-                  <ButtonLink
-                    href={`/admin/notifications?${new URLSearchParams({ ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)), page: String(page - 1) }).toString()}`}
-                    variant="secondary"
-                  >
-                    قبلی
-                  </ButtonLink>
-                ) : (
-                  <span />
-                )}
-                <span className="text-xs text-muted">
-                  صفحه {page} از {totalPages}
-                </span>
-                {page < totalPages ? (
-                  <ButtonLink
-                    href={`/admin/notifications?${new URLSearchParams({ ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)), page: String(page + 1) }).toString()}`}
-                    variant="secondary"
-                  >
-                    بعدی
-                  </ButtonLink>
-                ) : (
-                  <span />
-                )}
+            {list.nextCursor && (
+              <nav aria-label="صفحه‌بندی رویدادها" className="flex items-center justify-end gap-3">
+                <ButtonLink
+                  href={`/admin/notifications?${new URLSearchParams({
+                    ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)),
+                    cursor: list.nextCursor,
+                    snapshotAt: list.snapshotAt,
+                  }).toString()}`}
+                  variant="secondary"
+                >
+                  رویدادهای قدیمی‌تر
+                </ButtonLink>
               </nav>
             )}
           </div>

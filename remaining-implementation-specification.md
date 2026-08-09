@@ -18,7 +18,7 @@
 
 ### Shared admin operational view
 
-- [ ] Replace offset paging in the shared operational view with cursor/snapshot paging and add a concurrent-insert test. The view is shared without per-admin read state, links to supported action routes, defaults to a documented 30-day bounded history, validates filters, and orders equal timestamps by ID. **[NOT FINISHED]**
+- The shared operational view now uses a fixed snapshot plus `(created_at, id)` cursor, fetches a bounded look-ahead row, preserves filters in continuation links, and has regression coverage for equal timestamps and concurrent newer inserts. It remains shared without per-admin read state, links only to supported admin routes, defaults to a documented 30-day history, and validates filters. Verified with focused API/web tests and both application typechecks on 2026-08-09.
 
 ### Student notification UI/API verification
 

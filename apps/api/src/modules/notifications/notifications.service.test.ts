@@ -107,7 +107,10 @@ describe('NotificationsService verification', () => {
   it('shared admin view returns the operational projection without any read state', async () => {
     const { database } = makeDb([[item()], [{ value: 1 }]]);
     const service = makeService(database);
-    const result = await service.getSharedAdminEvents({ page: 1, pageSize: 20 });
+    const result = await service.getSharedAdminEvents({
+      pageSize: 20,
+      snapshotAt: '2026-08-09T12:00:00.000Z',
+    });
     const view = result.items[0];
     expect(view).toMatchObject({
       id: 'notif-1',
@@ -122,21 +125,57 @@ describe('NotificationsService verification', () => {
     expect(view).not.toHaveProperty('userId');
   });
 
-  it('keeps the shared operational view bounded and stably ordered', async () => {
-    const { database, select } = makeDb([[item()], [{ value: 1 }]]);
+  it('keeps the shared operational view bounded and returns a stable equal-time cursor', async () => {
+    const equalTime = new Date('2026-08-01T10:00:00Z');
+    const { database, select } = makeDb([
+      [
+        item({ id: '00000000-0000-4000-8000-000000000003', createdAt: equalTime }),
+        item({ id: '00000000-0000-4000-8000-000000000002', createdAt: equalTime }),
+        item({ id: '00000000-0000-4000-8000-000000000001', createdAt: equalTime }),
+      ],
+      [{ value: 3 }],
+    ]);
     const service = makeService(database);
-    await service.getSharedAdminEvents({
-      page: 2,
-      pageSize: 10,
+    const result = await service.getSharedAdminEvents({
+      pageSize: 2,
       type: 'LIMIT_REQUEST_CREATED',
       status: 'SENT',
       dateFrom: '2026-08-01',
       dateTo: '2026-08-09',
+      snapshotAt: '2026-08-09T12:00:00.000Z',
     });
     const itemsQuery = select.mock.results[0].value;
     expect(itemsQuery.orderBy).toHaveBeenCalledWith(expect.anything(), expect.anything());
-    expect(itemsQuery.limit).toHaveBeenCalledWith(10);
-    expect(itemsQuery.offset).toHaveBeenCalledWith(10);
+    expect(itemsQuery.limit).toHaveBeenCalledWith(3);
+    expect(result.items.map((row) => row.id)).toEqual([
+      '00000000-0000-4000-8000-000000000003',
+      '00000000-0000-4000-8000-000000000002',
+    ]);
+    expect(result.snapshotAt).toBe('2026-08-09T12:00:00.000Z');
+    expect(result.nextCursor).toBeTruthy();
+  });
+
+  it('reuses the original snapshot on the next page so concurrent newer inserts cannot shift it', async () => {
+    const cursor = Buffer.from(
+      JSON.stringify({
+        createdAt: '2026-08-01T10:00:00.000Z',
+        id: '00000000-0000-4000-8000-000000000002',
+      }),
+      'utf8',
+    ).toString('base64url');
+    const { database, select } = makeDb([
+      [item({ id: '00000000-0000-4000-8000-000000000001' })],
+      [{ value: 3 }],
+    ]);
+    const service = makeService(database);
+    const result = await service.getSharedAdminEvents({
+      pageSize: 2,
+      cursor,
+      snapshotAt: '2026-08-09T12:00:00.000Z',
+    });
+    expect(result.snapshotAt).toBe('2026-08-09T12:00:00.000Z');
+    expect(result.items).toHaveLength(1);
+    expect(select.mock.results[0].value.where).toHaveBeenCalledTimes(1);
   });
 
   it('counts only unread rows returned for the authenticated user', async () => {

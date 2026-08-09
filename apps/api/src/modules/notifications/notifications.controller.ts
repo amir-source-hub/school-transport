@@ -18,7 +18,16 @@ import { AuthenticatedRequest } from '../../common/http-request';
 import { Body } from '@nestjs/common';
 import { UpdateNotificationConsentDto } from './notification-consent.dto';
 import { Type } from 'class-transformer';
-import { IsDateString, IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { notificationCatalog } from '../../infrastructure/notifications/notification.catalog';
 
 const ADMIN_OPERATIONAL_TYPES = Object.entries(notificationCatalog)
@@ -42,6 +51,15 @@ export class NotificationListQueryDto {
 }
 
 export class AdminNotificationListQueryDto extends NotificationListQueryDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  cursor?: string;
+
+  @IsOptional()
+  @IsDateString({ strict: true })
+  snapshotAt?: string;
+
   @IsOptional()
   @IsIn(ADMIN_OPERATIONAL_TYPES)
   type?: string;
@@ -113,6 +131,6 @@ export class AdminNotificationsController {
   @Get()
   async getAll(@Req() req: AuthenticatedRequest, @Query() query: AdminNotificationListQueryDto) {
     const result = await this.notificationsService.getSharedAdminEvents(query);
-    return paginatedResponse(result.items, result.page, result.pageSize, result.total);
+    return successResponse(result);
   }
 }

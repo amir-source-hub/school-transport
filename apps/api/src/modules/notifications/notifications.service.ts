@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { notificationConsents, notifications } from '../../database/schemas';
-import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import { Inject } from '@nestjs/common';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { UpdateNotificationConsentDto } from './notification-consent.dto';
@@ -20,10 +20,40 @@ export interface NotificationListQuery {
 }
 
 export interface AdminNotificationListQuery extends NotificationListQuery {
+  cursor?: string;
+  snapshotAt?: string;
   type?: string;
   status?: string;
   dateFrom?: string;
   dateTo?: string;
+}
+
+interface AdminNotificationCursor {
+  createdAt: string;
+  id: string;
+}
+
+function encodeAdminCursor(value: AdminNotificationCursor): string {
+  return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
+}
+
+function decodeAdminCursor(value: string): AdminNotificationCursor {
+  try {
+    const decoded = JSON.parse(
+      Buffer.from(value, 'base64url').toString('utf8'),
+    ) as Partial<AdminNotificationCursor>;
+    if (
+      typeof decoded.createdAt !== 'string' ||
+      Number.isNaN(Date.parse(decoded.createdAt)) ||
+      typeof decoded.id !== 'string' ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(decoded.id)
+    ) {
+      throw new Error('Malformed cursor payload.');
+    }
+    return { createdAt: decoded.createdAt, id: decoded.id };
+  } catch {
+    throw new BadRequestException('Invalid notification cursor.');
+  }
 }
 
 const DEFAULT_PAGE = 1;
@@ -170,13 +200,15 @@ export class NotificationsService {
   }
 
   async getSharedAdminEvents(query: AdminNotificationListQuery = {}) {
-    const { page, pageSize } = boundedPagination(query);
+    const { pageSize } = boundedPagination(query);
+    const snapshotAt = query.snapshotAt ? new Date(query.snapshotAt) : new Date();
     const adminTypes = Object.entries(notificationCatalog)
       .filter(([, entry]) => entry.adminOperational)
       .map(([type]) => type as NotificationType);
     const filters = [
       eq(notifications.channel, 'IN_APP'),
       inArray(notifications.notificationType, adminTypes),
+      sql`${notifications.createdAt} <= ${snapshotAt}`,
     ];
     if (query.type) filters.push(eq(notifications.notificationType, query.type));
     if (query.status) filters.push(eq(notifications.notificationStatus, query.status));
@@ -189,20 +221,32 @@ export class NotificationsService {
       if (/^\d{4}-\d{2}-\d{2}$/.test(query.dateTo)) dateTo.setUTCHours(23, 59, 59, 999);
       filters.push(sql`${notifications.createdAt} <= ${dateTo}`);
     }
+    const countWhere = and(...filters);
+    if (query.cursor) {
+      const cursor = decodeAdminCursor(query.cursor);
+      const cursorTime = new Date(cursor.createdAt);
+      filters.push(
+        or(
+          lt(notifications.createdAt, cursorTime),
+          and(eq(notifications.createdAt, cursorTime), lt(notifications.id, cursor.id)),
+        )!,
+      );
+    }
     const where = and(...filters);
     const items = await this.db.db
       .select()
       .from(notifications)
       .where(where)
       .orderBy(desc(notifications.createdAt), desc(notifications.id))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize);
+      .limit(pageSize + 1);
     const [{ value }] = await this.db.db
       .select({ value: count() })
       .from(notifications)
-      .where(where);
+      .where(countWhere);
+    const pageItems = items.slice(0, pageSize);
+    const last = pageItems.at(-1);
     return {
-      items: items.map((row) => {
+      items: pageItems.map((row) => {
         const context: NotificationContext = {
           relatedEntityType: row.relatedEntityType,
           relatedEntityId: row.relatedEntityId,
@@ -220,8 +264,12 @@ export class NotificationsService {
         };
       }),
       total: Number(value),
-      page,
       pageSize,
+      snapshotAt: snapshotAt.toISOString(),
+      nextCursor:
+        items.length > pageSize && last
+          ? encodeAdminCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
+          : null,
     };
   }
 
