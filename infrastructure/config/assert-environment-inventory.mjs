@@ -54,13 +54,13 @@ if (undocumented.length || exampleOnly.length) {
   if (undocumented.length) {
     const message = `Consumed but undocumented: ${undocumented.join(', ')}`;
     console.error(message);
-    if (process.env.GITHUB_ACTIONS === 'true')
+    if (process.env['GITHUB_ACTIONS'] === 'true')
       console.error(`::error title=Environment inventory::${message}`);
   }
   if (exampleOnly.length) {
     const message = `Example entries with no consumer: ${exampleOnly.join(', ')}`;
     console.error(message);
-    if (process.env.GITHUB_ACTIONS === 'true')
+    if (process.env['GITHUB_ACTIONS'] === 'true')
       console.error(`::error title=Environment examples::${message}`);
   }
   process.exit(1);
