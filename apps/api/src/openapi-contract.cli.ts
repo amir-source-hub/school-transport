@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import { format } from 'prettier';
 import { AppModule } from './app.module';
 import { createOpenApiDocument } from './openapi';
 
@@ -24,7 +25,9 @@ async function main() {
     { logger: ['error'] },
   );
   app.setGlobalPrefix('api/v1');
-  const serialized = `${JSON.stringify(createOpenApiDocument(app), null, 2)}\n`;
+  const serialized = await format(JSON.stringify(createOpenApiDocument(app)), {
+    filepath: outputPath,
+  });
   await app.close();
 
   if (check) {

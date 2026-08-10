@@ -5,11 +5,7 @@
       "get": {
         "operationId": "MetricsController_metricsText",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Metrics"]
       }
     },
@@ -21,17 +17,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RequestOtpDto"
-              }
+              "schema": { "$ref": "#/components/schemas/RequestOtpDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Auth"]
       }
     },
@@ -49,11 +39,7 @@
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Auth"]
       }
     },
@@ -71,11 +57,7 @@
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Auth"]
       }
     },
@@ -87,17 +69,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VerifyAuthOtpDto"
-              }
+              "schema": { "$ref": "#/components/schemas/VerifyAuthOtpDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Auth"]
       }
     },
@@ -105,11 +81,7 @@
       "get": {
         "operationId": "AuthController_onboardingMe",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Auth"]
       }
     },
@@ -121,17 +93,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FinalizeOnboardingDto"
-              }
+              "schema": { "$ref": "#/components/schemas/FinalizeOnboardingDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Auth"]
       }
     },
@@ -139,11 +105,7 @@
       "post": {
         "operationId": "AuthController_refresh",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Auth"]
       }
     },
@@ -151,11 +113,7 @@
       "post": {
         "operationId": "AuthController_logout",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Auth"]
       }
     },
@@ -163,11 +121,7 @@
       "get": {
         "operationId": "AuthController_me",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Auth"]
       }
     },
@@ -175,11 +129,7 @@
       "get": {
         "operationId": "AdminIdentityController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminIdentity"]
       },
       "post": {
@@ -189,17 +139,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAdminDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CreateAdminDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminIdentity"]
       }
     },
@@ -207,11 +151,7 @@
       "get": {
         "operationId": "AdminIdentityController_getMe",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminIdentity"]
       }
     },
@@ -223,26 +163,18 @@
             "name": "adminId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAdminDto"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateAdminDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminIdentity"]
       }
     },
@@ -254,16 +186,10 @@
             "name": "adminId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminIdentity"]
       }
     },
@@ -275,16 +201,10 @@
             "name": "adminId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminIdentity"]
       }
     },
@@ -296,17 +216,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CompleteFamilyDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CompleteFamilyDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Families"]
       }
     },
@@ -314,11 +228,7 @@
       "get": {
         "operationId": "FamiliesController_getProfile",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Families"]
       },
       "patch": {
@@ -328,17 +238,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateProfileDto"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateProfileDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Families"]
       }
     },
@@ -350,17 +254,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddAddressDto"
-              }
+              "schema": { "$ref": "#/components/schemas/AddAddressDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Families"]
       }
     },
@@ -372,26 +270,18 @@
             "name": "addressId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddressMutationDto"
-              }
+              "schema": { "$ref": "#/components/schemas/AddressMutationDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Families"]
       }
     },
@@ -403,26 +293,18 @@
             "name": "contactId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmergencyMutationDto"
-              }
+              "schema": { "$ref": "#/components/schemas/EmergencyMutationDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Families"]
       }
     },
@@ -434,17 +316,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ParentTypeDto"
-              }
+              "schema": { "$ref": "#/components/schemas/ParentTypeDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Families"]
       }
     },
@@ -456,17 +332,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ParentTypeDto"
-              }
+              "schema": { "$ref": "#/components/schemas/ParentTypeDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Families"]
       }
     },
@@ -474,11 +344,7 @@
       "get": {
         "operationId": "AdminFamiliesController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminFamilies"]
       }
     },
@@ -490,16 +356,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminFamilies"]
       }
     },
@@ -511,26 +371,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AdminCreateParentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/AdminCreateParentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminFamilies"]
       }
     },
@@ -542,34 +394,24 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           },
           {
             "name": "parentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AdminUpdateParentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/AdminUpdateParentDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminFamilies"]
       },
       "delete": {
@@ -579,24 +421,16 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           },
           {
             "name": "parentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminFamilies"]
       }
     },
@@ -608,26 +442,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddAddressDto"
-              }
+              "schema": { "$ref": "#/components/schemas/AddAddressDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminFamilies"]
       }
     },
@@ -639,34 +465,24 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           },
           {
             "name": "addressId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddressMutationDto"
-              }
+              "schema": { "$ref": "#/components/schemas/AddressMutationDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminFamilies"]
       }
     },
@@ -678,34 +494,24 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           },
           {
             "name": "contactId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmergencyMutationDto"
-              }
+              "schema": { "$ref": "#/components/schemas/EmergencyMutationDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminFamilies"]
       }
     },
@@ -713,11 +519,7 @@
       "get": {
         "operationId": "SchoolsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Schools"]
       }
     },
@@ -729,16 +531,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Schools"]
       }
     },
@@ -746,11 +542,7 @@
       "get": {
         "operationId": "AdminSchoolsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminSchools"]
       },
       "post": {
@@ -760,17 +552,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateSchoolDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CreateSchoolDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminSchools"]
       }
     },
@@ -782,26 +568,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateSchoolDto"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateSchoolDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminSchools"]
       }
     },
@@ -813,16 +591,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminSchools"]
       }
     },
@@ -834,16 +606,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminSchools"]
       }
     },
@@ -851,11 +617,7 @@
       "get": {
         "operationId": "StudentsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Students"]
       },
       "post": {
@@ -865,17 +627,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateStudentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CreateStudentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Students"]
       }
     },
@@ -883,11 +639,7 @@
       "get": {
         "operationId": "StudentsController_getCapacity",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Students"]
       }
     },
@@ -895,11 +647,7 @@
       "get": {
         "operationId": "StudentsController_getLimitRequests",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Students"]
       },
       "post": {
@@ -909,17 +657,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateLimitRequestDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CreateLimitRequestDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Students"]
       }
     },
@@ -931,16 +673,10 @@
             "name": "studentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Students"]
       },
       "patch": {
@@ -950,26 +686,18 @@
             "name": "studentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateStudentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateStudentDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Students"]
       },
       "delete": {
@@ -979,16 +707,10 @@
             "name": "studentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Students"]
       }
     },
@@ -996,11 +718,7 @@
       "get": {
         "operationId": "AdminStudentsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminStudents"]
       },
       "post": {
@@ -1010,17 +728,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AdminCreateStudentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/AdminCreateStudentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminStudents"]
       }
     },
@@ -1028,11 +740,7 @@
       "get": {
         "operationId": "AdminStudentsController_getAllLimitRequests",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminStudents"]
       }
     },
@@ -1044,16 +752,10 @@
             "name": "studentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminStudents"]
       },
       "patch": {
@@ -1063,26 +765,18 @@
             "name": "studentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AdminUpdateStudentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/AdminUpdateStudentDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminStudents"]
       }
     },
@@ -1094,16 +788,10 @@
             "name": "requestId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminStudents"]
       }
     },
@@ -1115,26 +803,18 @@
             "name": "requestId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RejectLimitRequestDto"
-              }
+              "schema": { "$ref": "#/components/schemas/RejectLimitRequestDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminStudents"]
       }
     },
@@ -1146,26 +826,18 @@
             "name": "studentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ArchiveStudentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/ArchiveStudentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminStudents"]
       }
     },
@@ -1177,26 +849,18 @@
             "name": "studentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ArchiveStudentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/ArchiveStudentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminStudents"]
       }
     },
@@ -1204,11 +868,7 @@
       "get": {
         "operationId": "RegistrationsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Registrations"]
       },
       "post": {
@@ -1218,17 +878,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateRegistrationDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CreateRegistrationDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Registrations"]
       }
     },
@@ -1240,17 +894,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GuidedEnrollmentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/GuidedEnrollmentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Registrations"]
       }
     },
@@ -1262,16 +910,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Registrations"]
       }
     },
@@ -1283,16 +925,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Registrations"]
       }
     },
@@ -1304,16 +940,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Registrations"]
       }
     },
@@ -1325,26 +955,18 @@
             "name": "familyId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GuidedEnrollmentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/GuidedEnrollmentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminRegistrations"]
       }
     },
@@ -1352,11 +974,7 @@
       "get": {
         "operationId": "AdminRegistrationsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminRegistrations"]
       }
     },
@@ -1368,16 +986,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminRegistrations"]
       }
     },
@@ -1389,16 +1001,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminRegistrations"]
       }
     },
@@ -1410,16 +1016,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminRegistrations"]
       }
     },
@@ -1431,26 +1031,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RejectRegistrationDto"
-              }
+              "schema": { "$ref": "#/components/schemas/RejectRegistrationDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminRegistrations"]
       }
     },
@@ -1462,26 +1054,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CorrectionDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CorrectionDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminRegistrations"]
       }
     },
@@ -1489,11 +1073,7 @@
       "get": {
         "operationId": "OnboardingRegistrationsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["OnboardingRegistrations"]
       }
     },
@@ -1505,17 +1085,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GuidedEnrollmentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/GuidedEnrollmentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["OnboardingRegistrations"]
       }
     },
@@ -1527,16 +1101,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["OnboardingRegistrations"]
       }
     },
@@ -1548,16 +1116,10 @@
             "name": "enrollmentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminPricing"]
       },
       "post": {
@@ -1567,26 +1129,18 @@
             "name": "enrollmentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePriceDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CreatePriceDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminPricing"]
       }
     },
@@ -1598,16 +1152,10 @@
             "name": "enrollmentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["ParentPricing"]
       }
     },
@@ -1619,26 +1167,18 @@
             "name": "priceId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AcceptPriceDto"
-              }
+              "schema": { "$ref": "#/components/schemas/AcceptPriceDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["ParentPricing"]
       }
     },
@@ -1646,11 +1186,7 @@
       "get": {
         "operationId": "ContractsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Contracts"]
       }
     },
@@ -1662,16 +1198,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Contracts"]
       }
     },
@@ -1683,16 +1213,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Contracts"]
       }
     },
@@ -1704,16 +1228,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Contracts"]
       }
     },
@@ -1725,16 +1243,10 @@
             "name": "enrollmentId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminContracts"]
       }
     },
@@ -1742,11 +1254,7 @@
       "get": {
         "operationId": "AdminContractsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminContracts"]
       }
     },
@@ -1758,16 +1266,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["OnboardingContracts"]
       }
     },
@@ -1779,16 +1281,10 @@
             "name": "planId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Installments"]
       }
     },
@@ -1796,11 +1292,7 @@
       "get": {
         "operationId": "PaymentsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Payments"]
       }
     },
@@ -1808,11 +1300,7 @@
       "get": {
         "operationId": "PaymentsController_offlineDestination",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Payments"]
       }
     },
@@ -1820,11 +1308,7 @@
       "get": {
         "operationId": "PaymentsController_offlineSubmissions",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Payments"]
       }
     },
@@ -1836,16 +1320,10 @@
             "name": "scheduleItemId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Payments"]
       }
     },
@@ -1857,9 +1335,7 @@
             "name": "txId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
@@ -1872,11 +1348,7 @@
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Payments"]
       }
     },
@@ -1888,26 +1360,18 @@
             "name": "scheduleItemId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OfflinePaymentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/OfflinePaymentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Payments"]
       }
     },
@@ -1919,9 +1383,7 @@
             "name": "submissionId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
@@ -1934,11 +1396,7 @@
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Payments"]
       }
     },
@@ -1950,16 +1408,10 @@
             "name": "submissionId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Payments"]
       }
     },
@@ -1971,16 +1423,10 @@
             "name": "submissionId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Payments"]
       }
     },
@@ -1988,11 +1434,7 @@
       "get": {
         "operationId": "AdminPaymentsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminPayments"]
       }
     },
@@ -2000,11 +1442,7 @@
       "get": {
         "operationId": "AdminPaymentsController_offlineDestination",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminPayments"]
       },
       "post": {
@@ -2020,11 +1458,7 @@
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminPayments"]
       }
     },
@@ -2032,11 +1466,7 @@
       "get": {
         "operationId": "AdminPaymentsController_offlineSubmissions",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminPayments"]
       }
     },
@@ -2048,16 +1478,10 @@
             "name": "submissionId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminPayments"]
       }
     },
@@ -2069,9 +1493,7 @@
             "name": "planId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
@@ -2084,11 +1506,7 @@
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminPayments"]
       }
     },
@@ -2100,26 +1518,18 @@
             "name": "submissionId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReviewPaymentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/ReviewPaymentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminPayments"]
       }
     },
@@ -2131,26 +1541,18 @@
             "name": "submissionId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RejectPaymentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/RejectPaymentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminPayments"]
       }
     },
@@ -2158,11 +1560,7 @@
       "get": {
         "operationId": "OnboardingPaymentsController_offlineDestination",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["OnboardingPayments"]
       }
     },
@@ -2170,11 +1568,7 @@
       "get": {
         "operationId": "OnboardingPaymentsController_offlineSubmissions",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["OnboardingPayments"]
       }
     },
@@ -2186,16 +1580,10 @@
             "name": "scheduleItemId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["OnboardingPayments"]
       }
     },
@@ -2207,9 +1595,7 @@
             "name": "txId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
@@ -2222,11 +1608,7 @@
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["OnboardingPayments"]
       }
     },
@@ -2238,26 +1620,18 @@
             "name": "scheduleItemId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OfflinePaymentDto"
-              }
+              "schema": { "$ref": "#/components/schemas/OfflinePaymentDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["OnboardingPayments"]
       }
     },
@@ -2269,9 +1643,7 @@
             "name": "submissionId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
@@ -2284,11 +1656,7 @@
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["OnboardingPayments"]
       }
     },
@@ -2300,16 +1668,10 @@
             "name": "submissionId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["OnboardingPayments"]
       }
     },
@@ -2317,11 +1679,7 @@
       "get": {
         "operationId": "NotificationsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Notifications"]
       }
     },
@@ -2329,11 +1687,7 @@
       "get": {
         "operationId": "NotificationsController_unreadCount",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Notifications"]
       }
     },
@@ -2345,16 +1699,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Notifications"]
       }
     },
@@ -2362,11 +1710,7 @@
       "post": {
         "operationId": "NotificationsController_markAllRead",
         "parameters": [],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Notifications"]
       }
     },
@@ -2374,11 +1718,7 @@
       "get": {
         "operationId": "NotificationsController_getSettings",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Notifications"]
       },
       "patch": {
@@ -2394,11 +1734,7 @@
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Notifications"]
       }
     },
@@ -2406,11 +1742,7 @@
       "get": {
         "operationId": "AdminNotificationsController_getAll",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminNotifications"]
       }
     },
@@ -2422,24 +1754,16 @@
             "name": "entityType",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           },
           {
             "name": "entityId",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Audit"]
       }
     },
@@ -2447,11 +1771,7 @@
       "get": {
         "operationId": "BroadcastsController_list",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Broadcasts"]
       },
       "post": {
@@ -2461,17 +1781,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateBroadcastDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CreateBroadcastDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Broadcasts"]
       }
     },
@@ -2483,17 +1797,11 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateBroadcastDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CreateBroadcastDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Broadcasts"]
       }
     },
@@ -2505,16 +1813,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Broadcasts"]
       }
     },
@@ -2526,26 +1828,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TestBroadcastDto"
-              }
+              "schema": { "$ref": "#/components/schemas/TestBroadcastDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Broadcasts"]
       }
     },
@@ -2557,16 +1851,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Broadcasts"]
       }
     },
@@ -2578,16 +1866,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Broadcasts"]
       }
     },
@@ -2599,16 +1881,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Broadcasts"]
       }
     },
@@ -2620,27 +1896,17 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateFeedbackDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CreateFeedbackDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Feedback"]
       },
       "get": {
         "operationId": "FeedbackController_mine",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Feedback"]
       }
     },
@@ -2648,11 +1914,7 @@
       "get": {
         "operationId": "AdminFeedbackController_list",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminFeedback"]
       }
     },
@@ -2664,26 +1926,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VersionDto"
-              }
+              "schema": { "$ref": "#/components/schemas/VersionDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminFeedback"]
       }
     },
@@ -2695,26 +1949,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssignFeedbackDto"
-              }
+              "schema": { "$ref": "#/components/schemas/AssignFeedbackDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminFeedback"]
       }
     },
@@ -2726,26 +1972,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RespondFeedbackDto"
-              }
+              "schema": { "$ref": "#/components/schemas/RespondFeedbackDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminFeedback"]
       }
     },
@@ -2757,26 +1995,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VersionDto"
-              }
+              "schema": { "$ref": "#/components/schemas/VersionDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminFeedback"]
       }
     },
@@ -2794,11 +2024,7 @@
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["StudentPhotos"]
       }
     },
@@ -2810,16 +2036,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["StudentPhotos"]
       }
     },
@@ -2831,26 +2051,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LinkPhotoUploadDto"
-              }
+              "schema": { "$ref": "#/components/schemas/LinkPhotoUploadDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["StudentPhotos"]
       }
     },
@@ -2862,16 +2074,10 @@
             "name": "studentId",
             "required": true,
             "in": "query",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["StudentPhotos"]
       }
     },
@@ -2883,16 +2089,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["StudentPhotos"]
       }
     },
@@ -2910,11 +2110,7 @@
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["OnboardingStudentPhotos"]
       }
     },
@@ -2926,16 +2122,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["OnboardingStudentPhotos"]
       }
     },
@@ -2947,26 +2137,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LinkPhotoUploadDto"
-              }
+              "schema": { "$ref": "#/components/schemas/LinkPhotoUploadDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["OnboardingStudentPhotos"]
       }
     },
@@ -2974,11 +2156,7 @@
       "get": {
         "operationId": "AdminStudentPhotosController_list",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminStudentPhotos"]
       }
     },
@@ -2990,16 +2168,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["AdminStudentPhotos"]
       }
     },
@@ -3011,26 +2183,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReviewPhotoUploadDto"
-              }
+              "schema": { "$ref": "#/components/schemas/ReviewPhotoUploadDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminStudentPhotos"]
       }
     },
@@ -3042,26 +2206,18 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RejectPhotoUploadDto"
-              }
+              "schema": { "$ref": "#/components/schemas/RejectPhotoUploadDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminStudentPhotos"]
       }
     },
@@ -3069,11 +2225,7 @@
       "get": {
         "operationId": "HealthController_health[0]",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Health"]
       }
     },
@@ -3081,11 +2233,7 @@
       "get": {
         "operationId": "HealthController_health[1]",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Health"]
       }
     },
@@ -3093,11 +2241,7 @@
       "get": {
         "operationId": "HealthController_ready",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Health"]
       }
     },
@@ -3105,11 +2249,7 @@
       "get": {
         "operationId": "ReportsController_previewComprehensiveReport",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Reports"]
       }
     },
@@ -3117,11 +2257,7 @@
       "get": {
         "operationId": "ReportsController_downloadComprehensiveReport",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["Reports"]
       }
     }
@@ -3136,210 +2272,58 @@
   "servers": [],
   "components": {
     "securitySchemes": {
-      "bearer": {
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "type": "http"
-      },
-      "cookie": {
-        "type": "apiKey",
-        "in": "cookie",
-        "name": "refresh_token"
-      }
+      "bearer": { "scheme": "bearer", "bearerFormat": "JWT", "type": "http" },
+      "cookie": { "type": "apiKey", "in": "cookie", "name": "refresh_token" }
     },
     "schemas": {
-      "RequestOtpDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AdminPasswordChallengeDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AdminOtpVerificationDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "VerifyAuthOtpDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "FinalizeOnboardingDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "CreateAdminDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "UpdateAdminDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "CompleteFamilyDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "UpdateProfileDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AddAddressDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AddressMutationDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "EmergencyMutationDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "ParentTypeDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AdminCreateParentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AdminUpdateParentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "CreateSchoolDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "UpdateSchoolDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "CreateLimitRequestDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "CreateStudentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "UpdateStudentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "RejectLimitRequestDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AdminCreateStudentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AdminUpdateStudentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "ArchiveStudentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "CreateRegistrationDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "GuidedEnrollmentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "RejectRegistrationDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "CorrectionDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "CreatePriceDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AcceptPriceDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "VerifyOnlinePaymentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "OfflinePaymentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AuthorizeReceiptUploadDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "ConfigureOfflineDestinationDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "ConfigureInstallmentsDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "ReviewPaymentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "RejectPaymentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "UpdateNotificationConsentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "CreateBroadcastDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "TestBroadcastDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "CreateFeedbackDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "VersionDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AssignFeedbackDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "RespondFeedbackDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "AuthorizePhotoUploadDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "LinkPhotoUploadDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "ReviewPhotoUploadDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "RejectPhotoUploadDto": {
-        "type": "object",
-        "properties": {}
-      }
+      "RequestOtpDto": { "type": "object", "properties": {} },
+      "AdminPasswordChallengeDto": { "type": "object", "properties": {} },
+      "AdminOtpVerificationDto": { "type": "object", "properties": {} },
+      "VerifyAuthOtpDto": { "type": "object", "properties": {} },
+      "FinalizeOnboardingDto": { "type": "object", "properties": {} },
+      "CreateAdminDto": { "type": "object", "properties": {} },
+      "UpdateAdminDto": { "type": "object", "properties": {} },
+      "CompleteFamilyDto": { "type": "object", "properties": {} },
+      "UpdateProfileDto": { "type": "object", "properties": {} },
+      "AddAddressDto": { "type": "object", "properties": {} },
+      "AddressMutationDto": { "type": "object", "properties": {} },
+      "EmergencyMutationDto": { "type": "object", "properties": {} },
+      "ParentTypeDto": { "type": "object", "properties": {} },
+      "AdminCreateParentDto": { "type": "object", "properties": {} },
+      "AdminUpdateParentDto": { "type": "object", "properties": {} },
+      "CreateSchoolDto": { "type": "object", "properties": {} },
+      "UpdateSchoolDto": { "type": "object", "properties": {} },
+      "CreateLimitRequestDto": { "type": "object", "properties": {} },
+      "CreateStudentDto": { "type": "object", "properties": {} },
+      "UpdateStudentDto": { "type": "object", "properties": {} },
+      "RejectLimitRequestDto": { "type": "object", "properties": {} },
+      "AdminCreateStudentDto": { "type": "object", "properties": {} },
+      "AdminUpdateStudentDto": { "type": "object", "properties": {} },
+      "ArchiveStudentDto": { "type": "object", "properties": {} },
+      "CreateRegistrationDto": { "type": "object", "properties": {} },
+      "GuidedEnrollmentDto": { "type": "object", "properties": {} },
+      "RejectRegistrationDto": { "type": "object", "properties": {} },
+      "CorrectionDto": { "type": "object", "properties": {} },
+      "CreatePriceDto": { "type": "object", "properties": {} },
+      "AcceptPriceDto": { "type": "object", "properties": {} },
+      "VerifyOnlinePaymentDto": { "type": "object", "properties": {} },
+      "OfflinePaymentDto": { "type": "object", "properties": {} },
+      "AuthorizeReceiptUploadDto": { "type": "object", "properties": {} },
+      "ConfigureOfflineDestinationDto": { "type": "object", "properties": {} },
+      "ConfigureInstallmentsDto": { "type": "object", "properties": {} },
+      "ReviewPaymentDto": { "type": "object", "properties": {} },
+      "RejectPaymentDto": { "type": "object", "properties": {} },
+      "UpdateNotificationConsentDto": { "type": "object", "properties": {} },
+      "CreateBroadcastDto": { "type": "object", "properties": {} },
+      "TestBroadcastDto": { "type": "object", "properties": {} },
+      "CreateFeedbackDto": { "type": "object", "properties": {} },
+      "VersionDto": { "type": "object", "properties": {} },
+      "AssignFeedbackDto": { "type": "object", "properties": {} },
+      "RespondFeedbackDto": { "type": "object", "properties": {} },
+      "AuthorizePhotoUploadDto": { "type": "object", "properties": {} },
+      "LinkPhotoUploadDto": { "type": "object", "properties": {} },
+      "ReviewPhotoUploadDto": { "type": "object", "properties": {} },
+      "RejectPhotoUploadDto": { "type": "object", "properties": {} }
     }
   }
 }
