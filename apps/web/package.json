@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "contract:generate": "openapi-typescript ../api/openapi.json -o src/generated/api-contract.ts",
+    "contract:generate": "openapi-typescript ../api/openapi.json -o src/generated/api-contract.ts && prettier --write src/generated/api-contract.ts",
     "contract:check": "pnpm contract:generate && git diff --exit-code -- src/generated/api-contract.ts",
     "performance:check": "node scripts/check-performance-budgets.mjs",
     "performance:browser": "node scripts/run-browser-performance-audit.mjs",
