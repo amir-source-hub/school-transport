@@ -116,6 +116,8 @@ jobs:
     name: Production container scan
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
     permissions:
       contents: read
       security-events: write

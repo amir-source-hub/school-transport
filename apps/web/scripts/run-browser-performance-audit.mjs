@@ -216,6 +216,13 @@ console.log(`Performance report: ${reportPath}`);
 for (const result of results)
   console.log(`${result.profile} ${result.route}: ${JSON.stringify(result.metrics)}`);
 if (violations.length) {
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    for (const item of violations) {
+      console.error(
+        `::error title=Performance budget exceeded::${item.profile} ${item.route} ${item.metric}: ${item.measured} > ${item.budget}`,
+      );
+    }
+  }
   console.error(
     `Performance budgets failed:\n${violations.map((item) => `${item.profile} ${item.route} ${item.metric}: ${item.measured} > ${item.budget}`).join('\n')}`,
   );
