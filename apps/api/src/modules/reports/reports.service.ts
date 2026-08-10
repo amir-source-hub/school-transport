@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { asc } from 'drizzle-orm';
 import { DatabaseService } from '../../database/database.service';
@@ -29,7 +29,7 @@ export function neutralizeSpreadsheetFormula(value: CellValue): CellValue {
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(@Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService) {}
 
   async createComprehensiveWorkbook(): Promise<Buffer> {
     const [

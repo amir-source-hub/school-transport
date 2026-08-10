@@ -24,13 +24,24 @@ import { ValidationError } from '../../../common/errors';
 import { TrustedOriginGuard } from '../../access-control/trusted-origin.guard';
 import { RolesGuard } from '../../access-control/roles.guard';
 import { Roles } from '../../../common/decorators';
-import { IsEmail, IsIn, IsOptional, IsString, Length, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 import { normalizeIranianDigits } from '../../../common/iranian-national-id';
 import { AuthenticatedRequest, OnboardingRequest } from '../../../common/http-request';
 
-const trimmed = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value;
-const digits = ({ value }: { value: unknown }) => typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
+const trimmed = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
+const digits = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
 const toBoolean = ({ value }: { value: unknown }) => value === true || value === 'true';
 
 export class CreateAdminDto {
@@ -49,7 +60,7 @@ export class CreateAdminDto {
   @Transform(trimmed)
   lastName!: string;
 
-@Transform(digits)
+  @Transform(digits)
   @Matches(/^09\d{9}$/)
   phoneNumber!: string;
 
@@ -147,7 +158,7 @@ export class AdminIdentityController {
     return successResponse(await this.authService.getAdmin(req.user.id));
   }
 
-@Post()
+  @Post()
   async create(@Req() req: AuthenticatedRequest, @Body() dto: CreateAdminDto) {
     return successResponse(await this.authService.createAdmin(dto));
   }
@@ -237,10 +248,7 @@ export class AuthController {
   @Post('admin/password-challenge')
   @HttpCode(HttpStatus.OK)
   @UseGuards(TrustedOriginGuard)
-  async passwordChallenge(
-    @Req() req: FastifyRequest,
-    @Body() dto: AdminPasswordChallengeDto,
-  ) {
+  async passwordChallenge(@Req() req: FastifyRequest, @Body() dto: AdminPasswordChallengeDto) {
     if (this.config.featureAdminTwoFactor === false) {
       throw new ValidationError('Admin authentication is temporarily unavailable.');
     }
@@ -312,7 +320,12 @@ export class AuthController {
         },
       });
     }
-    this.setRefreshCookie(reply, result.refreshToken, result.user.role === 'ADMIN', dto.rememberMe ?? false);
+    this.setRefreshCookie(
+      reply,
+      result.refreshToken,
+      result.user.role === 'ADMIN',
+      dto.rememberMe ?? false,
+    );
     this.setAccessCookie(reply, result.accessToken, result.user.role === 'ADMIN');
     return successResponse({
       user: result.user,
@@ -433,10 +446,7 @@ export class AuthController {
   }
 
   private setOnboardingCookie(reply: CookieReply, token: string, expiresAt: Date) {
-    const maxAge = Math.max(
-      1,
-      Math.round((expiresAt.getTime() - Date.now()) / 1000),
-    );
+    const maxAge = Math.max(1, Math.round((expiresAt.getTime() - Date.now()) / 1000));
     reply.setCookie('onboarding_token', token, {
       httpOnly: true,
       secure: this.config.nodeEnv === 'production',

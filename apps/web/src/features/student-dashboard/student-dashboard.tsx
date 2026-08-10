@@ -233,7 +233,7 @@ function NextBestAction({ nextAction, warning }: { nextAction: string; warning: 
       {!warning && (
         <div className="mt-4">
           <ButtonLink
-href="/student/enrollments"
+            href="/student/enrollments"
             size="sm"
             variant="primary"
             className="bg-navy text-white hover:bg-navy/90"

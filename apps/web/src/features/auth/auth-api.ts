@@ -3,9 +3,7 @@ import { apiRequest } from '@/lib/api-client';
 export type AuthRole = 'PARENT' | 'ADMIN';
 
 export type UiRoleIdentifier =
-  | 'STUDENT_PORTAL'
-  | 'SCHOOL_MANAGER_COMING_SOON'
-  | 'DRIVER_COMING_SOON';
+  'STUDENT_PORTAL' | 'SCHOOL_MANAGER_COMING_SOON' | 'DRIVER_COMING_SOON';
 
 type AuthUser = {
   id: string;

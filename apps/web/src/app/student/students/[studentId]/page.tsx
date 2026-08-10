@@ -12,7 +12,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function StudentPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
-  const [student, photos] = await Promise.all([getStudent(studentId), getMyPhotoUploads(studentId)]);
+  const [student, photos] = await Promise.all([
+    getStudent(studentId),
+    getMyPhotoUploads(studentId),
+  ]);
   return (
     <div className="space-y-6">
       <Breadcrumbs

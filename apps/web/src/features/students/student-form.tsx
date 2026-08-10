@@ -54,16 +54,35 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
   return (
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-bold">نام
-          <Input required value={form.firstName} onChange={(event) => set('firstName', event.target.value)} />
+        <label className="text-sm font-bold">
+          نام
+          <Input
+            required
+            value={form.firstName}
+            onChange={(event) => set('firstName', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">نام خانوادگی
-          <Input required value={form.lastName} onChange={(event) => set('lastName', event.target.value)} />
+        <label className="text-sm font-bold">
+          نام خانوادگی
+          <Input
+            required
+            value={form.lastName}
+            onChange={(event) => set('lastName', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">کد ملی
-          <Input required disabled={Boolean(student)} dir="ltr" inputMode="numeric" value={form.nationalId} onChange={(event) => set('nationalId', event.target.value)} />
+        <label className="text-sm font-bold">
+          کد ملی
+          <Input
+            required
+            disabled={Boolean(student)}
+            dir="ltr"
+            inputMode="numeric"
+            value={form.nationalId}
+            onChange={(event) => set('nationalId', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">مدرسه
+        <label className="text-sm font-bold">
+          مدرسه
           <Select
             disabled={Boolean(student)}
             value={form.schoolId}
@@ -72,19 +91,33 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
             placeholder="مدرسه را انتخاب کنید"
           />
         </label>
-        <label className="text-sm font-bold">پایه
-          <Input required value={form.grade} onChange={(event) => set('grade', event.target.value)} />
+        <label className="text-sm font-bold">
+          پایه
+          <Input
+            required
+            value={form.grade}
+            onChange={(event) => set('grade', event.target.value)}
+          />
         </label>
         {!student && (
           <>
-            <label className="text-sm font-bold">تاریخ تولد
-              <JalaliDateInput value={form.birthDate ?? ''} onChange={(value) => set('birthDate', value)} required />
+            <label className="text-sm font-bold">
+              تاریخ تولد
+              <JalaliDateInput
+                value={form.birthDate ?? ''}
+                onChange={(value) => set('birthDate', value)}
+                required
+              />
             </label>
-            <label className="text-sm font-bold">جنسیت
+            <label className="text-sm font-bold">
+              جنسیت
               <Select
                 value={form.gender}
                 onValueChange={(value) => set('gender', value)}
-                options={[{ value: 'FEMALE', label: 'دختر' }, { value: 'MALE', label: 'پسر' }]}
+                options={[
+                  { value: 'FEMALE', label: 'دختر' },
+                  { value: 'MALE', label: 'پسر' },
+                ]}
                 placeholder="انتخاب کنید"
               />
             </label>
@@ -92,7 +125,9 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
         )}
       </div>
       {error && <p className="text-sm text-danger">{error}</p>}
-      <Button type="submit" loading={pending}>{student ? 'ذخیره تغییرات' : 'افزودن دانش‌آموز'}</Button>
+      <Button type="submit" loading={pending}>
+        {student ? 'ذخیره تغییرات' : 'افزودن دانش‌آموز'}
+      </Button>
     </form>
   );
 }

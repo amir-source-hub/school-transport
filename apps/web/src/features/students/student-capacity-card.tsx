@@ -79,7 +79,8 @@ export function StudentCapacityCard() {
     );
   }
 
-  const pct = capacity.studentLimit > 0 ? (capacity.activeStudentCount / capacity.studentLimit) * 100 : 100;
+  const pct =
+    capacity.studentLimit > 0 ? (capacity.activeStudentCount / capacity.studentLimit) * 100 : 100;
 
   return (
     <Card>
@@ -111,9 +112,7 @@ export function StudentCapacityCard() {
           </p>
           <p className="rounded-lg bg-surface-muted px-3 py-2">{latest.reason}</p>
           {latest.status === 'REJECTED' && latest.rejectionReason && (
-            <p className="text-danger">
-              دلیل رد: {latest.rejectionReason}
-            </p>
+            <p className="text-danger">دلیل رد: {latest.rejectionReason}</p>
           )}
         </div>
       )}
@@ -133,7 +132,11 @@ export function StudentCapacityCard() {
           <Button type="submit" loading={pending} disabled={!reason.trim()}>
             ثبت درخواست افزایش ظرفیت
           </Button>
-          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          )}
         </form>
       )}
     </Card>

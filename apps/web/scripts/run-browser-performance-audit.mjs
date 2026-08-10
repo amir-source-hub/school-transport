@@ -77,11 +77,14 @@ for (const profileName of selectedProfiles) {
     };
     const onResponse = (response) => {
       transferMeasurements.push(
-        response.request().sizes().then((sizes) => ({
-          bytes: sizes.responseBodySize + sizes.responseHeadersSize,
-          resourceType: response.request().resourceType(),
-          contentType: response.headers()['content-type'] ?? '',
-        })),
+        response
+          .request()
+          .sizes()
+          .then((sizes) => ({
+            bytes: sizes.responseBodySize + sizes.responseHeadersSize,
+            resourceType: response.request().resourceType(),
+            contentType: response.headers()['content-type'] ?? '',
+          })),
       );
     };
     page.on('request', onRequest);
@@ -105,9 +108,9 @@ for (const profileName of selectedProfiles) {
             window.__performanceAudit.cls += entry.value;
             window.__performanceAudit.layoutShiftSources.push({
               value: entry.value,
-              sources: (entry.sources ?? []).map(source => ({
+              sources: (entry.sources ?? []).map((source) => ({
                 node: source.node
-                  ? `${source.node.tagName?.toLowerCase() ?? ''}${source.node.id ? `#${source.node.id}` : ''}.${[...source.node.classList ?? []].slice(0, 4).join('.')}`
+                  ? `${source.node.tagName?.toLowerCase() ?? ''}${source.node.id ? `#${source.node.id}` : ''}.${[...(source.node.classList ?? [])].slice(0, 4).join('.')}`
                   : 'unknown',
                 previousRect: source.previousRect,
                 currentRect: source.currentRect,
@@ -140,16 +143,8 @@ for (const profileName of selectedProfiles) {
       const markInteractionStart = () => {
         interactionStart ||= performance.now();
       };
-      document.addEventListener(
-        'pointerdown',
-        markInteractionStart,
-        { capture: true, once: true },
-      );
-      document.addEventListener(
-        'keydown',
-        markInteractionStart,
-        { capture: true, once: true },
-      );
+      document.addEventListener('pointerdown', markInteractionStart, { capture: true, once: true });
+      document.addEventListener('keydown', markInteractionStart, { capture: true, once: true });
       document.addEventListener(
         'click',
         (event) => {

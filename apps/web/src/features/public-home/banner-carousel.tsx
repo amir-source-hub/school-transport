@@ -19,11 +19,11 @@ export function BannerCarousel() {
   const prefersReduced = useReducedMotion();
 
   const next = useCallback(() => {
-    setCurrent(prev => (prev + 1) % banners.length);
+    setCurrent((prev) => (prev + 1) % banners.length);
   }, []);
 
   const prev = useCallback(() => {
-    setCurrent(prev => (prev - 1 + banners.length) % banners.length);
+    setCurrent((prev) => (prev - 1 + banners.length) % banners.length);
   }, []);
 
   useEffect(() => {

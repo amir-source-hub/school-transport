@@ -1,4 +1,11 @@
-import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
 import { Job, Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import { ConfigService } from '../../config/config.service';
@@ -24,13 +31,17 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   private closePromise?: Promise<void>;
 
   constructor(
-    private readonly config: ConfigService,
-    private readonly logger: AppLogger,
-    private readonly database: DatabaseService,
+    @Inject(forwardRef(() => ConfigService)) private readonly config: ConfigService,
+    @Inject(forwardRef(() => AppLogger)) private readonly logger: AppLogger,
+    @Inject(forwardRef(() => DatabaseService)) private readonly database: DatabaseService,
+    @Inject(forwardRef(() => InAppNotificationService))
     private readonly notificationOutbox: InAppNotificationService,
-    private readonly broadcasts: BroadcastsService,
+    @Inject(forwardRef(() => BroadcastsService)) private readonly broadcasts: BroadcastsService,
+    @Inject(forwardRef(() => StudentPhotosService))
     private readonly studentPhotos: StudentPhotosService,
-    @Optional() private readonly metrics?: OperationalMetricsService,
+    @Optional()
+    @Inject(forwardRef(() => OperationalMetricsService))
+    private readonly metrics?: OperationalMetricsService,
   ) {
     this.connection = new IORedis(config.redisUrl, {
       maxRetriesPerRequest: null,

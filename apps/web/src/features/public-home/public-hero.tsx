@@ -1,6 +1,14 @@
 'use client';
 
-import { ArrowLeft, CheckCircle2, MapPinned, Route, ScrollText, ShieldCheck, WalletCards } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  MapPinned,
+  Route,
+  ScrollText,
+  ShieldCheck,
+  WalletCards,
+} from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
@@ -26,13 +34,55 @@ function HeroRouteLine() {
         opacity="0.4"
         initial={prefersReduced ? { pathLength: 1 } : { pathLength: 0 }}
         animate={{ pathLength: 1 }}
-        transition={prefersReduced ? { duration: 0 } : { duration: 1.5, ease: [0.16, 1, 0.3, 1], delay: 0.5 }}
+        transition={
+          prefersReduced ? { duration: 0 } : { duration: 1.5, ease: [0.16, 1, 0.3, 1], delay: 0.5 }
+        }
       />
-      <motion.circle cx="0" cy="64" r="4" fill="var(--sun)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }} />
-      <motion.circle cx="360" cy="50" r="3" fill="var(--transit-blue)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2 }} />
-      <motion.circle cx="720" cy="40" r="4" fill="var(--sun)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2 }} />
-      <motion.circle cx="1080" cy="55" r="3" fill="var(--transit-blue)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 }} />
-      <motion.circle cx="1440" cy="45" r="4" fill="var(--sun)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.6 }} />
+      <motion.circle
+        cx="0"
+        cy="64"
+        r="4"
+        fill="var(--sun)"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.8 }}
+      />
+      <motion.circle
+        cx="360"
+        cy="50"
+        r="3"
+        fill="var(--transit-blue)"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2 }}
+      />
+      <motion.circle
+        cx="720"
+        cy="40"
+        r="4"
+        fill="var(--sun)"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.2 }}
+      />
+      <motion.circle
+        cx="1080"
+        cy="55"
+        r="3"
+        fill="var(--transit-blue)"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.4 }}
+      />
+      <motion.circle
+        cx="1440"
+        cy="45"
+        r="4"
+        fill="var(--sun)"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.6 }}
+      />
       <defs>
         <linearGradient id="hero-route-gradient" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="var(--sun)" />
@@ -63,7 +113,10 @@ export function PublicHero() {
         aria-hidden="true"
       />
       <HeroRouteLine />
-      <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.04]" aria-hidden="true">
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.04]"
+        aria-hidden="true"
+      >
         <defs>
           <pattern id="hero-dots" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
             <circle cx="30" cy="30" r="1" fill="white" />
@@ -88,13 +141,18 @@ export function PublicHero() {
             </span>
           </div>
           <div className="mt-5 space-y-3">
-            {['ثبت اطلاعات و نشانی', 'انتخاب مدرسه و خودرو', 'قرارداد و پیش‌پرداخت'].map((label, index) => (
-              <div key={label} className="flex items-center gap-3 rounded-xl bg-white/8 px-3 py-2.5">
-                <CheckCircle2 className="size-4 shrink-0 text-sun" />
-                <span className="text-xs font-bold text-white/85">{label}</span>
-                <span className="mr-auto text-[10px] text-white/50">۰{index + 1}</span>
-              </div>
-            ))}
+            {['ثبت اطلاعات و نشانی', 'انتخاب مدرسه و خودرو', 'قرارداد و پیش‌پرداخت'].map(
+              (label, index) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-3 rounded-xl bg-white/8 px-3 py-2.5"
+                >
+                  <CheckCircle2 className="size-4 shrink-0 text-sun" />
+                  <span className="text-xs font-bold text-white/85">{label}</span>
+                  <span className="mr-auto text-[10px] text-white/50">۰{index + 1}</span>
+                </div>
+              ),
+            )}
           </div>
         </motion.div>
         <motion.div
@@ -114,8 +172,8 @@ export function PublicHero() {
             <span className="text-white">از خانه تا مدرسه</span>
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/70">
-            ثبت‌نام آنلاین، قرارداد شفاف، پرداخت امن و پیگیری وضعیت سرویس مدرسه در هر مرحله.
-            همه چیز در یک سامانه یکپارچه و قابل اعتماد.
+            ثبت‌نام آنلاین، قرارداد شفاف، پرداخت امن و پیگیری وضعیت سرویس مدرسه در هر مرحله. همه چیز
+            در یک سامانه یکپارچه و قابل اعتماد.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <ButtonLink
@@ -165,7 +223,13 @@ export function PublicHero() {
           transition={{ delay: 2.8, repeat: Infinity, duration: 2, ease: 'easeInOut' }}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-white/40">
-            <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M12 5v14M5 12l7 7 7-7"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </motion.div>
       )}

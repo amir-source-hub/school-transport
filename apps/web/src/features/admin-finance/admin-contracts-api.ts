@@ -28,33 +28,39 @@ const rawContractSchema = z.object({
   contractDataSnapshot: z.string().nullable(),
   academicYear: z.string(),
   totalAmount: z.number(),
-  paymentPlan: z.object({
-    id: z.string(),
-    planType: z.string(),
-    totalAmount: z.number(),
-    prepaymentAmount: z.number(),
-    remainingInstallmentAmount: z.number(),
-    installmentCount: z.number(),
-    planStatus: z.string(),
-    items: z.array(z.object({
+  paymentPlan: z
+    .object({
       id: z.string(),
-      itemType: z.string(),
-      sequenceNumber: z.number(),
-      amount: z.number(),
-      dueDate: z.coerce.date().nullable(),
-      itemStatus: z.string(),
-      paidAmount: z.number(),
-      paidAt: z.coerce.date().nullable(),
-      transactions: z.array(z.object({
-        id: z.string(),
-        amount: z.number(),
-        paymentMethod: z.string(),
-        transactionStatus: z.string(),
-        verifiedAt: z.coerce.date().nullable(),
-        createdAt: z.coerce.date(),
-      })),
-    })),
-  }).nullable(),
+      planType: z.string(),
+      totalAmount: z.number(),
+      prepaymentAmount: z.number(),
+      remainingInstallmentAmount: z.number(),
+      installmentCount: z.number(),
+      planStatus: z.string(),
+      items: z.array(
+        z.object({
+          id: z.string(),
+          itemType: z.string(),
+          sequenceNumber: z.number(),
+          amount: z.number(),
+          dueDate: z.coerce.date().nullable(),
+          itemStatus: z.string(),
+          paidAmount: z.number(),
+          paidAt: z.coerce.date().nullable(),
+          transactions: z.array(
+            z.object({
+              id: z.string(),
+              amount: z.number(),
+              paymentMethod: z.string(),
+              transactionStatus: z.string(),
+              verifiedAt: z.coerce.date().nullable(),
+              createdAt: z.coerce.date(),
+            }),
+          ),
+        }),
+      ),
+    })
+    .nullable(),
 });
 
 export async function getAdminContracts() {

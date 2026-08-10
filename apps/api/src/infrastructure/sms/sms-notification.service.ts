@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import { ConfigService } from '../../config/config.service';
 import { DatabaseService } from '../../database/database.service';
@@ -18,10 +18,12 @@ export type SmsDispatchOutcome =
 @Injectable()
 export class SmsNotificationService {
   constructor(
-    private readonly db: DatabaseService,
-    private readonly config: ConfigService,
+    @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
+    @Inject(forwardRef(() => ConfigService)) private readonly config: ConfigService,
     @Inject(SMS_PROVIDER) private readonly provider: SmsProvider,
-    @Optional() private readonly metrics?: OperationalMetricsService,
+    @Optional()
+    @Inject(forwardRef(() => OperationalMetricsService))
+    private readonly metrics?: OperationalMetricsService,
   ) {}
 
   async dispatch(input: {

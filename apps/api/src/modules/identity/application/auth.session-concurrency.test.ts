@@ -49,7 +49,13 @@ describe('refresh session rotation', () => {
       };
       const audit = { record: vi.fn(), recordInTransaction: vi.fn() };
       const service = new AuthService(
-        jwt as never, config as never, database as never, {} as never, {} as never, {} as never, audit as never,
+        jwt as never,
+        config as never,
+        database as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        audit as never,
       );
       const generate = (service as any).generateTokens.bind(service) as (
         id: string,
@@ -94,8 +100,7 @@ describe('credential change session revocation', () => {
     const db = {
       db: {
         select: () => ({
-          from: (table: unknown) =>
-            select(table === adminUsers ? [currentAdmin] : []),
+          from: (table: unknown) => select(table === adminUsers ? [currentAdmin] : []),
         }),
         update: (table: unknown) =>
           table === authSessions
@@ -289,11 +294,13 @@ describe('refresh token lifecycle', () => {
     adminJwtRememberRefreshTokenTtl: 604800,
   };
 
-  function build(overrides: {
-    hashMismatch?: boolean;
-    status?: string;
-    revokedAt?: Date | null;
-  } = {}) {
+  function build(
+    overrides: {
+      hashMismatch?: boolean;
+      status?: string;
+      revokedAt?: Date | null;
+    } = {},
+  ) {
     const revocations: Array<Record<string, unknown>> = [];
     const session = {
       id: 'session-1',

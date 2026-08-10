@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { schools } from '../../database/schemas';
 import { and, asc, eq } from 'drizzle-orm';
@@ -10,7 +10,7 @@ export const SCHOOL_LIST_LIMIT = 500;
 
 @Injectable()
 export class SchoolsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(@Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService) {}
 
   async getAll(includeInactive = false) {
     if (includeInactive) {

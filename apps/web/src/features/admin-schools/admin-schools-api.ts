@@ -13,10 +13,12 @@ const rawSchoolSchema = z.object({
   phoneNumber: z.string().nullable(),
   managerName: z.string().nullable(),
   managerPhone: z.string().nullable(),
-  educationOptions: z.array(z.object({
-    level: z.string(),
-    grades: z.array(z.string()),
-  })),
+  educationOptions: z.array(
+    z.object({
+      level: z.string(),
+      grades: z.array(z.string()),
+    }),
+  ),
   isActive: z.boolean(),
 });
 
@@ -46,10 +48,14 @@ export const createSchoolSchema = z.object({
   phoneNumber: z.string().optional(),
   managerName: z.string().optional(),
   managerPhone: z.string().optional(),
-  educationOptions: z.array(z.object({
-    level: z.string().min(1),
-    grades: z.array(z.string().min(1)).min(1),
-  })).min(1, 'حداقل یک مقطع و پایه انتخاب کنید'),
+  educationOptions: z
+    .array(
+      z.object({
+        level: z.string().min(1),
+        grades: z.array(z.string().min(1)).min(1),
+      }),
+    )
+    .min(1, 'حداقل یک مقطع و پایه انتخاب کنید'),
 });
 
 export type AdminSchool = z.infer<typeof schoolSchema>;
@@ -61,8 +67,16 @@ const mapSchool = (value: unknown): AdminSchool => {
 };
 
 export async function getAdminSchools() {
-  const response = await apiRequest<unknown>('/admin/schools', { cache: 'no-store', timeoutMs: 8_000 });
-  return { schools: z.array(rawSchoolSchema).parse(response.data).map((school) => mapSchool(school)) };
+  const response = await apiRequest<unknown>('/admin/schools', {
+    cache: 'no-store',
+    timeoutMs: 8_000,
+  });
+  return {
+    schools: z
+      .array(rawSchoolSchema)
+      .parse(response.data)
+      .map((school) => mapSchool(school)),
+  };
 }
 
 export async function createSchool(data: CreateSchoolInput) {
@@ -71,7 +85,10 @@ export async function createSchool(data: CreateSchoolInput) {
 }
 
 export async function updateSchool(id: string, data: Partial<CreateSchoolInput>) {
-  const response = await apiRequest<unknown>(`/admin/schools/${id}`, { method: 'PATCH', body: data });
+  const response = await apiRequest<unknown>(`/admin/schools/${id}`, {
+    method: 'PATCH',
+    body: data,
+  });
   return mapSchool(response.data);
 }
 

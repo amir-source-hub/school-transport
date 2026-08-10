@@ -22,11 +22,7 @@ export function RouteLine({
         className="absolute bottom-0 left-0 w-full bg-primary"
         initial={false}
         animate={{ height: `${progress * 100}%` }}
-        transition={
-          prefersReduced
-            ? { duration: 0 }
-            : { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
-        }
+        transition={prefersReduced ? { duration: 0 } : { duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       />
     </div>
   );
@@ -65,24 +61,12 @@ export function RouteCheckpoint({
       </span>
       <div>
         <p className="text-sm font-semibold text-foreground">{label}</p>
-        {description && (
-          <p className="text-xs text-muted">{description}</p>
-        )}
+        {description && <p className="text-xs text-muted">{description}</p>}
       </div>
     </li>
   );
 }
 
-export function JourneyLine({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <ol className={cn('flex flex-col gap-6', className)}>
-      {children}
-    </ol>
-  );
+export function JourneyLine({ children, className }: { children: ReactNode; className?: string }) {
+  return <ol className={cn('flex flex-col gap-6', className)}>{children}</ol>;
 }

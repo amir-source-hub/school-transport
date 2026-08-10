@@ -1,7 +1,11 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { getAdminSchools, GENDER_TYPE_LABELS, SCHOOL_TYPE_LABELS } from '@/features/admin-schools/admin-schools-api';
+import {
+  getAdminSchools,
+  GENDER_TYPE_LABELS,
+  SCHOOL_TYPE_LABELS,
+} from '@/features/admin-schools/admin-schools-api';
 import { ArchiveSchoolDialog } from '@/features/admin-schools/archive-action';
 import { SchoolFormDialog } from '@/features/admin-schools/school-form-dialog';
 
@@ -51,7 +55,9 @@ export default async function SchoolsPage() {
               <p className="mt-1 text-sm text-muted">
                 مدیر: {school.managerName ?? '—'}
                 {school.managerPhone && (
-                  <span dir="ltr" className="ms-2">{school.managerPhone}</span>
+                  <span dir="ltr" className="ms-2">
+                    {school.managerPhone}
+                  </span>
                 )}
               </p>
             )}

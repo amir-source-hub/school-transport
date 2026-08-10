@@ -66,9 +66,9 @@ describe('mapValidationErrors', () => {
 
 describe('validationErrorMessage', () => {
   it('returns the first field message', () => {
-    expect(
-      validationErrorMessage({ school: ['شناسه مدرسه معتبر نیست.'] }),
-    ).toBe('شناسه مدرسه معتبر نیست.');
+    expect(validationErrorMessage({ school: ['شناسه مدرسه معتبر نیست.'] })).toBe(
+      'شناسه مدرسه معتبر نیست.',
+    );
   });
 
   it('falls back to a generic message when empty', () => {

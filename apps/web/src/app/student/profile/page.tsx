@@ -12,7 +12,10 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-6">
       <Breadcrumbs
-        items={[{ label: 'پنل دانش‌آموز', href: '/student/dashboard' }, { label: 'اطلاعات خانواده' }]}
+        items={[
+          { label: 'پنل دانش‌آموز', href: '/student/dashboard' },
+          { label: 'اطلاعات خانواده' },
+        ]}
       />
       <div>
         <p className="text-sm font-bold text-primary">پروفایل خانواده</p>

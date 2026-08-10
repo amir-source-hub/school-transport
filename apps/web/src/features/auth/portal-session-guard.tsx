@@ -32,9 +32,7 @@ export function PortalSessionGuard({
       .then(({ data }) => {
         if (!isCurrent()) return;
         if (data.user.role !== role) {
-          router.replace(
-            data.user.role === 'ADMIN' ? '/admin/dashboard' : '/student/dashboard',
-          );
+          router.replace(data.user.role === 'ADMIN' ? '/admin/dashboard' : '/student/dashboard');
           return;
         }
         setAuthRole(role);

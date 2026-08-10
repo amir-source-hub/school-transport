@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Req,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { RegistrationsService } from './registrations.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
@@ -6,7 +16,13 @@ import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { paginatedResponse, successResponse } from '../../common/response';
 import { AuthenticatedRequest } from '../../common/http-request';
-import { AdminEnrollmentListQueryDto, CorrectionDto, CreateRegistrationDto, GuidedEnrollmentDto, RejectRegistrationDto } from './registration.dto';
+import {
+  AdminEnrollmentListQueryDto,
+  CorrectionDto,
+  CreateRegistrationDto,
+  GuidedEnrollmentDto,
+  RejectRegistrationDto,
+} from './registration.dto';
 
 @UseGuards(AuthGuard)
 @Controller('enrollments')
@@ -20,17 +36,16 @@ export class RegistrationsController {
   }
 
   @Post()
-  async create(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: CreateRegistrationDto,
-  ) {
+  async create(@Req() req: AuthenticatedRequest, @Body() dto: CreateRegistrationDto) {
     const reg = await this.registrationsService.create(req.user.id, dto);
     return successResponse(reg);
   }
 
   @Post('guided')
   async createGuided(@Req() req: AuthenticatedRequest, @Body() dto: GuidedEnrollmentDto) {
-    return successResponse(await this.registrationsService.createGuidedEnrollment(req.user.id, dto));
+    return successResponse(
+      await this.registrationsService.createGuidedEnrollment(req.user.id, dto),
+    );
   }
 
   @Get(':id')
@@ -81,9 +96,7 @@ export class OnboardingRegistrationsController {
 @Roles('ADMIN')
 @Controller('admin/enrollments')
 export class AdminRegistrationsController {
-  constructor(
-    private readonly registrationsService: RegistrationsService,
-  ) {}
+  constructor(private readonly registrationsService: RegistrationsService) {}
 
   @Post('families/:familyId/guided')
   async createForFamily(
@@ -124,7 +137,10 @@ export class AdminRegistrationsController {
   }
 
   @Post(':id/start-review')
-  async startReview(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: AuthenticatedRequest) {
+  async startReview(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const reg = await this.registrationsService.startReview(id, req.user.id);
     return successResponse(reg);
   }
@@ -136,7 +152,11 @@ export class AdminRegistrationsController {
   }
 
   @Post(':id/reject')
-  async reject(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: AuthenticatedRequest, @Body() dto: RejectRegistrationDto) {
+  async reject(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: RejectRegistrationDto,
+  ) {
     const reg = await this.registrationsService.reject(id, req.user.id, dto.reason);
     return successResponse(reg);
   }

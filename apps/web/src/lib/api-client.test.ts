@@ -29,7 +29,9 @@ describe('API client', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, request] = fetchMock.mock.calls[0];
     const headers = new Headers(request?.headers);
-    expect(url).toBe('http://localhost:5000/api/v1/example');
+    expect(url).toBe(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5000/api/v1'}/example`,
+    );
     expect(request?.credentials).toBe('include');
     expect(request?.body).toBe(JSON.stringify({ value: 'safe' }));
     expect(headers.get('Content-Type')).toBe('application/json');
@@ -81,7 +83,8 @@ describe('API client', () => {
   });
 
   it('retries read-only requests when the API is still starting', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
       .mockRejectedValueOnce(new TypeError('fetch failed'))
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ success: true, data: { ready: true } }), {
@@ -97,7 +100,8 @@ describe('API client', () => {
   });
 
   it('does not retry state-changing requests', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
       .mockRejectedValue(new TypeError('fetch failed'));
 
     await expect(apiRequest('/enrollments', { method: 'POST', body: {} })).rejects.toThrow(
@@ -132,8 +136,8 @@ describe('API client', () => {
 
     await expect(Promise.all([apiRequest('/one'), apiRequest('/two')])).resolves.toHaveLength(2);
 
-    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/auth/refresh'))).toHaveLength(
-      1,
-    );
+    expect(
+      fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/auth/refresh')),
+    ).toHaveLength(1);
   });
 });

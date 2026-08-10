@@ -13,9 +13,7 @@ import type {
  * correct for Persian names; the DB collation/byte ordering is the single
  * ordering source for admin student lists.
  */
-export function buildAdminStudentArchiveWhere(
-  archive: AdminStudentArchiveFilter,
-): SQL | undefined {
+export function buildAdminStudentArchiveWhere(archive: AdminStudentArchiveFilter): SQL | undefined {
   if (archive === 'all') return undefined;
   return eq(students.isActive, archive === 'active');
 }

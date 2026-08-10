@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy, Optional } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, OnModuleDestroy, Optional } from '@nestjs/common';
 import { Pool } from 'pg';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { ConfigService } from '../config/config.service';
@@ -13,8 +13,10 @@ export class DatabaseService implements OnModuleDestroy {
   private closePromise?: Promise<void>;
 
   constructor(
-    config: ConfigService,
-    @Optional() private readonly metrics?: OperationalMetricsService,
+    @Inject(forwardRef(() => ConfigService)) config: ConfigService,
+    @Optional()
+    @Inject(forwardRef(() => OperationalMetricsService))
+    private readonly metrics?: OperationalMetricsService,
   ) {
     this.pool = new Pool({
       connectionString: config.databaseUrl,

@@ -50,7 +50,10 @@ const enrollmentBase = (mode: EnrollmentMode, suffix: string) =>
 const contractBase = (mode: EnrollmentMode, suffix: string) =>
   mode === 'onboarding' ? `/onboarding/contracts${suffix}` : `/contracts${suffix}`;
 
-export async function createGuidedEnrollment(input: GuidedEnrollmentInput, mode: EnrollmentMode = 'panel') {
+export async function createGuidedEnrollment(
+  input: GuidedEnrollmentInput,
+  mode: EnrollmentMode = 'panel',
+) {
   const response = await apiRequest<unknown>(enrollmentBase(mode, '/guided'), {
     method: 'POST',
     body: input,

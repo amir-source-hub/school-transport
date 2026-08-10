@@ -43,7 +43,11 @@ const validInput = {
     latitude: 35.7,
     longitude: 51.3,
   },
-  school: { schoolId: '8b841592-e504-4f0a-9e31-40a2aa540f3f', educationLevel: 'هفتم', grade: 'هفتم' },
+  school: {
+    schoolId: '8b841592-e504-4f0a-9e31-40a2aa540f3f',
+    educationLevel: 'هفتم',
+    grade: 'هفتم',
+  },
   service: { serviceType: 'BUS', paymentPlanType: 'INSTALLMENTS', parentNotes: 'مسیر کوتاه' },
 };
 

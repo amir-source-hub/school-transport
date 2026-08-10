@@ -20,7 +20,10 @@ export interface ProcessedPhoto {
 }
 
 export class PhotoValidationError extends Error {
-  constructor(public readonly rejectionCode: string, message: string) {
+  constructor(
+    public readonly rejectionCode: string,
+    message: string,
+  ) {
     super(message);
     this.name = 'PhotoValidationError';
   }
@@ -51,7 +54,8 @@ export async function processStudentPhoto(
   source: Buffer,
   config: PhotoProcessingConfig,
 ): Promise<ProcessedPhoto> {
-  if (source.length === 0) throw new PhotoValidationError('ZERO_BYTE', 'The uploaded file is empty.');
+  if (source.length === 0)
+    throw new PhotoValidationError('ZERO_BYTE', 'The uploaded file is empty.');
   if (source.length > config.maxBytes) {
     throw new PhotoValidationError('TOO_LARGE', 'The uploaded file exceeds the size limit.');
   }
@@ -62,8 +66,10 @@ export async function processStudentPhoto(
 
   let metadata: sharp.Metadata;
   try {
-    metadata = await sharp(source, { failOn: 'error', limitInputPixels: config.maxPixels + 1 })
-      .metadata();
+    metadata = await sharp(source, {
+      failOn: 'error',
+      limitInputPixels: config.maxPixels + 1,
+    }).metadata();
   } catch {
     throw new PhotoValidationError('CORRUPT_IMAGE', 'The image could not be decoded.');
   }
@@ -83,7 +89,10 @@ export async function processStudentPhoto(
   }
   const aspect = Math.max(effWidth / effHeight, effHeight / effWidth);
   if (aspect > 10) {
-    throw new PhotoValidationError('EXTREME_ASPECT_RATIO', 'The image aspect ratio is not supported.');
+    throw new PhotoValidationError(
+      'EXTREME_ASPECT_RATIO',
+      'The image aspect ratio is not supported.',
+    );
   }
 
   let canonical: Buffer;

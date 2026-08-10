@@ -35,8 +35,8 @@ export function SafetyStory() {
               استانداردهای ایمنی و شفافیت در تمام مراحل
             </h2>
             <p className="mt-4 text-muted leading-relaxed">
-              ما به ایمنی و آرامش خاطر خانواده‌ها اهمیت می‌دهیم. تمام مراحل خدمت
-              با استانداردهای مشخص و قابل پیگیری طراحی شده است.
+              ما به ایمنی و آرامش خاطر خانواده‌ها اهمیت می‌دهیم. تمام مراحل خدمت با استانداردهای
+              مشخص و قابل پیگیری طراحی شده است.
             </p>
             <div className="mt-8 space-y-5">
               {proofPoints.map((point) => (
@@ -54,7 +54,9 @@ export function SafetyStory() {
             <div className="mt-8">
               <ButtonLink href="/safety" variant="secondary" size="md">
                 بیشتر درباره ایمنی
-                <span aria-hidden="true" className="mr-1">&larr;</span>
+                <span aria-hidden="true" className="mr-1">
+                  &larr;
+                </span>
               </ButtonLink>
             </div>
           </div>
@@ -69,7 +71,10 @@ export function SafetyStory() {
                   sizes="(max-width: 1024px) 100vw, 50vw"
                 />
               </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-navy/30 to-transparent" aria-hidden="true" />
+              <div
+                className="absolute inset-0 bg-gradient-to-t from-navy/30 to-transparent"
+                aria-hidden="true"
+              />
             </div>
           </div>
         </div>

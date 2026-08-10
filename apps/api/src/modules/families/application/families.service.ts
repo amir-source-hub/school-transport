@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../../database/database.service';
 import {
   users,
@@ -27,7 +27,8 @@ export const ADMIN_FAMILY_LIST_LIMIT = 500;
 @Injectable()
 export class FamiliesService {
   constructor(
-    private readonly db: DatabaseService,
+    @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
+    @Inject(forwardRef(() => InAppNotificationService))
     private readonly notifications: InAppNotificationService,
   ) {}
 

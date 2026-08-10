@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 type FetchMock = ReturnType<
-  typeof vi.fn<[string | URL | Request, RequestInit?], Promise<Response>>
+  typeof vi.fn<(input: string | URL | Request, init?: RequestInit) => Promise<Response>>
 >;
 
 describe('KavenegarClient', () => {

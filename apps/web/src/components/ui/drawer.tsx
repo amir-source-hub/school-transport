@@ -41,7 +41,9 @@ export function DrawerContent({
             </DialogPrimitive.Description>
           )}
         </div>
-        <div className="mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain pe-1">{children}</div>
+        <div className="mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain pe-1">
+          {children}
+        </div>
         <DialogPrimitive.Close
           aria-label="بستن"
           className="absolute end-3 top-3 grid size-11 place-items-center rounded-lg text-muted hover:bg-surface-muted hover:text-foreground"

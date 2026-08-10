@@ -56,7 +56,9 @@ describe('OnboardingSessionGuard', () => {
       </OnboardingSessionGuard>,
     );
 
-    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith('/login?next=%2Fonboarding%2Fenrollments'));
+    await waitFor(() =>
+      expect(navigation.replace).toHaveBeenCalledWith('/login?next=%2Fonboarding%2Fenrollments'),
+    );
     expect(screen.queryByText('guided enrollment steps')).not.toBeInTheDocument();
   });
 

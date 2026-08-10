@@ -164,11 +164,7 @@ async function refreshBrowserSession() {
         });
         if (!response.ok) return false;
         const payload = (await response.json()) as ApiSuccess<{ accessToken: string }>;
-        if (
-          payload.success &&
-          payload.data.accessToken &&
-          version === getAuthSessionVersion()
-        ) {
+        if (payload.success && payload.data.accessToken && version === getAuthSessionVersion()) {
           setAuthAccessToken(payload.data.accessToken);
         }
         return payload.success && version === getAuthSessionVersion();

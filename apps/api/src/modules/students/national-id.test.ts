@@ -13,10 +13,15 @@ describe('Iranian national ID', () => {
     },
   );
 
-  it.each(['', '123', '1234567890', '002453', 'abcdefghij', '12345678901234567890', '0000000000'] as const)(
-    'rejects an invalid national ID: %s',
-    (value) => {
-      expect(isIranianNationalId(value)).toBe(false);
-    },
-  );
+  it.each([
+    '',
+    '123',
+    '1234567890',
+    '002453',
+    'abcdefghij',
+    '12345678901234567890',
+    '0000000000',
+  ] as const)('rejects an invalid national ID: %s', (value) => {
+    expect(isIranianNationalId(value)).toBe(false);
+  });
 });

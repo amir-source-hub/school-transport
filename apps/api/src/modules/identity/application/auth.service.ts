@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { addSeconds, isPast } from 'date-fns';
@@ -37,15 +37,20 @@ export const ADMIN_IDENTITY_LIST_LIMIT = 500;
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly jwtService: JwtService,
-    private readonly config: ConfigService,
-    private readonly db: DatabaseService,
-    private readonly logger: AppLogger,
+    @Inject(JwtService) private readonly jwtService: JwtService,
+    @Inject(forwardRef(() => ConfigService)) private readonly config: ConfigService,
+    @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
+    @Inject(forwardRef(() => AppLogger)) private readonly logger: AppLogger,
     @Inject(OTP_DELIVERY) private readonly otpDelivery: OtpDelivery,
+    @Inject(forwardRef(() => InAppNotificationService))
     private readonly notifications: InAppNotificationService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
-    @Optional() private readonly onboarding?: OnboardingService,
-    @Optional() private readonly metrics?: OperationalMetricsService,
+    @Optional()
+    @Inject(forwardRef(() => OnboardingService))
+    private readonly onboarding?: OnboardingService,
+    @Optional()
+    @Inject(forwardRef(() => OperationalMetricsService))
+    private readonly metrics?: OperationalMetricsService,
   ) {}
 
   async getAdmins() {

@@ -81,9 +81,16 @@ describe('processStudentPhoto', () => {
 
   it('rejects extreme aspect ratios and renamed non-image documents', async () => {
     const strip = await makePng(2000, 100);
-    await expect(processStudentPhoto(strip, config)).rejects.toMatchObject({ rejectionCode: 'EXTREME_ASPECT_RATIO' });
-    for (const payload of [Buffer.from('%PDF-1.7'), Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')]) {
-      await expect(processStudentPhoto(payload, config)).rejects.toMatchObject({ rejectionCode: 'UNSUPPORTED_FORMAT' });
+    await expect(processStudentPhoto(strip, config)).rejects.toMatchObject({
+      rejectionCode: 'EXTREME_ASPECT_RATIO',
+    });
+    for (const payload of [
+      Buffer.from('%PDF-1.7'),
+      Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+    ]) {
+      await expect(processStudentPhoto(payload, config)).rejects.toMatchObject({
+        rejectionCode: 'UNSUPPORTED_FORMAT',
+      });
     }
   });
 

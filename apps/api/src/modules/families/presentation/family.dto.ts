@@ -1,7 +1,19 @@
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, Length, Matches, Max, Min, ValidateNested } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { normalizeIranianDigits } from '../../../common/iranian-national-id';
-const digits = ({ value }: { value: unknown }) => typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
+const digits = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
 export class ParentInputDto {
   @IsString() @Length(1, 100) firstName!: string;
   @IsString() @Length(1, 100) lastName!: string;
@@ -62,9 +74,13 @@ export class EmergencyMutationDto {
   @IsOptional() @IsString() @Length(1, 50) relationship?: string;
   @IsOptional() @Transform(digits) @Matches(/^09\d{9}$/) phoneNumber?: string;
 }
-export class ParentTypeDto { @IsIn(['MOTHER', 'FATHER']) parentType!: 'MOTHER' | 'FATHER'; }
+export class ParentTypeDto {
+  @IsIn(['MOTHER', 'FATHER']) parentType!: 'MOTHER' | 'FATHER';
+}
 export class AdminCreateParentDto extends ParentInputDto {
   @IsIn(['MOTHER', 'FATHER']) parentType!: 'MOTHER' | 'FATHER';
   @IsOptional() @IsBoolean() isPrimaryContact?: boolean;
 }
-export class AdminUpdateParentDto extends UpdateProfileDto { @IsOptional() @IsBoolean() isPrimaryContact?: boolean; }
+export class AdminUpdateParentDto extends UpdateProfileDto {
+  @IsOptional() @IsBoolean() isPrimaryContact?: boolean;
+}

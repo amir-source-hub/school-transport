@@ -89,7 +89,9 @@ export const authSessions = pgTable(
   'auth_sessions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    subjectId: uuid('subject_id').notNull().references(() => users.id),
+    subjectId: uuid('subject_id')
+      .notNull()
+      .references(() => users.id),
     role: varchar('role', { length: 20 }).notNull(),
     refreshTokenHash: varchar('refresh_token_hash', { length: 64 }).notNull().unique(),
     deviceName: varchar('device_name', { length: 255 }),
@@ -104,9 +106,7 @@ export const authSessions = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
-    refreshTokenHashIdx: uniqueIndex('idx_sessions_refresh_token_hash').on(
-      table.refreshTokenHash,
-    ),
+    refreshTokenHashIdx: uniqueIndex('idx_sessions_refresh_token_hash').on(table.refreshTokenHash),
     subjectRoleIdx: index('idx_sessions_subject_role').on(table.subjectId, table.role),
     expiresAtIdx: index('idx_sessions_expires_at').on(table.expiresAt),
     revokedAtIdx: index('idx_sessions_revoked_at').on(table.revokedAt),
@@ -118,7 +118,9 @@ export const onboardingSessions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     phoneNumber: varchar('phone_number', { length: 20 }).notNull(),
-    userId: uuid('user_id').notNull().references(() => users.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
     status: varchar('status', { length: 20 }).notNull().default('PENDING'),
     onboardingTokenHash: varchar('onboarding_token_hash', { length: 64 }).notNull(),
     verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull(),
@@ -129,9 +131,9 @@ export const onboardingSessions = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
-    activePerPhoneIdx: uniqueIndex('idx_onboarding_one_active_per_phone').on(
-      table.phoneNumber,
-    ).where(sql`${table.status} = 'PENDING'`),
+    activePerPhoneIdx: uniqueIndex('idx_onboarding_one_active_per_phone')
+      .on(table.phoneNumber)
+      .where(sql`${table.status} = 'PENDING'`),
     phoneStatusIdx: index('idx_onboarding_phone_status').on(table.phoneNumber, table.status),
     expiresAtIdx: index('idx_onboarding_expires_at').on(table.expiresAt),
   }),

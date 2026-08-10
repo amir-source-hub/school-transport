@@ -92,18 +92,11 @@ export function PublicHeader() {
             aria-label="صفحه اصلی ثمین گشت مهر ایران"
           >
             <BrandMark size={32} style={{ color: '#ffc857' }} />
-            <span className="hidden text-sm text-white sm:inline">
-              {SITE_NAME}
-            </span>
-            <span className="text-sm text-white sm:hidden">
-              ثمین گشت مهر ایران
-            </span>
+            <span className="hidden text-sm text-white sm:inline">{SITE_NAME}</span>
+            <span className="text-sm text-white sm:hidden">ثمین گشت مهر ایران</span>
           </Link>
 
-          <nav
-            aria-label="ناوبری اصلی"
-            className="hidden items-center gap-1 lg:flex"
-          >
+          <nav aria-label="ناوبری اصلی" className="hidden items-center gap-1 lg:flex">
             <PublicNavLinks />
           </nav>
 

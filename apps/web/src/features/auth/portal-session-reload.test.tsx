@@ -42,10 +42,10 @@ describe('portal session hard-reload bootstrap', () => {
           );
         }
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer reload-access');
-        return new Response(
-          JSON.stringify({ success: true, data: { user: { role: 'PARENT' } } }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        );
+        return new Response(JSON.stringify({ success: true, data: { user: { role: 'PARENT' } } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
       throw new Error(`Unexpected request: ${url}`);
     });
@@ -58,10 +58,9 @@ describe('portal session hard-reload bootstrap', () => {
 
     expect(await screen.findByText('restored protected content')).toBeInTheDocument();
     expect(getAuthSession()).toEqual({ accessToken: 'reload-access', role: 'PARENT' });
-    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/auth/refresh'))).toHaveLength(
-      1,
-    );
+    expect(
+      fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/auth/refresh')),
+    ).toHaveLength(1);
     expect(meCalls).toBe(2);
   });
 });
-

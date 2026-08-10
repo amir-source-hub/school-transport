@@ -36,7 +36,9 @@ describe('StudentCapacityCard', () => {
     render(<StudentCapacityCard />);
 
     expect(await screen.findByText(/۱ از ۲/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /ثبت درخواست افزایش ظرفیت/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /ثبت درخواست افزایش ظرفیت/ }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the increase form at capacity and submits the reason', async () => {
@@ -51,7 +53,9 @@ describe('StudentCapacityCard', () => {
     await user.type(textbox, 'فرزند دیگری اضافه شده است');
     await user.click(screen.getByRole('button', { name: 'ثبت درخواست افزایش ظرفیت' }));
 
-    await waitFor(() => expect(createLimitRequest).toHaveBeenCalledWith('فرزند دیگری اضافه شده است'));
+    await waitFor(() =>
+      expect(createLimitRequest).toHaveBeenCalledWith('فرزند دیگری اضافه شده است'),
+    );
   });
 
   it('shows the pending status and hides the form when a request is awaiting review', async () => {
@@ -61,7 +65,9 @@ describe('StudentCapacityCard', () => {
     render(<StudentCapacityCard />);
 
     expect(await screen.findByText('در انتظار بررسی')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'ثبت درخواست افزایش ظرفیت' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'ثبت درخواست افزایش ظرفیت' }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the Persian rejection reason and allows a new request', async () => {

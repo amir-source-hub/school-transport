@@ -19,8 +19,12 @@ export function ContractActions({ id }: { id: string }) {
   }
   return (
     <div className="flex flex-wrap gap-3">
-      <Button loading={pending === 'accept'} onClick={() => act('accept')}>پذیرش قرارداد</Button>
-      <Button variant="danger" loading={pending === 'reject'} onClick={() => act('reject')}>رد قرارداد</Button>
+      <Button loading={pending === 'accept'} onClick={() => act('accept')}>
+        پذیرش قرارداد
+      </Button>
+      <Button variant="danger" loading={pending === 'reject'} onClick={() => act('reject')}>
+        رد قرارداد
+      </Button>
     </div>
   );
 }

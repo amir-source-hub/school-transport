@@ -12,9 +12,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MotionConfig reducedMotion="user">
-        {children}
-      </MotionConfig>
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
       <Toaster dir="rtl" position="top-center" richColors closeButton />
     </QueryClientProvider>
   );

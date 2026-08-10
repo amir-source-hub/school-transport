@@ -35,12 +35,14 @@ const educationLevels = [
   { level: 'متوسطه دوم', grades: ['دهم', 'یازدهم', 'دوازدهم'] },
 ];
 
-type Props = {
-  mode: 'create';
-} | {
-  mode: 'edit';
-  school: AdminSchool;
-};
+type Props =
+  | {
+      mode: 'create';
+    }
+  | {
+      mode: 'edit';
+      school: AdminSchool;
+    };
 
 export function SchoolFormDialog(props: Props) {
   const router = useRouter();
@@ -68,7 +70,14 @@ export function SchoolFormDialog(props: Props) {
   };
 
   const handle = async () => {
-    if (!form.name || !form.schoolType || !form.genderType || !form.province || !form.city || !form.address) {
+    if (
+      !form.name ||
+      !form.schoolType ||
+      !form.genderType ||
+      !form.province ||
+      !form.city ||
+      !form.address
+    ) {
       setError('لطفاً همه فیلدهای ضروری را پر کنید');
       return;
     }
@@ -111,54 +120,135 @@ export function SchoolFormDialog(props: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {isEdit ? (
-          <Button variant="ghost" size="sm">ویرایش</Button>
+          <Button variant="ghost" size="sm">
+            ویرایش
+          </Button>
         ) : (
           <Button>افزودن مدرسه</Button>
         )}
       </DialogTrigger>
-      <DialogContent title={isEdit ? 'ویرایش مدرسه' : 'افزودن مدرسه جدید'} description="اطلاعات مدرسه را وارد کنید.">
+      <DialogContent
+        title={isEdit ? 'ویرایش مدرسه' : 'افزودن مدرسه جدید'}
+        description="اطلاعات مدرسه را وارد کنید."
+      >
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="school-name" className="text-sm font-bold">نام مدرسه *</label>
-              <Input id="school-name" value={form.name} onChange={(e) => update('name', e.target.value)} className="mt-1" />
+              <label htmlFor="school-name" className="text-sm font-bold">
+                نام مدرسه *
+              </label>
+              <Input
+                id="school-name"
+                value={form.name}
+                onChange={(e) => update('name', e.target.value)}
+                className="mt-1"
+              />
             </div>
             <div>
-              <label htmlFor="school-type" className="text-sm font-bold">نوع مدرسه *</label>
-              <div className="mt-1"><Select options={schoolTypes} value={form.schoolType} onValueChange={(v) => update('schoolType', v)} placeholder="انتخاب کنید" /></div>
+              <label htmlFor="school-type" className="text-sm font-bold">
+                نوع مدرسه *
+              </label>
+              <div className="mt-1">
+                <Select
+                  options={schoolTypes}
+                  value={form.schoolType}
+                  onValueChange={(v) => update('schoolType', v)}
+                  placeholder="انتخاب کنید"
+                />
+              </div>
             </div>
             <div>
-              <label htmlFor="gender-type" className="text-sm font-bold">نوع جنسیت *</label>
-              <div className="mt-1"><Select options={genderTypes} value={form.genderType} onValueChange={(v) => update('genderType', v)} placeholder="انتخاب کنید" /></div>
+              <label htmlFor="gender-type" className="text-sm font-bold">
+                نوع جنسیت *
+              </label>
+              <div className="mt-1">
+                <Select
+                  options={genderTypes}
+                  value={form.genderType}
+                  onValueChange={(v) => update('genderType', v)}
+                  placeholder="انتخاب کنید"
+                />
+              </div>
             </div>
             <div>
-              <label htmlFor="school-phone" className="text-sm font-bold">تلفن</label>
-              <Input id="school-phone" dir="ltr" value={form.phoneNumber ?? ''} onChange={(e) => update('phoneNumber', e.target.value)} className="mt-1" />
+              <label htmlFor="school-phone" className="text-sm font-bold">
+                تلفن
+              </label>
+              <Input
+                id="school-phone"
+                dir="ltr"
+                value={form.phoneNumber ?? ''}
+                onChange={(e) => update('phoneNumber', e.target.value)}
+                className="mt-1"
+              />
             </div>
             <div>
-              <label htmlFor="school-province" className="text-sm font-bold">استان *</label>
-              <Input id="school-province" value={form.province} onChange={(e) => update('province', e.target.value)} className="mt-1" />
+              <label htmlFor="school-province" className="text-sm font-bold">
+                استان *
+              </label>
+              <Input
+                id="school-province"
+                value={form.province}
+                onChange={(e) => update('province', e.target.value)}
+                className="mt-1"
+              />
             </div>
             <div>
-              <label htmlFor="school-city" className="text-sm font-bold">شهر *</label>
-              <Input id="school-city" value={form.city} onChange={(e) => update('city', e.target.value)} className="mt-1" />
+              <label htmlFor="school-city" className="text-sm font-bold">
+                شهر *
+              </label>
+              <Input
+                id="school-city"
+                value={form.city}
+                onChange={(e) => update('city', e.target.value)}
+                className="mt-1"
+              />
             </div>
             <div>
-              <label htmlFor="school-district" className="text-sm font-bold">منطقه</label>
-              <Input id="school-district" value={form.district ?? ''} onChange={(e) => update('district', e.target.value)} className="mt-1" />
+              <label htmlFor="school-district" className="text-sm font-bold">
+                منطقه
+              </label>
+              <Input
+                id="school-district"
+                value={form.district ?? ''}
+                onChange={(e) => update('district', e.target.value)}
+                className="mt-1"
+              />
             </div>
             <div>
-              <label htmlFor="school-manager-name" className="text-sm font-bold">نام مدیر</label>
-              <Input id="school-manager-name" value={form.managerName ?? ''} onChange={(e) => update('managerName', e.target.value)} className="mt-1" />
+              <label htmlFor="school-manager-name" className="text-sm font-bold">
+                نام مدیر
+              </label>
+              <Input
+                id="school-manager-name"
+                value={form.managerName ?? ''}
+                onChange={(e) => update('managerName', e.target.value)}
+                className="mt-1"
+              />
             </div>
             <div>
-              <label htmlFor="school-manager-phone" className="text-sm font-bold">تلفن مدیر</label>
-              <Input id="school-manager-phone" dir="ltr" value={form.managerPhone ?? ''} onChange={(e) => update('managerPhone', e.target.value)} className="mt-1" />
+              <label htmlFor="school-manager-phone" className="text-sm font-bold">
+                تلفن مدیر
+              </label>
+              <Input
+                id="school-manager-phone"
+                dir="ltr"
+                value={form.managerPhone ?? ''}
+                onChange={(e) => update('managerPhone', e.target.value)}
+                className="mt-1"
+              />
             </div>
           </div>
           <div>
-            <label htmlFor="school-address" className="text-sm font-bold">نشانی *</label>
-            <Textarea id="school-address" value={form.address} onChange={(e) => update('address', e.target.value)} className="mt-1" />
+            <label htmlFor="school-address" className="text-sm font-bold">
+              نشانی *
+            </label>
+            <Textarea
+              id="school-address"
+              value={form.address}
+              onChange={(e) => update('address', e.target.value)}
+              className="mt-1"
+            />
           </div>
           <div>
             <p className="text-sm font-bold">مقطع‌ها و پایه‌های قابل ثبت‌نام *</p>
@@ -168,10 +258,20 @@ export function SchoolFormDialog(props: Props) {
                   <p className="mb-2 text-sm font-black">{level}</p>
                   <div className="flex flex-wrap gap-2">
                     {grades.map((grade) => {
-                      const checked = form.educationOptions.some((option) => option.level === level && option.grades.includes(grade));
+                      const checked = form.educationOptions.some(
+                        (option) => option.level === level && option.grades.includes(grade),
+                      );
                       return (
-                        <label key={grade} className={`cursor-pointer rounded-lg border px-3 py-2 text-xs font-bold transition ${checked ? 'border-primary bg-primary-soft text-primary' : 'border-border bg-white'}`}>
-                          <input className="sr-only" type="checkbox" checked={checked} onChange={() => toggleGrade(level, grade)} />
+                        <label
+                          key={grade}
+                          className={`cursor-pointer rounded-lg border px-3 py-2 text-xs font-bold transition ${checked ? 'border-primary bg-primary-soft text-primary' : 'border-border bg-white'}`}
+                        >
+                          <input
+                            className="sr-only"
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleGrade(level, grade)}
+                          />
                           {grade}
                         </label>
                       );
@@ -183,8 +283,12 @@ export function SchoolFormDialog(props: Props) {
           </div>
           {error && <p className="text-xs text-danger">{error}</p>}
           <div className="flex gap-3">
-            <Button variant="ghost" onClick={() => setOpen(false)}>انصراف</Button>
-            <Button loading={loading} onClick={handle}>{isEdit ? 'ذخیره تغییرات' : 'افزودن مدرسه'}</Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              انصراف
+            </Button>
+            <Button loading={loading} onClick={handle}>
+              {isEdit ? 'ذخیره تغییرات' : 'افزودن مدرسه'}
+            </Button>
           </div>
         </div>
       </DialogContent>

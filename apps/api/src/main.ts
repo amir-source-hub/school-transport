@@ -3,10 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import {
-  mapValidationErrors,
-  validationErrorMessage,
-} from './common/validation-errors';
+import { mapValidationErrors, validationErrorMessage } from './common/validation-errors';
 import { ConfigService, parseTrustedProxyCidrs } from './config/config.service';
 import { GlobalExceptionFilter } from './common/filters';
 import { registerSecurityHeaders } from './common/security-headers';

@@ -5,34 +5,36 @@ groups:
         expr: sum(rate(school_transport_message_outcomes_total{outcome="permanent_failure"}[10m])) by (category) > 0.05
         for: 10m
         labels: { severity: warning }
-        annotations: { summary: "Permanent messaging failures are elevated for {{ $labels.category }}" }
+        annotations:
+          { summary: 'Permanent messaging failures are elevated for {{ $labels.category }}' }
       - alert: MessagingTimeoutRateHigh
         expr: sum(rate(school_transport_message_outcomes_total{outcome="timeout"}[10m])) by (category) > 0.1
         for: 10m
         labels: { severity: warning }
-        annotations: { summary: "Messaging timeouts are elevated for {{ $labels.category }}" }
+        annotations: { summary: 'Messaging timeouts are elevated for {{ $labels.category }}' }
       - alert: MessagingDeadLetters
         expr: increase(school_transport_message_outcomes_total{outcome="dead_letter"}[15m]) > 0
         for: 5m
         labels: { severity: critical }
-        annotations: { summary: "Messaging dead letters require review" }
+        annotations: { summary: 'Messaging dead letters require review' }
       - alert: NotificationBacklogOld
         expr: school_transport_notification_queue_oldest_age_seconds > 900
         for: 10m
         labels: { severity: critical }
-        annotations: { summary: "The notification queue oldest item exceeds 15 minutes" }
+        annotations: { summary: 'The notification queue oldest item exceeds 15 minutes' }
       - alert: OtpRateLimitSpike
         expr: increase(school_transport_message_outcomes_total{category="otp",outcome="rate_limited"}[10m]) > 50
         for: 5m
         labels: { severity: warning }
-        annotations: { summary: "OTP rate-limit outcomes are elevated" }
+        annotations: { summary: 'OTP rate-limit outcomes are elevated' }
       - alert: BroadcastVolumeHigh
         expr: increase(school_transport_message_outcomes_total{category="broadcast_campaign",outcome="accepted"}[1h]) > 5000
         for: 5m
         labels: { severity: warning }
-        annotations: { summary: "Broadcast campaign volume exceeded the reviewed hourly threshold" }
+        annotations: { summary: 'Broadcast campaign volume exceeded the reviewed hourly threshold' }
       - alert: BroadcastEstimatedSpendHigh
         expr: increase(school_transport_broadcast_estimated_spend_rial_total[1h]) > 10000000
         for: 5m
         labels: { severity: warning }
-        annotations: { summary: "Approved estimated broadcast spend exceeded the reviewed hourly threshold" }
+        annotations:
+          { summary: 'Approved estimated broadcast spend exceeded the reviewed hourly threshold' }

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import { and, count, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { AppError, ConflictError, NotFoundError } from '../../common/errors';
@@ -24,11 +24,13 @@ export const BROADCAST_LIST_LIMIT = 200;
 @Injectable()
 export class BroadcastsService {
   constructor(
-    private readonly db: DatabaseService,
-    private readonly config: ConfigService,
+    @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
+    @Inject(forwardRef(() => ConfigService)) private readonly config: ConfigService,
     @Inject(SMS_PROVIDER) private readonly sms: SmsProvider,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
-    @Optional() private readonly metrics?: OperationalMetricsService,
+    @Optional()
+    @Inject(forwardRef(() => OperationalMetricsService))
+    private readonly metrics?: OperationalMetricsService,
   ) {}
 
   async list() {

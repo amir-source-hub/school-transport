@@ -12,8 +12,7 @@ function buildChain(rows: unknown[]) {
     where: vi.fn(),
     for: vi.fn(),
     limit: vi.fn(),
-    then: (onFulfilled: (value: unknown) => unknown) =>
-      Promise.resolve(rows).then(onFulfilled),
+    then: (onFulfilled: (value: unknown) => unknown) => Promise.resolve(rows).then(onFulfilled),
   };
   thenable.from.mockReturnValue(thenable);
   thenable.where.mockReturnValue(thenable);
@@ -60,8 +59,7 @@ describe('assertStudentCapacity', () => {
     const txn = capacityTx([[{ studentLimit: 2 }], [{ count: 0 }]]);
 
     await assertStudentCapacity(txn, 'account-1');
-    const userChain = (txn as { select: ReturnType<typeof vi.fn> }).select.mock.results[0]
-      .value;
+    const userChain = (txn as { select: ReturnType<typeof vi.fn> }).select.mock.results[0].value;
     expect(userChain.for).toHaveBeenCalledWith('update');
   });
 
@@ -71,9 +69,11 @@ describe('assertStudentCapacity', () => {
     await assertStudentCapacity(txn, 'account-1');
     const countChain = (txn as { select: ReturnType<typeof vi.fn> }).select.mock.results[1]
       .value as { where: ReturnType<typeof vi.fn> };
-    const query = (countChain.where.mock.calls[0][0] as {
-      toQuery: (config: unknown) => { sql: string; params: unknown[] };
-    }).toQuery({
+    const query = (
+      countChain.where.mock.calls[0][0] as {
+        toQuery: (config: unknown) => { sql: string; params: unknown[] };
+      }
+    ).toQuery({
       casing: new CasingCache(),
       escapeName: (name: string) => `"${name}"`,
       escapeParam: (num: number) => `$${num + 1}`,

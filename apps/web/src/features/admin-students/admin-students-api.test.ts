@@ -92,7 +92,14 @@ describe('admin student detail API', () => {
         planStatus: 'ACTIVE',
         paidInstallmentCount: 1,
         scheduleItems: [
-          { itemType: 'PREPAYMENT', sequenceNumber: 0, amount: 1_000_000, dueDate: null, itemStatus: 'PAID', paidAt: '2026-08-02T00:00:00.000Z' },
+          {
+            itemType: 'PREPAYMENT',
+            sequenceNumber: 0,
+            amount: 1_000_000,
+            dueDate: null,
+            itemStatus: 'PAID',
+            paidAt: '2026-08-02T00:00:00.000Z',
+          },
         ],
       },
     },

@@ -11,8 +11,7 @@ function buildChain(rows: unknown[]) {
     orderBy: vi.fn(),
     for: vi.fn(),
     limit: vi.fn(),
-    then: (onFulfilled: (value: unknown) => unknown) =>
-      Promise.resolve(rows).then(onFulfilled),
+    then: (onFulfilled: (value: unknown) => unknown) => Promise.resolve(rows).then(onFulfilled),
   };
   thenable.from.mockReturnValue(thenable);
   thenable.innerJoin.mockReturnValue(thenable);
@@ -118,17 +117,10 @@ describe('updateByAdmin', () => {
   });
 
   it('rejects a national id already used by another student', async () => {
-    const { service, transaction, audit } = makeService([
-      [currentStudent],
-      [{ id: 'student-2' }],
-    ]);
+    const { service, transaction, audit } = makeService([[currentStudent], [{ id: 'student-2' }]]);
 
     await expect(
-      service.updateByAdmin(
-        'student-1',
-        { nationalId: '1122334455' },
-        { adminId: 'admin-1' },
-      ),
+      service.updateByAdmin('student-1', { nationalId: '1122334455' }, { adminId: 'admin-1' }),
     ).rejects.toMatchObject({ status: 409, code: 'DUPLICATE_NATIONAL_ID' });
     expect(transaction).not.toHaveBeenCalled();
     expect(audit.recordInTransaction).not.toHaveBeenCalled();

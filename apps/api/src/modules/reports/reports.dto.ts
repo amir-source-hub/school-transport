@@ -26,4 +26,3 @@ export class ReportPreviewQueryDto {
   @Max(50)
   pageSize = 10;
 }
-

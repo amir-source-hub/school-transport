@@ -6,7 +6,8 @@ type Padding = 'none' | 'sm' | 'md' | 'lg';
 
 const variantStyles: Record<Variant, string> = {
   raised: 'border border-white/80 bg-surface-paper shadow-[0_18px_55px_-38px_rgba(15,23,42,.38)]',
-  outlined: 'border border-border/80 bg-surface-paper shadow-[0_12px_35px_-32px_rgba(15,23,42,.28)]',
+  outlined:
+    'border border-border/80 bg-surface-paper shadow-[0_12px_35px_-32px_rgba(15,23,42,.28)]',
   inset: 'surface-inset',
   dark: 'surface-dark',
   transparent: 'bg-transparent',

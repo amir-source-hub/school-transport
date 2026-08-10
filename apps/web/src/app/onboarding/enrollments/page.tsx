@@ -9,15 +9,13 @@ export default async function OnboardingEnrollmentsPage() {
   const { schools } = await getSchools();
   return (
     <div className="space-y-6">
-      <Breadcrumbs
-        items={[{ label: 'خانه', href: '/' }, { label: 'تکمیل ثبت‌نام' }]}
-      />
+      <Breadcrumbs items={[{ label: 'خانه', href: '/' }, { label: 'تکمیل ثبت‌نام' }]} />
       <div>
         <p className="text-sm font-bold text-primary">مرحله نخست ورود شما</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">تکمیل ثبت‌نام سرویس مدرسه</h1>
         <p className="mt-3 text-sm leading-7 text-muted">
-          برای فعال شدن حساب دانش‌آموزی، مشخصات، نشانی، مدرسه، قرارداد و پیش‌پرداخت را تکمیل
-          کنید. پس از تأیید پرداخت، پنل خانواده فعال می‌شود.
+          برای فعال شدن حساب دانش‌آموزی، مشخصات، نشانی، مدرسه، قرارداد و پیش‌پرداخت را تکمیل کنید.
+          پس از تأیید پرداخت، پنل خانواده فعال می‌شود.
         </p>
       </div>
       <CreateEnrollmentForm

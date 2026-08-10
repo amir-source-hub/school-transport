@@ -34,4 +34,3 @@ export async function getReportPreview(section: ReportSection, page: number, pag
   });
   return previewSchema.parse(response.data);
 }
-

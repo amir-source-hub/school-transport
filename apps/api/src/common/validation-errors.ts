@@ -2,10 +2,7 @@ import { ValidationError } from 'class-validator';
 
 export type FieldErrors = Record<string, string[]>;
 
-export function mapValidationErrors(
-  errors: ValidationError[],
-  prefix = '',
-): FieldErrors {
+export function mapValidationErrors(errors: ValidationError[], prefix = ''): FieldErrors {
   const result: FieldErrors = {};
 
   for (const error of errors) {
@@ -17,9 +14,7 @@ export function mapValidationErrors(
     }
 
     if (error.children?.length) {
-      for (const [key, value] of Object.entries(
-        mapValidationErrors(error.children, path),
-      )) {
+      for (const [key, value] of Object.entries(mapValidationErrors(error.children, path))) {
         result[key] = (result[key] ?? []).concat(value);
       }
     }

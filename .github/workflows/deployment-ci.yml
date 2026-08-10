@@ -34,6 +34,10 @@ jobs:
     timeout-minutes: 30
     env:
       JWT_SECRET: ci-only-deployment-secret-with-at-least-32-characters
+      POSTGRES_PASSWORD: ci-only-postgres-password
+      REDIS_PASSWORD: ci-only-redis-password
+      DATABASE_URL: postgresql://school_transport:ci-only-postgres-password@postgres:5432/school_transport
+      REDIS_URL: redis://:ci-only-redis-password@redis:6379
       NEXT_DEPLOYMENT_ID: ci-${{ github.sha }}
       NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
     steps:

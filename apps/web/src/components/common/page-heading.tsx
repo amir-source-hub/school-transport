@@ -33,9 +33,7 @@ export function PageHeading({
       <span className="pointer-events-none absolute -left-10 -top-16 size-40 rounded-full bg-primary/8 blur-2xl" />
       <div className="relative min-w-0">
         {eyebrow && (
-          <p className="mb-1 text-xs font-bold uppercase tracking-wider text-primary">
-            {eyebrow}
-          </p>
+          <p className="mb-1 text-xs font-bold uppercase tracking-wider text-primary">{eyebrow}</p>
         )}
         <h1
           className={cn(
@@ -45,9 +43,7 @@ export function PageHeading({
         >
           {title}
         </h1>
-        {description && (
-          <p className="mt-2 max-w-2xl text-sm text-muted">{description}</p>
-        )}
+        {description && <p className="mt-2 max-w-2xl text-sm text-muted">{description}</p>}
         {status && <div className="mt-2">{status}</div>}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-2">

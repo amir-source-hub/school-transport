@@ -4,7 +4,13 @@ import { addSeconds, isPast } from 'date-fns';
 import { createHash, randomBytes } from 'node:crypto';
 import { ConfigService } from '../../../config/config.service';
 import { DatabaseService } from '../../../database/database.service';
-import { onboardingSessions, users, parents, paymentScheduleItems, paymentTransactions } from '../../../database/schemas';
+import {
+  onboardingSessions,
+  users,
+  parents,
+  paymentScheduleItems,
+  paymentTransactions,
+} from '../../../database/schemas';
 import { generateId } from '../../../common/utils';
 import { OnboardingSessionResult } from '../domain/auth.types';
 import { InAppNotificationService } from '../../../infrastructure/notifications/in-app-notification.service';
@@ -30,7 +36,12 @@ export class OnboardingService {
     const existing = await this.db.db
       .select()
       .from(onboardingSessions)
-      .where(and(eq(onboardingSessions.phoneNumber, phoneNumber), eq(onboardingSessions.status, 'PENDING')))
+      .where(
+        and(
+          eq(onboardingSessions.phoneNumber, phoneNumber),
+          eq(onboardingSessions.status, 'PENDING'),
+        ),
+      )
       .limit(1);
 
     if (existing[0]) {
@@ -71,15 +82,16 @@ export class OnboardingService {
     };
   }
 
-  async resolve(
-    token: string,
-  ): Promise<{
-    id: string;
-    userId: string;
-    phoneNumber: string;
-    currentStep: string | null;
-    expiresAt: Date;
-  } | undefined> {
+  async resolve(token: string): Promise<
+    | {
+        id: string;
+        userId: string;
+        phoneNumber: string;
+        currentStep: string | null;
+        expiresAt: Date;
+      }
+    | undefined
+  > {
     const [session] = await this.db.db
       .select()
       .from(onboardingSessions)
@@ -158,12 +170,19 @@ export class OnboardingService {
     const expired = await this.db.db
       .select({ id: onboardingSessions.id })
       .from(onboardingSessions)
-      .where(and(eq(onboardingSessions.status, 'PENDING'), lt(onboardingSessions.expiresAt, new Date())));
+      .where(
+        and(eq(onboardingSessions.status, 'PENDING'), lt(onboardingSessions.expiresAt, new Date())),
+      );
     if (expired.length === 0) return 0;
     await this.db.db
       .update(onboardingSessions)
       .set({ status: 'EXPIRED', updatedAt: new Date() })
-      .where(inArray(onboardingSessions.id, expired.map((row) => row.id)));
+      .where(
+        inArray(
+          onboardingSessions.id,
+          expired.map((row) => row.id),
+        ),
+      );
     return expired.length;
   }
 }

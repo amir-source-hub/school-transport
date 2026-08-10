@@ -195,7 +195,9 @@ export function createEnrollmentFormState({
     postalCode: defaults.address?.postalCode ?? '',
     latitude: defaults.address?.latitude ?? emptyForm.latitude,
     longitude: defaults.address?.longitude ?? emptyForm.longitude,
-    locationSelected: Boolean(defaults.address?.latitude !== undefined && defaults.address?.longitude !== undefined),
+    locationSelected: Boolean(
+      defaults.address?.latitude !== undefined && defaults.address?.longitude !== undefined,
+    ),
     schoolId: firstExisting?.schoolId ?? firstSchool?.id ?? '',
     educationLevel: existingLevel?.level ?? firstLevel?.level ?? '',
     grade: firstExisting?.grade ?? existingLevel?.grades[0] ?? firstLevel?.grades[0] ?? '',

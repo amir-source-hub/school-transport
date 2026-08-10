@@ -85,7 +85,9 @@ export function StudentEditDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">ویرایش</Button>
+        <Button variant="ghost" size="sm">
+          ویرایش
+        </Button>
       </DialogTrigger>
       <DialogContent
         className="max-w-3xl"
@@ -247,19 +249,38 @@ function IdentityTab({
   return (
     <form className="space-y-4" onSubmit={submit}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-bold">نام
-          <Input required value={form.firstName} onChange={(event) => set('firstName', event.target.value)} />
+        <label className="text-sm font-bold">
+          نام
+          <Input
+            required
+            value={form.firstName}
+            onChange={(event) => set('firstName', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">نام خانوادگی
-          <Input required value={form.lastName} onChange={(event) => set('lastName', event.target.value)} />
+        <label className="text-sm font-bold">
+          نام خانوادگی
+          <Input
+            required
+            value={form.lastName}
+            onChange={(event) => set('lastName', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">کد ملی
-          <Input required dir="ltr" inputMode="numeric" value={form.nationalId} onChange={(event) => set('nationalId', event.target.value)} />
+        <label className="text-sm font-bold">
+          کد ملی
+          <Input
+            required
+            dir="ltr"
+            inputMode="numeric"
+            value={form.nationalId}
+            onChange={(event) => set('nationalId', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">تاریخ تولد
+        <label className="text-sm font-bold">
+          تاریخ تولد
           <JalaliDateInput value={form.birthDate} onChange={(value) => set('birthDate', value)} />
         </label>
-        <label className="text-sm font-bold">جنسیت
+        <label className="text-sm font-bold">
+          جنسیت
           <Select
             value={form.gender}
             onValueChange={(value) => set('gender', value)}
@@ -272,7 +293,9 @@ function IdentityTab({
         </label>
       </div>
       <SaveFeedback message={feedback?.message} tone={feedback?.tone ?? 'success'} />
-      <Button type="submit" loading={pending}>ذخیره مشخصات</Button>
+      <Button type="submit" loading={pending}>
+        ذخیره مشخصات
+      </Button>
     </form>
   );
 }
@@ -294,7 +317,8 @@ function SchoolTab({
   const school = schools.find((item) => item.id === schoolId);
   const currentLevel =
     school?.educationOptions.find((option) => option.grades.includes(detail.grade ?? ''))?.level ??
-    (detail.className ?? '');
+    detail.className ??
+    '';
   const [educationLevel, setEducationLevel] = useState(
     school?.educationOptions.some((option) => option.level === currentLevel) ? currentLevel : '',
   );
@@ -337,37 +361,55 @@ function SchoolTab({
   return (
     <form className="space-y-4" onSubmit={submit}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-bold">مدرسه
+        <label className="text-sm font-bold">
+          مدرسه
           <Select
             value={schoolId}
             onValueChange={selectSchool}
             options={schools.map((item) => ({ value: item.id, label: item.name }))}
           />
         </label>
-        <label className="text-sm font-bold">مقطع
+        <label className="text-sm font-bold">
+          مقطع
           <Select
             value={educationLevel}
             onValueChange={selectEducationLevel}
-            options={school?.educationOptions.map((option) => ({ value: option.level, label: option.level })) ?? []}
+            options={
+              school?.educationOptions.map((option) => ({
+                value: option.level,
+                label: option.level,
+              })) ?? []
+            }
             disabled={!school}
           />
         </label>
-        <label className="text-sm font-bold">پایه
+        <label className="text-sm font-bold">
+          پایه
           <Select
             value={grade}
             onValueChange={setGrade}
-            options={gradeOptions.map((gradeOption) => ({ value: gradeOption, label: gradeOption }))}
+            options={gradeOptions.map((gradeOption) => ({
+              value: gradeOption,
+              label: gradeOption,
+            }))}
             disabled={gradeOptions.length === 0}
           />
         </label>
       </div>
       <SaveFeedback message={feedback?.message} tone={feedback?.tone ?? 'success'} />
-      <Button type="submit" loading={pending}>ذخیره مدرسه</Button>
+      <Button type="submit" loading={pending}>
+        ذخیره مدرسه
+      </Button>
     </form>
   );
 }
 
-type ParentFormValue = { firstName: string; lastName: string; nationalId: string; phoneNumber: string };
+type ParentFormValue = {
+  firstName: string;
+  lastName: string;
+  nationalId: string;
+  phoneNumber: string;
+};
 
 function ParentFields({
   title,
@@ -377,7 +419,14 @@ function ParentFields({
 }: {
   title: string;
   familyId: string;
-  parent?: { id: string; parentType: string; firstName: string; lastName: string; nationalId: string; phoneNumber: string };
+  parent?: {
+    id: string;
+    parentType: string;
+    firstName: string;
+    lastName: string;
+    nationalId: string;
+    phoneNumber: string;
+  };
   parentType: 'FATHER' | 'MOTHER';
 }) {
   const router = useRouter();
@@ -431,24 +480,56 @@ function ParentFields({
     <form className="space-y-4" onSubmit={submit}>
       <p className="text-sm font-bold">{title}</p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-bold">نام
-          <Input required value={form.firstName} onChange={(event) => set('firstName', event.target.value)} />
+        <label className="text-sm font-bold">
+          نام
+          <Input
+            required
+            value={form.firstName}
+            onChange={(event) => set('firstName', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">نام خانوادگی
-          <Input required value={form.lastName} onChange={(event) => set('lastName', event.target.value)} />
+        <label className="text-sm font-bold">
+          نام خانوادگی
+          <Input
+            required
+            value={form.lastName}
+            onChange={(event) => set('lastName', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">کد ملی
-          <Input required dir="ltr" inputMode="numeric" value={form.nationalId} onChange={(event) => set('nationalId', event.target.value)} />
+        <label className="text-sm font-bold">
+          کد ملی
+          <Input
+            required
+            dir="ltr"
+            inputMode="numeric"
+            value={form.nationalId}
+            onChange={(event) => set('nationalId', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">شماره همراه
-          <Input required dir="ltr" inputMode="tel" value={form.phoneNumber} onChange={(event) => set('phoneNumber', event.target.value)} />
+        <label className="text-sm font-bold">
+          شماره همراه
+          <Input
+            required
+            dir="ltr"
+            inputMode="tel"
+            value={form.phoneNumber}
+            onChange={(event) => set('phoneNumber', event.target.value)}
+          />
         </label>
       </div>
       <SaveFeedback message={feedback?.message} tone={feedback?.tone ?? 'success'} />
       <div className="flex items-center gap-3">
-        <Button type="submit" loading={pending}>{parent ? 'ذخیره' : 'ثبت'}</Button>
+        <Button type="submit" loading={pending}>
+          {parent ? 'ذخیره' : 'ثبت'}
+        </Button>
         {parent && (
-          <Button type="button" variant="danger" size="sm" loading={deletePending} onClick={removeParent}>
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            loading={deletePending}
+            onClick={removeParent}
+          >
             حذف از خانواده
           </Button>
         )}
@@ -463,7 +544,13 @@ function EmergencyFields({
   contact,
 }: {
   familyId: string;
-  contact?: { id: string; firstName: string; lastName: string; relationship: string; phoneNumber: string };
+  contact?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    relationship: string;
+    phoneNumber: string;
+  };
 }) {
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<{ message: string; tone: 'error' | 'success' }>();
@@ -498,21 +585,45 @@ function EmergencyFields({
     <form className="space-y-4" onSubmit={submit}>
       <p className="text-sm font-bold">تماس اضطراری</p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-bold">نام
-          <Input required value={form.firstName} onChange={(event) => set('firstName', event.target.value)} />
+        <label className="text-sm font-bold">
+          نام
+          <Input
+            required
+            value={form.firstName}
+            onChange={(event) => set('firstName', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">نام خانوادگی
-          <Input required value={form.lastName} onChange={(event) => set('lastName', event.target.value)} />
+        <label className="text-sm font-bold">
+          نام خانوادگی
+          <Input
+            required
+            value={form.lastName}
+            onChange={(event) => set('lastName', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">نسبت
-          <Input required value={form.relationship} onChange={(event) => set('relationship', event.target.value)} />
+        <label className="text-sm font-bold">
+          نسبت
+          <Input
+            required
+            value={form.relationship}
+            onChange={(event) => set('relationship', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">شماره همراه
-          <Input required dir="ltr" inputMode="tel" value={form.phoneNumber} onChange={(event) => set('phoneNumber', event.target.value)} />
+        <label className="text-sm font-bold">
+          شماره همراه
+          <Input
+            required
+            dir="ltr"
+            inputMode="tel"
+            value={form.phoneNumber}
+            onChange={(event) => set('phoneNumber', event.target.value)}
+          />
         </label>
       </div>
       <SaveFeedback message={feedback?.message} tone={feedback?.tone ?? 'success'} />
-      <Button type="submit" loading={pending}>ذخیره</Button>
+      <Button type="submit" loading={pending}>
+        ذخیره
+      </Button>
     </form>
   );
 }
@@ -523,8 +634,18 @@ function GuardianTab({ detail }: { detail: AdminStudentDetail }) {
   const emergency = detail.emergencyContacts[0];
   return (
     <div className="space-y-8">
-      <ParentFields title="اطلاعات پدر" familyId={detail.userId} parent={father} parentType="FATHER" />
-      <ParentFields title="اطلاعات مادر" familyId={detail.userId} parent={mother} parentType="MOTHER" />
+      <ParentFields
+        title="اطلاعات پدر"
+        familyId={detail.userId}
+        parent={father}
+        parentType="FATHER"
+      />
+      <ParentFields
+        title="اطلاعات مادر"
+        familyId={detail.userId}
+        parent={mother}
+        parentType="MOTHER"
+      />
       <EmergencyFields familyId={detail.userId} contact={emergency} />
     </div>
   );
@@ -580,23 +701,47 @@ function AddressTab({ detail }: { detail: AdminStudentDetail }) {
   return (
     <form className="space-y-4" onSubmit={submit}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-bold">عنوان نشانی
-          <Input required value={form.title} onChange={(event) => set('title', event.target.value)} />
+        <label className="text-sm font-bold">
+          عنوان نشانی
+          <Input
+            required
+            value={form.title}
+            onChange={(event) => set('title', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">استان
-          <Input required value={form.province} onChange={(event) => set('province', event.target.value)} />
+        <label className="text-sm font-bold">
+          استان
+          <Input
+            required
+            value={form.province}
+            onChange={(event) => set('province', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">شهر
+        <label className="text-sm font-bold">
+          شهر
           <Input required value={form.city} onChange={(event) => set('city', event.target.value)} />
         </label>
-        <label className="text-sm font-bold">منطقه
+        <label className="text-sm font-bold">
+          منطقه
           <Input value={form.district} onChange={(event) => set('district', event.target.value)} />
         </label>
-        <label className="text-sm font-bold">نشانی خیابان
-          <Input required value={form.streetAddress} onChange={(event) => set('streetAddress', event.target.value)} />
+        <label className="text-sm font-bold">
+          نشانی خیابان
+          <Input
+            required
+            value={form.streetAddress}
+            onChange={(event) => set('streetAddress', event.target.value)}
+          />
         </label>
-        <label className="text-sm font-bold">کد پستی
-          <Input required dir="ltr" inputMode="numeric" value={form.postalCode} onChange={(event) => set('postalCode', event.target.value)} />
+        <label className="text-sm font-bold">
+          کد پستی
+          <Input
+            required
+            dir="ltr"
+            inputMode="numeric"
+            value={form.postalCode}
+            onChange={(event) => set('postalCode', event.target.value)}
+          />
         </label>
       </div>
       <div>
@@ -618,7 +763,9 @@ function AddressTab({ detail }: { detail: AdminStudentDetail }) {
         </p>
       </div>
       <SaveFeedback message={feedback?.message} tone={feedback?.tone ?? 'success'} />
-      <Button type="submit" loading={pending}>ذخیره نشانی</Button>
+      <Button type="submit" loading={pending}>
+        ذخیره نشانی
+      </Button>
     </form>
   );
 }
@@ -674,7 +821,10 @@ function PaymentTab({ detail }: { detail: AdminStudentDetail }) {
   return (
     <div className="space-y-4 text-sm">
       <div className="space-y-2">
-        <Row label="روش پرداخت" value={plan.planType === 'FULL' ? 'پرداخت یکجا' : 'پیش‌پرداخت و اقساط'} />
+        <Row
+          label="روش پرداخت"
+          value={plan.planType === 'FULL' ? 'پرداخت یکجا' : 'پیش‌پرداخت و اقساط'}
+        />
         <Row label="وضعیت برنامه" value={PLAN_STATUS_LABELS[plan.planStatus] ?? plan.planStatus} />
         <Row label="مبلغ کل" value={formatIrr(plan.totalAmount)} />
         <Row label="پیش‌پرداخت" value={formatIrr(plan.prepaymentAmount)} />
@@ -696,8 +846,15 @@ function PaymentTab({ detail }: { detail: AdminStudentDetail }) {
           </thead>
           <tbody>
             {plan.scheduleItems.map((item) => (
-              <tr key={`${item.itemType}-${item.sequenceNumber}`} className="border-b last:border-0">
-                <td className="py-2">{item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : `قسط ${formatPersianNumber(item.sequenceNumber)}`}</td>
+              <tr
+                key={`${item.itemType}-${item.sequenceNumber}`}
+                className="border-b last:border-0"
+              >
+                <td className="py-2">
+                  {item.itemType === 'PREPAYMENT'
+                    ? 'پیش‌پرداخت'
+                    : `قسط ${formatPersianNumber(item.sequenceNumber)}`}
+                </td>
                 <td className="py-2">{formatIrr(item.amount)}</td>
                 <td className="py-2">{ITEM_STATUS_LABELS[item.itemStatus] ?? item.itemStatus}</td>
                 <td className="py-2">{item.dueDate ? formatJalaliDate(item.dueDate) : '—'}</td>

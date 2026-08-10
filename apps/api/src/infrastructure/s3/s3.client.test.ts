@@ -15,7 +15,9 @@ describe('S3 SigV4 presigned URLs', () => {
       now: new Date('2013-05-24T00:00:00Z'),
     });
     expect(url).toContain('X-Amz-Algorithm=AWS4-HMAC-SHA256');
-    expect(url).toContain('X-Amz-Signature=aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404');
+    expect(url).toContain(
+      'X-Amz-Signature=aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404',
+    );
   });
 
   it('uses path-style URLs with a bucket prefix and encodes object keys', () => {
@@ -31,8 +33,12 @@ describe('S3 SigV4 presigned URLs', () => {
       now: new Date('2026-08-01T00:00:00Z'),
       contentType: 'image/jpeg',
     });
-    expect(url.startsWith('https://s3.ir-thr-at1.arvanstorage.ir/school-transport-dev/student-photos/raw/abc-def.jpg?')).toBe(true);
-    expect(url).toContain('X-Amz-SignedHeaders=host%3Bcontent-type');
+    expect(
+      url.startsWith(
+        'https://s3.ir-thr-at1.arvanstorage.ir/school-transport-dev/student-photos/raw/abc-def.jpg?',
+      ),
+    ).toBe(true);
+    expect(url).toContain('X-Amz-SignedHeaders=content-type%3Bhost');
     expect(url).toContain('X-Amz-Expires=300');
   });
 

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { registrationPrices, serviceRegistrations, students } from '../../database/schemas';
 import { eq, and, desc } from 'drizzle-orm';
@@ -13,7 +13,8 @@ export const REGISTRATION_PRICE_VERSION_LIMIT = 100;
 @Injectable()
 export class PricingService {
   constructor(
-    private readonly db: DatabaseService,
+    @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
+    @Inject(forwardRef(() => InAppNotificationService))
     private readonly notifications: InAppNotificationService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}

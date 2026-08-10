@@ -1,10 +1,28 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Req,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
 import { Roles } from '../../common/decorators';
 import { paginatedResponse, successResponse } from '../../common/response';
-import { AdminCreateStudentDto, AdminUpdateStudentDto, ArchiveStudentDto, CreateStudentDto, UpdateStudentDto } from './student.dto';
+import {
+  AdminCreateStudentDto,
+  AdminUpdateStudentDto,
+  ArchiveStudentDto,
+  CreateStudentDto,
+  UpdateStudentDto,
+} from './student.dto';
 import { CreateLimitRequestDto, RejectLimitRequestDto } from './student-limit-request.dto';
 import { AdminStudentListQueryDto } from './student-list.dto';
 import { AuthenticatedRequest } from '../../common/http-request';
@@ -33,10 +51,7 @@ export class StudentsController {
   }
 
   @Post('limit-requests')
-  async createLimitRequest(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: CreateLimitRequestDto,
-  ) {
+  async createLimitRequest(@Req() req: AuthenticatedRequest, @Body() dto: CreateLimitRequestDto) {
     const request = await this.studentsService.createLimitRequest(req.user.id, dto.reason);
     return successResponse(request);
   }
@@ -52,7 +67,10 @@ export class StudentsController {
   }
 
   @Get(':studentId')
-  async getById(@Req() req: AuthenticatedRequest, @Param('studentId', new ParseUUIDPipe()) studentId: string) {
+  async getById(
+    @Req() req: AuthenticatedRequest,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+  ) {
     const student = await this.studentsService.getById(studentId, req.user.id);
     return successResponse(student);
   }
@@ -68,7 +86,10 @@ export class StudentsController {
   }
 
   @Delete(':studentId')
-  async archive(@Req() req: AuthenticatedRequest, @Param('studentId', new ParseUUIDPipe()) studentId: string) {
+  async archive(
+    @Req() req: AuthenticatedRequest,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+  ) {
     await this.studentsService.archive(studentId, req.user.id);
     return successResponse({ archived: true });
   }
@@ -101,11 +122,7 @@ export class AdminStudentsController {
     @Req() req: AuthenticatedRequest,
     @Param('requestId', new ParseUUIDPipe()) requestId: string,
   ) {
-    const request = await this.studentsService.approveLimitRequest(
-      requestId,
-      req.user.id,
-      req.ip,
-    );
+    const request = await this.studentsService.approveLimitRequest(requestId, req.user.id, req.ip);
     return successResponse(request);
   }
 

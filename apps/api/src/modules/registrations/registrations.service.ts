@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import {
   serviceRegistrations,
@@ -33,7 +33,6 @@ import {
   type AdminEnrollmentActions,
 } from './admin-guided-enrollment';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
-import { Inject } from '@nestjs/common';
 import type { AdminEnrollmentListQueryDto } from './registration.dto';
 import { expandRegistrationStatusGroup } from './registration-status-groups';
 import type { DatabaseTransaction } from '../../database/payment-plan';
@@ -46,7 +45,8 @@ type AdminEnrollmentAudit = { adminId: string; ipAddress?: string };
 @Injectable()
 export class RegistrationsService {
   constructor(
-    private readonly db: DatabaseService,
+    @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
+    @Inject(forwardRef(() => InAppNotificationService))
     private readonly notifications: InAppNotificationService,
     @Inject(AUDIT_PORT) private readonly auditService: AuditPort,
   ) {}

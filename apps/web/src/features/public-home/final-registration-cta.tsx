@@ -28,9 +28,7 @@ export function FinalRegistrationCta() {
           <h2 className="text-balance text-3xl font-black leading-tight text-white sm:text-4xl">
             برای ثبت‌نام آماده‌اید؟
           </h2>
-          <p className="mt-4 text-lg text-white/60">
-            مسیر امن فرزند شما از اینجا شروع می‌شود
-          </p>
+          <p className="mt-4 text-lg text-white/60">مسیر امن فرزند شما از اینجا شروع می‌شود</p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
             {checklist.map((item) => (
               <span key={item} className="flex items-center gap-2 text-sm text-white/70">

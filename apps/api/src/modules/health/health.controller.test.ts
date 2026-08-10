@@ -20,15 +20,21 @@ describe('HealthController', () => {
     await expect(controller(true, true).ready()).resolves.toMatchObject({
       data: { status: 'ready', database: 'up', queue: 'up' },
     });
-    await expect(controller(false, true).ready()).rejects.toBeInstanceOf(ServiceUnavailableException);
-    await expect(controller(true, false).ready()).rejects.toBeInstanceOf(ServiceUnavailableException);
+    await expect(controller(false, true).ready()).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+    await expect(controller(true, false).ready()).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
     await expect(controller(true, false, false).ready()).resolves.toMatchObject({
       data: { queue: 'optional' },
     });
   });
 
   it('fails readiness while draining and on a dependency timeout', async () => {
-    await expect(controller(true, true, true, true).ready()).rejects.toBeInstanceOf(ServiceUnavailableException);
+    await expect(controller(true, true, true, true).ready()).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
     const health = new HealthController(
       { isReady: () => new Promise(() => undefined) } as never,
       { isReady: vi.fn().mockResolvedValue(true) } as never,

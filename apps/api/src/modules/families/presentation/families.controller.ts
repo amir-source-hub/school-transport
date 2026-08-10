@@ -1,11 +1,31 @@
-import { Controller, Delete, Get, Post, Patch, Body, UseGuards, Req, Param, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  Post,
+  Patch,
+  Body,
+  UseGuards,
+  Req,
+  Param,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { FamiliesService } from '../application/families.service';
 import { AuthGuard } from '../../access-control/auth.guard';
 import { successResponse } from '../../../common/response';
 import { Roles } from '../../../common/decorators';
 import { RolesGuard } from '../../access-control/roles.guard';
 import { AuthenticatedRequest } from '../../../common/http-request';
-import { AddAddressDto, AddressMutationDto, AdminCreateParentDto, AdminUpdateParentDto, CompleteFamilyDto, EmergencyMutationDto, ParentTypeDto, UpdateProfileDto } from './family.dto';
+import {
+  AddAddressDto,
+  AddressMutationDto,
+  AdminCreateParentDto,
+  AdminUpdateParentDto,
+  CompleteFamilyDto,
+  EmergencyMutationDto,
+  ParentTypeDto,
+  UpdateProfileDto,
+} from './family.dto';
 
 @UseGuards(AuthGuard)
 @Controller('families')
@@ -25,25 +45,23 @@ export class FamiliesController {
   }
 
   @Patch('me')
-  async updateProfile(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: UpdateProfileDto,
-  ) {
+  async updateProfile(@Req() req: AuthenticatedRequest, @Body() dto: UpdateProfileDto) {
     await this.familiesService.updateProfile(req.user.id, dto);
     return successResponse({ updated: true });
   }
 
   @Post('addresses')
-  async addAddress(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: AddAddressDto,
-  ) {
+  async addAddress(@Req() req: AuthenticatedRequest, @Body() dto: AddAddressDto) {
     const address = await this.familiesService.addAddress(req.user.id, dto);
     return successResponse(address);
   }
 
   @Patch('addresses/:addressId')
-  async updateAddress(@Req() req: AuthenticatedRequest, @Param('addressId', new ParseUUIDPipe()) addressId: string, @Body() dto: AddressMutationDto) {
+  async updateAddress(
+    @Req() req: AuthenticatedRequest,
+    @Param('addressId', new ParseUUIDPipe()) addressId: string,
+    @Body() dto: AddressMutationDto,
+  ) {
     await this.familiesService.updateAddress(addressId, req.user.id, { ...dto });
     return successResponse({ updated: true });
   }
@@ -91,7 +109,10 @@ export class AdminFamiliesController {
   }
 
   @Post(':id/parents')
-  async createParent(@Param('id', new ParseUUIDPipe()) id: string, @Body() dto: AdminCreateParentDto) {
+  async createParent(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: AdminCreateParentDto,
+  ) {
     return successResponse(await this.familiesService.adminCreateParent(id, dto));
   }
 
@@ -105,15 +126,15 @@ export class AdminFamiliesController {
   }
 
   @Delete(':id/parents/:parentId')
-  async deleteParent(@Param('id', new ParseUUIDPipe()) id: string, @Param('parentId', new ParseUUIDPipe()) parentId: string) {
+  async deleteParent(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('parentId', new ParseUUIDPipe()) parentId: string,
+  ) {
     return successResponse(await this.familiesService.adminDeleteParent(id, parentId));
   }
 
   @Post(':id/addresses')
-  async addAddress(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() dto: AddAddressDto,
-  ) {
+  async addAddress(@Param('id', new ParseUUIDPipe()) id: string, @Body() dto: AddAddressDto) {
     return successResponse(await this.familiesService.addAddress(id, dto));
   }
 

@@ -19,7 +19,13 @@ export function Badge({
   className?: string;
 }) {
   return (
-    <span className={cn('inline-flex min-h-7 items-center rounded-full px-3 py-0.5 text-xs font-bold', tones[tone], className)}>
+    <span
+      className={cn(
+        'inline-flex min-h-7 items-center rounded-full px-3 py-0.5 text-xs font-bold',
+        tones[tone],
+        className,
+      )}
+    >
       {children}
     </span>
   );

@@ -13,7 +13,10 @@ import {
   type AdminLimitRequest,
 } from './admin-students-api';
 
-const statusLabels: Record<string, { label: string; tone: 'info' | 'success' | 'danger' | 'neutral' }> = {
+const statusLabels: Record<
+  string,
+  { label: string; tone: 'info' | 'success' | 'danger' | 'neutral' }
+> = {
   PENDING: { label: 'در انتظار بررسی', tone: 'info' },
   APPROVED: { label: 'تأیید شده', tone: 'success' },
   REJECTED: { label: 'رد شده', tone: 'danger' },
@@ -132,7 +135,9 @@ export function AdminLimitRequestSection({
                 <Button
                   size="sm"
                   variant="danger"
-                  onClick={() => setRejectingId((current) => (current === request.id ? undefined : request.id))}
+                  onClick={() =>
+                    setRejectingId((current) => (current === request.id ? undefined : request.id))
+                  }
                 >
                   رد درخواست
                 </Button>
@@ -160,7 +165,11 @@ export function AdminLimitRequestSection({
           )}
         </Card>
       ))}
-      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-danger">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

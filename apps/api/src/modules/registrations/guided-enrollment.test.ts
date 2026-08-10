@@ -119,7 +119,9 @@ describe('guided enrollment policy', () => {
     const input = validEnrollment();
     input.homePhone = '0';
 
-    expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow('A 021 Tehran landline number is required.');
+    expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow(
+      'A 021 Tehran landline number is required.',
+    );
   });
 
   it('normalizes and validates the optional student mobile number', () => {

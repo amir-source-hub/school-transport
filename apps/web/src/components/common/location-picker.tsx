@@ -66,16 +66,16 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
         tiles.addTo(map);
 
         marker = L.marker(
-        [initialPositionRef.current.latitude, initialPositionRef.current.longitude],
-        {
-          draggable: true,
-          icon: L.divIcon({
-            className: 'location-picker-marker',
-            html: '<span aria-hidden="true"></span>',
-            iconSize: [34, 42],
-            iconAnchor: [17, 42],
-          }),
-        },
+          [initialPositionRef.current.latitude, initialPositionRef.current.longitude],
+          {
+            draggable: true,
+            icon: L.divIcon({
+              className: 'location-picker-marker',
+              html: '<span aria-hidden="true"></span>',
+              iconSize: [34, 42],
+              iconAnchor: [17, 42],
+            }),
+          },
         ).addTo(map);
 
         marker.on('dragend', () => {
@@ -99,7 +99,9 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
           if (document.visibilityState === 'visible') map?.invalidateSize({ pan: false });
         };
         document.addEventListener('visibilitychange', handleVisibility);
-        map.once('unload', () => document.removeEventListener('visibilitychange', handleVisibility));
+        map.once('unload', () =>
+          document.removeEventListener('visibilitychange', handleVisibility),
+        );
       } catch {
         if (!active) return;
         setLoading(false);

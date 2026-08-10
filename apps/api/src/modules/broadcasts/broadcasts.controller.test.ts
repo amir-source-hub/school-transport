@@ -8,9 +8,21 @@ import { BroadcastsController } from './broadcasts.controller';
 
 describe('bulk SMS controller authorization', () => {
   it('requires an active ordinary ADMIN role for every campaign operation', () => {
-    expect(Reflect.getMetadata(GUARDS_METADATA, BroadcastsController)).toEqual([AuthGuard, RolesGuard]);
+    expect(Reflect.getMetadata(GUARDS_METADATA, BroadcastsController)).toEqual([
+      AuthGuard,
+      RolesGuard,
+    ]);
     expect(Reflect.getMetadata(ROLES_KEY, BroadcastsController)).toEqual(['ADMIN']);
-    for (const method of ['list', 'preview', 'create', 'approve', 'test', 'pause', 'resume', 'cancel'] as const) {
+    for (const method of [
+      'list',
+      'preview',
+      'create',
+      'approve',
+      'test',
+      'pause',
+      'resume',
+      'cancel',
+    ] as const) {
       expect(BroadcastsController.prototype[method]).toBeTypeOf('function');
     }
   });

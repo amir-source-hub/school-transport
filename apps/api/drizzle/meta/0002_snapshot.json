@@ -86,16 +86,12 @@
         "admin_users_username_unique": {
           "name": "admin_users_username_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "username"
-          ]
+          "columns": ["username"]
         },
         "admin_users_phone_number_unique": {
           "name": "admin_users_phone_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "phone_number"
-          ]
+          "columns": ["phone_number"]
         }
       }
     },
@@ -544,12 +540,8 @@
           "name": "contracts_registration_id_service_registrations_id_fk",
           "tableFrom": "contracts",
           "tableTo": "service_registrations",
-          "columnsFrom": [
-            "registration_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["registration_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -557,12 +549,8 @@
           "name": "contracts_registration_price_id_registration_prices_id_fk",
           "tableFrom": "contracts",
           "tableTo": "registration_prices",
-          "columnsFrom": [
-            "registration_price_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["registration_price_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -570,12 +558,8 @@
           "name": "contracts_payment_plan_id_payment_plans_id_fk",
           "tableFrom": "contracts",
           "tableTo": "payment_plans",
-          "columnsFrom": [
-            "payment_plan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["payment_plan_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -583,12 +567,8 @@
           "name": "contracts_generated_by_admin_id_admin_users_id_fk",
           "tableFrom": "contracts",
           "tableTo": "admin_users",
-          "columnsFrom": [
-            "generated_by_admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["generated_by_admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -598,9 +578,7 @@
         "contracts_contract_number_unique": {
           "name": "contracts_contract_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "contract_number"
-          ]
+          "columns": ["contract_number"]
         }
       }
     },
@@ -695,12 +673,8 @@
           "name": "emergency_contacts_user_id_users_id_fk",
           "tableFrom": "emergency_contacts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -811,12 +785,8 @@
           "name": "family_addresses_user_id_users_id_fk",
           "tableFrom": "family_addresses",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -955,12 +925,8 @@
           "name": "notifications_user_id_users_id_fk",
           "tableFrom": "notifications",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1207,12 +1173,8 @@
           "name": "parents_user_id_users_id_fk",
           "tableFrom": "parents",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1222,9 +1184,7 @@
         "parents_national_id_unique": {
           "name": "parents_national_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "national_id"
-          ]
+          "columns": ["national_id"]
         }
       }
     },
@@ -1334,12 +1294,8 @@
           "name": "payment_plans_registration_price_id_registration_prices_id_fk",
           "tableFrom": "payment_plans",
           "tableTo": "registration_prices",
-          "columnsFrom": [
-            "registration_price_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["registration_price_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1502,12 +1458,8 @@
           "name": "payment_schedule_items_payment_plan_id_payment_plans_id_fk",
           "tableFrom": "payment_schedule_items",
           "tableTo": "payment_plans",
-          "columnsFrom": [
-            "payment_plan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["payment_plan_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1716,12 +1668,8 @@
           "name": "payment_transactions_payment_plan_id_payment_plans_id_fk",
           "tableFrom": "payment_transactions",
           "tableTo": "payment_plans",
-          "columnsFrom": [
-            "payment_plan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["payment_plan_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1729,12 +1677,8 @@
           "name": "payment_transactions_payment_schedule_item_id_payment_schedule_items_id_fk",
           "tableFrom": "payment_transactions",
           "tableTo": "payment_schedule_items",
-          "columnsFrom": [
-            "payment_schedule_item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["payment_schedule_item_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1742,12 +1686,8 @@
           "name": "payment_transactions_user_id_users_id_fk",
           "tableFrom": "payment_transactions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1755,12 +1695,8 @@
           "name": "payment_transactions_recorded_by_admin_id_admin_users_id_fk",
           "tableFrom": "payment_transactions",
           "tableTo": "admin_users",
-          "columnsFrom": [
-            "recorded_by_admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["recorded_by_admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1770,9 +1706,7 @@
         "payment_transactions_idempotency_key_unique": {
           "name": "payment_transactions_idempotency_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "idempotency_key"
-          ]
+          "columns": ["idempotency_key"]
         }
       }
     },
@@ -1832,12 +1766,8 @@
           "name": "registration_notes_registration_id_service_registrations_id_fk",
           "tableFrom": "registration_notes",
           "tableTo": "service_registrations",
-          "columnsFrom": [
-            "registration_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["registration_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1845,12 +1775,8 @@
           "name": "registration_notes_admin_id_admin_users_id_fk",
           "tableFrom": "registration_notes",
           "tableTo": "admin_users",
-          "columnsFrom": [
-            "admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2013,12 +1939,8 @@
           "name": "registration_prices_registration_id_service_registrations_id_fk",
           "tableFrom": "registration_prices",
           "tableTo": "service_registrations",
-          "columnsFrom": [
-            "registration_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["registration_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2026,12 +1948,8 @@
           "name": "registration_prices_set_by_admin_id_admin_users_id_fk",
           "tableFrom": "registration_prices",
           "tableTo": "admin_users",
-          "columnsFrom": [
-            "set_by_admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["set_by_admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2104,12 +2022,8 @@
           "name": "registration_reviews_registration_id_service_registrations_id_fk",
           "tableFrom": "registration_reviews",
           "tableTo": "service_registrations",
-          "columnsFrom": [
-            "registration_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["registration_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2117,12 +2031,8 @@
           "name": "registration_reviews_admin_id_admin_users_id_fk",
           "tableFrom": "registration_reviews",
           "tableTo": "admin_users",
-          "columnsFrom": [
-            "admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2191,12 +2101,8 @@
           "name": "registration_snapshots_registration_id_service_registrations_id_fk",
           "tableFrom": "registration_snapshots",
           "tableTo": "service_registrations",
-          "columnsFrom": [
-            "registration_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["registration_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2456,12 +2362,8 @@
           "name": "service_registrations_student_id_students_id_fk",
           "tableFrom": "service_registrations",
           "tableTo": "students",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2469,12 +2371,8 @@
           "name": "service_registrations_reviewed_by_admin_id_admin_users_id_fk",
           "tableFrom": "service_registrations",
           "tableTo": "admin_users",
-          "columnsFrom": [
-            "reviewed_by_admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewed_by_admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2627,12 +2525,8 @@
           "name": "students_user_id_users_id_fk",
           "tableFrom": "students",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2640,12 +2534,8 @@
           "name": "students_school_id_schools_id_fk",
           "tableFrom": "students",
           "tableTo": "schools",
-          "columnsFrom": [
-            "school_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["school_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2655,9 +2545,7 @@
         "students_national_id_unique": {
           "name": "students_national_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "national_id"
-          ]
+          "columns": ["national_id"]
         }
       }
     },
@@ -2756,16 +2644,12 @@
         "users_username_unique": {
           "name": "users_username_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "username"
-          ]
+          "columns": ["username"]
         },
         "users_phone_number_unique": {
           "name": "users_phone_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "phone_number"
-          ]
+          "columns": ["phone_number"]
         }
       }
     }

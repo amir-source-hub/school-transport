@@ -17,7 +17,15 @@ import {
 } from '@/features/admin-students/admin-students-api';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 
-export function ArchiveStudentDialog({ studentId, studentName, active }: { studentId: string; studentName: string; active: boolean }) {
+export function ArchiveStudentDialog({
+  studentId,
+  studentName,
+  active,
+}: {
+  studentId: string;
+  studentName: string;
+  active: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -46,20 +54,29 @@ export function ArchiveStudentDialog({ studentId, studentName, active }: { stude
   };
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) setError(null); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setError(null);
+      }}
+    >
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">{active ? 'بایگانی' : 'بازیابی'}</Button>
+        <Button variant="ghost" size="sm">
+          {active ? 'بایگانی' : 'بازیابی'}
+        </Button>
       </DialogTrigger>
       <DialogContent title={active ? 'بایگانی دانش‌آموز' : 'بازیابی دانش‌آموز'}>
         <div className="space-y-4 text-sm">
           <p>
-            دانش‌آموز «{studentName}» {active ? 'بایگانی (غیرفعال) می‌شود. ' : 'دوباره فعال می‌شود. '}
+            دانش‌آموز «{studentName}»{' '}
+            {active ? 'بایگانی (غیرفعال) می‌شود. ' : 'دوباره فعال می‌شود. '}
           </p>
           {active && (
             <p className="text-muted">
-              با بایگانی، این دانش‌آموز از فهرست فعال حساب خانواده حذف می‌شود و ظرفیت آن آزاد می‌شود؛
-              اما ثبت‌نام، قرارداد، سرویس حمل‌ونقل و سوابق مالی او حفظ می‌شود و می‌توانید بعداً آن را
-              بازیابی کنید.
+              با بایگانی، این دانش‌آموز از فهرست فعال حساب خانواده حذف می‌شود و ظرفیت آن آزاد
+              می‌شود؛ اما ثبت‌نام، قرارداد، سرویس حمل‌ونقل و سوابق مالی او حفظ می‌شود و می‌توانید
+              بعداً آن را بازیابی کنید.
             </p>
           )}
           {active && (
@@ -76,7 +93,9 @@ export function ArchiveStudentDialog({ studentId, studentName, active }: { stude
           )}
           {error && <p className="text-xs text-danger">{error}</p>}
           <div className="flex gap-3">
-            <Button variant="ghost" onClick={() => setOpen(false)}>انصراف</Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              انصراف
+            </Button>
             <Button variant={active ? 'danger' : 'primary'} loading={loading} onClick={handle}>
               {active ? 'تأیید بایگانی' : 'تأیید بازیابی'}
             </Button>
@@ -132,7 +151,8 @@ export function AdminStudentForm({
   const educationOptions = selectedSchool?.educationOptions ?? [];
   const gradeOptions =
     educationOptions.find((option) => option.level === educationLevel)?.grades ?? [];
-  const set = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const set = (key: keyof typeof form, value: string) =>
+    setForm((current) => ({ ...current, [key]: value }));
   const selectSchool = (schoolId: string) => {
     const school = schools.find((item) => item.id === schoolId);
     const nextLevel = school?.educationOptions[0]?.level ?? '';
@@ -145,8 +165,7 @@ export function AdminStudentForm({
     setEducationLevel(nextLevel);
   };
   const selectEducationLevel = (level: string) => {
-    const nextGrade =
-      educationOptions.find((option) => option.level === level)?.grades[0] ?? '';
+    const nextGrade = educationOptions.find((option) => option.level === level)?.grades[0] ?? '';
     setEducationLevel(level);
     set('grade', nextGrade);
   };
@@ -179,32 +198,133 @@ export function AdminStudentForm({
     <form className="space-y-4" onSubmit={submit}>
       {!student && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold">خانواده<Select value={form.userId} onValueChange={(value) => set('userId', value)} options={families.map((item) => ({ value: item.id, label: item.name }))} /></label>
-          <label className="text-sm font-bold">مدرسه<Select value={form.schoolId} onValueChange={selectSchool} options={schools.map((item) => ({ value: item.id, label: item.name }))} /></label>
+          <label className="text-sm font-bold">
+            خانواده
+            <Select
+              value={form.userId}
+              onValueChange={(value) => set('userId', value)}
+              options={families.map((item) => ({ value: item.id, label: item.name }))}
+            />
+          </label>
+          <label className="text-sm font-bold">
+            مدرسه
+            <Select
+              value={form.schoolId}
+              onValueChange={selectSchool}
+              options={schools.map((item) => ({ value: item.id, label: item.name }))}
+            />
+          </label>
         </div>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-bold">نام<Input required value={form.firstName} onChange={(event) => set('firstName', event.target.value)} /></label>
-        <label className="text-sm font-bold">نام خانوادگی<Input required value={form.lastName} onChange={(event) => set('lastName', event.target.value)} /></label>
-        {!student && <label className="text-sm font-bold">کد ملی<Input required dir="ltr" value={form.nationalId} onChange={(event) => set('nationalId', event.target.value)} /></label>}
-        <label className="text-sm font-bold">مقطع<Select value={educationLevel} onValueChange={selectEducationLevel} options={educationOptions.map((option) => ({ value: option.level, label: option.level }))} disabled={educationOptions.length === 0} /></label>
-        <label className="text-sm font-bold">پایه<Select value={form.grade} onValueChange={(value) => set('grade', value)} options={gradeOptions.map((grade) => ({ value: grade, label: grade }))} disabled={gradeOptions.length === 0} /></label>
-        {!student && <label className="text-sm font-bold">تاریخ تولد<JalaliDateInput value={form.birthDate} onChange={(value) => set('birthDate', value)} required /></label>}
-        {!student && <label className="text-sm font-bold">جنسیت<Select value={form.gender} onValueChange={(value) => set('gender', value)} options={[{ value: 'FEMALE', label: 'دختر' }, { value: 'MALE', label: 'پسر' }]} /></label>}
+        <label className="text-sm font-bold">
+          نام
+          <Input
+            required
+            value={form.firstName}
+            onChange={(event) => set('firstName', event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          نام خانوادگی
+          <Input
+            required
+            value={form.lastName}
+            onChange={(event) => set('lastName', event.target.value)}
+          />
+        </label>
+        {!student && (
+          <label className="text-sm font-bold">
+            کد ملی
+            <Input
+              required
+              dir="ltr"
+              value={form.nationalId}
+              onChange={(event) => set('nationalId', event.target.value)}
+            />
+          </label>
+        )}
+        <label className="text-sm font-bold">
+          مقطع
+          <Select
+            value={educationLevel}
+            onValueChange={selectEducationLevel}
+            options={educationOptions.map((option) => ({
+              value: option.level,
+              label: option.level,
+            }))}
+            disabled={educationOptions.length === 0}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          پایه
+          <Select
+            value={form.grade}
+            onValueChange={(value) => set('grade', value)}
+            options={gradeOptions.map((grade) => ({ value: grade, label: grade }))}
+            disabled={gradeOptions.length === 0}
+          />
+        </label>
+        {!student && (
+          <label className="text-sm font-bold">
+            تاریخ تولد
+            <JalaliDateInput
+              value={form.birthDate}
+              onChange={(value) => set('birthDate', value)}
+              required
+            />
+          </label>
+        )}
+        {!student && (
+          <label className="text-sm font-bold">
+            جنسیت
+            <Select
+              value={form.gender}
+              onValueChange={(value) => set('gender', value)}
+              options={[
+                { value: 'FEMALE', label: 'دختر' },
+                { value: 'MALE', label: 'پسر' },
+              ]}
+            />
+          </label>
+        )}
       </div>
       {error && <p className="text-sm text-danger">{error}</p>}
-      <Button type="submit" loading={pending}>{student ? 'ذخیره تغییرات' : 'افزودن دانش‌آموز'}</Button>
+      <Button type="submit" loading={pending}>
+        {student ? 'ذخیره تغییرات' : 'افزودن دانش‌آموز'}
+      </Button>
     </form>
   );
 }
 
-export function AdminStudentDialog({ families, schools, student }: { families: FamilyOption[]; schools: SchoolOption[]; student?: AdminStudent }) {
+export function AdminStudentDialog({
+  families,
+  schools,
+  student,
+}: {
+  families: FamilyOption[];
+  schools: SchoolOption[];
+  student?: AdminStudent;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant={student ? 'ghost' : 'primary'} size="sm">{student ? 'ویرایش' : 'افزودن دانش‌آموز'}</Button></DialogTrigger>
-      <DialogContent className="max-w-2xl" title={student ? 'ویرایش دانش‌آموز' : 'افزودن دانش‌آموز'} description="اطلاعات از این فرم مستقیماً در پایگاه داده ذخیره می‌شود.">
-        <AdminStudentForm families={families} schools={schools} student={student} onSuccess={() => setOpen(false)} />
+      <DialogTrigger asChild>
+        <Button variant={student ? 'ghost' : 'primary'} size="sm">
+          {student ? 'ویرایش' : 'افزودن دانش‌آموز'}
+        </Button>
+      </DialogTrigger>
+      <DialogContent
+        className="max-w-2xl"
+        title={student ? 'ویرایش دانش‌آموز' : 'افزودن دانش‌آموز'}
+        description="اطلاعات از این فرم مستقیماً در پایگاه داده ذخیره می‌شود."
+      >
+        <AdminStudentForm
+          families={families}
+          schools={schools}
+          student={student}
+          onSuccess={() => setOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );

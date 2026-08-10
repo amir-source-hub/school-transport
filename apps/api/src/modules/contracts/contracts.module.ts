@@ -8,11 +8,7 @@ import {
 import { OnboardingGuard } from '../access-control/onboarding.guard';
 
 @Module({
-  controllers: [
-    ContractsController,
-    AdminContractsController,
-    OnboardingContractsController,
-  ],
+  controllers: [ContractsController, AdminContractsController, OnboardingContractsController],
   providers: [ContractsService, OnboardingGuard],
   exports: [ContractsService],
 })

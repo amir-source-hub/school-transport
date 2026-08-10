@@ -50,8 +50,8 @@ describe('student photo lifecycle', () => {
   });
 
   it('rejects unknown persisted statuses', () => {
-    expect(() =>
-      assertStudentPhotoTransition('UNKNOWN' as StudentPhotoStatus, 'UPLOADED'),
-    ).toThrow(ValidationError);
+    expect(() => assertStudentPhotoTransition('UNKNOWN' as StudentPhotoStatus, 'UPLOADED')).toThrow(
+      ValidationError,
+    );
   });
 });

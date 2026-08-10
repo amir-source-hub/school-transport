@@ -34,7 +34,11 @@ export class HealthController {
     if (checks.some((ready) => !ready)) {
       throw new ServiceUnavailableException('Service dependencies are unavailable.');
     }
-    return successResponse({ status: 'ready', database: 'up', queue: this.config.queueRequired ? 'up' : 'optional' });
+    return successResponse({
+      status: 'ready',
+      database: 'up',
+      queue: this.config.queueRequired ? 'up' : 'optional',
+    });
   }
 }
 
@@ -43,7 +47,9 @@ async function withTimeout(check: Promise<boolean>, timeoutMs: number): Promise<
   try {
     return await Promise.race([
       check,
-      new Promise<boolean>((resolve) => { timer = setTimeout(() => resolve(false), timeoutMs); }),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), timeoutMs);
+      }),
     ]);
   } finally {
     if (timer) clearTimeout(timer);

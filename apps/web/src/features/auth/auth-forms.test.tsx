@@ -61,9 +61,7 @@ describe('OTP code entry', () => {
     await sendCode(user);
 
     expect(screen.getByText(/کد تا \d+ ثانیه دیگر معتبر است/)).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /ارسال مجدد کد تا \d+ ثانیه دیگر/ }),
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: /ارسال مجدد کد تا \d+ ثانیه دیگر/ })).toBeDisabled();
     expect(
       screen.getByRole('checkbox', { name: 'در این دستگاه به خاطر بسپار (۷ روز)' }),
     ).not.toBeChecked();
@@ -92,9 +90,7 @@ describe('OTP code entry', () => {
     const user = setup();
     await sendCode(user);
 
-    await user.click(
-      screen.getByRole('checkbox', { name: 'در این دستگاه به خاطر بسپار (۷ روز)' }),
-    );
+    await user.click(screen.getByRole('checkbox', { name: 'در این دستگاه به خاطر بسپار (۷ روز)' }));
     await user.type(screen.getByLabelText(/کد تأیید/), '123456');
     await user.click(screen.getByRole('button', { name: 'تأیید و ادامه' }));
 

@@ -74,7 +74,10 @@ describe('AuthGuard', () => {
     >;
     const jwt = {
       verifyAsync: vi.fn().mockResolvedValue({
-        sub: 'user-1', role: 'PARENT', type: 'access', sid: 'session-1',
+        sub: 'user-1',
+        role: 'PARENT',
+        type: 'access',
+        sid: 'session-1',
       }),
     } as unknown as JwtService;
     const database = databaseReturning([{ id: 'session-1' }], [{ status: 'ACTIVE' }]);
@@ -88,19 +91,28 @@ describe('AuthGuard', () => {
     ['PARENT', [], [{ status: 'ACTIVE' }]],
     ['PARENT', [{ id: 'session-1' }], [{ status: 'INACTIVE' }]],
     ['ADMIN', [{ id: 'session-1' }], [{ status: 'INACTIVE' }]],
-  ])('rejects revoked/expired sessions and inactive %s accounts', async (role, sessions, accounts) => {
-    const jwt = {
-      verifyAsync: vi.fn().mockResolvedValue({
-        sub: 'subject-1', role, type: 'access', sid: 'session-1',
-      }),
-    } as unknown as JwtService;
-    const guard = new AuthGuard(
-      reflectorReturning(false), jwt, config, databaseReturning(sessions, accounts),
-    );
-    await expect(
-      guard.canActivate(contextWithRequest({ headers: { authorization: 'Bearer token' } })),
-    ).rejects.toThrow('Invalid or expired token.');
-  });
+  ])(
+    'rejects revoked/expired sessions and inactive %s accounts',
+    async (role, sessions, accounts) => {
+      const jwt = {
+        verifyAsync: vi.fn().mockResolvedValue({
+          sub: 'subject-1',
+          role,
+          type: 'access',
+          sid: 'session-1',
+        }),
+      } as unknown as JwtService;
+      const guard = new AuthGuard(
+        reflectorReturning(false),
+        jwt,
+        config,
+        databaseReturning(sessions, accounts),
+      );
+      await expect(
+        guard.canActivate(contextWithRequest({ headers: { authorization: 'Bearer token' } })),
+      ).rejects.toThrow('Invalid or expired token.');
+    },
+  );
 });
 
 function databaseReturning(...results: unknown[][]): DatabaseService {

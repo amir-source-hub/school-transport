@@ -7,7 +7,10 @@ import { routeDocumentPolicies } from './route-metadata';
 const appRoot = resolve(process.cwd(), 'src/app');
 const headingProviders: Record<string, string> = {
   '/': resolve(process.cwd(), 'src/features/public-home/public-hero.tsx'),
-  '/student/dashboard': resolve(process.cwd(), 'src/features/student-dashboard/student-dashboard.tsx'),
+  '/student/dashboard': resolve(
+    process.cwd(),
+    'src/features/student-dashboard/student-dashboard.tsx',
+  ),
 };
 
 function pageFile(path: string): string {

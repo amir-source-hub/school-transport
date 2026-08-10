@@ -56,7 +56,10 @@ export class AdminContractsController {
   constructor(private readonly contractsService: ContractsService) {}
 
   @Post('enrollments/:enrollmentId/contracts')
-  async generate(@Param('enrollmentId', new ParseUUIDPipe()) enrollmentId: string, @Req() req: AuthenticatedRequest) {
+  async generate(
+    @Param('enrollmentId', new ParseUUIDPipe()) enrollmentId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const contract = await this.contractsService.generate(enrollmentId, req.user.id);
     return successResponse(contract);
   }

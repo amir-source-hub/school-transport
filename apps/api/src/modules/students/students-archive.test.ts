@@ -10,8 +10,7 @@ function buildChain(rows: unknown[]) {
     where: vi.fn(),
     for: vi.fn(),
     limit: vi.fn(),
-    then: (onFulfilled: (value: unknown) => unknown) =>
-      Promise.resolve(rows).then(onFulfilled),
+    then: (onFulfilled: (value: unknown) => unknown) => Promise.resolve(rows).then(onFulfilled),
   };
   thenable.from.mockReturnValue(thenable);
   thenable.innerJoin.mockReturnValue(thenable);
@@ -86,7 +85,10 @@ describe('setActiveByAdmin', () => {
 
   it('activates a previously archived student and audits the action', async () => {
     const reactivated = { ...activeStudent, isActive: true };
-    const { service, audit } = makeService([[{ ...activeStudent, isActive: false }], [reactivated]]);
+    const { service, audit } = makeService([
+      [{ ...activeStudent, isActive: false }],
+      [reactivated],
+    ]);
 
     await service.setActiveByAdmin('student-1', true, { adminId: 'admin-2' });
 

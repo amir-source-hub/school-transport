@@ -5,11 +5,11 @@ import IORedis from 'ioredis';
 import { Queue, Worker } from 'bullmq';
 import { fork } from 'node:child_process';
 import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { randomUUID } from 'node:crypto';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { AppModule } from '../app.module';
 import type { DatabaseService } from '../database/database.service';
 import * as schema from '../database/schemas';
 import { feedbackSubmissions, notifications, users } from '../database/schemas';
@@ -20,6 +20,52 @@ import { PaymentsService } from '../modules/payments/payments.service';
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const redisUrl = process.env.REDIS_URL;
 const enabled = Boolean(databaseUrl && redisUrl);
+
+async function deletePaymentHistoryFixture(pool: Pool, itemId: string) {
+  const cleanup = await pool.connect();
+  try {
+    await cleanup.query('begin');
+    await cleanup.query(
+      'delete from offline_payment_submissions where payment_schedule_item_id = $1',
+      [itemId],
+    );
+    await cleanup.query(
+      'alter table payment_transactions disable trigger payment_transactions_success_immutable',
+    );
+    await cleanup.query('delete from payment_transactions where payment_schedule_item_id = $1', [
+      itemId,
+    ]);
+    await cleanup.query(
+      'alter table payment_transactions enable trigger payment_transactions_success_immutable',
+    );
+    await cleanup.query('commit');
+  } catch (error) {
+    await cleanup.query('rollback');
+    throw error;
+  } finally {
+    cleanup.release();
+  }
+}
+
+async function deleteAcceptedPriceFixture(pool: Pool, priceId: string) {
+  const cleanup = await pool.connect();
+  try {
+    await cleanup.query('begin');
+    await cleanup.query(
+      'alter table registration_prices disable trigger registration_prices_history_no_delete',
+    );
+    await cleanup.query('delete from registration_prices where id = $1', [priceId]);
+    await cleanup.query(
+      'alter table registration_prices enable trigger registration_prices_history_no_delete',
+    );
+    await cleanup.query('commit');
+  } catch (error) {
+    await cleanup.query('rollback');
+    throw error;
+  } finally {
+    cleanup.release();
+  }
+}
 
 describe.skipIf(!enabled)('real PostgreSQL/Redis integration', () => {
   let pool: Pool;
@@ -144,21 +190,23 @@ describe.skipIf(!enabled)('real PostgreSQL/Redis integration', () => {
   }, 20_000);
 
   it('boots the real Nest module graph and serves the liveness HTTP contract', async () => {
+    const compiledModuleUrl = pathToFileURL(resolve(process.cwd(), 'dist/app.module.js')).href;
+    const { AppModule } = (await import(compiledModuleUrl)) as typeof import('../app.module');
     const app = await NestFactory.create<NestFastifyApplication>(
       AppModule,
       new FastifyAdapter({ logger: false }),
-      { logger: false },
+      { logger: false, abortOnError: false },
     );
     app.setGlobalPrefix('api/v1');
     await app.init();
     try {
       const response = await app.inject({ method: 'GET', url: '/api/v1/health' });
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toMatchObject({ status: 'ok' });
+      expect(response.json()).toMatchObject({ success: true, data: { status: 'alive' } });
     } finally {
       await app.close();
     }
-  });
+  }, 20_000);
 
   it('enforces notification IDOR boundaries and snapshot-stable equal-time pagination', async () => {
     const userA = randomUUID();
@@ -402,6 +450,7 @@ describe.skipIf(!enabled)('real PostgreSQL/Redis integration', () => {
     const itemId = randomUUID();
     const installmentId = randomUUID();
     const destinationId = randomUUID();
+    const destinationVersion = Math.floor(Date.now() % 2_000_000_000);
     const service = new PaymentsService(
       database,
       {} as never,
@@ -465,9 +514,10 @@ describe.skipIf(!enabled)('real PostgreSQL/Redis integration', () => {
         `insert into offline_payment_destinations
            (id, version, account_owner, bank_name, card_number, instructions,
             created_by_admin_id)
-         values ($1, 900001, 'integration', 'integration bank', '1234567890123456',
-                 'integration only', $2)`,
-        [destinationId, adminId],
+         values ($1, $2, 'integration', 'integration bank', '1234567890123456',
+                 'integration only', $3)
+         on conflict (is_active) where is_active = true do nothing`,
+        [destinationId, destinationVersion, adminId],
       );
 
       await expect(
@@ -526,16 +576,10 @@ describe.skipIf(!enabled)('real PostgreSQL/Redis integration', () => {
         paid_amount: 1000,
       });
     } finally {
-      await pool.query('delete from payment_transactions where payment_schedule_item_id = $1', [
-        itemId,
-      ]);
-      await pool.query(
-        'delete from offline_payment_submissions where payment_schedule_item_id = $1',
-        [itemId],
-      );
+      await deletePaymentHistoryFixture(pool, itemId);
       await pool.query('delete from payment_schedule_items where payment_plan_id = $1', [planId]);
       await pool.query('delete from payment_plans where id = $1', [planId]);
-      await pool.query('delete from registration_prices where id = $1', [priceId]);
+      await deleteAcceptedPriceFixture(pool, priceId);
       await pool.query('delete from service_registrations where id = $1', [registrationId]);
       await pool.query('delete from students where id = $1', [studentId]);
       await pool.query('delete from offline_payment_destinations where id = $1', [destinationId]);

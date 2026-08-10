@@ -21,12 +21,7 @@ export function AdminAccountAction({
 
   if (isSelf && active) {
     return (
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled
-        title="غیرفعال‌سازی حساب خودتان مجاز نیست"
-      >
+      <Button variant="ghost" size="sm" disabled title="غیرفعال‌سازی حساب خودتان مجاز نیست">
         حساب خودتان
       </Button>
     );

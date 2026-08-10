@@ -23,9 +23,7 @@ describe('getSchools', () => {
               district: null,
               address: 'خیابان نمونه',
               phoneNumber: null,
-              educationOptions: [
-                { level: 'ابتدایی', grades: ['اول', 'دوم'] },
-              ],
+              educationOptions: [{ level: 'ابتدایی', grades: ['اول', 'دوم'] }],
             },
           ],
         }),
@@ -35,11 +33,13 @@ describe('getSchools', () => {
 
     await expect(getSchools()).resolves.toMatchObject({
       source: 'api',
-      schools: [{
-        id: 'school-1',
-        name: 'مدرسه واقعی',
-        educationOptions: [{ level: 'ابتدایی', grades: ['اول', 'دوم'] }],
-      }],
+      schools: [
+        {
+          id: 'school-1',
+          name: 'مدرسه واقعی',
+          educationOptions: [{ level: 'ابتدایی', grades: ['اول', 'دوم'] }],
+        },
+      ],
     });
   });
 

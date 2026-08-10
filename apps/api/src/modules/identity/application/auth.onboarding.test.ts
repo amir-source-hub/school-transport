@@ -30,8 +30,10 @@ function memoryDatabase() {
               limit: async (n: number) => rows(table).slice(0, n),
             }),
           };
-          result.then = (resolve: (value: unknown) => unknown, reject: (reason?: unknown) => unknown) =>
-            Promise.resolve(rows(table)).then(resolve, reject);
+          result.then = (
+            resolve: (value: unknown) => unknown,
+            reject: (reason?: unknown) => unknown,
+          ) => Promise.resolve(rows(table)).then(resolve, reject);
           return result;
         },
         innerJoin: () => query,
@@ -147,7 +149,9 @@ describe('first-time onboarding after OTP', () => {
     expect(result.user).toBeNull();
     if (result.user !== null) return;
     expect(result.onboarding.token).toBeTruthy();
-    expect(result.onboarding.expiresAt.getTime()).toBeGreaterThan(Date.now() + 604_800 * 1000 - 1000);
+    expect(result.onboarding.expiresAt.getTime()).toBeGreaterThan(
+      Date.now() + 604_800 * 1000 - 1000,
+    );
     expect(memory.rows(users)[0].accountStatus).toBe('PENDING');
     expect(memory.rows(onboardingSessions)).toHaveLength(1);
     expect(memory.rows(onboardingSessions)[0].status).toBe('PENDING');

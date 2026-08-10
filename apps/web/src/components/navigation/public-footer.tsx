@@ -43,7 +43,14 @@ export function PublicFooter() {
         <div className="pointer-events-none absolute inset-0 opacity-[0.03]" aria-hidden="true">
           <svg width="100%" height="100%" className="h-full w-full">
             <defs>
-              <pattern id="footer-grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+              <pattern
+                id="footer-grid"
+                x="0"
+                y="0"
+                width="60"
+                height="60"
+                patternUnits="userSpaceOnUse"
+              >
                 <circle cx="30" cy="30" r="1" fill="white" />
               </pattern>
             </defs>
@@ -52,7 +59,10 @@ export function PublicFooter() {
         </div>
       )}
       {!prefersReduced && (
-        <div className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-sun/30 to-transparent" aria-hidden="true" />
+        <div
+          className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-sun/30 to-transparent"
+          aria-hidden="true"
+        />
       )}
       <PageContainer className="relative z-10">
         <div className="grid gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
@@ -65,8 +75,8 @@ export function PublicFooter() {
               </div>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/50">
-              سامانه یکپارچه ثبت‌نام، قرارداد و پرداخت خدمات سرویس مدرسه.
-              از خانه تا مدرسه، همراه شما.
+              سامانه یکپارچه ثبت‌نام، قرارداد و پرداخت خدمات سرویس مدرسه. از خانه تا مدرسه، همراه
+              شما.
             </p>
             <Link
               href="/login"
@@ -99,12 +109,16 @@ export function PublicFooter() {
 
         {!prefersReduced && (
           <div className="relative h-px" aria-hidden="true">
-            <svg
-              viewBox="0 0 1200 1"
-              className="w-full h-px"
-              preserveAspectRatio="none"
-            >
-              <line x1="0" y1="0" x2="1200" y2="0" stroke="url(#footer-route-gradient)" strokeWidth="1" opacity="0.3" />
+            <svg viewBox="0 0 1200 1" className="w-full h-px" preserveAspectRatio="none">
+              <line
+                x1="0"
+                y1="0"
+                x2="1200"
+                y2="0"
+                stroke="url(#footer-route-gradient)"
+                strokeWidth="1"
+                opacity="0.3"
+              />
               <defs>
                 <linearGradient id="footer-route-gradient" x1="0" y1="0" x2="1" y2="0">
                   <stop offset="0%" stopColor="transparent" />

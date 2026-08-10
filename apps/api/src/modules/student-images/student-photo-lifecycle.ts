@@ -32,6 +32,8 @@ export function assertStudentPhotoTransition(
 ): void {
   if (current === next) return;
   if (!transitions[current]?.includes(next)) {
-    throw new ValidationError(`Student photo status transition ${current} → ${next} is not allowed.`);
+    throw new ValidationError(
+      `Student photo status transition ${current} → ${next} is not allowed.`,
+    );
   }
 }

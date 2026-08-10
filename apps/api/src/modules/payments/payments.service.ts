@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import {
   paymentTransactions,
@@ -18,7 +18,6 @@ import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './pa
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import { createHash } from 'node:crypto';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
-import { Optional } from '@nestjs/common';
 import { ConfigService } from '../../config/config.service';
 import { S3_CLIENT, S3Storage } from '../../infrastructure/s3/s3-storage.port';
 import { processReceiptImage } from './receipt-image-processor';
@@ -40,11 +39,14 @@ export const PAYMENT_TRANSACTION_HISTORY_LIMIT = 500;
 @Injectable()
 export class PaymentsService {
   constructor(
-    private readonly db: DatabaseService,
+    @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
     @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
+    @Inject(forwardRef(() => InAppNotificationService))
     private readonly notifications: InAppNotificationService,
     @Optional() @Inject(AUDIT_PORT) private readonly audit?: AuditPort,
-    @Optional() private readonly config?: ConfigService,
+    @Optional()
+    @Inject(forwardRef(() => ConfigService))
+    private readonly config?: ConfigService,
     @Optional() @Inject(S3_CLIENT) private readonly storage?: S3Storage,
   ) {}
 

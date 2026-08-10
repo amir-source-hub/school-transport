@@ -14,13 +14,7 @@ import {
   type AdminParent,
 } from './admin-families-api';
 
-export function ParentEditor({
-  familyId,
-  parent,
-}: {
-  familyId: string;
-  parent?: AdminParent;
-}) {
+export function ParentEditor({ familyId, parent }: { familyId: string; parent?: AdminParent }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -71,7 +65,10 @@ export function ParentEditor({
           {parent ? 'ویرایش والد' : 'افزودن والد'}
         </Button>
       </DialogTrigger>
-      <DialogContent title={parent ? 'ویرایش اطلاعات والد' : 'افزودن والد'} description="اطلاعات پدر یا مادر را ثبت کنید.">
+      <DialogContent
+        title={parent ? 'ویرایش اطلاعات والد' : 'افزودن والد'}
+        description="اطلاعات پدر یا مادر را ثبت کنید."
+      >
         <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
           {!parent && (
             <label className="text-sm font-bold sm:col-span-2">
@@ -80,7 +77,10 @@ export function ParentEditor({
                 className="mt-2"
                 value={form.parentType}
                 onValueChange={(value) => set('parentType', value)}
-                options={[{ value: 'FATHER', label: 'پدر' }, { value: 'MOTHER', label: 'مادر' }]}
+                options={[
+                  { value: 'FATHER', label: 'پدر' },
+                  { value: 'MOTHER', label: 'مادر' },
+                ]}
               />
             </label>
           )}
@@ -118,8 +118,12 @@ export function ParentEditor({
           </label>
           {error && <p className="text-sm text-danger sm:col-span-2">{error}</p>}
           <div className="flex gap-2 sm:col-span-2">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>انصراف</Button>
-            <Button type="submit" loading={pending}>ذخیره</Button>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              انصراف
+            </Button>
+            <Button type="submit" loading={pending}>
+              ذخیره
+            </Button>
           </div>
         </form>
       </DialogContent>
@@ -127,13 +131,7 @@ export function ParentEditor({
   );
 }
 
-export function DeleteParentButton({
-  familyId,
-  parentId,
-}: {
-  familyId: string;
-  parentId: string;
-}) {
+export function DeleteParentButton({ familyId, parentId }: { familyId: string; parentId: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();

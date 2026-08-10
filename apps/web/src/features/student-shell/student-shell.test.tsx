@@ -15,27 +15,24 @@ describe('student mobile shell', () => {
     navigation.pathname = '/student/dashboard';
   });
 
-  it.each([320, 360, 390, 768])(
-    'reserves dock and safe-area space at a %ipx viewport',
-    (width) => {
-      Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
-      render(
-        <StudentShell>
-          <button type="button">آخرین اقدام</button>
-        </StudentShell>,
-      );
+  it.each([320, 360, 390, 768])('reserves dock and safe-area space at a %ipx viewport', (width) => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
+    render(
+      <StudentShell>
+        <button type="button">آخرین اقدام</button>
+      </StudentShell>,
+    );
 
-      const main = screen.getByRole('main');
-      const dock = screen.getByRole('navigation', { name: 'ناوبری سریع موبایل' });
-      expect(main.className).toContain(
-        'pb-[calc(var(--parent-mobile-dock-height)+env(safe-area-inset-bottom)+1rem)]',
-      );
-      expect(main.className).toContain('[&_:focus]:scroll-mb-');
-      expect(dock.className).toContain('pb-[env(safe-area-inset-bottom)]');
-      expect(dock.className).toContain('min-h-[calc(var(--parent-mobile-dock-height)');
-      expect(within(dock).getAllByRole('link')).toHaveLength(4);
-    },
-  );
+    const main = screen.getByRole('main');
+    const dock = screen.getByRole('navigation', { name: 'ناوبری سریع موبایل' });
+    expect(main.className).toContain(
+      'pb-[calc(var(--parent-mobile-dock-height)+env(safe-area-inset-bottom)+1rem)]',
+    );
+    expect(main.className).toContain('[&_:focus]:scroll-mb-');
+    expect(dock.className).toContain('pb-[env(safe-area-inset-bottom)]');
+    expect(dock.className).toContain('min-h-[calc(var(--parent-mobile-dock-height)');
+    expect(within(dock).getAllByRole('link')).toHaveLength(4);
+  });
 
   it('matches only the selected route segment and marks nested dock routes active', () => {
     expect(isStudentRouteActive('/student/students/42', '/student/students')).toBe(true);
@@ -47,7 +44,10 @@ describe('student mobile shell', () => {
 
     const dock = screen.getByRole('navigation', { name: 'ناوبری سریع موبایل' });
     expect(screen.getAllByRole('link', { name: 'دانش‌آموزان' })).toHaveLength(2);
-    expect(dock.querySelector('a[href="/student/students"]')).toHaveAttribute('aria-current', 'page');
+    expect(dock.querySelector('a[href="/student/students"]')).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     expect(dock.querySelector('a[href="/student/dashboard"]')).not.toHaveAttribute('aria-current');
   });
 

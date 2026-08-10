@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import {
   contracts,
@@ -22,7 +22,8 @@ export const ADMIN_CONTRACT_LIST_LIMIT = 500;
 @Injectable()
 export class ContractsService {
   constructor(
-    private readonly db: DatabaseService,
+    @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
+    @Inject(forwardRef(() => InAppNotificationService))
     private readonly notifications: InAppNotificationService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}

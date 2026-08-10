@@ -21,19 +21,58 @@ export function ReceiptPreviewDialog({ submissionId }: { submissionId: string })
   const [open, setOpen] = useState(false);
   const [viewUrl, setViewUrl] = useState<string>();
   const [error, setError] = useState<string>();
-  return <Dialog open={open} onOpenChange={async (next) => {
-    setOpen(next); if (!next || viewUrl) return;
-    try { setViewUrl((await getReceiptView(submissionId)).viewUrl); } catch (caught) { setError(getApiErrorFeedback(caught).message); }
-  }}>
-    <DialogTrigger asChild><Button variant="ghost">مشاهده رسید</Button></DialogTrigger>
-    <DialogContent title="تصویر رسید پرداخت" description="این پیوند کوتاه‌عمر و فقط برای بررسی مجاز است.">
-      {viewUrl ? <Image src={viewUrl} alt="رسید پرداخت ارسالی" width={1200} height={1200} unoptimized className="max-h-[65vh] w-full object-contain" /> : <p role="status" className="text-sm text-muted">در حال دریافت رسید…</p>}
-      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-    </DialogContent>
-  </Dialog>;
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={async (next) => {
+        setOpen(next);
+        if (!next || viewUrl) return;
+        try {
+          setViewUrl((await getReceiptView(submissionId)).viewUrl);
+        } catch (caught) {
+          setError(getApiErrorFeedback(caught).message);
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="ghost">مشاهده رسید</Button>
+      </DialogTrigger>
+      <DialogContent
+        title="تصویر رسید پرداخت"
+        description="این پیوند کوتاه‌عمر و فقط برای بررسی مجاز است."
+      >
+        {viewUrl ? (
+          <Image
+            src={viewUrl}
+            alt="رسید پرداخت ارسالی"
+            width={1200}
+            height={1200}
+            sizes="(max-width: 640px) 100vw, 640px"
+            unoptimized
+            className="max-h-[65vh] w-full object-contain"
+          />
+        ) : (
+          <p role="status" className="text-sm text-muted">
+            در حال دریافت رسید…
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
-export function ApprovePaymentDialog({ paymentId, version }: { paymentId: string; version: number }) {
+export function ApprovePaymentDialog({
+  paymentId,
+  version,
+}: {
+  paymentId: string;
+  version: number;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -198,7 +237,13 @@ export function ConfigureInstallmentsDialog({
   );
 }
 
-export function RejectPaymentDialog({ paymentId, version }: { paymentId: string; version: number }) {
+export function RejectPaymentDialog({
+  paymentId,
+  version,
+}: {
+  paymentId: string;
+  version: number;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');

@@ -201,4 +201,3 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
     </div>
   );
 }
-

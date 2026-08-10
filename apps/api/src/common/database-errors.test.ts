@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { DATABASE_ERROR_MARKER, markDatabaseError, translateDatabaseError } from './database-errors';
+import {
+  DATABASE_ERROR_MARKER,
+  markDatabaseError,
+  translateDatabaseError,
+} from './database-errors';
 
 const translate = (code: string, constraint?: string) =>
   translateDatabaseError({ code, constraint, message: 'SQL and private values must not leak' });

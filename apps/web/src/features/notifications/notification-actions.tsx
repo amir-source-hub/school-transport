@@ -29,7 +29,11 @@ export function MarkReadButton({ id }: { id: string }) {
       >
         خواندم
       </Button>
-      {error && <span role="alert" className="text-xs text-danger">{error}</span>}
+      {error && (
+        <span role="alert" className="text-xs text-danger">
+          {error}
+        </span>
+      )}
     </>
   );
 }
@@ -58,7 +62,11 @@ export function MarkAllReadButton() {
       >
         خواندن همه
       </Button>
-      {error && <span role="alert" className="text-xs text-danger">{error}</span>}
+      {error && (
+        <span role="alert" className="text-xs text-danger">
+          {error}
+        </span>
+      )}
     </>
   );
 }

@@ -46,4 +46,3 @@ describe('JalaliDateInput', () => {
     expect(input).not.toHaveAttribute('aria-describedby');
   });
 });
-

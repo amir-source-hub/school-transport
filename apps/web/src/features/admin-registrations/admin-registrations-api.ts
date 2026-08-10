@@ -113,9 +113,7 @@ export type AdminEnrollmentListPagination = {
   totalPages: number;
 };
 
-export async function getAdminRegistrations(
-  params: AdminEnrollmentListParams = {},
-): Promise<{
+export async function getAdminRegistrations(params: AdminEnrollmentListParams = {}): Promise<{
   registrations: RegistrationDetail[];
   pagination: AdminEnrollmentListPagination;
 }> {

@@ -18,9 +18,10 @@ function databaseWith(rows: unknown[][]): DatabaseService {
 }
 
 function provider() {
-  const send = vi.fn<[Parameters<SmsProvider['send']>[0]], ReturnType<SmsProvider['send']>>(
-    async (_input) => ({ providerMessageId: '42', status: 1 }),
-  );
+  const send = vi.fn<SmsProvider['send']>(async (_input) => ({
+    providerMessageId: '42',
+    status: 1,
+  }));
   return { adapter: { send } satisfies SmsProvider, send };
 }
 

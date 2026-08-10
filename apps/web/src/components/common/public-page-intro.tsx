@@ -30,12 +30,7 @@ export function PublicPageHero({
         className,
       )}
     >
-      <PageContainer
-        className={cn(
-          'py-12 sm:py-16',
-          variant === 'compact' && 'py-8 sm:py-10',
-        )}
-      >
+      <PageContainer className={cn('py-12 sm:py-16', variant === 'compact' && 'py-8 sm:py-10')}>
         {eyebrow && (
           <p
             className={cn(

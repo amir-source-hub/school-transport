@@ -1,5 +1,11 @@
 # Explicit local-development override. Never use this file for production deployment.
 services:
+  postgres:
+    ports:
+      - '127.0.0.1:5433:5432'
+  redis:
+    ports:
+      - '127.0.0.1:6379:6379'
   api:
     environment:
       NODE_ENV: development
@@ -9,7 +15,7 @@ services:
       LOG_LEVEL: debug
       OTP_PROVIDER: console
       PAYMENT_GATEWAY_PROVIDER: mock
-      QUEUE_REQUIRED: "false"
+      QUEUE_REQUIRED: 'false'
   worker:
     environment:
       NODE_ENV: development
@@ -19,9 +25,9 @@ services:
       LOG_LEVEL: debug
       OTP_PROVIDER: console
       PAYMENT_GATEWAY_PROVIDER: mock
-      QUEUE_REQUIRED: "true"
+      QUEUE_REQUIRED: 'true'
   bootstrap:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://school_transport:school_transport_dev@postgres:5432/school_transport
-      SEED_DEMO_DATA: "true"
+      SEED_DEMO_DATA: 'true'

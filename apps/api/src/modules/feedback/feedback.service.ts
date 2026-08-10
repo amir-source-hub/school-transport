@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { and, count, desc, eq, lte, sql } from 'drizzle-orm';
 import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { ConflictError, NotFoundError } from '../../common/errors';
@@ -11,7 +11,8 @@ import type { CreateFeedbackDto, FeedbackQueryDto } from './feedback.dto';
 @Injectable()
 export class FeedbackService {
   constructor(
-    private readonly db: DatabaseService,
+    @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
+    @Inject(forwardRef(() => InAppNotificationService))
     private readonly notifications: InAppNotificationService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}

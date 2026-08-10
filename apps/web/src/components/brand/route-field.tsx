@@ -20,21 +20,9 @@ export function RouteField({
       )}
       aria-hidden="true"
     >
-      <svg
-        width="100%"
-        height="100%"
-        className="h-full w-full"
-        preserveAspectRatio="none"
-      >
+      <svg width="100%" height="100%" className="h-full w-full" preserveAspectRatio="none">
         <defs>
-          <pattern
-            id="route-grid"
-            x="0"
-            y="0"
-            width="80"
-            height="80"
-            patternUnits="userSpaceOnUse"
-          >
+          <pattern id="route-grid" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
             <circle cx="40" cy="40" r="1.5" fill="currentColor" />
           </pattern>
         </defs>

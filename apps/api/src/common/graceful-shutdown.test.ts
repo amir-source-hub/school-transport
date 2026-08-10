@@ -8,7 +8,10 @@ describe('GracefulShutdownService', () => {
     const readiness = { beginDraining: vi.fn() };
     const queue = { onModuleDestroy: vi.fn().mockResolvedValue(undefined) };
     const shutdown = new GracefulShutdownService(
-      database as never, logger as never, readiness as never, queue as never,
+      database as never,
+      logger as never,
+      readiness as never,
+      queue as never,
     );
     await Promise.all([
       shutdown.onApplicationShutdown('SIGTERM'),

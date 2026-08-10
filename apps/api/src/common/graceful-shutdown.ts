@@ -22,7 +22,10 @@ export class GracefulShutdownService implements OnApplicationShutdown {
 
   private async shutdown(signal?: string) {
     this.readiness.beginDraining();
-    this.logger.log({ event: 'application_shutdown_started', signal }, GracefulShutdownService.name);
+    this.logger.log(
+      { event: 'application_shutdown_started', signal },
+      GracefulShutdownService.name,
+    );
     await this.queue.onModuleDestroy();
     this.logger.log({ event: 'queue_workers_drained' }, GracefulShutdownService.name);
     await this.database.onModuleDestroy();

@@ -158,7 +158,9 @@ export const offlinePaymentDestinations = pgTable(
     accountNumber: varchar('account_number', { length: 40 }),
     instructions: text('instructions').notNull(),
     isActive: boolean('is_active').notNull().default(true),
-    createdByAdminId: uuid('created_by_admin_id').notNull().references(() => adminUsers.id),
+    createdByAdminId: uuid('created_by_admin_id')
+      .notNull()
+      .references(() => adminUsers.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -175,10 +177,18 @@ export const offlinePaymentSubmissions = pgTable(
   'offline_payment_submissions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    paymentScheduleItemId: uuid('payment_schedule_item_id').notNull().references(() => paymentScheduleItems.id),
-    paymentPlanId: uuid('payment_plan_id').notNull().references(() => paymentPlans.id),
-    payerUserId: uuid('payer_user_id').notNull().references(() => users.id),
-    destinationId: uuid('destination_id').notNull().references(() => offlinePaymentDestinations.id),
+    paymentScheduleItemId: uuid('payment_schedule_item_id')
+      .notNull()
+      .references(() => paymentScheduleItems.id),
+    paymentPlanId: uuid('payment_plan_id')
+      .notNull()
+      .references(() => paymentPlans.id),
+    payerUserId: uuid('payer_user_id')
+      .notNull()
+      .references(() => users.id),
+    destinationId: uuid('destination_id')
+      .notNull()
+      .references(() => offlinePaymentDestinations.id),
     destinationSnapshot: jsonb('destination_snapshot').notNull(),
     submittedAmount: integer('submitted_amount').notNull(),
     paidAt: timestamp('paid_at', { withTimezone: true }).notNull(),
@@ -206,7 +216,10 @@ export const offlinePaymentSubmissions = pgTable(
   (table) => ({
     ownerIdx: index('idx_offline_submissions_owner').on(table.payerUserId, table.createdAt),
     reviewIdx: index('idx_offline_submissions_review').on(table.status, table.createdAt),
-    idempotencyIdx: uniqueIndex('idx_offline_submissions_idempotency').on(table.payerUserId, table.idempotencyKey),
+    idempotencyIdx: uniqueIndex('idx_offline_submissions_idempotency').on(
+      table.payerUserId,
+      table.idempotencyKey,
+    ),
     onePendingIdx: uniqueIndex('idx_offline_submissions_one_active')
       .on(table.paymentScheduleItemId)
       .where(sql`${table.status} IN ('DRAFT', 'PENDING_REVIEW')`),
@@ -214,8 +227,17 @@ export const offlinePaymentSubmissions = pgTable(
       .on(table.paymentScheduleItemId)
       .where(sql`${table.status} = 'APPROVED'`),
     positiveAmount: check('offline_submissions_amount_positive', sql`${table.submittedAmount} > 0`),
-    validLastFour: check('offline_submissions_last_four', sql`${table.sourceCardLastFour} IS NULL OR ${table.sourceCardLastFour} ~ '^[0-9]{4}$'`),
-    validStatus: check('offline_submissions_valid_status', sql`${table.status} IN ('DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN', 'SUPERSEDED')`),
-    receiptRequiredForReview: check('offline_submissions_receipt_required', sql`${table.status} = 'DRAFT' OR (${table.receiptObjectKey} IS NOT NULL AND ${table.receiptChecksum} IS NOT NULL)`),
+    validLastFour: check(
+      'offline_submissions_last_four',
+      sql`${table.sourceCardLastFour} IS NULL OR ${table.sourceCardLastFour} ~ '^[0-9]{4}$'`,
+    ),
+    validStatus: check(
+      'offline_submissions_valid_status',
+      sql`${table.status} IN ('DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN', 'SUPERSEDED')`,
+    ),
+    receiptRequiredForReview: check(
+      'offline_submissions_receipt_required',
+      sql`${table.status} = 'DRAFT' OR (${table.receiptObjectKey} IS NOT NULL AND ${table.receiptChecksum} IS NOT NULL)`,
+    ),
   }),
 );

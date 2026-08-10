@@ -11,7 +11,10 @@ export const metadata = { title: 'پرداخت‌ها' };
 export const dynamic = 'force-dynamic';
 
 export default async function PaymentsPage() {
-  const [overviews, offlineSubmissions] = await Promise.all([getPayments(), getOfflineSubmissions()]);
+  const [overviews, offlineSubmissions] = await Promise.all([
+    getPayments(),
+    getOfflineSubmissions(),
+  ]);
   const pendingOfflineItemIds = new Set(
     offlineSubmissions
       .filter((submission) => submission.status === 'PENDING_REVIEW')
@@ -107,9 +110,15 @@ export default async function PaymentsPage() {
             {offlineSubmissions.map((submission) => (
               <div key={submission.id} className="rounded-xl border border-border p-4 text-sm">
                 <p className="font-bold">
-                  {submission.status === 'PENDING_REVIEW' ? 'در انتظار بررسی' : submission.status === 'APPROVED' ? 'تأییدشده' : 'نیازمند اصلاح'}
+                  {submission.status === 'PENDING_REVIEW'
+                    ? 'در انتظار بررسی'
+                    : submission.status === 'APPROVED'
+                      ? 'تأییدشده'
+                      : 'نیازمند اصلاح'}
                 </p>
-                {submission.rejectionReason && <p className="mt-2 text-danger">{submission.rejectionReason}</p>}
+                {submission.rejectionReason && (
+                  <p className="mt-2 text-danger">{submission.rejectionReason}</p>
+                )}
               </div>
             ))}
           </div>

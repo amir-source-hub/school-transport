@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { and, count, desc, eq, gt, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import { ConfigService } from '../../config/config.service';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '../../common/errors';
@@ -30,8 +30,9 @@ function keyOfPrefix(prefix: string, extension: string): string {
 @Injectable()
 export class StudentPhotosService {
   constructor(
-    private readonly db: DatabaseService,
-    private readonly config: ConfigService,
+    @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
+    @Inject(forwardRef(() => ConfigService)) private readonly config: ConfigService,
+    @Inject(forwardRef(() => InAppNotificationService))
     private readonly notifications: InAppNotificationService,
     @Inject(S3_CLIENT) private readonly storage: S3Storage,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,

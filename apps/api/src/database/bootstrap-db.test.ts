@@ -14,15 +14,20 @@ describe('bootstrapDatabase', () => {
     const migrate = vi.fn().mockResolvedValue(undefined);
     const seed = vi.fn().mockResolvedValue(undefined);
     await bootstrapDatabase(
-      { NODE_ENV: 'development', DATABASE_URL: 'db', SEED_DEMO_DATA: 'true' }, migrate, seed,
+      { NODE_ENV: 'development', DATABASE_URL: 'db', SEED_DEMO_DATA: 'true' },
+      migrate,
+      seed,
     );
     expect(seed).toHaveBeenCalledWith('db');
   });
 
   it('refuses explicit demo seeding in production', async () => {
-    await expect(bootstrapDatabase(
-      { NODE_ENV: 'production', DATABASE_URL: 'db', SEED_DEMO_DATA: 'true' },
-      vi.fn(), vi.fn(),
-    )).rejects.toThrow('forbidden');
+    await expect(
+      bootstrapDatabase(
+        { NODE_ENV: 'production', DATABASE_URL: 'db', SEED_DEMO_DATA: 'true' },
+        vi.fn(),
+        vi.fn(),
+      ),
+    ).rejects.toThrow('forbidden');
   });
 });

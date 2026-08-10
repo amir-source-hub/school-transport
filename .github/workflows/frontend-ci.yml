@@ -57,7 +57,7 @@ jobs:
           version: 10.29.2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Check repository formatting without rewriting files
@@ -80,7 +80,7 @@ jobs:
           version: 10.29.2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter web lint
@@ -110,11 +110,16 @@ jobs:
           version: 10.29.2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
       - name: Run Playwright project with installed Chrome
         working-directory: apps/web
+        env:
+          E2E_BROWSER_CHANNEL: chromium
         run: pnpm test:e2e --project=${{ matrix.project }}
       - name: Upload browser failure artifacts
         if: failure()
@@ -140,7 +145,7 @@ jobs:
           version: 10.29.2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Install Chromium
@@ -163,6 +168,8 @@ jobs:
         run: for attempt in {1..60}; do curl --fail --silent http://127.0.0.1:3000/ && exit 0; sleep 1; done; exit 1
       - name: Run real-browser performance budgets
         working-directory: apps/web
+        env:
+          PERFORMANCE_BROWSER_CHANNEL: chromium
         run: pnpm performance:browser -- --scope=${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'full' || 'smoke' }}
       - name: Upload performance reports
         if: always()

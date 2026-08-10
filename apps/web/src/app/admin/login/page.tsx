@@ -76,8 +76,8 @@ export default function AdminLoginPage() {
           <p className="text-xs font-black text-primary">ورود مدیریت</p>
           <h1 className="mt-2 text-2xl font-black tracking-tight">ورود مدیران سامانه</h1>
           <p className="mt-3 text-sm leading-7 text-muted">
-            نام کاربری و رمز عبور را وارد کنید؛ سپس کد تأیید پیامک‌شده را برای ورود دو مرحله‌ای
-            وارد کنید.
+            نام کاربری و رمز عبور را وارد کنید؛ سپس کد تأیید پیامک‌شده را برای ورود دو مرحله‌ای وارد
+            کنید.
           </p>
           <div className="mt-7">
             {featureFlags.adminTwoFactor ? (

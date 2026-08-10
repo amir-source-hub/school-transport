@@ -86,7 +86,9 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           city: 'تهران',
           district: '2',
           address: 'سعادت‌آباد، بلوار دریا',
-          educationOptions: [{ level: 'ابتدایی', grades: ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم'] }],
+          educationOptions: [
+            { level: 'ابتدایی', grades: ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم'] },
+          ],
         },
         {
           id: ids.school2,
@@ -258,11 +260,49 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
     await db
       .insert(paymentScheduleItems)
       .values([
-        { id: ids.prepayment, paymentPlanId: ids.plan, itemType: 'PREPAYMENT', sequenceNumber: 0, amount: 40_000_000, dueDate: new Date('2026-07-10T08:00:00Z'), itemStatus: 'PAID', paidAmount: 40_000_000, paidAt: new Date('2026-07-08T08:00:00Z') },
-        { id: ids.installment1, paymentPlanId: ids.plan, itemType: 'INSTALLMENT', sequenceNumber: 1, amount: 20_000_000, dueDate: new Date('2026-09-23T08:00:00Z') },
-        { id: ids.installment2, paymentPlanId: ids.plan, itemType: 'INSTALLMENT', sequenceNumber: 2, amount: 20_000_000, dueDate: new Date('2026-10-23T08:00:00Z') },
-        { id: ids.installment3, paymentPlanId: ids.plan, itemType: 'INSTALLMENT', sequenceNumber: 3, amount: 20_000_000, dueDate: new Date('2026-11-22T08:00:00Z') },
-        { id: ids.installment4, paymentPlanId: ids.plan, itemType: 'INSTALLMENT', sequenceNumber: 4, amount: 20_000_000, dueDate: new Date('2026-12-22T08:00:00Z') },
+        {
+          id: ids.prepayment,
+          paymentPlanId: ids.plan,
+          itemType: 'PREPAYMENT',
+          sequenceNumber: 0,
+          amount: 40_000_000,
+          dueDate: new Date('2026-07-10T08:00:00Z'),
+          itemStatus: 'PAID',
+          paidAmount: 40_000_000,
+          paidAt: new Date('2026-07-08T08:00:00Z'),
+        },
+        {
+          id: ids.installment1,
+          paymentPlanId: ids.plan,
+          itemType: 'INSTALLMENT',
+          sequenceNumber: 1,
+          amount: 20_000_000,
+          dueDate: new Date('2026-09-23T08:00:00Z'),
+        },
+        {
+          id: ids.installment2,
+          paymentPlanId: ids.plan,
+          itemType: 'INSTALLMENT',
+          sequenceNumber: 2,
+          amount: 20_000_000,
+          dueDate: new Date('2026-10-23T08:00:00Z'),
+        },
+        {
+          id: ids.installment3,
+          paymentPlanId: ids.plan,
+          itemType: 'INSTALLMENT',
+          sequenceNumber: 3,
+          amount: 20_000_000,
+          dueDate: new Date('2026-11-22T08:00:00Z'),
+        },
+        {
+          id: ids.installment4,
+          paymentPlanId: ids.plan,
+          itemType: 'INSTALLMENT',
+          sequenceNumber: 4,
+          amount: 20_000_000,
+          dueDate: new Date('2026-12-22T08:00:00Z'),
+        },
       ])
       .onConflictDoNothing();
     await db
@@ -291,7 +331,11 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         contractNumber: 'ST-1405-0001',
         contractStatus: 'ACCEPTED',
         selectedAddressId: ids.address,
-        contractDataSnapshot: JSON.stringify({ academicYear: '1405-1406', serviceType: 'ROUND_TRIP', totalAmount: 120_000_000 }),
+        contractDataSnapshot: JSON.stringify({
+          academicYear: '1405-1406',
+          serviceType: 'ROUND_TRIP',
+          totalAmount: 120_000_000,
+        }),
         versionNumber: 1,
         generatedByAdminId: ids.admin,
         generatedAt: new Date('2026-07-06T08:00:00Z'),

@@ -71,7 +71,10 @@ export function presignedUrl(input: {
   } = input;
   const url = new URL(endpoint.replace(/\/$/, ''));
   const host = url.host;
-  const amzDate = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  const amzDate = now
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}Z$/, 'Z');
   const dateStamp = amzDate.slice(0, 8);
   const scope = `${dateStamp}/${region}/s3/aws4_request`;
   const path = `/${[bucket, ...key.split('/')]
@@ -81,10 +84,9 @@ export function presignedUrl(input: {
 
   const headers: Array<[string, string]> = [['host', host]];
   if (contentType) headers.push(['content-type', contentType]);
+  headers.sort(([left], [right]) => left.localeCompare(right));
   const signedHeaders = headers.map(([name]) => name).join(';');
-  const canonicalHeaders = headers
-    .map(([name, value]) => `${name}:${value.trim()}\n`)
-    .join('');
+  const canonicalHeaders = headers.map(([name, value]) => `${name}:${value.trim()}\n`).join('');
 
   const query = canonicalQuery([
     ['X-Amz-Algorithm', 'AWS4-HMAC-SHA256'],
@@ -149,8 +151,29 @@ export class S3Client {
     const url = this.sign('HEAD', key, 60);
     const response = await fetch(url, { method: 'HEAD' });
     if (!response.ok) throw new S3StorageError(`Object ${key} not available.`);
-    const size = Number(response.headers.get('content-length') ?? '0');
-    const etag = response.headers.get('etag') ?? '';
+    const contentLength = response.headers.get('content-length');
+    let size = contentLength === null ? null : Number(contentLength);
+    let etag = response.headers.get('etag') ?? '';
+
+    // Some S3-compatible providers, including Arvan, omit Content-Length on HEAD.
+    // A one-byte ranged GET exposes the total object size in Content-Range.
+    if (size === null || !Number.isFinite(size)) {
+      const rangeUrl = this.sign('GET', key, 60);
+      const rangeResponse = await fetch(rangeUrl, {
+        headers: { Range: 'bytes=0-0' },
+      });
+      if (!rangeResponse.ok) throw new S3StorageError(`Object ${key} metadata unavailable.`);
+      const contentRange = rangeResponse.headers.get('content-range');
+      const totalMatch = contentRange?.match(/\/(\d+)$/);
+      const fallbackLength = rangeResponse.headers.get('content-length');
+      size = totalMatch ? Number(totalMatch[1]) : Number(fallbackLength ?? Number.NaN);
+      etag ||= rangeResponse.headers.get('etag') ?? '';
+      await rangeResponse.body?.cancel();
+    }
+
+    if (size === null || !Number.isFinite(size)) {
+      throw new S3StorageError(`Object ${key} size unavailable.`);
+    }
     return { size, etag };
   }
 

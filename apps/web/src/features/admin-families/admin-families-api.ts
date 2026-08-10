@@ -18,32 +18,53 @@ export const familyDetailSchema = z.object({
   studentCount: z.number(),
   status: z.string(),
   createdAt: z.string().optional(),
-  parents: z.array(z.object({
-    id: z.string(),
-    parentType: z.string(),
-    firstName: z.string(),
-    lastName: z.string(),
-    nationalId: z.string(),
-    phoneNumber: z.string(),
-    isPrimaryContact: z.boolean(),
-  })),
-  addresses: z.array(z.object({
-    id: z.string(), title: z.string(), province: z.string(), city: z.string(),
-    district: z.string().nullable(), streetAddress: z.string(), postalCode: z.string().nullable(),
-    latitude: z.number().nullable(), longitude: z.number().nullable(), isActive: z.boolean(),
-  })),
-  emergencyContacts: z.array(z.object({
-    id: z.string(), firstName: z.string(), lastName: z.string(), relationship: z.string(),
-    phoneNumber: z.string(), isActive: z.boolean(),
-  })),
-  students: z.array(z.object({
-    id: z.string(),
-    firstName: z.string(),
-    lastName: z.string(),
-    schoolName: z.string().nullable(),
-    grade: z.string().nullable(),
-    status: z.string(),
-  })).optional(),
+  parents: z.array(
+    z.object({
+      id: z.string(),
+      parentType: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      nationalId: z.string(),
+      phoneNumber: z.string(),
+      isPrimaryContact: z.boolean(),
+    }),
+  ),
+  addresses: z.array(
+    z.object({
+      id: z.string(),
+      title: z.string(),
+      province: z.string(),
+      city: z.string(),
+      district: z.string().nullable(),
+      streetAddress: z.string(),
+      postalCode: z.string().nullable(),
+      latitude: z.number().nullable(),
+      longitude: z.number().nullable(),
+      isActive: z.boolean(),
+    }),
+  ),
+  emergencyContacts: z.array(
+    z.object({
+      id: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      relationship: z.string(),
+      phoneNumber: z.string(),
+      isActive: z.boolean(),
+    }),
+  ),
+  students: z
+    .array(
+      z.object({
+        id: z.string(),
+        firstName: z.string(),
+        lastName: z.string(),
+        schoolName: z.string().nullable(),
+        grade: z.string().nullable(),
+        status: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 export const familiesSchema = z.array(familySchema);
@@ -123,13 +144,10 @@ export async function createAdminFamilyEnrollment(
   input: GuidedEnrollmentInput,
   actions?: AdminEnrollmentActions,
 ) {
-  return apiRequest<AdminFamilyEnrollmentResult>(
-    `/admin/enrollments/families/${familyId}/guided`,
-    {
-      method: 'POST',
-      body: actions ? { ...input, adminActions: actions } : input,
-    },
-  );
+  return apiRequest<AdminFamilyEnrollmentResult>(`/admin/enrollments/families/${familyId}/guided`, {
+    method: 'POST',
+    body: actions ? { ...input, adminActions: actions } : input,
+  });
 }
 
 export type AdminAddressInput = {

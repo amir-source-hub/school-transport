@@ -4,47 +4,78 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OfflinePaymentForm } from './offline-payment-form';
 
 const api = vi.hoisted(() => ({
-  getOfflineDestination: vi.fn(), submitOfflinePayment: vi.fn(),
-  authorizeReceiptUpload: vi.fn(), completeReceiptUpload: vi.fn(),
+  getOfflineDestination: vi.fn(),
+  submitOfflinePayment: vi.fn(),
+  authorizeReceiptUpload: vi.fn(),
+  completeReceiptUpload: vi.fn(),
 }));
 vi.mock('./payments-api', () => api);
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 class UploadRequest {
-  upload: { onprogress?: (event: { lengthComputable: boolean; loaded: number; total: number }) => void } = {};
+  upload: {
+    onprogress?: (event: { lengthComputable: boolean; loaded: number; total: number }) => void;
+  } = {};
   status = 200;
   onload?: () => void;
   onerror?: () => void;
   onabort?: () => void;
   open() {}
   setRequestHeader() {}
-  send() { this.upload.onprogress?.({ lengthComputable: true, loaded: 10, total: 10 }); this.onload?.(); }
-  abort() { this.onabort?.(); }
+  send() {
+    this.upload.onprogress?.({ lengthComputable: true, loaded: 10, total: 10 });
+    this.onload?.();
+  }
+  abort() {
+    this.onabort?.();
+  }
 }
 
 describe('OfflinePaymentForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    api.getOfflineDestination.mockResolvedValue({ id: 'd1', version: 1, accountOwner: 'شرکت', bankName: 'بانک', cardNumber: '6037991234567890', iban: null, accountNumber: null, instructions: 'رسید را ثبت کنید.' });
+    api.getOfflineDestination.mockResolvedValue({
+      id: 'd1',
+      version: 1,
+      accountOwner: 'شرکت',
+      bankName: 'بانک',
+      cardNumber: '6037991234567890',
+      iban: null,
+      accountNumber: null,
+      instructions: 'رسید را ثبت کنید.',
+    });
     api.submitOfflinePayment.mockResolvedValue('submission-1');
     api.authorizeReceiptUpload.mockResolvedValue('https://storage.example/upload');
     api.completeReceiptUpload.mockResolvedValue(undefined);
     vi.stubGlobal('XMLHttpRequest', UploadRequest);
-    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:receipt') });
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => 'blob:receipt'),
+    });
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
   });
 
   it('shows the central destination and uploads required receipt evidence before completion', async () => {
     const user = userEvent.setup();
-    render(<OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت — ۴٬۰۰۰٬۰۰۰ تومان' }]} />);
+    render(
+      <OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت — ۴٬۰۰۰٬۰۰۰ تومان' }]} />,
+    );
     expect(await screen.findByText('6037991234567890')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('تاریخ پرداخت (شمسی)'), { target: { value: '1405/05/18' } });
+    fireEvent.change(screen.getByLabelText('تاریخ پرداخت (شمسی)'), {
+      target: { value: '1405/05/18' },
+    });
     await user.type(screen.getByLabelText('شماره پیگیری بانکی'), '123456');
-    const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'receipt.jpg', { type: 'image/jpeg' });
+    const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'receipt.jpg', {
+      type: 'image/jpeg',
+    });
     await user.upload(screen.getByLabelText('تصویر رسید (JPEG یا PNG)'), file);
     expect(screen.getByAltText('پیش‌نمایش رسید پرداخت')).toBeInTheDocument();
-    fireEvent.submit(screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' }).closest('form')!);
-    await waitFor(() => expect(api.completeReceiptUpload).toHaveBeenCalledWith('submission-1', 'panel'));
+    fireEvent.submit(
+      screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' }).closest('form')!,
+    );
+    await waitFor(() =>
+      expect(api.completeReceiptUpload).toHaveBeenCalledWith('submission-1', 'panel'),
+    );
     expect(api.authorizeReceiptUpload).toHaveBeenCalledWith('submission-1', file, 'panel');
   });
 });

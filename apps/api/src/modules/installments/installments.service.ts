@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import {
   paymentPlans,
@@ -13,7 +13,7 @@ import { createPaymentPlanInTransaction, PaymentPlanType } from '../../database/
 
 @Injectable()
 export class InstallmentsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(@Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService) {}
 
   async createPlan(priceId: string, planType: string): Promise<string> {
     const normalizedType: PaymentPlanType =

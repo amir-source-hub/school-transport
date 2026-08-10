@@ -59,13 +59,13 @@ jobs:
           version: 10.29.2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @school-transport/api db:migrate:runtime
       - run: pnpm --filter @school-transport/api lint
       - run: pnpm --filter @school-transport/api typecheck
-      - run: pnpm --filter @school-transport/api test
       - run: pnpm --filter @school-transport/api build
+      - run: pnpm --filter @school-transport/api test
       - run: pnpm --filter @school-transport/api contract:check
       - run: pnpm audit --audit-level high

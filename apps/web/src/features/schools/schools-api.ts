@@ -11,10 +11,12 @@ const schoolSchema = z.object({
   district: z.string().nullable(),
   address: z.string(),
   phoneNumber: z.string().nullable(),
-  educationOptions: z.array(z.object({
-    level: z.string(),
-    grades: z.array(z.string()),
-  })),
+  educationOptions: z.array(
+    z.object({
+      level: z.string(),
+      grades: z.array(z.string()),
+    }),
+  ),
 });
 
 export type School = z.infer<typeof schoolSchema>;

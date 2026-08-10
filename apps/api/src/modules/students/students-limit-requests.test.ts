@@ -9,8 +9,7 @@ function buildChain(rows: unknown[]) {
     where: vi.fn(),
     for: vi.fn(),
     limit: vi.fn(),
-    then: (onFulfilled: (value: unknown) => unknown) =>
-      Promise.resolve(rows).then(onFulfilled),
+    then: (onFulfilled: (value: unknown) => unknown) => Promise.resolve(rows).then(onFulfilled),
   };
   thenable.from.mockReturnValue(thenable);
   thenable.where.mockReturnValue(thenable);
@@ -61,11 +60,7 @@ const pendingRequest = {
 describe('createLimitRequest', () => {
   it('creates a PENDING request for the next limit and notifies the owner', async () => {
     const created = { ...pendingRequest, reason: 'دو فرزند دیگر' };
-    const { service, notifications, insert } = makeService([
-      [{ studentLimit: 2 }],
-      [],
-      [created],
-    ]);
+    const { service, notifications, insert } = makeService([[{ studentLimit: 2 }], [], [created]]);
 
     const result = await service.createLimitRequest('account-1', 'دو فرزند دیگر');
 
@@ -81,9 +76,10 @@ describe('createLimitRequest', () => {
   it('rejects a second pending request for the same account', async () => {
     const { service, insert } = makeService([[{ studentLimit: 2 }], [{ id: 'request-9' }]]);
 
-    await expect(
-      service.createLimitRequest('account-1', 'another student'),
-    ).rejects.toMatchObject({ code: 'LIMIT_REQUEST_ALREADY_PENDING', status: 409 });
+    await expect(service.createLimitRequest('account-1', 'another student')).rejects.toMatchObject({
+      code: 'LIMIT_REQUEST_ALREADY_PENDING',
+      status: 409,
+    });
     expect(insert).not.toHaveBeenCalled();
   });
 });
@@ -117,9 +113,10 @@ describe('approveLimitRequest', () => {
     const resolved = { ...pendingRequest, status: 'APPROVED' };
     const { service, update, audit } = makeService([[resolved]]);
 
-    await expect(
-      service.approveLimitRequest('request-1', 'admin-1'),
-    ).rejects.toMatchObject({ code: 'LIMIT_REQUEST_NOT_PENDING', status: 409 });
+    await expect(service.approveLimitRequest('request-1', 'admin-1')).rejects.toMatchObject({
+      code: 'LIMIT_REQUEST_NOT_PENDING',
+      status: 409,
+    });
     expect(update).not.toHaveBeenCalled();
     expect(audit.recordInTransaction).not.toHaveBeenCalled();
   });
@@ -154,9 +151,9 @@ describe('rejectLimitRequest', () => {
     const resolved = { ...pendingRequest, status: 'APPROVED' };
     const { service, audit } = makeService([[resolved]]);
 
-    await expect(
-      service.rejectLimitRequest('request-1', 'admin-1'),
-    ).rejects.toMatchObject({ code: 'LIMIT_REQUEST_NOT_PENDING' });
+    await expect(service.rejectLimitRequest('request-1', 'admin-1')).rejects.toMatchObject({
+      code: 'LIMIT_REQUEST_NOT_PENDING',
+    });
     expect(audit.recordInTransaction).not.toHaveBeenCalled();
   });
 });

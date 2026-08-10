@@ -68,7 +68,11 @@ export function translateDatabaseError(error: unknown): DatabaseErrorTranslation
   if (!databaseError || typeof databaseError.code !== 'string') return undefined;
 
   const databaseCode = databaseError.code;
-  const result = (appError: AppError, category: DatabaseErrorTranslation['diagnostics']['category'], retryable = false) => ({
+  const result = (
+    appError: AppError,
+    category: DatabaseErrorTranslation['diagnostics']['category'],
+    retryable = false,
+  ) => ({
     error: appError,
     diagnostics: { category, databaseCode, retryable },
   });

@@ -6,10 +6,7 @@ import type { DatabaseTransaction } from './payment-plan';
 
 export class StudentCapacityLimitError extends ConflictError {
   constructor() {
-    super(
-      'STUDENT_LIMIT_REACHED',
-      'The account has reached its active student capacity.',
-    );
+    super('STUDENT_LIMIT_REACHED', 'The account has reached its active student capacity.');
   }
 }
 
@@ -39,12 +36,7 @@ export async function assertStudentCapacity(
   const [row] = await txn
     .select({ count: sql<number>`count(*)::int` })
     .from(schema.students)
-    .where(
-      and(
-        eq(schema.students.userId, userId),
-        eq(schema.students.isActive, true),
-      ),
-    );
+    .where(and(eq(schema.students.userId, userId), eq(schema.students.isActive, true)));
   const activeCount = row?.count ?? 0;
   if (activeCount >= account.studentLimit) {
     throw new StudentCapacityLimitError();
@@ -64,12 +56,7 @@ export async function getStudentCapacity(
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(schema.students)
-    .where(
-      and(
-        eq(schema.students.userId, userId),
-        eq(schema.students.isActive, true),
-      ),
-    );
+    .where(and(eq(schema.students.userId, userId), eq(schema.students.isActive, true)));
   const activeStudentCount = row?.count ?? 0;
   return {
     studentLimit: limit,

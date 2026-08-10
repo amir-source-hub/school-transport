@@ -79,10 +79,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
         <AdminStudentDialog families={familyOptions} schools={schoolOptions} />
       </div>
       <Card>
-        <AutoSubmitForm
-          method="get"
-          className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr] md:max-w-2xl"
-        >
+        <AutoSubmitForm method="get" className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr] md:max-w-2xl">
           <label className="text-sm font-bold">
             وضعیت
             <select
@@ -139,7 +136,15 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                 <p className="mt-1 text-sm text-muted">
                   {student.schoolName ?? 'مدرسه ثبت نشده'} — {student.grade ?? '—'}
                 </p>
-                <p className="text-sm text-muted">خانواده: <Link href={`/admin/families/${student.userId}`} className="font-bold text-primary hover:underline">{student.familyName}</Link></p>
+                <p className="text-sm text-muted">
+                  خانواده:{' '}
+                  <Link
+                    href={`/admin/families/${student.userId}`}
+                    className="font-bold text-primary hover:underline"
+                  >
+                    {student.familyName}
+                  </Link>
+                </p>
                 <div className="mt-3 flex gap-2 border-t border-border pt-3">
                   <StudentEditDialog
                     studentId={student.id}
@@ -181,12 +186,17 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                     <td className="px-3 py-3">{student.schoolName ?? '—'}</td>
                     <td className="px-3 py-3">{student.grade ?? '—'}</td>
                     <td className="px-3 py-3">
-                      <Link href={`/admin/families/${student.userId}`} className="font-bold text-primary hover:underline">
+                      <Link
+                        href={`/admin/families/${student.userId}`}
+                        className="font-bold text-primary hover:underline"
+                      >
                         {student.familyName}
                       </Link>
                     </td>
                     <td className="px-3 py-3">
-                      <Badge tone={student.isActive ? 'success' : 'neutral'}>{student.status}</Badge>
+                      <Badge tone={student.isActive ? 'success' : 'neutral'}>
+                        {student.status}
+                      </Badge>
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex gap-2">

@@ -2,16 +2,25 @@ import { describe, expect, it } from 'vitest';
 import { PaymentsService } from './payments.service';
 
 const item = {
-  id: 'schedule-1', paymentPlanId: 'plan-1', amount: 5000, itemStatus: 'PENDING',
+  id: 'schedule-1',
+  paymentPlanId: 'plan-1',
+  amount: 5000,
+  itemStatus: 'PENDING',
 };
 
 function databaseHarness() {
   const transactions: any[] = [];
   let tail = Promise.resolve();
   const ownedQuery = {
-    innerJoin() { return this; },
-    where() { return this; },
-    async limit() { return [{ item }]; },
+    innerJoin() {
+      return this;
+    },
+    where() {
+      return this;
+    },
+    async limit() {
+      return [{ item }];
+    },
   };
   const db = {
     select: () => ({ from: () => ownedQuery }),
@@ -53,21 +62,43 @@ function databaseHarness() {
                     row.paymentMethod === attempted.paymentMethod &&
                     row.idempotencyKey === attempted.idempotencyKey,
                 );
-                return found ? [{ ...safe(found), idempotencyFingerprint: found.idempotencyFingerprint }] : [];
+                return found
+                  ? [{ ...safe(found), idempotencyFingerprint: found.idempotencyFingerprint }]
+                  : [];
               },
             }),
           }),
         }),
       };
-      try { return await work(txn); } finally { release(); }
+      try {
+        return await work(txn);
+      } finally {
+        release();
+      }
     },
   };
   return { db: { db }, transactions };
 }
 
 function safe(row: any) {
-  const { id, paymentPlanId, paymentScheduleItemId, amount, paymentMethod, transactionStatus, requestedAt } = row;
-  return { id, paymentPlanId, paymentScheduleItemId, amount, paymentMethod, transactionStatus, requestedAt };
+  const {
+    id,
+    paymentPlanId,
+    paymentScheduleItemId,
+    amount,
+    paymentMethod,
+    transactionStatus,
+    requestedAt,
+  } = row;
+  return {
+    id,
+    paymentPlanId,
+    paymentScheduleItemId,
+    amount,
+    paymentMethod,
+    transactionStatus,
+    requestedAt,
+  };
 }
 
 function service(harness = databaseHarness()) {
@@ -77,7 +108,14 @@ function service(harness = databaseHarness()) {
 describe('online payment idempotency', () => {
   it('rejects before any database access when the gateway feature is disabled', async () => {
     let touchedDatabase = false;
-    const db = { db: { select: () => { touchedDatabase = true; throw new Error('unexpected'); } } };
+    const db = {
+      db: {
+        select: () => {
+          touchedDatabase = true;
+          throw new Error('unexpected');
+        },
+      },
+    };
     const payments = new PaymentsService(db as never, { enabled: false } as never, {} as never);
 
     await expect(
@@ -96,7 +134,8 @@ describe('online payment idempotency', () => {
     async (key) => {
       const { payments } = service();
       await expect(payments.startOnlinePayment('schedule-1', 'user-1', key)).rejects.toMatchObject({
-        code: 'VALIDATION_ERROR', status: 400,
+        code: 'VALIDATION_ERROR',
+        status: 400,
       });
     },
   );
@@ -114,9 +153,14 @@ describe('online payment idempotency', () => {
   it('allows the same key for another user but rejects reuse for another schedule item', async () => {
     const { payments, harness } = service();
     await payments.startOnlinePayment('schedule-1', 'user-1', 'request-123');
-    await expect(payments.startOnlinePayment('schedule-1', 'user-2', 'request-123')).resolves.toBeTruthy();
-    await expect(payments.startOnlinePayment('schedule-2', 'user-1', 'request-123')).rejects.toMatchObject({
-      code: 'IDEMPOTENCY_CONFLICT', status: 409,
+    await expect(
+      payments.startOnlinePayment('schedule-1', 'user-2', 'request-123'),
+    ).resolves.toBeTruthy();
+    await expect(
+      payments.startOnlinePayment('schedule-2', 'user-1', 'request-123'),
+    ).rejects.toMatchObject({
+      code: 'IDEMPOTENCY_CONFLICT',
+      status: 409,
     });
     expect(harness.transactions).toHaveLength(2);
   });

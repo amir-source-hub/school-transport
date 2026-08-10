@@ -110,9 +110,20 @@ function createService(database: ReturnType<typeof otpDatabase>['service']) {
     otpProvider: 'none',
   };
   const logger = { log: vi.fn(), warn: vi.fn() };
-  const audit = { record: vi.fn().mockResolvedValue(undefined), recordInTransaction: vi.fn().mockResolvedValue(undefined) };
+  const audit = {
+    record: vi.fn().mockResolvedValue(undefined),
+    recordInTransaction: vi.fn().mockResolvedValue(undefined),
+  };
   return {
-    auth: new AuthService({} as never, config as never, database as never, logger as never, delivery, {} as never, audit as never),
+    auth: new AuthService(
+      {} as never,
+      config as never,
+      database as never,
+      logger as never,
+      delivery,
+      {} as never,
+      audit as never,
+    ),
     delivery,
   };
 }
@@ -128,7 +139,9 @@ describe('OTP concurrency', () => {
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     expect(database.rows).toHaveLength(1);
     expect(database.rows[0].codeHash).not.toBe(delivery.send.mock.calls[0][0].code);
-    expect(await argon2.verify(database.rows[0].codeHash, delivery.send.mock.calls[0][0].code)).toBe(true);
+    expect(
+      await argon2.verify(database.rows[0].codeHash, delivery.send.mock.calls[0][0].code),
+    ).toBe(true);
   });
 
   it('does not apply resend cooldown to a code invalidated after delivery failure', async () => {
@@ -160,7 +173,9 @@ describe('OTP concurrency', () => {
 
   it('persists expiry and brute-force invalidation', async () => {
     const expiredDb = otpDatabase([row(await argon2.hash('123456'), new Date(0))]);
-    await expect(createService(expiredDb.service).auth.verifyOtp('09120000000', 'AUTH_PARENT', '123456')).rejects.toThrow('expired');
+    await expect(
+      createService(expiredDb.service).auth.verifyOtp('09120000000', 'AUTH_PARENT', '123456'),
+    ).rejects.toThrow('expired');
     expect(expiredDb.rows[0].invalidatedAt).toBeInstanceOf(Date);
 
     const bruteDb = otpDatabase([row(await argon2.hash('123456'))]);
@@ -222,9 +237,7 @@ describe('OTP resend', () => {
     expect(database.rows).toHaveLength(2);
     expect(database.rows[0].invalidatedAt).toBeInstanceOf(Date);
 
-    await expect(
-      auth.verifyOtp('09120000000', 'AUTH_PARENT', firstCode),
-    ).rejects.toThrow();
+    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', firstCode)).rejects.toThrow();
     await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', secondCode)).resolves.toBeDefined();
     expect(database.rows[1].verifiedAt).toBeInstanceOf(Date);
   });
@@ -232,8 +245,16 @@ describe('OTP resend', () => {
 
 function row(codeHash: string, expiresAt = new Date(Date.now() + 60_000)): OtpRow {
   return {
-    id: 'otp-1', phoneNumber: '09120000000', purpose: 'AUTH_PARENT', codeHash, expiresAt,
-    attemptCount: 0, maxAttempts: 2, verifiedAt: null, invalidatedAt: null, requestIp: null,
+    id: 'otp-1',
+    phoneNumber: '09120000000',
+    purpose: 'AUTH_PARENT',
+    codeHash,
+    expiresAt,
+    attemptCount: 0,
+    maxAttempts: 2,
+    verifiedAt: null,
+    invalidatedAt: null,
+    requestIp: null,
     createdAt: new Date(),
   };
 }

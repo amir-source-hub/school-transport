@@ -14,9 +14,7 @@ describe('registration status groups', () => {
 
   it('expands prepayment, installment, and completion groups to detailed statuses', () => {
     expect(expandRegistrationStatusGroup('prepaid')).toEqual(['ENROLLED']);
-    expect(expandRegistrationStatusGroup('installments')).toEqual([
-      'INSTALLMENTS_IN_PROGRESS',
-    ]);
+    expect(expandRegistrationStatusGroup('installments')).toEqual(['INSTALLMENTS_IN_PROGRESS']);
     expect(expandRegistrationStatusGroup('completed')).toEqual(['PAYMENT_COMPLETED']);
   });
 

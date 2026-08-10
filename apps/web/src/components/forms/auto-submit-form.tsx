@@ -3,10 +3,7 @@
 import { useRef } from 'react';
 import type { FormHTMLAttributes } from 'react';
 
-export function AutoSubmitForm({
-  children,
-  ...props
-}: FormHTMLAttributes<HTMLFormElement>) {
+export function AutoSubmitForm({ children, ...props }: FormHTMLAttributes<HTMLFormElement>) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const submit = (form: HTMLFormElement, delayed = false) => {
     if (timer.current) clearTimeout(timer.current);

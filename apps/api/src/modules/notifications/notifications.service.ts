@@ -1,8 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { notificationConsents, notifications } from '../../database/schemas';
 import { and, count, desc, eq, inArray, lt, lte, or, sql } from 'drizzle-orm';
-import { Inject } from '@nestjs/common';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { UpdateNotificationConsentDto } from './notification-consent.dto';
 import { NOTIFICATION_CONSENT_TEXT_VERSION } from '../../database/schemas/notifications.schema';
@@ -96,7 +101,7 @@ function toNotificationView(row: typeof notifications.$inferSelect) {
 @Injectable()
 export class NotificationsService {
   constructor(
-    private readonly db: DatabaseService,
+    @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 

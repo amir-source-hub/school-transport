@@ -10,9 +10,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Metrics"
-        ]
+        "tags": ["Metrics"]
       }
     },
     "/api/v1/auth/request-otp": {
@@ -34,9 +32,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/auth/admin/password-challenge": {
@@ -58,9 +54,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/auth/admin/verify-otp": {
@@ -82,9 +76,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/auth/verify-otp": {
@@ -106,9 +98,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/auth/onboarding/me": {
@@ -120,9 +110,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/auth/onboarding/finalize": {
@@ -144,9 +132,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/auth/refresh": {
@@ -158,9 +144,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/auth/logout": {
@@ -172,9 +156,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/auth/me": {
@@ -186,9 +168,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/admin/admins": {
@@ -200,9 +180,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminIdentity"
-        ]
+        "tags": ["AdminIdentity"]
       },
       "post": {
         "operationId": "AdminIdentityController_create",
@@ -222,9 +200,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminIdentity"
-        ]
+        "tags": ["AdminIdentity"]
       }
     },
     "/api/v1/admin/admins/me": {
@@ -236,9 +212,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminIdentity"
-        ]
+        "tags": ["AdminIdentity"]
       }
     },
     "/api/v1/admin/admins/{adminId}": {
@@ -269,9 +243,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminIdentity"
-        ]
+        "tags": ["AdminIdentity"]
       }
     },
     "/api/v1/admin/admins/{adminId}/archive": {
@@ -292,9 +264,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminIdentity"
-        ]
+        "tags": ["AdminIdentity"]
       }
     },
     "/api/v1/admin/admins/{adminId}/unarchive": {
@@ -315,9 +285,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminIdentity"
-        ]
+        "tags": ["AdminIdentity"]
       }
     },
     "/api/v1/families/complete-registration": {
@@ -339,9 +307,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Families"
-        ]
+        "tags": ["Families"]
       }
     },
     "/api/v1/families/me": {
@@ -353,9 +319,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Families"
-        ]
+        "tags": ["Families"]
       },
       "patch": {
         "operationId": "FamiliesController_updateProfile",
@@ -375,9 +339,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Families"
-        ]
+        "tags": ["Families"]
       }
     },
     "/api/v1/families/addresses": {
@@ -399,9 +361,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Families"
-        ]
+        "tags": ["Families"]
       }
     },
     "/api/v1/families/addresses/{addressId}": {
@@ -432,9 +392,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Families"
-        ]
+        "tags": ["Families"]
       }
     },
     "/api/v1/families/emergency-contacts/{contactId}": {
@@ -465,9 +423,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Families"
-        ]
+        "tags": ["Families"]
       }
     },
     "/api/v1/families/set-primary-phone": {
@@ -489,9 +445,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Families"
-        ]
+        "tags": ["Families"]
       }
     },
     "/api/v1/families/change-primary-phone": {
@@ -513,9 +467,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Families"
-        ]
+        "tags": ["Families"]
       }
     },
     "/api/v1/admin/families": {
@@ -527,9 +479,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFamilies"
-        ]
+        "tags": ["AdminFamilies"]
       }
     },
     "/api/v1/admin/families/{id}": {
@@ -550,9 +500,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFamilies"
-        ]
+        "tags": ["AdminFamilies"]
       }
     },
     "/api/v1/admin/families/{id}/parents": {
@@ -583,9 +531,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFamilies"
-        ]
+        "tags": ["AdminFamilies"]
       }
     },
     "/api/v1/admin/families/{id}/parents/{parentId}": {
@@ -624,9 +570,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFamilies"
-        ]
+        "tags": ["AdminFamilies"]
       },
       "delete": {
         "operationId": "AdminFamiliesController_deleteParent",
@@ -653,9 +597,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFamilies"
-        ]
+        "tags": ["AdminFamilies"]
       }
     },
     "/api/v1/admin/families/{id}/addresses": {
@@ -686,9 +628,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFamilies"
-        ]
+        "tags": ["AdminFamilies"]
       }
     },
     "/api/v1/admin/families/{id}/addresses/{addressId}": {
@@ -727,9 +667,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFamilies"
-        ]
+        "tags": ["AdminFamilies"]
       }
     },
     "/api/v1/admin/families/{id}/emergency-contacts/{contactId}": {
@@ -768,9 +706,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFamilies"
-        ]
+        "tags": ["AdminFamilies"]
       }
     },
     "/api/v1/schools": {
@@ -782,9 +718,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Schools"
-        ]
+        "tags": ["Schools"]
       }
     },
     "/api/v1/schools/{id}": {
@@ -805,9 +739,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Schools"
-        ]
+        "tags": ["Schools"]
       }
     },
     "/api/v1/admin/schools": {
@@ -819,9 +751,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminSchools"
-        ]
+        "tags": ["AdminSchools"]
       },
       "post": {
         "operationId": "AdminSchoolsController_create",
@@ -841,9 +771,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminSchools"
-        ]
+        "tags": ["AdminSchools"]
       }
     },
     "/api/v1/admin/schools/{id}": {
@@ -874,9 +802,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminSchools"
-        ]
+        "tags": ["AdminSchools"]
       }
     },
     "/api/v1/admin/schools/{id}/archive": {
@@ -897,9 +823,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminSchools"
-        ]
+        "tags": ["AdminSchools"]
       }
     },
     "/api/v1/admin/schools/{id}/unarchive": {
@@ -920,9 +844,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminSchools"
-        ]
+        "tags": ["AdminSchools"]
       }
     },
     "/api/v1/students": {
@@ -934,9 +856,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Students"
-        ]
+        "tags": ["Students"]
       },
       "post": {
         "operationId": "StudentsController_create",
@@ -956,9 +876,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Students"
-        ]
+        "tags": ["Students"]
       }
     },
     "/api/v1/students/capacity": {
@@ -970,9 +888,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Students"
-        ]
+        "tags": ["Students"]
       }
     },
     "/api/v1/students/limit-requests": {
@@ -984,9 +900,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Students"
-        ]
+        "tags": ["Students"]
       },
       "post": {
         "operationId": "StudentsController_createLimitRequest",
@@ -1006,9 +920,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Students"
-        ]
+        "tags": ["Students"]
       }
     },
     "/api/v1/students/{studentId}": {
@@ -1029,9 +941,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Students"
-        ]
+        "tags": ["Students"]
       },
       "patch": {
         "operationId": "StudentsController_update",
@@ -1060,9 +970,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Students"
-        ]
+        "tags": ["Students"]
       },
       "delete": {
         "operationId": "StudentsController_archive",
@@ -1081,9 +989,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Students"
-        ]
+        "tags": ["Students"]
       }
     },
     "/api/v1/admin/students": {
@@ -1095,9 +1001,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudents"
-        ]
+        "tags": ["AdminStudents"]
       },
       "post": {
         "operationId": "AdminStudentsController_create",
@@ -1117,9 +1021,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudents"
-        ]
+        "tags": ["AdminStudents"]
       }
     },
     "/api/v1/admin/students/limit-requests": {
@@ -1131,9 +1033,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudents"
-        ]
+        "tags": ["AdminStudents"]
       }
     },
     "/api/v1/admin/students/{studentId}": {
@@ -1154,9 +1054,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudents"
-        ]
+        "tags": ["AdminStudents"]
       },
       "patch": {
         "operationId": "AdminStudentsController_update",
@@ -1185,9 +1083,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudents"
-        ]
+        "tags": ["AdminStudents"]
       }
     },
     "/api/v1/admin/students/limit-requests/{requestId}/approve": {
@@ -1208,9 +1104,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudents"
-        ]
+        "tags": ["AdminStudents"]
       }
     },
     "/api/v1/admin/students/limit-requests/{requestId}/reject": {
@@ -1241,9 +1135,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudents"
-        ]
+        "tags": ["AdminStudents"]
       }
     },
     "/api/v1/admin/students/{studentId}/archive": {
@@ -1274,9 +1166,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudents"
-        ]
+        "tags": ["AdminStudents"]
       }
     },
     "/api/v1/admin/students/{studentId}/unarchive": {
@@ -1307,9 +1197,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudents"
-        ]
+        "tags": ["AdminStudents"]
       }
     },
     "/api/v1/enrollments": {
@@ -1321,9 +1209,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Registrations"
-        ]
+        "tags": ["Registrations"]
       },
       "post": {
         "operationId": "RegistrationsController_create",
@@ -1343,9 +1229,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Registrations"
-        ]
+        "tags": ["Registrations"]
       }
     },
     "/api/v1/enrollments/guided": {
@@ -1367,9 +1251,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Registrations"
-        ]
+        "tags": ["Registrations"]
       }
     },
     "/api/v1/enrollments/{id}": {
@@ -1390,9 +1272,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Registrations"
-        ]
+        "tags": ["Registrations"]
       }
     },
     "/api/v1/enrollments/{id}/submit": {
@@ -1413,9 +1293,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Registrations"
-        ]
+        "tags": ["Registrations"]
       }
     },
     "/api/v1/enrollments/{id}/cancel": {
@@ -1436,9 +1314,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Registrations"
-        ]
+        "tags": ["Registrations"]
       }
     },
     "/api/v1/admin/enrollments/families/{familyId}/guided": {
@@ -1469,9 +1345,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminRegistrations"
-        ]
+        "tags": ["AdminRegistrations"]
       }
     },
     "/api/v1/admin/enrollments": {
@@ -1483,9 +1357,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminRegistrations"
-        ]
+        "tags": ["AdminRegistrations"]
       }
     },
     "/api/v1/admin/enrollments/{id}": {
@@ -1506,9 +1378,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminRegistrations"
-        ]
+        "tags": ["AdminRegistrations"]
       }
     },
     "/api/v1/admin/enrollments/{id}/start-review": {
@@ -1529,9 +1399,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminRegistrations"
-        ]
+        "tags": ["AdminRegistrations"]
       }
     },
     "/api/v1/admin/enrollments/{id}/approve": {
@@ -1552,9 +1420,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminRegistrations"
-        ]
+        "tags": ["AdminRegistrations"]
       }
     },
     "/api/v1/admin/enrollments/{id}/reject": {
@@ -1585,9 +1451,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminRegistrations"
-        ]
+        "tags": ["AdminRegistrations"]
       }
     },
     "/api/v1/admin/enrollments/{id}/request-correction": {
@@ -1618,9 +1482,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminRegistrations"
-        ]
+        "tags": ["AdminRegistrations"]
       }
     },
     "/api/v1/onboarding/enrollments": {
@@ -1632,9 +1494,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingRegistrations"
-        ]
+        "tags": ["OnboardingRegistrations"]
       }
     },
     "/api/v1/onboarding/enrollments/guided": {
@@ -1656,9 +1516,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingRegistrations"
-        ]
+        "tags": ["OnboardingRegistrations"]
       }
     },
     "/api/v1/onboarding/enrollments/{id}": {
@@ -1679,9 +1537,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingRegistrations"
-        ]
+        "tags": ["OnboardingRegistrations"]
       }
     },
     "/api/v1/admin/enrollments/{enrollmentId}/pricing": {
@@ -1702,9 +1558,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminPricing"
-        ]
+        "tags": ["AdminPricing"]
       },
       "post": {
         "operationId": "AdminPricingController_createPrice",
@@ -1733,9 +1587,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminPricing"
-        ]
+        "tags": ["AdminPricing"]
       }
     },
     "/api/v1/enrollments/{enrollmentId}/pricing": {
@@ -1756,9 +1608,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "ParentPricing"
-        ]
+        "tags": ["ParentPricing"]
       }
     },
     "/api/v1/enrollments/{enrollmentId}/pricing/{priceId}/accept": {
@@ -1789,9 +1639,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "ParentPricing"
-        ]
+        "tags": ["ParentPricing"]
       }
     },
     "/api/v1/contracts": {
@@ -1803,9 +1651,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Contracts"
-        ]
+        "tags": ["Contracts"]
       }
     },
     "/api/v1/contracts/{id}": {
@@ -1826,9 +1672,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Contracts"
-        ]
+        "tags": ["Contracts"]
       }
     },
     "/api/v1/contracts/{id}/accept": {
@@ -1849,9 +1693,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Contracts"
-        ]
+        "tags": ["Contracts"]
       }
     },
     "/api/v1/contracts/{id}/reject": {
@@ -1872,9 +1714,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Contracts"
-        ]
+        "tags": ["Contracts"]
       }
     },
     "/api/v1/admin/enrollments/{enrollmentId}/contracts": {
@@ -1895,9 +1735,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminContracts"
-        ]
+        "tags": ["AdminContracts"]
       }
     },
     "/api/v1/admin/contracts": {
@@ -1909,9 +1747,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminContracts"
-        ]
+        "tags": ["AdminContracts"]
       }
     },
     "/api/v1/onboarding/contracts/{id}/accept": {
@@ -1932,9 +1768,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingContracts"
-        ]
+        "tags": ["OnboardingContracts"]
       }
     },
     "/api/v1/installments/plan/{planId}": {
@@ -1955,9 +1789,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Installments"
-        ]
+        "tags": ["Installments"]
       }
     },
     "/api/v1/payments": {
@@ -1969,9 +1801,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Payments"
-        ]
+        "tags": ["Payments"]
       }
     },
     "/api/v1/payments/offline-destination": {
@@ -1983,9 +1813,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Payments"
-        ]
+        "tags": ["Payments"]
       }
     },
     "/api/v1/payments/offline-submissions": {
@@ -1997,9 +1825,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Payments"
-        ]
+        "tags": ["Payments"]
       }
     },
     "/api/v1/payments/{scheduleItemId}/online/start": {
@@ -2020,9 +1846,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Payments"
-        ]
+        "tags": ["Payments"]
       }
     },
     "/api/v1/payments/{txId}/online/verify": {
@@ -2053,9 +1877,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Payments"
-        ]
+        "tags": ["Payments"]
       }
     },
     "/api/v1/payments/{scheduleItemId}/offline-submissions": {
@@ -2086,9 +1908,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Payments"
-        ]
+        "tags": ["Payments"]
       }
     },
     "/api/v1/payments/offline-submissions/{submissionId}/receipt/authorize": {
@@ -2119,9 +1939,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Payments"
-        ]
+        "tags": ["Payments"]
       }
     },
     "/api/v1/payments/offline-submissions/{submissionId}/receipt/complete": {
@@ -2142,9 +1960,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Payments"
-        ]
+        "tags": ["Payments"]
       }
     },
     "/api/v1/payments/offline-submissions/{submissionId}/receipt": {
@@ -2165,9 +1981,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Payments"
-        ]
+        "tags": ["Payments"]
       }
     },
     "/api/v1/admin/payments": {
@@ -2179,9 +1993,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminPayments"
-        ]
+        "tags": ["AdminPayments"]
       }
     },
     "/api/v1/admin/payments/offline-destination": {
@@ -2193,9 +2005,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminPayments"
-        ]
+        "tags": ["AdminPayments"]
       },
       "post": {
         "operationId": "AdminPaymentsController_configureOfflineDestination",
@@ -2215,9 +2025,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminPayments"
-        ]
+        "tags": ["AdminPayments"]
       }
     },
     "/api/v1/admin/payments/offline-submissions": {
@@ -2229,9 +2037,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminPayments"
-        ]
+        "tags": ["AdminPayments"]
       }
     },
     "/api/v1/admin/payments/offline-submissions/{submissionId}/receipt": {
@@ -2252,9 +2058,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminPayments"
-        ]
+        "tags": ["AdminPayments"]
       }
     },
     "/api/v1/admin/payments/plans/{planId}/installments": {
@@ -2285,9 +2089,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminPayments"
-        ]
+        "tags": ["AdminPayments"]
       }
     },
     "/api/v1/admin/payments/offline-submissions/{submissionId}/approve": {
@@ -2318,9 +2120,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminPayments"
-        ]
+        "tags": ["AdminPayments"]
       }
     },
     "/api/v1/admin/payments/offline-submissions/{submissionId}/reject": {
@@ -2351,9 +2151,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminPayments"
-        ]
+        "tags": ["AdminPayments"]
       }
     },
     "/api/v1/onboarding/payments/offline-destination": {
@@ -2365,9 +2163,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingPayments"
-        ]
+        "tags": ["OnboardingPayments"]
       }
     },
     "/api/v1/onboarding/payments/offline-submissions": {
@@ -2379,9 +2175,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingPayments"
-        ]
+        "tags": ["OnboardingPayments"]
       }
     },
     "/api/v1/onboarding/payments/{scheduleItemId}/online/start": {
@@ -2402,9 +2196,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingPayments"
-        ]
+        "tags": ["OnboardingPayments"]
       }
     },
     "/api/v1/onboarding/payments/{txId}/online/verify": {
@@ -2435,9 +2227,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingPayments"
-        ]
+        "tags": ["OnboardingPayments"]
       }
     },
     "/api/v1/onboarding/payments/{scheduleItemId}/offline-submissions": {
@@ -2468,9 +2258,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingPayments"
-        ]
+        "tags": ["OnboardingPayments"]
       }
     },
     "/api/v1/onboarding/payments/offline-submissions/{submissionId}/receipt/authorize": {
@@ -2501,9 +2289,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingPayments"
-        ]
+        "tags": ["OnboardingPayments"]
       }
     },
     "/api/v1/onboarding/payments/offline-submissions/{submissionId}/receipt/complete": {
@@ -2524,9 +2310,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingPayments"
-        ]
+        "tags": ["OnboardingPayments"]
       }
     },
     "/api/v1/notifications": {
@@ -2538,9 +2322,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       }
     },
     "/api/v1/notifications/unread-count": {
@@ -2552,9 +2334,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       }
     },
     "/api/v1/notifications/{id}/read": {
@@ -2575,9 +2355,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       }
     },
     "/api/v1/notifications/read-all": {
@@ -2589,9 +2367,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       }
     },
     "/api/v1/notifications/settings": {
@@ -2603,9 +2379,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       },
       "patch": {
         "operationId": "NotificationsController_updateSettings",
@@ -2625,9 +2399,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       }
     },
     "/api/v1/admin/notifications": {
@@ -2639,9 +2411,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminNotifications"
-        ]
+        "tags": ["AdminNotifications"]
       }
     },
     "/api/v1/admin/audit/{entityType}/{entityId}": {
@@ -2670,9 +2440,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Audit"
-        ]
+        "tags": ["Audit"]
       }
     },
     "/api/v1/admin/broadcasts": {
@@ -2684,9 +2452,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Broadcasts"
-        ]
+        "tags": ["Broadcasts"]
       },
       "post": {
         "operationId": "BroadcastsController_create",
@@ -2706,9 +2472,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Broadcasts"
-        ]
+        "tags": ["Broadcasts"]
       }
     },
     "/api/v1/admin/broadcasts/preview": {
@@ -2730,9 +2494,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Broadcasts"
-        ]
+        "tags": ["Broadcasts"]
       }
     },
     "/api/v1/admin/broadcasts/{id}/approve": {
@@ -2753,9 +2515,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Broadcasts"
-        ]
+        "tags": ["Broadcasts"]
       }
     },
     "/api/v1/admin/broadcasts/{id}/test": {
@@ -2786,9 +2546,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Broadcasts"
-        ]
+        "tags": ["Broadcasts"]
       }
     },
     "/api/v1/admin/broadcasts/{id}/pause": {
@@ -2809,9 +2567,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Broadcasts"
-        ]
+        "tags": ["Broadcasts"]
       }
     },
     "/api/v1/admin/broadcasts/{id}/resume": {
@@ -2832,9 +2588,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Broadcasts"
-        ]
+        "tags": ["Broadcasts"]
       }
     },
     "/api/v1/admin/broadcasts/{id}/cancel": {
@@ -2855,9 +2609,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Broadcasts"
-        ]
+        "tags": ["Broadcasts"]
       }
     },
     "/api/v1/feedback": {
@@ -2879,9 +2631,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Feedback"
-        ]
+        "tags": ["Feedback"]
       },
       "get": {
         "operationId": "FeedbackController_mine",
@@ -2891,9 +2641,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Feedback"
-        ]
+        "tags": ["Feedback"]
       }
     },
     "/api/v1/admin/feedback": {
@@ -2905,9 +2653,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFeedback"
-        ]
+        "tags": ["AdminFeedback"]
       }
     },
     "/api/v1/admin/feedback/{id}/read": {
@@ -2938,9 +2684,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFeedback"
-        ]
+        "tags": ["AdminFeedback"]
       }
     },
     "/api/v1/admin/feedback/{id}/assign": {
@@ -2971,9 +2715,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFeedback"
-        ]
+        "tags": ["AdminFeedback"]
       }
     },
     "/api/v1/admin/feedback/{id}/respond": {
@@ -3004,9 +2746,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFeedback"
-        ]
+        "tags": ["AdminFeedback"]
       }
     },
     "/api/v1/admin/feedback/{id}/close": {
@@ -3037,9 +2777,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminFeedback"
-        ]
+        "tags": ["AdminFeedback"]
       }
     },
     "/api/v1/student-photos/uploads": {
@@ -3061,9 +2799,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "StudentPhotos"
-        ]
+        "tags": ["StudentPhotos"]
       }
     },
     "/api/v1/student-photos/uploads/{id}/complete": {
@@ -3084,9 +2820,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "StudentPhotos"
-        ]
+        "tags": ["StudentPhotos"]
       }
     },
     "/api/v1/student-photos/uploads/{id}/link": {
@@ -3117,9 +2851,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "StudentPhotos"
-        ]
+        "tags": ["StudentPhotos"]
       }
     },
     "/api/v1/student-photos/current": {
@@ -3140,9 +2872,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "StudentPhotos"
-        ]
+        "tags": ["StudentPhotos"]
       }
     },
     "/api/v1/student-photos/{id}/view-url": {
@@ -3163,9 +2893,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "StudentPhotos"
-        ]
+        "tags": ["StudentPhotos"]
       }
     },
     "/api/v1/onboarding/student-photos/uploads": {
@@ -3187,9 +2915,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingStudentPhotos"
-        ]
+        "tags": ["OnboardingStudentPhotos"]
       }
     },
     "/api/v1/onboarding/student-photos/uploads/{id}/complete": {
@@ -3210,9 +2936,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingStudentPhotos"
-        ]
+        "tags": ["OnboardingStudentPhotos"]
       }
     },
     "/api/v1/onboarding/student-photos/uploads/{id}/link": {
@@ -3243,9 +2967,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "OnboardingStudentPhotos"
-        ]
+        "tags": ["OnboardingStudentPhotos"]
       }
     },
     "/api/v1/admin/student-photos": {
@@ -3257,9 +2979,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudentPhotos"
-        ]
+        "tags": ["AdminStudentPhotos"]
       }
     },
     "/api/v1/admin/student-photos/{id}/view-url": {
@@ -3280,9 +3000,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudentPhotos"
-        ]
+        "tags": ["AdminStudentPhotos"]
       }
     },
     "/api/v1/admin/student-photos/{id}/approve": {
@@ -3313,9 +3031,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudentPhotos"
-        ]
+        "tags": ["AdminStudentPhotos"]
       }
     },
     "/api/v1/admin/student-photos/{id}/reject": {
@@ -3346,9 +3062,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "AdminStudentPhotos"
-        ]
+        "tags": ["AdminStudentPhotos"]
       }
     },
     "/api/v1/health": {
@@ -3360,9 +3074,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Health"
-        ]
+        "tags": ["Health"]
       }
     },
     "/api/v1/health/live": {
@@ -3374,9 +3086,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Health"
-        ]
+        "tags": ["Health"]
       }
     },
     "/api/v1/health/ready": {
@@ -3388,9 +3098,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Health"
-        ]
+        "tags": ["Health"]
       }
     },
     "/api/v1/admin/reports/comprehensive/preview": {
@@ -3402,9 +3110,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Reports"
-        ]
+        "tags": ["Reports"]
       }
     },
     "/api/v1/admin/reports/comprehensive.xlsx": {
@@ -3416,9 +3122,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Reports"
-        ]
+        "tags": ["Reports"]
       }
     }
   },

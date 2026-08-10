@@ -58,8 +58,22 @@ function buildMockDb(selectResults: unknown[][]) {
   };
 }
 
-const father = { parentType: 'FATHER', firstName: 'Reza', lastName: 'Ahmadi', nationalId: '0499370899', phoneNumber: '09121111111', isPrimaryContact: true };
-const mother = { parentType: 'MOTHER', firstName: 'Sara', lastName: 'Ahmadi', nationalId: '0067749811', phoneNumber: '09122222222', isPrimaryContact: false };
+const father = {
+  parentType: 'FATHER',
+  firstName: 'Reza',
+  lastName: 'Ahmadi',
+  nationalId: '0499370899',
+  phoneNumber: '09121111111',
+  isPrimaryContact: true,
+};
+const mother = {
+  parentType: 'MOTHER',
+  firstName: 'Sara',
+  lastName: 'Ahmadi',
+  nationalId: '0067749811',
+  phoneNumber: '09122222222',
+  isPrimaryContact: false,
+};
 
 const baseInput: GuidedEnrollmentData = {
   student: { firstName: 'Ali', lastName: 'Ahmadi', nationalId: '0013540394' },
@@ -72,13 +86,28 @@ const baseInput: GuidedEnrollmentData = {
   homePhone: '02122113333',
   father,
   mother,
-  emergencyContact: { firstName: 'Maryam', lastName: 'Ahmadi', relationship: 'Aunt', phoneNumber: '09123333333' },
-  address: { title: 'Home', province: 'Tehran', city: 'Tehran', streetAddress: 'Street', postalCode: '1234567890', latitude: 35.7, longitude: 51.3 },
+  emergencyContact: {
+    firstName: 'Maryam',
+    lastName: 'Ahmadi',
+    relationship: 'Aunt',
+    phoneNumber: '09123333333',
+  },
+  address: {
+    title: 'Home',
+    province: 'Tehran',
+    city: 'Tehran',
+    streetAddress: 'Street',
+    postalCode: '1234567890',
+    latitude: 35.7,
+    longitude: 51.3,
+  },
   school: { schoolId: 'school-1', educationLevel: 'Primary', grade: 'First' },
   service: { serviceType: 'BUS', paymentPlanType: 'INSTALLMENTS' },
 };
 
-const schoolResult = [{ id: 'school-1', educationOptions: [{ level: 'Primary', grades: ['First'] }] }];
+const schoolResult = [
+  { id: 'school-1', educationOptions: [{ level: 'Primary', grades: ['First'] }] },
+];
 const capacityResults = [[{ studentLimit: 2 }], [{ count: 0 }]];
 const standardSelectResults = [
   schoolResult,
@@ -97,16 +126,21 @@ describe('admin guided enrollment transaction', () => {
     const mock = buildMockDb(standardSelectResults);
     const createNotification = vi.fn();
     const auditFailure = new Error('audit unavailable');
-    const audit = { recordInTransaction: vi.fn().mockRejectedValue(auditFailure) } as unknown as AuditPort;
+    const audit = {
+      recordInTransaction: vi.fn().mockRejectedValue(auditFailure),
+    } as unknown as AuditPort;
     const service = new RegistrationsService(
       mock.database,
-      { create: createNotification, enqueueInTransaction: vi.fn(async () => undefined) } as unknown as InAppNotificationService,
+      {
+        create: createNotification,
+        enqueueInTransaction: vi.fn(async () => undefined),
+      } as unknown as InAppNotificationService,
       audit,
     );
 
-    await expect(
-      service.createGuidedEnrollment('family-1', baseInput, adminAudit),
-    ).rejects.toBe(auditFailure);
+    await expect(service.createGuidedEnrollment('family-1', baseInput, adminAudit)).rejects.toBe(
+      auditFailure,
+    );
 
     expect(mock.rolledBack).toBe(true);
     expect(audit.recordInTransaction).toHaveBeenCalledWith(
@@ -118,11 +152,20 @@ describe('admin guided enrollment transaction', () => {
 
   it('signs the contract on behalf of the parent and records a cash prepayment through the payment domain', async () => {
     const mock = buildMockDb(standardSelectResults);
-    const auditCalls: Array<{ action: string; newValues?: Record<string, unknown>; actorType?: string }> = [];
+    const auditCalls: Array<{
+      action: string;
+      newValues?: Record<string, unknown>;
+      actorType?: string;
+    }> = [];
     const audit = {
-      recordInTransaction: vi.fn(async (_txn: unknown, record: { action: string; newValues?: Record<string, unknown>; actorType?: string }) => {
-        auditCalls.push(record);
-      }),
+      recordInTransaction: vi.fn(
+        async (
+          _txn: unknown,
+          record: { action: string; newValues?: Record<string, unknown>; actorType?: string },
+        ) => {
+          auditCalls.push(record);
+        },
+      ),
     } as unknown as AuditPort;
     const createNotification = vi.fn();
     const enqueueInTransaction = vi.fn(async () => undefined);
@@ -156,7 +199,9 @@ describe('admin guided enrollment transaction', () => {
     );
 
     const registrationUpdates = mock.updated.filter(({ set }) => set.registrationStatus);
-    expect(registrationUpdates.some(({ set }) => set.registrationStatus === 'CONTRACT_ACCEPTED')).toBe(true);
+    expect(
+      registrationUpdates.some(({ set }) => set.registrationStatus === 'CONTRACT_ACCEPTED'),
+    ).toBe(true);
     expect(registrationUpdates.some(({ set }) => set.registrationStatus === 'ENROLLED')).toBe(true);
 
     const prepaymentItems = mock.updated.filter(({ set }) => set.itemStatus === 'PAID');
@@ -186,7 +231,10 @@ describe('admin guided enrollment transaction', () => {
         expect.objectContaining({ action: 'CONTRACT_ACCEPTED_BY_ADMIN', actorType: 'ADMIN' }),
         expect.objectContaining({
           action: 'ADMIN_CASH_PREPAYMENT_RECORDED',
-          newValues: expect.objectContaining({ referenceNumber: 'receipt-001', registrationStatus: 'ENROLLED' }),
+          newValues: expect.objectContaining({
+            referenceNumber: 'receipt-001',
+            registrationStatus: 'ENROLLED',
+          }),
         }),
         expect.objectContaining({
           action: 'ADMIN_FAMILY_ENROLLMENT_CREATED',
@@ -204,7 +252,10 @@ describe('admin guided enrollment transaction', () => {
     const createNotification = vi.fn();
     const service = new RegistrationsService(
       mock.database,
-      { create: createNotification, enqueueInTransaction: vi.fn(async () => undefined) } as unknown as InAppNotificationService,
+      {
+        create: createNotification,
+        enqueueInTransaction: vi.fn(async () => undefined),
+      } as unknown as InAppNotificationService,
       audit,
     );
 
@@ -218,7 +269,10 @@ describe('admin guided enrollment transaction', () => {
 
     expect(mock.rolledBack).toBe(true);
     expect(
-      mock.inserted.some(({ values }) => (values as { [key: string]: unknown }).paymentMethod === 'MANUAL_ADMIN_ENTRY'),
+      mock.inserted.some(
+        ({ values }) =>
+          (values as { [key: string]: unknown }).paymentMethod === 'MANUAL_ADMIN_ENTRY',
+      ),
     ).toBe(false);
   });
 
@@ -228,7 +282,10 @@ describe('admin guided enrollment transaction', () => {
     const createNotification = vi.fn();
     const service = new RegistrationsService(
       mock.database,
-      { create: createNotification, enqueueInTransaction: vi.fn(async () => undefined) } as unknown as InAppNotificationService,
+      {
+        create: createNotification,
+        enqueueInTransaction: vi.fn(async () => undefined),
+      } as unknown as InAppNotificationService,
       audit,
     );
 
@@ -251,7 +308,10 @@ describe('admin guided enrollment transaction', () => {
     const createNotification = vi.fn();
     const service = new RegistrationsService(
       mock.database,
-      { create: createNotification, enqueueInTransaction: vi.fn(async () => undefined) } as unknown as InAppNotificationService,
+      {
+        create: createNotification,
+        enqueueInTransaction: vi.fn(async () => undefined),
+      } as unknown as InAppNotificationService,
       audit,
     );
 
@@ -279,7 +339,10 @@ describe('admin guided enrollment transaction', () => {
     const createNotification = vi.fn();
     const service = new RegistrationsService(
       mock.database,
-      { create: createNotification, enqueueInTransaction: vi.fn(async () => undefined) } as unknown as InAppNotificationService,
+      {
+        create: createNotification,
+        enqueueInTransaction: vi.fn(async () => undefined),
+      } as unknown as InAppNotificationService,
       audit,
     );
 

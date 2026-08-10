@@ -29,15 +29,17 @@ const planSchema = z.object({
     planStatus: z.string(),
     planType: z.string(),
   }),
-  items: z.array(z.object({
-    id: z.string(),
-    itemType: z.string(),
-    sequenceNumber: z.number(),
-    amount: z.number(),
-    dueDate: z.coerce.date().nullable(),
-    itemStatus: z.string(),
-    paidAmount: z.number(),
-  })),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      itemType: z.string(),
+      sequenceNumber: z.number(),
+      amount: z.number(),
+      dueDate: z.coerce.date().nullable(),
+      itemStatus: z.string(),
+      paidAmount: z.number(),
+    }),
+  ),
 });
 
 export type Contract = z.infer<typeof contractSchema>;

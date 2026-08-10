@@ -76,7 +76,13 @@ function ResendButton({
 }) {
   const label = resendIn > 0 ? `ارسال مجدد کد تا ${resendIn} ثانیه دیگر` : 'دریافت کد جدید';
   return (
-    <Button type="button" variant="ghost" className="w-full" disabled={disabled || resendIn > 0} onClick={onClick}>
+    <Button
+      type="button"
+      variant="ghost"
+      className="w-full"
+      disabled={disabled || resendIn > 0}
+      onClick={onClick}
+    >
       {label}
     </Button>
   );
@@ -240,31 +246,33 @@ function OtpAuthForm() {
       <fieldset>
         <legend className="text-sm font-bold">نقش شما</legend>
         <div className="mt-3 grid grid-cols-3 gap-2.5" role="listbox" aria-label="نقش">
-          {([
-            {
-              id: 'STUDENT_PORTAL',
-              title: 'دانش‌آموز',
-              description: 'ورود و ثبت‌نام سرویس مدرسه',
-              active: true,
-            },
-            {
-              id: 'SCHOOL_MANAGER_COMING_SOON',
-              title: 'مدیر مدارس',
-              description: 'پنل مدیریت مدرسه',
-              active: false,
-            },
-            {
-              id: 'DRIVER_COMING_SOON',
-              title: 'راننده',
-              description: 'پنل راننده سرویس',
-              active: false,
-            },
-          ] as const satisfies ReadonlyArray<{
-            id: UiRoleIdentifier;
-            title: string;
-            description: string;
-            active: boolean;
-          }>).map(({ id, title, description, active }) => (
+          {(
+            [
+              {
+                id: 'STUDENT_PORTAL',
+                title: 'دانش‌آموز',
+                description: 'ورود و ثبت‌نام سرویس مدرسه',
+                active: true,
+              },
+              {
+                id: 'SCHOOL_MANAGER_COMING_SOON',
+                title: 'مدیر مدارس',
+                description: 'پنل مدیریت مدرسه',
+                active: false,
+              },
+              {
+                id: 'DRIVER_COMING_SOON',
+                title: 'راننده',
+                description: 'پنل راننده سرویس',
+                active: false,
+              },
+            ] as const satisfies ReadonlyArray<{
+              id: UiRoleIdentifier;
+              title: string;
+              description: string;
+              active: boolean;
+            }>
+          ).map(({ id, title, description, active }) => (
             <button
               key={id}
               type="button"

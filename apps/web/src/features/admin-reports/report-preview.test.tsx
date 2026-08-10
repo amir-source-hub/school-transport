@@ -29,4 +29,3 @@ describe('ReportPreviewPanel', () => {
     expect(screen.getByRole('region', { name: 'جدول پیش‌نمایش گزارش' })).toBeInTheDocument();
   });
 });
-

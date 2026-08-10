@@ -96,13 +96,13 @@ export default async function EnrollmentsPage() {
                   firstName: primaryParent.firstName,
                   lastName: primaryParent.lastName,
                   nationalId: primaryParent.nationalId,
-                  relationshipType:
-                    primaryParent.parentType === 'MOTHER' ? 'MOTHER' : 'FATHER',
+                  relationshipType: primaryParent.parentType === 'MOTHER' ? 'MOTHER' : 'FATHER',
                 }
               : undefined,
           }}
         />
-      )}      <div className="space-y-4">
+      )}{' '}
+      <div className="space-y-4">
         {entries.map(({ enrollment, prices }) => {
           const student = students.find(({ id }) => id === enrollment.studentId);
           const offered = prices.find(({ priceStatus }) => priceStatus === 'OFFERED');

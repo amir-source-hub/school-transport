@@ -8,7 +8,10 @@ const navigation = vi.hoisted(() => ({
   replace: vi.fn(),
   refresh: vi.fn(),
   searchParams: new URLSearchParams('tab=active'),
-  router: undefined as unknown as { replace: ReturnType<typeof vi.fn>; refresh: ReturnType<typeof vi.fn> },
+  router: undefined as unknown as {
+    replace: ReturnType<typeof vi.fn>;
+    refresh: ReturnType<typeof vi.fn>;
+  },
 }));
 navigation.router = { replace: navigation.replace, refresh: navigation.refresh };
 const apiRequest = vi.hoisted(() => vi.fn());
