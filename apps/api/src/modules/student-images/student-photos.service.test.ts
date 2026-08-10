@@ -58,6 +58,17 @@ function updateReturning(rows: unknown[]): Record<string, unknown> {
   return chain;
 }
 
+function insertReturning(rows: unknown[]): Record<string, unknown> {
+  const chain: Record<string, unknown> = {};
+  chain.values = vi.fn(() => chain);
+  chain.returning = vi.fn(async () => rows);
+  return chain;
+}
+
+function transactionDb(txn: Record<string, unknown>): DatabaseService {
+  return { db: { transaction: vi.fn(async (cb: (t: unknown) => unknown) => cb(txn)) } } as unknown as DatabaseService;
+}
+
 function baseRow(overrides: Record<string, unknown> = {}) {
   return {
     id: 'upload-1',
@@ -119,28 +130,72 @@ function audit() {
 
 describe('StudentPhotosService authorizeUpload', () => {
   it('throws ConflictError when the active-upload cap is reached', async () => {
-    const db = {
-      db: {
-        select: vi.fn(() => selectWhere([{ count: '3' }])),
-        insert: vi.fn(),
-      },
-    } as unknown as DatabaseService;
-    const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
+    const txn = {
+      update: vi.fn(() => updateReturning([])),
+      select: vi.fn(() => selectWhere([{ count: '3' }])),
+    };
+    const service = new StudentPhotosService(
+      transactionDb(txn),
+      config(),
+      notifications(),
+      storage(),
+      audit(),
+    );
 
     await expect(
       service.authorizeUpload('user-1', { declaredMime: 'image/jpeg', declaredSize: 100_000 }),
     ).rejects.toBeInstanceOf(ConflictError);
-    expect(service).toBeInstanceOf(StudentPhotosService);
   });
 
-  it('rejects a declared size above the byte cap', async () => {
-    const db = {
-      db: {
-        select: vi.fn(() => selectWhere([{ count: '0' }])),
-        insert: vi.fn(),
-      },
-    } as unknown as DatabaseService;
+  it('expires overdue authorizations for the account before enforcing the cap', async () => {
+    const txn = {
+      update: vi.fn(() => updateReturning([])),
+      select: vi.fn(() => selectWhere([{ count: '0' }])),
+      insert: vi.fn(() => insertReturning([baseRow({ id: 'upload-9', status: 'AUTHORIZED' })])),
+    };
+    const db = transactionDb(txn);
     const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
+
+    await service.authorizeUpload('user-1', {
+      declaredMime: 'image/jpeg',
+      declaredSize: 100_000,
+    });
+
+    expect(txn.update).toHaveBeenCalledTimes(1);
+    expect(txn.select).toHaveBeenCalledTimes(1);
+    expect(txn.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it('enforces the cap only for genuinely active uploads after expiring stale rows', async () => {
+    const saved = baseRow({ id: 'upload-9', status: 'AUTHORIZED' });
+    const txn = {
+      update: vi.fn(() => updateReturning([])),
+      select: vi.fn(() => selectWhere([{ count: '2' }])),
+      insert: vi.fn(() => insertReturning([saved])),
+    };
+    const service = new StudentPhotosService(
+      transactionDb(txn),
+      config({ studentPhotoMaxActiveUploads: 3 }),
+      notifications(),
+      storage(),
+      audit(),
+    );
+
+    const result = await service.authorizeUpload('user-1', {
+      declaredMime: 'image/png',
+      declaredSize: 100_000,
+    });
+    expect(result.uploadId).toBe('upload-9');
+  });
+
+  it('rejects a declared size above the byte cap before any transaction', async () => {
+    const service = new StudentPhotosService(
+      transactionDb({}),
+      config(),
+      notifications(),
+      storage(),
+      audit(),
+    );
 
     await expect(
       service.authorizeUpload('user-1', {
@@ -152,14 +207,19 @@ describe('StudentPhotosService authorizeUpload', () => {
 
   it('returns a presigned PUT URL and stores an AUTHORIZED row', async () => {
     const saved = baseRow({ id: 'upload-9', status: 'AUTHORIZED' });
-    const db = {
-      db: {
-        select: vi.fn(() => selectWhere([{ count: '0' }])),
-        insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn(async () => [saved]) })) })),
-      },
-    } as unknown as DatabaseService;
+    const txn = {
+      update: vi.fn(() => updateReturning([])),
+      select: vi.fn(() => selectWhere([{ count: '0' }])),
+      insert: vi.fn(() => insertReturning([saved])),
+    };
     const store = storage();
-    const service = new StudentPhotosService(db, config(), notifications(), store, audit());
+    const service = new StudentPhotosService(
+      transactionDb(txn),
+      config(),
+      notifications(),
+      store,
+      audit(),
+    );
 
     const result = await service.authorizeUpload('user-1', {
       declaredMime: 'image/jpeg',
@@ -178,11 +238,8 @@ describe('StudentPhotosService authorizeUpload', () => {
   it('checks student ownership when a studentId is provided', async () => {
     const db = {
       db: {
-        select: vi
-          .fn()
-          .mockReturnValueOnce(selectLimit([]))
-          .mockReturnValueOnce(selectWhere([{ count: '0' }])),
-        insert: vi.fn(),
+        select: vi.fn(() => selectLimit([])),
+        transaction: vi.fn(),
       },
     } as unknown as DatabaseService;
     const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());

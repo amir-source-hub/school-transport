@@ -1,5 +1,5 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, gt, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, gt, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { ConfigService } from '../../config/config.service';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -51,26 +51,6 @@ export class StudentPhotosService {
 
   async authorizeUpload(userId: string, input: AuthorizePhotoUploadDto, ip?: string) {
     if (input.studentId) await this.assertOwnedStudent(userId, input.studentId);
-    const active = await this.db.db
-      .select({ count: count() })
-      .from(studentPhotoUploads)
-      .where(
-        and(
-          eq(studentPhotoUploads.accountUserId, userId),
-          inArray(studentPhotoUploads.status, [
-            'AUTHORIZED',
-            'UPLOADED',
-            'VALIDATING',
-            'PENDING_REVIEW',
-          ]),
-        ),
-      );
-    if (Number(active[0].count) >= this.config.studentPhotoMaxActiveUploads) {
-      throw new ConflictError(
-        'PHOTO_UPLOAD_LIMIT',
-        'هم‌زمان چند عکس در حال بارگذاری دارید. ابتدا وضعیت عکس‌های قبلی را بررسی کنید.',
-      );
-    }
     if (input.declaredSize > this.config.studentPhotoMaxBytes) {
       throw new ValidationError('حجم فایل از حد مجاز بیشتر است. حداکثر ۲۵ مگابایت.', {
         declaredSize: ['حداکثر ۲۵ مگابایت مجاز است.'],
@@ -83,28 +63,67 @@ export class StudentPhotosService {
     const expiry = new Date(now.getTime() + ttl * 1_000);
     const uploadUrl = this.storage.presignPut(rawKey, input.declaredMime, ttl);
 
-    const [saved] = await this.db.db
-      .insert(studentPhotoUploads)
-      .values({
-        id: generateId(),
-        accountUserId: userId,
-        studentId: input.studentId ?? null,
-        rawKey,
-        declaredMime: input.declaredMime,
-        declaredSize: input.declaredSize,
-        status: 'AUTHORIZED',
-        uploadAuthorizationExpiry: expiry,
-      })
-      .returning();
-    await this.audit.record({
-      actorType: 'PARENT',
-      actorId: userId,
-      action: 'STUDENT_PHOTO_UPLOAD_AUTHORIZED',
-      entityType: 'STUDENT_PHOTO_UPLOAD',
-      entityId: saved.id,
-      newValues: { declaredMime: input.declaredMime, declaredSize: input.declaredSize },
-      ipAddress: ip,
+    const saved = await this.db.db.transaction(async (txn) => {
+      await txn
+        .update(studentPhotoUploads)
+        .set({ status: 'EXPIRED', updatedAt: now })
+        .where(
+          and(
+            eq(studentPhotoUploads.accountUserId, userId),
+            eq(studentPhotoUploads.status, 'AUTHORIZED'),
+            lt(studentPhotoUploads.uploadAuthorizationExpiry, now),
+          ),
+        );
+      const active = await txn
+        .select({ count: count() })
+        .from(studentPhotoUploads)
+        .where(
+          and(
+            eq(studentPhotoUploads.accountUserId, userId),
+            or(
+              inArray(studentPhotoUploads.status, [
+                'UPLOADED',
+                'VALIDATING',
+                'PENDING_REVIEW',
+              ]),
+              and(
+                eq(studentPhotoUploads.status, 'AUTHORIZED'),
+                gte(studentPhotoUploads.uploadAuthorizationExpiry, now),
+              ),
+            ),
+          ),
+        );
+      if (Number(active[0].count) >= this.config.studentPhotoMaxActiveUploads) {
+        throw new ConflictError(
+          'PHOTO_UPLOAD_LIMIT',
+          'هم‌زمان چند عکس در حال بارگذاری دارید. ابتدا وضعیت عکس‌های قبلی را بررسی کنید.',
+        );
+      }
+      const [saved] = await txn
+        .insert(studentPhotoUploads)
+        .values({
+          id: generateId(),
+          accountUserId: userId,
+          studentId: input.studentId ?? null,
+          rawKey,
+          declaredMime: input.declaredMime,
+          declaredSize: input.declaredSize,
+          status: 'AUTHORIZED',
+          uploadAuthorizationExpiry: expiry,
+        })
+        .returning();
+      await this.audit.recordInTransaction(txn, {
+        actorType: 'PARENT',
+        actorId: userId,
+        action: 'STUDENT_PHOTO_UPLOAD_AUTHORIZED',
+        entityType: 'STUDENT_PHOTO_UPLOAD',
+        entityId: saved.id,
+        newValues: { declaredMime: input.declaredMime, declaredSize: input.declaredSize },
+        ipAddress: ip,
+      });
+      return saved;
     });
+
     return {
       uploadId: saved.id,
       objectKey: rawKey,
