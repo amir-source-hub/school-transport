@@ -148,8 +148,10 @@ Starting Redis prevents repeated `ECONNREFUSED 127.0.0.1:6379` messages from the
 
 ### 3. Configure environment variables
 
-Copy `apps/api/.env.example` to `apps/api/.env` and `apps/web/.env.example` to
-`apps/web/.env.local`, then replace development placeholders as needed. See
+Direct API development always loads the safe defaults in `apps/api/.env.example` and optionally
+overlays `apps/api/.env` when it exists. Copy `apps/api/.env.example` to `apps/api/.env` only when
+you need local overrides or provider credentials. Copy `apps/web/.env.example` to
+`apps/web/.env.local` when web overrides are needed. See
 [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) for ownership, validation, and rebuild behavior.
 
 Never commit `.env` files or real credentials.

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node --env-file=.env ./node_modules/@nestjs/cli/bin/nest.js start --watch",
+    "dev": "node --env-file=.env.example --env-file-if-exists=.env ./node_modules/@nestjs/cli/bin/nest.js start --watch",
     "build": "nest build",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write . --ignore-path ../../.prettierignore",
@@ -15,9 +15,9 @@
     "contract:check": "node dist/openapi-contract.cli.js --check",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:migrate:runtime": "node --env-file=.env --import tsx src/database/migrate.ts",
-    "db:seed": "node --env-file=.env --import tsx src/database/seed.ts",
-    "db:bootstrap": "node --env-file=.env --import tsx src/database/bootstrap-db.ts",
+    "db:migrate:runtime": "node --env-file=.env.example --env-file-if-exists=.env --import tsx src/database/migrate.ts",
+    "db:seed": "node --env-file=.env.example --env-file-if-exists=.env --import tsx src/database/seed.ts",
+    "db:bootstrap": "node --env-file=.env.example --env-file-if-exists=.env --import tsx src/database/bootstrap-db.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
