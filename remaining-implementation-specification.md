@@ -41,7 +41,14 @@
 - [ ] Define required export ranges, delivery method, access control, expiry, and retention before implementing queued/streamed exports beyond the current 10,000-row synchronous ceiling. **[BLOCKED — PRODUCT/OPERATIONS INPUT]**
 - [ ] Approve exact retention, erasure/anonymization, dispute/legal-hold, consent-history, child-record, financial, audit, support, and campaign periods before enabling irreversible cleanup and replacing `pending-legal-approval` in the privacy register. **[BLOCKED — LEGAL/PRODUCT POLICY]**
 
-## 7. Staging, deployment, and release approval
+## 7. CI and repository cleanup
+
+- [ ] Reproduce and diagnose the failing production Compose `Build and start the production web dependency chain` step from the `8bd55c7` `main` workflow run; the local reproduction was intentionally stopped before completion. Split build/start diagnostics if needed, preserve the first actionable Docker/Next.js error in CI annotations or an artifact, fix the root cause, and verify the complete deployment smoke job. **[PAUSED — CI/LOCAL REPRODUCTION]**
+- [ ] Confirm the production-container scan result after the `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` and Git LFS checkout fixes; if it still fails, inspect the Trivy/SARIF findings, remediate actionable vulnerabilities or document narrowly scoped accepted risks, and rerun the scan to success. **[PAUSED — CI RESULT/REPOSITORY ACCESS]**
+- [ ] Enable GitHub Dependency graph and dependency review under repository security settings, then rerun the pull-request dependency/license check and verify that push runs remain intentionally skipped. **[BLOCKED — REPOSITORY ADMIN SETTING]**
+- [ ] Close the superseded `dependabot/docker/node-26-bookworm-slim` pull request and delete its remote branch after confirming no useful dependency metadata remains; `main` deliberately targets Node.js 24 LTS instead of that proposed Node.js 26 image update. **[BLOCKED — REMOTE REPOSITORY APPROVAL]**
+
+## 8. Staging, deployment, and release approval
 
 - [ ] Verify notification migration `0025_notification_read_state.sql`, all forward migrations, and recovery procedures against a sanitized production-like snapshot; record duration, locks, backup, restore, and legacy outbox compatibility. **[BLOCKED — STAGING DATABASE]**
 - [ ] Enable persistent Redis memory overcommit and verify it after a host reboot. **[BLOCKED — HOST ACCESS]**
