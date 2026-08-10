@@ -78,8 +78,9 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-debug}
       # The minimized production API image intentionally excludes Swagger's static-file plugin.
       API_DOCS_ENABLED: 'false'
-      OTP_PROVIDER: ${OTP_PROVIDER:-console}
-      SMS_PROVIDER: ${SMS_PROVIDER:-none}
+      # Local authentication must never depend on unfinished live provider credentials.
+      OTP_PROVIDER: console
+      SMS_PROVIDER: none
       PAYMENT_GATEWAY_PROVIDER: none
       SERVICE_ROLE: api
       QUEUE_REQUIRED: 'false'
