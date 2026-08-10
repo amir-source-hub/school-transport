@@ -23,6 +23,20 @@ export const QUEUE_NAMES = {
   maintenance: 'maintenance',
 } as const;
 
+export const MAINTENANCE_SCHEDULES = {
+  authRetention: { pattern: '15 3 * * *', jobId: 'scheduled-auth-retention' },
+  notificationOutbox: { every: 5_000, jobId: 'scheduled-notification-outbox' },
+  smsBroadcasts: { every: 5_000, jobId: 'scheduled-sms-broadcasts' },
+  studentPhotoCleanup: { every: 30 * 60 * 1_000, jobId: 'scheduled-student-photo-cleanup' },
+} as const;
+
+export const MAINTENANCE_JOB_NAMES = {
+  authRetention: 'purge-expired-auth-data',
+  notificationOutbox: 'dispatch-notification-outbox',
+  smsBroadcasts: 'dispatch-sms-broadcasts',
+  studentPhotoCleanup: 'cleanup-student-photos',
+} as const;
+
 @Injectable()
 export class QueueService implements OnModuleInit, OnModuleDestroy {
   private readonly connection: IORedis;
@@ -89,41 +103,41 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       }
       this.logger.log('BullMQ workers started.');
       await this.queue(QUEUE_NAMES.maintenance).add(
-        'purge-expired-auth-data',
+        MAINTENANCE_JOB_NAMES.authRetention,
         {},
         {
-          jobId: 'scheduled-auth-retention',
-          repeat: { pattern: '15 3 * * *' },
+          jobId: MAINTENANCE_SCHEDULES.authRetention.jobId,
+          repeat: { pattern: MAINTENANCE_SCHEDULES.authRetention.pattern },
           removeOnComplete: 30,
           removeOnFail: 100,
         },
       );
       await this.queue(QUEUE_NAMES.maintenance).add(
-        'dispatch-notification-outbox',
+        MAINTENANCE_JOB_NAMES.notificationOutbox,
         {},
         {
-          jobId: 'scheduled-notification-outbox',
-          repeat: { every: 5_000 },
+          jobId: MAINTENANCE_SCHEDULES.notificationOutbox.jobId,
+          repeat: { every: MAINTENANCE_SCHEDULES.notificationOutbox.every },
           removeOnComplete: 30,
           removeOnFail: 100,
         },
       );
       await this.queue(QUEUE_NAMES.maintenance).add(
-        'dispatch-sms-broadcasts',
+        MAINTENANCE_JOB_NAMES.smsBroadcasts,
         {},
         {
-          jobId: 'scheduled-sms-broadcasts',
-          repeat: { every: 5_000 },
+          jobId: MAINTENANCE_SCHEDULES.smsBroadcasts.jobId,
+          repeat: { every: MAINTENANCE_SCHEDULES.smsBroadcasts.every },
           removeOnComplete: 30,
           removeOnFail: 100,
         },
       );
       await this.queue(QUEUE_NAMES.maintenance).add(
-        'cleanup-student-photos',
+        MAINTENANCE_JOB_NAMES.studentPhotoCleanup,
         {},
         {
-          jobId: 'scheduled-student-photo-cleanup',
-          repeat: { every: 30 * 60 * 1_000 },
+          jobId: MAINTENANCE_SCHEDULES.studentPhotoCleanup.jobId,
+          repeat: { every: MAINTENANCE_SCHEDULES.studentPhotoCleanup.every },
           removeOnComplete: 30,
           removeOnFail: 100,
         },
@@ -217,7 +231,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       await this.broadcasts.dispatchAvailable();
       return;
     }
-    if (job.name === 'cleanup-student-photos') {
+    if (job.name === MAINTENANCE_JOB_NAMES.studentPhotoCleanup) {
       await this.studentPhotos.cleanupExpired();
       this.logger.log('Cleaned up expired and superseded student photos.');
       return;

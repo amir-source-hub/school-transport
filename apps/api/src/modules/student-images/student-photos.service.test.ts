@@ -5,6 +5,7 @@ import type { AuditPort } from '../../common/audit.port';
 import type { ConfigService } from '../../config/config.service';
 import type { DatabaseService } from '../../database/database.service';
 import type { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
+import type { OperationalMetricsService } from '../../infrastructure/metrics/operational-metrics.service';
 import type { S3Storage } from '../../infrastructure/s3/s3-storage.port';
 import { StudentPhotosService } from './student-photos.service';
 
@@ -564,6 +565,7 @@ describe('StudentPhotosService cleanupExpired', () => {
   it('expires stale authorizations and fails stalled uploads', async () => {
     const expirable = baseRow({ id: 'exp-1', status: 'AUTHORIZED' });
     const stalled = baseRow({ id: 'stall-1', status: 'UPLOADED' });
+    const validating = baseRow({ id: 'val-1', status: 'VALIDATING' });
     const removable = baseRow({ id: 'old-1', status: 'REJECTED' });
     const canonicalRemovable = baseRow({
       id: 'old-c-1',
@@ -576,6 +578,7 @@ describe('StudentPhotosService cleanupExpired', () => {
           .fn()
           .mockReturnValueOnce(selectWhere([expirable]))
           .mockReturnValueOnce(selectWhere([stalled]))
+          .mockReturnValueOnce(selectWhere([validating]))
           .mockReturnValueOnce(selectWhere([removable]))
           .mockReturnValueOnce(selectWhere([canonicalRemovable])),
         update: vi.fn(() => updateSimple()),
@@ -584,8 +587,60 @@ describe('StudentPhotosService cleanupExpired', () => {
     const store = storage();
     const service = new StudentPhotosService(db, config(), notifications(), store, audit());
 
-    await expect(service.cleanupExpired()).resolves.toBe(2);
+    await expect(service.cleanupExpired()).resolves.toBe(3);
     expect(store.deleteObject).toHaveBeenCalledWith(expirable.rawKey);
     expect(store.deleteObject).toHaveBeenCalledWith('canonical/x.jpg');
+  });
+
+  it('records stale-row gauges for AUTHORIZED, UPLOADED, and VALIDATING', async () => {
+    const expirable = baseRow({ id: 'exp-1', status: 'AUTHORIZED' });
+    const db = {
+      db: {
+        select: vi
+          .fn()
+          .mockReturnValueOnce(selectWhere([expirable]))
+          .mockReturnValueOnce(selectWhere([]))
+          .mockReturnValueOnce(selectWhere([]))
+          .mockReturnValueOnce(selectWhere([]))
+          .mockReturnValueOnce(selectWhere([])),
+        update: vi.fn(() => updateSimple()),
+      },
+    } as unknown as DatabaseService;
+    const store = storage();
+    const metrics = {
+      recordStaleStudentPhotoRows: vi.fn(),
+    } as unknown as OperationalMetricsService;
+    const service = new StudentPhotosService(db, config(), notifications(), store, audit(), metrics);
+
+    await service.cleanupExpired();
+
+    expect(metrics.recordStaleStudentPhotoRows).toHaveBeenCalledWith([
+      { status: 'AUTHORIZED', count: 1 },
+      { status: 'UPLOADED', count: 0 },
+      { status: 'VALIDATING', count: 0 },
+    ]);
+  });
+
+  it('is idempotent across repeated runs and does not re-expire already-EXPIRED rows', async () => {
+    const run = () => {
+      const db = {
+        db: {
+          select: vi
+            .fn()
+            .mockReturnValueOnce(selectWhere([]))
+            .mockReturnValueOnce(selectWhere([]))
+            .mockReturnValueOnce(selectWhere([]))
+            .mockReturnValueOnce(selectWhere([]))
+            .mockReturnValueOnce(selectWhere([])),
+          update: vi.fn(() => updateSimple()),
+        },
+      } as unknown as DatabaseService;
+      return new StudentPhotosService(db, config(), notifications(), storage(), audit());
+    };
+    const first = run();
+    const second = run();
+
+    await expect(first.cleanupExpired()).resolves.toBe(0);
+    await expect(second.cleanupExpired()).resolves.toBe(0);
   });
 });

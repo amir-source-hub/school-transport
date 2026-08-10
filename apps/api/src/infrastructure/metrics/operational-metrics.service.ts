@@ -31,6 +31,7 @@ export class OperationalMetricsService {
   private readonly latencyObservations = new Map<string, number>();
   private queueAgeSeconds = 0;
   private broadcastEstimatedSpendRial = 0;
+  private readonly stalePhotoRows = new Map<string, number>();
   private readonly httpCounts = new Map<string, number>();
   private readonly httpLatency = new Map<string, number[]>();
   private readonly queueOutcomes = new Map<string, number>();
@@ -80,6 +81,10 @@ export class OperationalMetricsService {
 
   addBroadcastEstimatedSpend(rial: number) {
     this.broadcastEstimatedSpendRial += Math.max(0, rial);
+  }
+
+  recordStaleStudentPhotoRows(rows: { status: string; count: number }[]) {
+    for (const row of rows) this.stalePhotoRows.set(row.status, Math.max(0, row.count));
   }
 
   renderPrometheus(): string {
@@ -171,6 +176,15 @@ export class OperationalMetricsService {
         `school_transport_database_pool_connections{state="idle"} ${pool.idle}`,
         `school_transport_database_pool_connections{state="waiting"} ${pool.waiting}`,
       );
+    lines.push(
+      '# HELP school_transport_student_photo_stale_rows Stale student-photo uploads awaiting cleanup by status.',
+      '# TYPE school_transport_student_photo_stale_rows gauge',
+    );
+    for (const status of ['AUTHORIZED', 'UPLOADED', 'VALIDATING']) {
+      lines.push(
+        `school_transport_student_photo_stale_rows{status="${status}"} ${this.stalePhotoRows.get(status) ?? 0}`,
+      );
+    }
     return `${lines.join('\n')}\n`;
   }
 }

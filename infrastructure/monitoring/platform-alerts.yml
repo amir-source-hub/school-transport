@@ -26,3 +26,15 @@ groups:
         for: 15m
         labels: { severity: critical, owner: platform }
         annotations: { summary: 'Queue failure rate exceeds 1% for {{ $labels.queue }}' }
+      - alert: StudentPhotoStaleAuthorizations
+        expr: school_transport_student_photo_stale_rows{status="AUTHORIZED"} > 10
+        for: 30m
+        labels: { severity: warning, owner: platform }
+        annotations:
+          { summary: 'Overdue student-photo authorizations are accumulating and need review' }
+      - alert: StudentPhotoStaleProcessing
+        expr: school_transport_student_photo_stale_rows{status="UPLOADED"} > 3 or school_transport_student_photo_stale_rows{status="VALIDATING"} > 3
+        for: 30m
+        labels: { severity: warning, owner: platform }
+        annotations:
+          { summary: 'Student-photo uploads are stalled in processing and require investigation' }
