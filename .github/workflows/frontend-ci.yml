@@ -29,7 +29,6 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           lfs: true
-        with:
           fetch-depth: 0
       - id: scope
         name: Check frontend and shared paths

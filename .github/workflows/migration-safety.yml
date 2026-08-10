@@ -45,7 +45,6 @@ jobs:
       DATABASE_URL: postgresql://school_transport:migration-ci-only@localhost:5432/migration_source_test
       DEPLOY_ENV: test
       RELEASE_ID: migration-ci-${{ github.run_id }}-${{ github.run_attempt }}
-      BACKUP_OUTPUT_DIR: ${{ runner.temp }}/encrypted-backups
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
@@ -72,6 +71,8 @@ jobs:
           bash infrastructure/database/migrate-safe.sh --status
       - name: Create encrypted backup
         id: backup
+        env:
+          BACKUP_OUTPUT_DIR: ${{ runner.temp }}/encrypted-backups
         run: |
           output="$(bash infrastructure/database/backup.sh)"
           printf '%s\n' "$output"
