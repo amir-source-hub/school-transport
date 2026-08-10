@@ -62,8 +62,10 @@ changes when `DATABASE_URL` is absent.
 
 ## Supported loading paths
 
-- Docker development uses only the explicitly selected root `.env.development` through
-  `docker compose --env-file .env.development -f docker-compose.yml -f docker-compose.development.yml ...`.
+- Full-stack Docker development uses the explicitly selected ignored root `.env` through
+  `docker compose --env-file .env -f docker-compose.local.yml ...`. The local Compose file adapts
+  database/Redis addresses to service DNS and uses a fixed public development-only Server Actions
+  key; production does neither.
 - Direct pnpm development uses `apps/api/.env` for the API and `apps/web/.env.local` for Next.js;
   workspace-root `.env` files are not implicitly loaded by those commands.
 - Ignored root `.env*` files are local operator inputs only. Staging and production values must be

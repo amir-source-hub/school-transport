@@ -1,0 +1,177 @@
+name: school-transport-local
+
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+    environment:
+      POSTGRES_DB: school_transport
+      POSTGRES_USER: school_transport
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-school_transport_dev}
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - postgres_local_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U school_transport -d school_transport']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
+    command:
+      [
+        'redis-server',
+        '--appendonly',
+        'yes',
+        '--requirepass',
+        '${REDIS_PASSWORD:-redis_dev_password}',
+      ]
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - redis_local_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-redis_dev_password}', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  bootstrap:
+    image: school-transport-api:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    command: ['node', 'dist/database/bootstrap-db.js']
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://school_transport:${POSTGRES_PASSWORD:-school_transport_dev}@postgres:5432/school_transport
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    image: school-transport-api:local
+    pull_policy: never
+    env_file:
+      - path: .env
+        required: false
+    environment: &local-api-environment
+      NODE_ENV: development
+      PORT: 5000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://school_transport:${POSTGRES_PASSWORD:-school_transport_dev}@postgres:5432/school_transport
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_dev_password}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-change-before-production}
+      CORS_ORIGINS: http://localhost:3000
+      TRUSTED_PROXY_CIDRS: ''
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      # The minimized production API image intentionally excludes Swagger's static-file plugin.
+      API_DOCS_ENABLED: 'false'
+      OTP_PROVIDER: ${OTP_PROVIDER:-console}
+      SMS_PROVIDER: ${SMS_PROVIDER:-none}
+      PAYMENT_GATEWAY_PROVIDER: none
+      SERVICE_ROLE: api
+      QUEUE_REQUIRED: 'false'
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+    ports:
+      - '127.0.0.1:5000:5000'
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:5000/api/v1/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  worker:
+    image: school-transport-api:local
+    pull_policy: never
+    command: ['node', 'dist/worker.js']
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *local-api-environment
+      SERVICE_ROLE: worker
+      QUEUE_REQUIRED: 'true'
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', 'dist/worker-readiness.js']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    image: school-transport-web:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api/v1
+        NEXT_DEPLOYMENT_ID: ${NEXT_DEPLOYMENT_ID:-development-local}
+      secrets:
+        - next_server_actions_encryption_key
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api/v1
+      API_INTERNAL_BASE_URL: http://api:5000/api/v1
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  postgres_local_data:
+  redis_local_data:
+
+secrets:
+  next_server_actions_encryption_key:
+    # Fixed, public development-only key. Production must continue to inject a unique secret.
+    file: ./infrastructure/container/local-next-server-actions-encryption-key.txt
