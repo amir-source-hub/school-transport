@@ -25,35 +25,49 @@
 - [ ] Approve retention/deletion and legal-hold rules for photos and payment-receipt evidence, then enable the remaining irreversible cleanup behavior. **[BLOCKED — PRODUCT/LEGAL POLICY]**
 - [ ] Supply and approve the physical student-card template and crop area, verify the 600×800 canonical output visually, and add the card-layout preview/export integration. **[BLOCKED — CARD TEMPLATE]**
 
-## 3. Offline-payment policy and contracts
+## 3. Enrollment form validation and UX
+
+- [ ] Replace the generic English `Invalid verification code.` response with an appropriate Persian OTP error at both API and UI boundaries. Distinguish an incorrect code, expired code, missing/invalidated request, resend cooldown, and too many attempts; preserve the tracking ID, avoid revealing whether an account exists, keep Persian copy consistent across login/onboarding/admin flows, and add API/UI tests for each state. **[READY — AUTH ERROR HANDLING]**
+- [ ] Redesign enrollment-form error presentation so errors appear next to the relevant field in Persian, the first invalid field receives focus, an accessible summary identifies every invalid section, submitted values are preserved, hidden conditional fields do not report stale errors, and server/network/conflict errors remain visually distinct from field-validation errors. Verify keyboard navigation, screen-reader associations, mobile layout, RTL rendering, loading/disabled states, and retry behavior. **[READY — ENROLLMENT ERROR UI]**
+- [ ] Render all numeric identifiers and telephone inputs left-to-right with left-aligned digits while keeping labels, help text, and surrounding form layout RTL. Apply `dir="ltr"`, numeric-friendly input modes, predictable caret behavior, and Persian/Arabic-to-ASCII digit normalization consistently without converting stored identifiers to numbers. **[READY — RTL/LTR INPUT UX]**
+- [ ] Initialize every mobile-phone field with the `09` prefix and every home/landline field with the `021` prefix. Keep these prefixes editable where product rules permit, place the caret after the prefix, prevent duplicated prefixes on paste/autofill, accept Persian and Arabic digits, and validate the normalized final value. Do not apply the `09` default to landline fields or the `021` default to mobile fields. **[READY — PHONE INPUT DEFAULTS]**
+- [ ] Change the product rule for every national-ID field to a numeric string of 1–10 digits, including values with meaningful leading zeros and short values such as three or four digits. Do not coerce the value to a number, do not require exactly ten digits, and do not apply the Iranian checksum rule unless product requirements are changed later. Use one shared validator and the same accurate Persian error across student, father, mother, attendant, emergency-contact, and any admin/edit/import surfaces. **[READY — NATIONAL-ID CONTRACT]**
+- [ ] Fix the attendant national-ID rejection demonstrated by `0023518805`. Remove the incorrect shared error `کد ملی نامعتبر است. فقط عدد و حداکثر ۲۰ رقم وارد کنید.` and any 20-digit, checksum, or field-specific schema mismatch; ensure the normalized value `0023518805` is accepted and its leading zeros survive request validation, persistence, retrieval, editing, exports, and audit redaction. Add regression tests for `1`, three/four-digit values, `0023518805`, ten digits, Persian digits, eleven digits, letters, whitespace/paste, and empty required/optional states. **[READY — NATIONAL-ID DEFECT]**
+- [ ] Replace free-form date fields with either an accessible Persian/Jalali calendar picker or three constrained numeric inputs for year, month, and day. The numeric presentation must read visually as `____/__/__` (`YYYY/MM/DD`), keep numeric segments left-to-right, auto-advance without trapping focus, support keyboard/paste/backspace, normalize Persian digits, and display the selected Persian date unambiguously. **[READY — PERSIAN DATE INPUT]**
+- [ ] Define one canonical date contract between UI and API: validate real Jalali dates including month lengths and leap years, reject impossible/future/out-of-policy dates with specific Persian messages, convert only at the boundary if storage uses Gregorian/ISO, and guarantee round-trip stability without timezone/day shifts. Apply it consistently to birth dates and every other enrollment date, with unit, integration, and E2E coverage. **[READY — DATE VALIDATION]**
+- [ ] Reduce the student-photo upload maximum from 25 MiB to 5 MiB across API configuration/defaults, authorization DTO responses, frontend preflight validation, Persian help/error copy, tests, environment examples, operational documentation, and S3/provider enforcement. Reject oversized files before issuing a presigned URL and verify exact-boundary behavior at 5 MiB and one byte above it. **[READY — PHOTO SIZE LIMIT]**
+- [ ] Make attendant identity fields conditional on the selected relationship: when `father` is selected, reuse the already entered father record and do not request duplicate father details; when `mother` is selected, reuse the mother record and do not request duplicate mother details; when `other` is selected, retain both father and mother sections and collect a separate attendant record. Clear or ignore stale hidden attendant values, preserve intentional data when toggling safely, enforce the same rule server-side, and verify create/edit/resume/export behavior. **[READY — CONDITIONAL ATTENDANT FORM]**
+- [ ] Add focused enrollment E2E coverage combining the preceding rules: mobile/home prefixes and LTR alignment, short/leading-zero national IDs, attendant relationship switching, Persian date entry/calendar selection, 5 MiB photo boundary, accessible field errors, submission retry, onboarding resume, and successful persistence/reload of normalized values. **[READY — ENROLLMENT VERIFICATION]**
+
+## 4. Offline-payment policy and contracts
 
 - [ ] Approve and version the final Persian offline-payment contract, including claim-versus-acceptance wording, destination/amount/reference responsibility, review timing, corrections, duplicate transfers, refunds, disputes, installments, late payment, retention, and activation timing. **[BLOCKED — PRODUCT/LEGAL INPUT]**
 - [ ] Review notification consent, photo privacy, payment-evidence privacy, retention/deletion, and SMS/OTP clauses together, then update contract rendering, print/download views, tests, and previews with the approved text. **[BLOCKED — APPROVED TEXT]**
 
-## 4. Online-payment gateway
+## 5. Online-payment gateway
 
 - [ ] Select a gateway and supply official documentation, sandbox/merchant credentials, callback URLs/IPs, rial/toman units, verification, expiry, reconciliation, settlement, duplicate-payment, refund, and support rules. **[BLOCKED — USER INPUT]**
 - [ ] Implement the selected provider behind the existing gateway port with server-to-server verification, atomic/idempotent finalization, unknown-state reconciliation, validated HTTPS redirects, return UI, sandbox contract/E2E coverage, and runbooks. **[BLOCKED — GATEWAY INPUT]**
 - [ ] Enable online controls only after sandbox and production-readiness verification; the completed offline workflow remains available. **[BLOCKED — GATEWAY VERIFICATION]**
 
-## 5. Media
+## 6. Media
 
 - [ ] Supply the approved tutorial video, poster, Persian captions/transcript, duration, rights, placement, and hosting origin; then build and verify the accessible reusable video surface. **[BLOCKED — MEDIA INPUT]**
 - [ ] Supply approved advertisement media, poster/captions, rights, campaign dates/pages, hosting, frequency, dismissal, autoplay/audio, and replay rules; then build and verify the accessible fail-closed dialog. **[BLOCKED — MEDIA INPUT]**
 
-## 6. Product and operations decisions
+## 7. Product and operations decisions
 
 - [ ] Define required export ranges, delivery method, access control, expiry, and retention before implementing queued/streamed exports beyond the current 10,000-row synchronous ceiling. **[BLOCKED — PRODUCT/OPERATIONS INPUT]**
 - [ ] Approve exact retention, erasure/anonymization, dispute/legal-hold, consent-history, child-record, financial, audit, support, and campaign periods before enabling irreversible cleanup and replacing `pending-legal-approval` in the privacy register. **[BLOCKED — LEGAL/PRODUCT POLICY]**
 
-## 7. CI and repository cleanup
+## 8. CI and repository cleanup
 
 - [ ] Reproduce and diagnose the failing production Compose `Build and start the production web dependency chain` step from the `8bd55c7` `main` workflow run; the local reproduction was intentionally stopped before completion. Split build/start diagnostics if needed, preserve the first actionable Docker/Next.js error in CI annotations or an artifact, fix the root cause, and verify the complete deployment smoke job. **[PAUSED — CI/LOCAL REPRODUCTION]**
 - [ ] Confirm the production-container scan result after the `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` and Git LFS checkout fixes; if it still fails, inspect the Trivy/SARIF findings, remediate actionable vulnerabilities or document narrowly scoped accepted risks, and rerun the scan to success. **[PAUSED — CI RESULT/REPOSITORY ACCESS]**
 - [ ] Enable GitHub Dependency graph and dependency review under repository security settings, then rerun the pull-request dependency/license check and verify that push runs remain intentionally skipped. **[BLOCKED — REPOSITORY ADMIN SETTING]**
 - [ ] Close the superseded `dependabot/docker/node-26-bookworm-slim` pull request and delete its remote branch after confirming no useful dependency metadata remains; `main` deliberately targets Node.js 24 LTS instead of that proposed Node.js 26 image update. **[BLOCKED — REMOTE REPOSITORY APPROVAL]**
 
-## 8. Staging, deployment, and release approval
+## 9. Staging, deployment, and release approval
 
 - [ ] Verify notification migration `0025_notification_read_state.sql`, all forward migrations, and recovery procedures against a sanitized production-like snapshot; record duration, locks, backup, restore, and legacy outbox compatibility. **[BLOCKED — STAGING DATABASE]**
 - [ ] Enable persistent Redis memory overcommit and verify it after a host reboot. **[BLOCKED — HOST ACCESS]**
