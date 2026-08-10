@@ -51,9 +51,18 @@ const exampleVariables = new Set(
 const undocumented = [...consumed].filter((name) => !documented.has(name)).sort();
 const exampleOnly = [...exampleVariables].filter((name) => !consumed.has(name)).sort();
 if (undocumented.length || exampleOnly.length) {
-  if (undocumented.length) console.error(`Consumed but undocumented: ${undocumented.join(', ')}`);
-  if (exampleOnly.length)
-    console.error(`Example entries with no consumer: ${exampleOnly.join(', ')}`);
+  if (undocumented.length) {
+    const message = `Consumed but undocumented: ${undocumented.join(', ')}`;
+    console.error(message);
+    if (process.env.GITHUB_ACTIONS === 'true')
+      console.error(`::error title=Environment inventory::${message}`);
+  }
+  if (exampleOnly.length) {
+    const message = `Example entries with no consumer: ${exampleOnly.join(', ')}`;
+    console.error(message);
+    if (process.env.GITHUB_ACTIONS === 'true')
+      console.error(`::error title=Environment examples::${message}`);
+  }
   process.exit(1);
 }
 

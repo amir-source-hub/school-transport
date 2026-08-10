@@ -123,6 +123,8 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          lfs: true
       - name: Build production images without publishing
         run: |
           docker build --target api --tag school-transport-api:scan .

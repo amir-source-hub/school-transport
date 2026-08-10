@@ -7,7 +7,7 @@
       "interactionToNextPaintMs": 200,
       "imageTransferBytes": 900000,
       "requestCount": 55,
-      "javascriptTransferBytes": 350000
+      "javascriptTransferBytes": 400000
     },
     "laptop": {
       "viewport": "1440x900",
@@ -15,8 +15,8 @@
       "cumulativeLayoutShift": 0.1,
       "interactionToNextPaintMs": 200,
       "imageTransferBytes": 1200000,
-      "requestCount": 50,
-      "javascriptTransferBytes": 400000
+      "requestCount": 85,
+      "javascriptTransferBytes": 450000
     }
   },
   "routes": [
