@@ -32,10 +32,25 @@ const contractLabels: Record<string, string> = {
   schoolId: 'شناسه مدرسه',
   educationLevel: 'مقطع',
   grade: 'پایه',
+  relationshipType: 'نسبت سرپرست',
+  relationshipDescription: 'شرح نسبت',
+  relationship: 'نسبت',
+  homePhone: 'تلفن منزل',
+  schoolName: 'نام مدرسه',
+  schoolType: 'نوع مدرسه',
+  genderType: 'نوع مدرسه از نظر جنسیت',
+  paymentPlanType: 'روش پرداخت',
+  requestedStartDate: 'تاریخ شروع درخواستی',
+  parentNotes: 'توضیحات خانواده',
+  vehicleType: 'نوع خودرو',
+  installmentAllowed: 'امکان پرداخت اقساطی',
+  itemType: 'نوع پرداخت',
+  itemStatus: 'وضعیت پرداخت',
 };
 
 const groupLabels: Record<string, string> = {
   student: 'دانش‌آموز',
+  guardian: 'سرپرست',
   father: 'پدر',
   mother: 'مادر',
   emergencyContact: 'تماس اضطراری',
@@ -45,6 +60,40 @@ const groupLabels: Record<string, string> = {
   price: 'شرایط مالی',
 };
 
+const contractValueLabels: Record<string, string> = {
+  GENERATED: 'صادرشده و در انتظار پذیرش',
+  ACCEPTED: 'پذیرفته‌شده',
+  REJECTED: 'ردشده',
+  CANCELLED: 'لغوشده',
+  BUS: 'اتوبوس',
+  MINIBUS: 'مینی‌بوس',
+  VAN: 'ون',
+  CAR: 'خودرو سواری',
+  MALE: 'پسر',
+  FEMALE: 'دختر',
+  MIXED: 'مختلط',
+  FATHER: 'پدر',
+  MOTHER: 'مادر',
+  OTHER: 'سایر',
+  FULL: 'پرداخت کامل',
+  INSTALLMENTS: 'پیش‌پرداخت و اقساط',
+  PREPAYMENT_PLUS_FOUR_INSTALLMENTS: 'پیش‌پرداخت و چهار قسط',
+  ADMIN_CONFIGURED: 'برنامه اقساط تنظیم‌شده توسط مدیریت',
+  PUBLIC: 'دولتی',
+  PRIVATE: 'خصوصی',
+  NEMOONE_DOLATI: 'نمونه دولتی',
+  GIFTED: 'تیزهوشان',
+  SHAHED: 'شاهد',
+  BOARDING: 'شبانه‌روزی',
+  SPECIAL: 'استثنائی',
+  INTERNATIONAL: 'بین‌المللی',
+  PREPAYMENT: 'پیش‌پرداخت',
+  INSTALLMENT: 'قسط',
+  PAID: 'پرداخت‌شده',
+  UNPAID: 'پرداخت‌نشده',
+  PENDING: 'در انتظار',
+};
+
 function parseContractSnapshot(snapshot: string | null) {
   if (!snapshot) return [];
   try {
@@ -52,7 +101,17 @@ function parseContractSnapshot(snapshot: string | null) {
     return Object.entries(parsed)
       .filter(
         ([group]) =>
-          !['contractText', 'pages', 'bindings', 'templateHash', 'enrollment'].includes(group),
+          ![
+            'contractText',
+            'pages',
+            'bindings',
+            'templateHash',
+            'enrollment',
+            'schemaVersion',
+            'templateVersion',
+            'generatedAt',
+            'acceptance',
+          ].includes(group),
       )
       .map(([group, value]) => ({
         title: groupLabels[group] ?? contractLabels[group] ?? group,
@@ -112,6 +171,7 @@ function formatContractValue(key: string, value: unknown) {
   if (value === null || value === undefined || value === '') return '—';
   if (key.toLowerCase().includes('amount') && typeof value === 'number') return formatIrr(value);
   if (typeof value === 'boolean') return value ? 'بله' : 'خیر';
+  if (typeof value === 'string' && contractValueLabels[value]) return contractValueLabels[value];
   return String(value);
 }
 
@@ -155,7 +215,7 @@ export default async function ContractPage({
                 : 'warning'
           }
         >
-          {contract.contractStatus}
+          {contractValueLabels[contract.contractStatus] ?? contract.contractStatus}
         </Badge>
       </div>
       <section className="grid gap-4 md:grid-cols-3">
@@ -165,7 +225,9 @@ export default async function ContractPage({
         </Card>
         <Card>
           <p className="text-sm text-muted">نوع سرویس</p>
-          <p className="mt-2 font-black">{contract.serviceType}</p>
+          <p className="mt-2 font-black">
+            {contractValueLabels[contract.serviceType] ?? contract.serviceType}
+          </p>
         </Card>
         <Card>
           <p className="text-sm text-muted">مبلغ</p>
@@ -191,7 +253,7 @@ export default async function ContractPage({
                   {group.fields.map(([key, value]) => (
                     <div key={key} className="grid grid-cols-[8rem_1fr] gap-3 py-2">
                       <dt className="text-muted">
-                        {contractLabels[key] ?? (key === 'text' ? 'متن' : key)}
+                        {contractLabels[key] ?? (key === 'text' ? 'متن' : 'اطلاعات تکمیلی')}
                       </dt>
                       <dd
                         className="break-words font-bold"
@@ -243,7 +305,7 @@ export default async function ContractPage({
                 </span>
                 <strong>{formatIrr(item.amount)}</strong>
                 <Badge tone={item.itemStatus === 'PAID' ? 'success' : 'warning'}>
-                  {item.itemStatus}
+                  {contractValueLabels[item.itemStatus] ?? item.itemStatus}
                 </Badge>
               </div>
             ))}

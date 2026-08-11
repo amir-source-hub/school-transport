@@ -31,7 +31,16 @@ const createContentSecurityPolicy = ({
   production,
 }: SecurityHeaderOptions) => {
   const apiOrigin = getApiOrigin(apiBaseUrl);
-  const connectSources = ["'self'", apiOrigin, getOrigin(privateUploadOrigin), 'blob:'];
+  const privateStorageOrigin = getOrigin(privateUploadOrigin);
+  const connectSources = ["'self'", apiOrigin, privateStorageOrigin, 'blob:'];
+  const imageSources = [
+    "'self'",
+    'data:',
+    'blob:',
+    'https://tile.openstreetmap.org',
+    'https://*.tile.openstreetmap.org',
+    privateStorageOrigin,
+  ];
 
   if (!production) {
     connectSources.push('ws:', 'wss:');
@@ -50,7 +59,7 @@ const createContentSecurityPolicy = ({
     "frame-ancestors 'none'",
     "form-action 'self'",
     "frame-src 'self' https://www.google.com",
-    "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org",
+    `img-src ${imageSources.filter(Boolean).join(' ')}`,
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
     `script-src ${scriptSources.join(' ')}`,

@@ -25,6 +25,10 @@ const rawSchoolSchema = z.object({
 export const SCHOOL_TYPE_LABELS: Record<string, string> = {
   PUBLIC: 'دولتی',
   PRIVATE: 'خصوصی',
+  NEMOONE_DOLATI: 'نمونه دولتی',
+  GIFTED: 'تیزهوشان',
+  SHAHED: 'شاهد',
+  BOARDING: 'شبانه‌روزی',
   SPECIAL: 'استثنائی',
   INTERNATIONAL: 'بین‌المللی',
 };
@@ -45,9 +49,13 @@ export const createSchoolSchema = z.object({
   city: z.string().min(1, 'شهر الزامی است'),
   district: z.string().optional(),
   address: z.string().min(1, 'نشانی الزامی است'),
-  phoneNumber: z.string().optional(),
-  managerName: z.string().optional(),
-  managerPhone: z.string().optional(),
+  phoneNumber: z
+    .string()
+    .regex(/^0[1-8]\d{9}$/, 'شماره تلفن مدرسه باید ۱۱ رقم و با پیش‌شماره معتبر باشد'),
+  managerName: z.string().trim().min(1, 'نام مدیر الزامی است'),
+  managerPhone: z
+    .string()
+    .regex(/^09\d{9}$/, 'شماره همراه مدیر باید ۱۱ رقم و با ۰۹ شروع شود'),
   educationOptions: z
     .array(
       z.object({

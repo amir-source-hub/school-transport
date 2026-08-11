@@ -41,7 +41,7 @@ describe('OfflinePaymentForm', () => {
       bankName: 'بانک',
       cardNumber: '6037991234567890',
       iban: null,
-      accountNumber: null,
+      accountNumber: '123456789001',
       instructions: 'رسید را ثبت کنید.',
     });
     api.submitOfflinePayment.mockResolvedValue('submission-1');
@@ -61,6 +61,7 @@ describe('OfflinePaymentForm', () => {
       <OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت — ۴٬۹۹۷٬۸۰۰ تومان' }]} />,
     );
     expect(await screen.findByText('6037991234567890')).toBeInTheDocument();
+    expect(screen.getByText('123456789001')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('سال'), { target: { value: '1405' } });
     fireEvent.change(screen.getByLabelText('ماه'), { target: { value: '05' } });
     fireEvent.change(screen.getByLabelText('روز'), { target: { value: '18' } });

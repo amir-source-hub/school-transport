@@ -169,6 +169,14 @@ export function OfflinePaymentForm({
               </dd>
             </div>
           )}
+          {destination.accountNumber && (
+            <div>
+              <dt className="text-muted">شماره حساب</dt>
+              <dd className="font-bold" dir="ltr">
+                {destination.accountNumber}
+              </dd>
+            </div>
+          )}
           <div className="sm:col-span-2">
             <dt className="text-muted">راهنما</dt>
             <dd className="whitespace-pre-line">{destination.instructions}</dd>

@@ -29,7 +29,6 @@ export class ReportsController {
       actorId: req.user?.id ?? 'unknown',
       action: 'REPORT_PREVIEW_VIEWED',
       entityType: 'REPORT',
-      entityId: query.section,
       newValues: { section: query.section, page: query.page, pageSize: query.pageSize },
       ipAddress: req.ip,
     });

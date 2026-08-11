@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  ArrayNotEmpty,
   IsBoolean,
   IsIn,
   IsOptional,
@@ -12,7 +13,16 @@ import {
 } from 'class-validator';
 import { normalizeIranianDigits } from '../../common/iranian-national-id';
 
-export const SCHOOL_TYPES = ['PUBLIC', 'PRIVATE', 'SPECIAL', 'INTERNATIONAL'] as const;
+export const SCHOOL_TYPES = [
+  'PUBLIC',
+  'PRIVATE',
+  'NEMOONE_DOLATI',
+  'GIFTED',
+  'SHAHED',
+  'BOARDING',
+  'SPECIAL',
+  'INTERNATIONAL',
+] as const;
 export const GENDER_TYPES = ['MALE', 'FEMALE', 'MIXED'] as const;
 
 export class EducationOptionDto {
@@ -34,23 +44,21 @@ export class CreateSchoolDto {
   @IsString() @Length(1, 100) city!: string;
   @IsOptional() @IsString() @Length(1, 50) district?: string;
   @IsString() @Length(1, 500) address!: string;
-  @IsOptional()
   @Transform(({ value }) =>
     typeof value === 'string' ? normalizeIranianDigits(value).trim() : value,
   )
   @IsString()
-  @Matches(/^0\d{9,10}$/)
-  phoneNumber?: string;
-  @IsOptional()
+  @Matches(/^0[1-8]\d{9}$/, { message: 'شماره تلفن مدرسه باید ۱۱ رقم و با پیش‌شماره معتبر باشد.' })
+  phoneNumber!: string;
   @Transform(({ value }) =>
     typeof value === 'string' ? normalizeIranianDigits(value).trim() : value,
   )
   @IsString()
-  @Matches(/^0\d{9,10}$/)
-  managerPhone?: string;
-  @IsOptional() @IsString() @Length(1, 100) managerName?: string;
-  @IsOptional()
+  @Matches(/^09\d{9}$/, { message: 'شماره همراه مدیر باید ۱۱ رقم و با ۰۹ شروع شود.' })
+  managerPhone!: string;
+  @IsString() @Length(1, 100) managerName!: string;
   @IsArray()
+  @ArrayNotEmpty()
   @ArrayMaxSize(20)
   @ValidateNested({ each: true })
   @Type(() => EducationOptionDto)
@@ -70,14 +78,14 @@ export class UpdateSchoolDto {
     typeof value === 'string' ? normalizeIranianDigits(value).trim() : value,
   )
   @IsString()
-  @Matches(/^0\d{9,10}$/)
+  @Matches(/^0[1-8]\d{9}$/, { message: 'شماره تلفن مدرسه باید ۱۱ رقم و با پیش‌شماره معتبر باشد.' })
   phoneNumber?: string;
   @IsOptional()
   @Transform(({ value }) =>
     typeof value === 'string' ? normalizeIranianDigits(value).trim() : value,
   )
   @IsString()
-  @Matches(/^0\d{9,10}$/)
+  @Matches(/^09\d{9}$/, { message: 'شماره همراه مدیر باید ۱۱ رقم و با ۰۹ شروع شود.' })
   managerPhone?: string;
   @IsOptional() @IsString() @Length(1, 100) managerName?: string;
   @IsOptional()

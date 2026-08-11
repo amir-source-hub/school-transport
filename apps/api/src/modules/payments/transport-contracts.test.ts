@@ -126,6 +126,8 @@ describe('scoped transport contracts', () => {
         city: 'Tehran',
         address: 'Street',
         phoneNumber: '۰۲۱۱۲۳۴۵۶۷۸',
+        managerName: 'مدیر مدرسه',
+        managerPhone: '۰۹۱۲۳۴۵۶۷۸۹',
         educationOptions: [{ level: 'Primary', grades: ['1'] }],
       },
       CreateSchoolDto,
@@ -148,13 +150,18 @@ describe('scoped transport contracts', () => {
         province: 'Tehran',
         city: 'Tehran',
         address: 'Street',
+        phoneNumber: '۰۲۱۱۲۳۴۵۶۷۸',
         managerName: 'مدیر مدرسه',
         managerPhone: '۰۹۱۲۳۴۵۶۷۸۹',
+        educationOptions: [{ level: 'Primary', grades: ['1'] }],
       },
       CreateSchoolDto,
     );
     expect(dto.schoolType).toBe('SPECIAL');
     expect(dto.managerPhone).toBe('09123456789');
+    await expect(body({ schoolType: 'GIFTED' }, UpdateSchoolDto)).resolves.toMatchObject({
+      schoolType: 'GIFTED',
+    });
     await expect(
       body({ schoolType: 'INTERNATIONAL', genderType: 'MIXED' }, UpdateSchoolDto),
     ).resolves.toMatchObject({ schoolType: 'INTERNATIONAL' });
