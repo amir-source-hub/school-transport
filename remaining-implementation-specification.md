@@ -1,29 +1,31 @@
 # Remaining Implementation Specification
 
 > Audited on 2026-08-10. Completed and verified implementation has been removed. This file contains only unresolved work, including diagnosed implementation defects and work blocked by external configuration, supplied assets, deployment access, or human approval.
+>
+> Items tagged `[LATER — …]` require external input (accounts, networks, assets, media, legal/product approval, deployment access) or are deliberately deferred and are not actionable in this codebase right now. In particular, anything coupled to the SMS provider (OTP delivery, delivery-status reconciliation, notification/consent copy, outbox verification) is deferred until the Kavenegar/sender issues under §1 are resolved; do not attempt OTP- or notification-related work while the SMS provider is unavailable.
 
 ## 1. SMS and Kavenegar
 
-- [ ] Obtain an authorized Kavenegar sender line; sender `2000660110` currently returns provider status `427`. **[BLOCKED — KAVENEGAR ACCOUNT]**
-- [ ] Restore outbound access to `api.kavenegar.com:443` and verify candidate sender `0018018949161`. **[BLOCKED — NETWORK/PROVIDER]**
-- [ ] Allowlist the server outbound IP if `LatestOutbox`/`SelectOutbox` reconciliation is required; the current request returns `407`. **[BLOCKED — KAVENEGAR ACCOUNT]**
-- [ ] Create and approve the exact `KAVEHNEGAR_OTP_TEMPLATE`; VerifyLookup currently returns `424`. **[BLOCKED — KAVENEGAR ACCOUNT]**
-- [ ] Supply the current price per segment, campaign spend cap, alert recipient/system, and approved live test number. **[BLOCKED — USER INPUT]**
-- [ ] Confirm whether authenticated callbacks are available for the account/plan or approve bounded official status polling, then implement and test the selected replay-safe delivery-status path. **[BLOCKED — PROVIDER DECISION]**
-- [ ] After configuration is corrected, verify one ordinary SMS, one OTP, and one controlled broadcast on an approved handset. **[BLOCKED — EXTERNAL SEND]**
-- [ ] Approve that requested OTP/security messages do not depend on optional marketing consent. **[BLOCKED — PRODUCT/LEGAL APPROVAL]**
+- [ ] Obtain an authorized Kavenegar sender line; sender `2000660110` currently returns provider status `427`. **[LATER — KAVENEGAR ACCOUNT]**
+- [ ] Restore outbound access to `api.kavenegar.com:443` and verify candidate sender `0018018949161`. **[LATER — NETWORK/PROVIDER]**
+- [ ] Allowlist the server outbound IP if `LatestOutbox`/`SelectOutbox` reconciliation is required; the current request returns `407`. **[LATER — KAVENEGAR ACCOUNT]**
+- [ ] Create and approve the exact `KAVEHNEGAR_OTP_TEMPLATE`; VerifyLookup currently returns `424`. **[LATER — KAVENEGAR ACCOUNT]**
+- [ ] Supply the current price per segment, campaign spend cap, alert recipient/system, and approved live test number. **[LATER — USER INPUT]**
+- [ ] Confirm whether authenticated callbacks are available for the account/plan or approve bounded official status polling, then implement and test the selected replay-safe delivery-status path. **[LATER — PROVIDER DECISION]**
+- [ ] After configuration is corrected, verify one ordinary SMS, one OTP, and one controlled broadcast on an approved handset. **[LATER — EXTERNAL SEND]**
+- [ ] Approve that requested OTP/security messages do not depend on optional marketing consent. **[LATER — PRODUCT/LEGAL APPROVAL]**
 
 ## 2. Private S3-compatible storage and student cards
 
-- [ ] Supply the Arvan endpoint, region, private bucket, scoped access key/secret, exact CORS origins, lifecycle policy, and versioning choice. **[BLOCKED — USER INPUT]**
-- [ ] Verify presigned PUT/GET expiry and tampering, anonymous denial, key scoping, CORS, TLS, and actual Arvan compatibility in staging for student photos and payment receipts. **[BLOCKED — ARVAN CONFIGURATION]**
+- [ ] Supply the Arvan endpoint, region, private bucket, scoped access key/secret, exact CORS origins, lifecycle policy, and versioning choice. **[LATER — USER INPUT]**
+- [ ] Verify presigned PUT/GET expiry and tampering, anonymous denial, key scoping, CORS, TLS, and actual Arvan compatibility in staging for student photos and payment receipts. **[LATER — ARVAN CONFIGURATION]**
 - [ ] Diagnose and fix the browser-to-Arvan presigned `PUT` failure. Local evidence on 2026-08-10 shows that the onboarding authorization endpoint returns `200`, creates an `AUTHORIZED` row, and generates a five-minute SigV4 URL; the configured endpoint resolves and serves TLS, the bucket answers the `http://localhost:3000` `OPTIONS` preflight with `200` and allows `PUT` plus `content-type`, and a host-side signed `HEAD` returns the expected `404`, but no browser `PUT` is observed and no object reaches storage. Capture the failed browser `OPTIONS`/`PUT` status and provider error without recording the signed URL, then correct any request-header, signing, provider-policy, browser-network, or Arvan-compatibility defect. **[READY — DIAGNOSTIC/IMPLEMENTATION]**
-- [ ] Restore outbound HTTPS connectivity from the API/worker containers to `s3.ir-thr-at1.arvanstorage.ir:443`. The Windows host reaches the endpoint, but a signed read-only request from the API container fails with `UND_ERR_CONNECT_TIMEOUT`; verify Docker DNS, routing, proxy/VPN, firewall, IPv4/IPv6 behavior, and production-host egress. Server-side `HEAD`, `GET`, canonical-image `PUT`, and cleanup `DELETE` must all work before photo or payment-receipt storage is considered usable. **[BLOCKED — DOCKER/HOST NETWORK]**
+- [ ] Restore outbound HTTPS connectivity from the API/worker containers to `s3.ir-thr-at1.arvanstorage.ir:443`. The Windows host reaches the endpoint, but a signed read-only request from the API container fails with `UND_ERR_CONNECT_TIMEOUT`; verify Docker DNS, routing, proxy/VPN, firewall, IPv4/IPv6 behavior, and production-host egress. Server-side `HEAD`, `GET`, canonical-image `PUT`, and cleanup `DELETE` must all work before photo or payment-receipt storage is considered usable. **[LATER — DOCKER/HOST NETWORK]**
 - [ ] Fix expired photo-upload authorizations exhausting `STUDENT_PHOTO_MAX_ACTIVE_UPLOADS`. Three failed local attempts remained `AUTHORIZED` after their five-minute expiry and caused `PHOTO_UPLOAD_LIMIT` (`409`). In the authorization transaction, expire overdue `AUTHORIZED` rows before enforcing the cap or exclude rows whose `upload_authorization_expiry` is in the past; preserve concurrency safety, account scoping, auditability, and idempotency. Verify that genuinely active uploads still enforce the cap while abandoned/expired uploads immediately stop counting. **[READY — BACKEND IMPLEMENTATION]**
 - [ ] Verify and repair scheduled student-photo cleanup. Confirm the worker schedules and executes `cleanupExpired`, records failures without log flooding, transitions expired authorizations to `EXPIRED`, and remains effective after Redis reconnect/restart. Add unit/integration coverage for worker scheduling, Redis interruption/recovery, repeated cleanup, and an authorization request racing cleanup; expose actionable metrics/alerts for stale `AUTHORIZED`, `UPLOADED`, and `VALIDATING` rows. **[READY — WORKER/OBSERVABILITY]**
-- [ ] After the fixes, clear only confirmed expired local authorization rows through the application cleanup path, then run a complete JPEG and PNG acceptance test: authorize, browser `PUT`, complete, server-side metadata/read, isolated validation/crop, canonical 600×800 JPEG write, raw-object deletion, review queue, signed view, approval/rejection, expiry/tampering, and retry. Repeat the equivalent presigned upload/read checks for offline-payment receipts. **[BLOCKED — ARVAN/IMPLEMENTATION VERIFICATION]**
-- [ ] Approve retention/deletion and legal-hold rules for photos and payment-receipt evidence, then enable the remaining irreversible cleanup behavior. **[BLOCKED — PRODUCT/LEGAL POLICY]**
-- [ ] Supply and approve the physical student-card template and crop area, verify the 600×800 canonical output visually, and add the card-layout preview/export integration. **[BLOCKED — CARD TEMPLATE]**
+- [ ] After the fixes, clear only confirmed expired local authorization rows through the application cleanup path, then run a complete JPEG and PNG acceptance test: authorize, browser `PUT`, complete, server-side metadata/read, isolated validation/crop, canonical 600×800 JPEG write, raw-object deletion, review queue, signed view, approval/rejection, expiry/tampering, and retry. Repeat the equivalent presigned upload/read checks for offline-payment receipts. **[LATER — ARVAN/IMPLEMENTATION VERIFICATION]**
+- [ ] Approve retention/deletion and legal-hold rules for photos and payment-receipt evidence, then enable the remaining irreversible cleanup behavior. **[LATER — PRODUCT/LEGAL POLICY]**
+- [ ] Supply and approve the physical student-card template and crop area, verify the 600×800 canonical output visually, and add the card-layout preview/export integration. **[LATER — CARD TEMPLATE]**
 
 ## 3. Enrollment form validation and UX
 
@@ -48,41 +50,41 @@
 - [ ] Preserve identifiers as strings so leading zeros survive in national IDs, postal codes, and telephone numbers; render dates in the approved Persian/Jalali format and monetary values consistently in rial/toman with both digits and words where the source contract requires it. Escape all user-controlled values, prevent markup/script injection, constrain overly long values, and show a blocking Persian validation error instead of leaving required legal fields blank. **[READY — CONTRACT VALUE SAFETY]**
 - [ ] Generate an immutable contract snapshot at acceptance containing the exact template/version hash, all resolved field values, three-page rendered representation, acceptance timestamp, authenticated actor/account/student identifiers, IP/user agent where legally approved, and audit event. Later profile or template changes must not alter an already accepted contract; amendments require a new explicit version and acceptance flow. **[READY — CONTRACT VERSIONING/AUDIT]**
 - [ ] Provide print and download output that remains exactly three pages and matches the interactive viewer's wording and populated values. Prevent orphaned headings, clipped Persian glyphs, overlapping fields, unexpected fourth pages, blank pages, or content reflow across supported rendering engines. Keep sensitive downloads authorization-scoped, non-cacheable where appropriate, and free of hidden Word metadata or unneeded personal data. **[READY — CONTRACT PRINT/DOWNLOAD]**
-- [ ] Before release, render the two source Word files and the generated populated contract to page images/PDF and visually compare every page at 100% zoom. The current Windows environment could structurally extract all text and identify the intended 1+2-page split, but LibreOffice was unavailable, so source visual fidelity remains unverified. Obtain product/legal approval for the final three-page comparison and representative long/short/empty-safe data cases. **[BLOCKED — DOCUMENT RENDER/LEGAL QA]**
+- [ ] Before release, render the two source Word files and the generated populated contract to page images/PDF and visually compare every page at 100% zoom. The current Windows environment could structurally extract all text and identify the intended 1+2-page split, but LibreOffice was unavailable, so source visual fidelity remains unverified. Obtain product/legal approval for the final three-page comparison and representative long/short/empty-safe data cases. **[LATER — DOCUMENT RENDER/LEGAL QA]**
 - [ ] Add unit, integration, accessibility, visual-regression, and E2E coverage for placeholder completeness, correct user/student ownership, page order/navigation, refresh/resume, leading-zero values, long Persian names/addresses, Jalali dates, currency wording, required-field blocking, acceptance immutability, authorization, print/PDF page count, and prevention of stale or cross-account contract data. **[READY — CONTRACT VERIFICATION]**
-- [ ] Approve and version the final Persian offline-payment contract, including claim-versus-acceptance wording, destination/amount/reference responsibility, review timing, corrections, duplicate transfers, refunds, disputes, installments, late payment, retention, and activation timing. **[BLOCKED — PRODUCT/LEGAL INPUT]**
-- [ ] Review notification consent, photo privacy, payment-evidence privacy, retention/deletion, and SMS/OTP clauses together, then update contract rendering, print/download views, tests, and previews with the approved text. **[BLOCKED — APPROVED TEXT]**
+- [ ] Approve and version the final Persian offline-payment contract, including claim-versus-acceptance wording, destination/amount/reference responsibility, review timing, corrections, duplicate transfers, refunds, disputes, installments, late payment, retention, and activation timing. **[LATER — PRODUCT/LEGAL INPUT]**
+- [ ] Review notification consent, photo privacy, payment-evidence privacy, retention/deletion, and SMS/OTP clauses together, then update contract rendering, print/download views, tests, and previews with the approved text. **[LATER — APPROVED TEXT]**
 
 ## 5. Online-payment gateway
 
-- [ ] Select a gateway and supply official documentation, sandbox/merchant credentials, callback URLs/IPs, rial/toman units, verification, expiry, reconciliation, settlement, duplicate-payment, refund, and support rules. **[BLOCKED — USER INPUT]**
-- [ ] Implement the selected provider behind the existing gateway port with server-to-server verification, atomic/idempotent finalization, unknown-state reconciliation, validated HTTPS redirects, return UI, sandbox contract/E2E coverage, and runbooks. **[BLOCKED — GATEWAY INPUT]**
-- [ ] Enable online controls only after sandbox and production-readiness verification; the completed offline workflow remains available. **[BLOCKED — GATEWAY VERIFICATION]**
+- [ ] Select a gateway and supply official documentation, sandbox/merchant credentials, callback URLs/IPs, rial/toman units, verification, expiry, reconciliation, settlement, duplicate-payment, refund, and support rules. **[LATER — USER INPUT]**
+- [ ] Implement the selected provider behind the existing gateway port with server-to-server verification, atomic/idempotent finalization, unknown-state reconciliation, validated HTTPS redirects, return UI, sandbox contract/E2E coverage, and runbooks. **[LATER — GATEWAY INPUT]**
+- [ ] Enable online controls only after sandbox and production-readiness verification; the completed offline workflow remains available. **[LATER — GATEWAY VERIFICATION]**
 
 ## 6. Media
 
-- [ ] Supply the approved tutorial video, poster, Persian captions/transcript, duration, rights, placement, and hosting origin; then build and verify the accessible reusable video surface. **[BLOCKED — MEDIA INPUT]**
-- [ ] Supply approved advertisement media, poster/captions, rights, campaign dates/pages, hosting, frequency, dismissal, autoplay/audio, and replay rules; then build and verify the accessible fail-closed dialog. **[BLOCKED — MEDIA INPUT]**
+- [ ] Supply the approved tutorial video, poster, Persian captions/transcript, duration, rights, placement, and hosting origin; then build and verify the accessible reusable video surface. **[LATER — MEDIA INPUT]**
+- [ ] Supply approved advertisement media, poster/captions, rights, campaign dates/pages, hosting, frequency, dismissal, autoplay/audio, and replay rules; then build and verify the accessible fail-closed dialog. **[LATER — MEDIA INPUT]**
 
 ## 7. Product and operations decisions
 
-- [ ] Define required export ranges, delivery method, access control, expiry, and retention before implementing queued/streamed exports beyond the current 10,000-row synchronous ceiling. **[BLOCKED — PRODUCT/OPERATIONS INPUT]**
-- [ ] Approve exact retention, erasure/anonymization, dispute/legal-hold, consent-history, child-record, financial, audit, support, and campaign periods before enabling irreversible cleanup and replacing `pending-legal-approval` in the privacy register. **[BLOCKED — LEGAL/PRODUCT POLICY]**
+- [ ] Define required export ranges, delivery method, access control, expiry, and retention before implementing queued/streamed exports beyond the current 10,000-row synchronous ceiling. **[LATER — PRODUCT/OPERATIONS INPUT]**
+- [ ] Approve exact retention, erasure/anonymization, dispute/legal-hold, consent-history, child-record, financial, audit, support, and campaign periods before enabling irreversible cleanup and replacing `pending-legal-approval` in the privacy register. **[LATER — LEGAL/PRODUCT POLICY]**
 
 ## 8. CI and repository cleanup
 
-- [ ] Reproduce and diagnose the failing production Compose `Build and start the production web dependency chain` step from the `8bd55c7` `main` workflow run; the local reproduction was intentionally stopped before completion. Split build/start diagnostics if needed, preserve the first actionable Docker/Next.js error in CI annotations or an artifact, fix the root cause, and verify the complete deployment smoke job. **[PAUSED — CI/LOCAL REPRODUCTION]**
-- [ ] Confirm the production-container scan result after the `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` and Git LFS checkout fixes; if it still fails, inspect the Trivy/SARIF findings, remediate actionable vulnerabilities or document narrowly scoped accepted risks, and rerun the scan to success. **[PAUSED — CI RESULT/REPOSITORY ACCESS]**
-- [ ] Enable GitHub Dependency graph and dependency review under repository security settings, then rerun the pull-request dependency/license check and verify that push runs remain intentionally skipped. **[BLOCKED — REPOSITORY ADMIN SETTING]**
-- [ ] Close the superseded `dependabot/docker/node-26-bookworm-slim` pull request and delete its remote branch after confirming no useful dependency metadata remains; `main` deliberately targets Node.js 24 LTS instead of that proposed Node.js 26 image update. **[BLOCKED — REMOTE REPOSITORY APPROVAL]**
+- [ ] Reproduce and diagnose the failing production Compose `Build and start the production web dependency chain` step from the `8bd55c7` `main` workflow run; the local reproduction was intentionally stopped before completion. Split build/start diagnostics if needed, preserve the first actionable Docker/Next.js error in CI annotations or an artifact, fix the root cause, and verify the complete deployment smoke job. **[LATER — CI/LOCAL REPRODUCTION]**
+- [ ] Confirm the production-container scan result after the `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` and Git LFS checkout fixes; if it still fails, inspect the Trivy/SARIF findings, remediate actionable vulnerabilities or document narrowly scoped accepted risks, and rerun the scan to success. **[LATER — CI RESULT/REPOSITORY ACCESS]**
+- [ ] Enable GitHub Dependency graph and dependency review under repository security settings, then rerun the pull-request dependency/license check and verify that push runs remain intentionally skipped. **[LATER — REPOSITORY ADMIN SETTING]**
+- [ ] Close the superseded `dependabot/docker/node-26-bookworm-slim` pull request and delete its remote branch after confirming no useful dependency metadata remains; `main` deliberately targets Node.js 24 LTS instead of that proposed Node.js 26 image update. **[LATER — REMOTE REPOSITORY APPROVAL]**
 
 ## 9. Staging, deployment, and release approval
 
-- [ ] Verify notification migration `0025_notification_read_state.sql`, all forward migrations, and recovery procedures against a sanitized production-like snapshot; record duration, locks, backup, restore, and legacy outbox compatibility. **[BLOCKED — STAGING DATABASE]**
-- [ ] Enable persistent Redis memory overcommit and verify it after a host reboot. **[BLOCKED — HOST ACCESS]**
-- [ ] Inspect PostgreSQL authentication, listening interfaces, firewall, and TLS; prevent trust authentication and public exposure. **[BLOCKED — DEPLOYMENT INSPECTION]**
-- [ ] Verify legacy redirects/bookmarks, route metadata, sitemap, proxy/browser caches, map tiles/CSP, and stale Next.js Server Actions through an actual rolling deployment. **[BLOCKED — DEPLOYMENT]**
-- [ ] Obtain recorded Persian-language, product, legal/privacy, security, and operations release approval. **[BLOCKED — EXTERNAL APPROVAL]**
+- [ ] Verify notification migration `0025_notification_read_state.sql`, all forward migrations, and recovery procedures against a sanitized production-like snapshot; record duration, locks, backup, restore, and legacy outbox compatibility. **[LATER — STAGING DATABASE]**
+- [ ] Enable persistent Redis memory overcommit and verify it after a host reboot. **[LATER — HOST ACCESS]**
+- [ ] Inspect PostgreSQL authentication, listening interfaces, firewall, and TLS; prevent trust authentication and public exposure. **[LATER — DEPLOYMENT INSPECTION]**
+- [ ] Verify legacy redirects/bookmarks, route metadata, sitemap, proxy/browser caches, map tiles/CSP, and stale Next.js Server Actions through an actual rolling deployment. **[LATER — DEPLOYMENT]**
+- [ ] Obtain recorded Persian-language, product, legal/privacy, security, and operations release approval. **[LATER — EXTERNAL APPROVAL]**
 
 ## Cleanup rule
 
