@@ -525,7 +525,7 @@ export function AdminFamilyEnrollmentForm({
               onChange={(event) => setRecordCash(event.target.checked)}
             />
             <span>
-              <span className="block text-sm font-bold">ثبت پیش‌پرداخت نقدی (۴٬۰۰۰٬۰۰۰ تومان)</span>
+              <span className="block text-sm font-bold">ثبت پیش‌پرداخت نقدی (۴٬۹۹۷٬۸۰۰ تومان)</span>
               <span className="block text-xs leading-5 text-muted">
                 هنگامی که مبلغ نقدی دریافت شده است؛ با ثبت آن سرویس بلافاصله فعال می‌شود.
               </span>
@@ -535,7 +535,7 @@ export function AdminFamilyEnrollmentForm({
             <div className="space-y-3 rounded-xl border border-warning/40 bg-warning/10 p-4">
               <p className="text-sm font-black text-foreground">هشدار پیش‌پرداخت نقدی</p>
               <p className="text-sm leading-6 text-muted">
-                با ثبت پیش‌پرداخت نقدی به نمایندگی از والد، مبلغ ۴٬۰۰۰٬۰۰۰ تومان (معادل ۴۰٬۰۰۰٬۰۰۰
+                با ثبت پیش‌پرداخت نقدی به نمایندگی از والد، مبلغ ۴٬۹۹۷٬۸۰۰ تومان (معادل ۴۹٬۹۷۸٬۰۰۰
                 ریال) به‌عنوان پرداخت قطعی ثبت می‌شود و سرویس بلافاصله فعال خواهد شد. حتماً شماره
                 رسید دریافتی را درج کنید؛ این اقدام با نام شما در گزارش حسابرسی ثبت می‌شود و قابل
                 بازگشت نیست.

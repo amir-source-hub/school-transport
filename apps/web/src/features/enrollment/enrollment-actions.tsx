@@ -56,7 +56,7 @@ import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
 import { ContractReview } from '@/features/finance/contract-review';
 import { getOfflineSubmissions } from '@/features/finance/payments-api';
 import { updateNotificationConsent } from '@/features/notifications/notifications-api';
-import { clearEnrollmentDraft, loadEnrollmentDraft, saveEnrollmentDraft } from './enrollment-draft';
+import { clearEnrollmentDraft } from './enrollment-draft';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const vehicleOptions = [
@@ -131,32 +131,10 @@ export function CreateEnrollmentForm({
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const submissionLockRef = useRef(false);
-  const draftHydratedRef = useRef(false);
 
   useEffect(() => {
-    let active = true;
-    queueMicrotask(() => {
-      if (!active) return;
-      const draft = loadEnrollmentDraft(window.sessionStorage, mode);
-      if (draft) {
-        setForm((current) => ({ ...current, ...draft.values }));
-        setStep(draft.step);
-      }
-      draftHydratedRef.current = true;
-    });
-    return () => {
-      active = false;
-    };
+    clearEnrollmentDraft(window.sessionStorage, mode);
   }, [mode]);
-
-  useEffect(() => {
-    if (!draftHydratedRef.current || result) return;
-    saveEnrollmentDraft(window.sessionStorage, mode, step, form);
-  }, [form, mode, result, step]);
-
-  useEffect(() => {
-    if (result) clearEnrollmentDraft(window.sessionStorage, mode);
-  }, [mode, result]);
 
   useEffect(() => {
     stepHeadingRef.current?.focus();
@@ -200,6 +178,25 @@ export function CreateEnrollmentForm({
     value: string | number | boolean,
   ): string | undefined {
     const text = String(value).trim();
+    const persianTextFields = new Set<keyof typeof form>([
+      'studentFirst',
+      'studentLast',
+      'guardianFirst',
+      'guardianLast',
+      'guardianRelationshipDescription',
+      'fatherFirst',
+      'fatherLast',
+      'motherFirst',
+      'motherLast',
+      'emergencyFirst',
+      'emergencyLast',
+      'emergencyRelationship',
+      'addressTitle',
+      'province',
+      'city',
+      'streetAddress',
+      'parentNotes',
+    ]);
     const requiredFields: (keyof typeof form)[] = [
       'studentFirst',
       'studentLast',
@@ -218,6 +215,9 @@ export function CreateEnrollmentForm({
     const section = sectionOf(key);
     if (section && !sectionStarted(section)) return undefined;
     if (requiredFields.includes(key) && !text) return 'پر کردن این فیلد اجباری است';
+    if (persianTextFields.has(key) && /[A-Za-z]/.test(text)) {
+      return 'فقط حروف فارسی مجاز است.';
+    }
     if (key === 'guardianRelationshipDescription') {
       if (form.guardianRelationshipType === 'OTHER' && !text) return 'شرح نسبت را وارد کنید.';
       return undefined;
@@ -254,6 +254,15 @@ export function CreateEnrollmentForm({
 
   function set(key: keyof typeof form, value: string | number) {
     let normalizedValue = value;
+    const persianOnlyKeys: (keyof typeof form)[] = [
+      'studentFirst', 'studentLast', 'guardianFirst', 'guardianLast',
+      'guardianRelationshipDescription', 'fatherFirst', 'fatherLast', 'motherFirst', 'motherLast',
+      'emergencyFirst', 'emergencyLast', 'emergencyRelationship', 'addressTitle', 'province', 'city',
+      'streetAddress', 'parentNotes',
+    ];
+    if (typeof value === 'string' && persianOnlyKeys.includes(key)) {
+      normalizedValue = value.replace(/[A-Za-z]/g, '');
+    }
     if (
       typeof value === 'string' &&
       ['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)
@@ -285,6 +294,9 @@ export function CreateEnrollmentForm({
             'studentNationalId',
             'guardianRelationshipType',
             'guardianRelationshipDescription',
+            'guardianFirst',
+            'guardianLast',
+            'guardianNationalId',
             'homePhone',
             ...(form.guardianRelationshipType === 'MOTHER' ? fatherKeys : []),
             ...(form.guardianRelationshipType === 'FATHER' ? motherKeys : []),
@@ -293,9 +305,6 @@ export function CreateEnrollmentForm({
         : currentStep === 2
           ? ['addressTitle', 'province', 'city', 'streetAddress', 'postalCode']
           : [];
-    if (currentStep === 1 && form.guardianRelationshipType === 'OTHER') {
-      keys.splice(4, 0, 'guardianFirst', 'guardianLast', 'guardianNationalId');
-    }
     const nextErrors = Object.fromEntries(
       keys.map((key) => [key, validateField(key, form[key])]).filter(([, message]) => message),
     );
@@ -903,12 +912,9 @@ export function CreateEnrollmentForm({
                     ]}
                   />
                 </label>
-                {!['FATHER', 'MOTHER'].includes(form.guardianRelationshipType) &&
-                  field('guardianFirst', 'نام')}
-                {!['FATHER', 'MOTHER'].includes(form.guardianRelationshipType) &&
-                  field('guardianLast', 'نام خانوادگی')}
-                {!['FATHER', 'MOTHER'].includes(form.guardianRelationshipType) &&
-                  field('guardianNationalId', 'کد ملی', 'tel')}
+                {field('guardianFirst', 'نام')}
+                {field('guardianLast', 'نام خانوادگی')}
+                {field('guardianNationalId', 'کد ملی', 'tel')}
                 {form.guardianRelationshipType === 'OTHER' && (
                   <div className="lg:col-span-2">
                     {field('guardianRelationshipDescription', 'شرح نسبت')}
@@ -1201,7 +1207,7 @@ export function CreateEnrollmentForm({
                 ))}
               </div>
               <p className="mt-3 text-sm text-muted">
-                پیش‌پرداخت ثابت ۴٬۰۰۰٬۰۰۰ تومان در هر دو روش همین حالا پرداخت می‌شود.
+                پیش‌پرداخت ثابت ۴٬۹۹۷٬۸۰۰ تومان در هر دو روش همین حالا پرداخت می‌شود.
               </p>
             </Section>
             <label className="text-sm font-bold">
@@ -1331,7 +1337,7 @@ export function CreateEnrollmentForm({
             <div className="mt-5 text-right">
               <OfflinePaymentForm
                 items={[
-                  { id: result.scheduleItemId, label: 'پیش‌پرداخت ثبت‌نام — ۴٬۰۰۰٬۰۰۰ تومان' },
+                  { id: result.scheduleItemId, label: 'پیش‌پرداخت ثبت‌نام — ۴٬۹۹۷٬۸۰۰ تومان' },
                 ]}
                 mode={mode}
               />

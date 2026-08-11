@@ -77,6 +77,10 @@ export function OfflinePaymentForm({
           setError('شماره پیگیری یا مرجع پرداخت را وارد کنید.');
           return;
         }
+        if (/[A-Za-z]/.test(description) || /[A-Za-z]/.test(payerName)) {
+          setError('در فیلدهای متنی فقط حروف فارسی مجاز است.');
+          return;
+        }
         if (sourceCardLastFour && !/^\d{4}$/.test(sourceCardLastFour)) {
           setError('چهار رقم آخر کارت مبدأ باید دقیقاً ۴ رقم باشد.');
           return;
@@ -203,9 +207,16 @@ export function OfflinePaymentForm({
           required
           className="mt-2"
           dir="ltr"
-          placeholder="مثلاً 123456789"
+          placeholder="مثلاً ۱۲۳۴۵۶۷۸۹"
           value={referenceNumber}
-          onChange={(event) => setReferenceNumber(event.target.value)}
+          onChange={(event) =>
+            setReferenceNumber(
+              event.target.value
+                .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+                .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+                .replace(/\D/g, ''),
+            )
+          }
         />
       </label>
       <label className="text-sm font-bold">
@@ -215,7 +226,7 @@ export function OfflinePaymentForm({
           className="mt-2"
           placeholder="اطلاعات تکمیلی پرداخت"
           value={description}
-          onChange={(event) => setDescription(event.target.value)}
+          onChange={(event) => setDescription(event.target.value.replace(/[A-Za-z]/g, ''))}
         />
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -225,7 +236,7 @@ export function OfflinePaymentForm({
             disabled={disabled}
             className="mt-2"
             value={payerName}
-            onChange={(event) => setPayerName(event.target.value)}
+            onChange={(event) => setPayerName(event.target.value.replace(/[A-Za-z]/g, ''))}
           />
         </label>
         <label className="text-sm font-bold">
@@ -237,7 +248,14 @@ export function OfflinePaymentForm({
             inputMode="numeric"
             maxLength={4}
             value={sourceCardLastFour}
-            onChange={(event) => setSourceCardLastFour(event.target.value.replace(/\D/g, ''))}
+            onChange={(event) =>
+              setSourceCardLastFour(
+                event.target.value
+                  .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+                  .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+                  .replace(/\D/g, ''),
+              )
+            }
           />
         </label>
       </div>

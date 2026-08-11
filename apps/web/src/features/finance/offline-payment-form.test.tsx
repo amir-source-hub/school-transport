@@ -58,7 +58,7 @@ describe('OfflinePaymentForm', () => {
   it('shows the central destination and uploads required receipt evidence before completion', async () => {
     const user = userEvent.setup();
     render(
-      <OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت — ۴٬۰۰۰٬۰۰۰ تومان' }]} />,
+      <OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت — ۴٬۹۹۷٬۸۰۰ تومان' }]} />,
     );
     expect(await screen.findByText('6037991234567890')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('سال'), { target: { value: '1405' } });

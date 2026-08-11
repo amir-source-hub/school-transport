@@ -6,6 +6,7 @@ import {
   emergencyContacts,
   familyAddresses,
   notifications,
+  offlinePaymentDestinations,
   parents,
   paymentPlans,
   paymentScheduleItems,
@@ -48,6 +49,7 @@ const ids = {
   contract: '00000000-0000-4000-8000-000000000023',
   notification1: '00000000-0000-4000-8000-000000000024',
   notification2: '00000000-0000-4000-8000-000000000025',
+  offlineDestination: '00000000-0000-4000-8000-000000000026',
 } as const;
 
 export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Promise<void> {
@@ -72,6 +74,21 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         firstName: 'Demo',
         lastName: 'Admin',
         phoneNumber: SEED_CREDENTIALS.admin.phoneNumber,
+      })
+      .onConflictDoNothing();
+    await db
+      .insert(offlinePaymentDestinations)
+      .values({
+        id: ids.offlineDestination,
+        version: 1,
+        accountOwner: 'شرکت سرویس مدرسه — حساب آزمایشی',
+        bankName: 'بانک آزمایشی',
+        cardNumber: '6037991234567890',
+        iban: 'IR120170000000123456789001',
+        accountNumber: '123456789001',
+        instructions:
+          'این مقصد فقط برای محیط محلی آزمایشی است. در محیط واقعی، مدیر باید مقصد مصوب را ثبت کند.',
+        createdByAdminId: ids.admin,
       })
       .onConflictDoNothing();
     await db
