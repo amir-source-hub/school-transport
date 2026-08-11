@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { JalaliDateTimeInput } from '@/components/forms/jalali-date-time-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import {
   createBroadcast,
@@ -122,24 +123,18 @@ export function BroadcastForm() {
             onChange={(event) => setValues({ ...values, inAppContent: event.target.value })}
           />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-bold">زمان ارسال (تهران)</span>
-          <Input
-            type="datetime-local"
-            required
-            value={values.scheduledAt}
-            onChange={(event) => setValues({ ...values, scheduledAt: event.target.value })}
-          />
-        </label>
-        <label className="space-y-2">
-          <span className="text-sm font-bold">زمان انقضا (تهران)</span>
-          <Input
-            type="datetime-local"
-            required
-            value={values.expiresAt}
-            onChange={(event) => setValues({ ...values, expiresAt: event.target.value })}
-          />
-        </label>
+        <JalaliDateTimeInput
+          label="زمان ارسال (تهران)"
+          required
+          value={values.scheduledAt}
+          onChange={(scheduledAt) => setValues({ ...values, scheduledAt })}
+        />
+        <JalaliDateTimeInput
+          label="زمان انقضا (تهران)"
+          required
+          value={values.expiresAt}
+          onChange={(expiresAt) => setValues({ ...values, expiresAt })}
+        />
       </div>
       <label className="flex min-h-11 items-center gap-3 rounded-2xl border border-border p-3">
         <input
