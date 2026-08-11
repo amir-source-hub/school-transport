@@ -53,8 +53,8 @@ import {
 import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-schema';
 import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
 import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
+import { OfflinePaymentDestinationCard } from '@/features/finance/offline-payment-destination-card';
 import { ContractReview } from '@/features/finance/contract-review';
-import { getOfflineSubmissions } from '@/features/finance/payments-api';
 import { updateNotificationConsent } from '@/features/notifications/notifications-api';
 import { clearEnrollmentDraft } from './enrollment-draft';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
@@ -124,6 +124,7 @@ export function CreateEnrollmentForm({
   const [paid, setPaid] = useState(false);
   const [optionalInAppConsent, setOptionalInAppConsent] = useState(false);
   const [optionalSmsConsent, setOptionalSmsConsent] = useState(false);
+  const [paymentInstructionsAccepted, setPaymentInstructionsAccepted] = useState(false);
   const [photoUploadId, setPhotoUploadId] = useState<string>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -135,6 +136,19 @@ export function CreateEnrollmentForm({
   useEffect(() => {
     clearEnrollmentDraft(window.sessionStorage, mode);
   }, [mode]);
+
+  useEffect(() => {
+    if (mode !== 'onboarding') return;
+    let active = true;
+    finalizeOnboarding()
+      .then(() => {
+        if (active) router.replace('/student/dashboard');
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [mode, router]);
 
   useEffect(() => {
     stepHeadingRef.current?.focus();
@@ -1290,7 +1304,7 @@ export function CreateEnrollmentForm({
             <h3 className="mt-5 text-2xl font-black">پرداخت پیش‌پرداخت ثبت‌نام</h3>
             <p className="mt-3 text-muted">مبلغ ثابت برای تمام دانش‌آموزان</p>
             <p className="mt-4 text-4xl font-black text-primary">
-              ۴٬۰۰۰٬۰۰۰ <span className="text-base">تومان</span>
+              ۴٬۹۹۷٬۸۰۰ <span className="text-base">تومان</span>
             </p>
             <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-right text-sm leading-7 text-muted">
               {form.paymentPlanType === 'FULL'
@@ -1321,56 +1335,48 @@ export function CreateEnrollmentForm({
                 <span className="text-sm font-bold">پیامک</span>
               </label>
             </fieldset>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border p-4 text-right">
-                <p className="font-black">پرداخت آفلاین</p>
-                <p className="mt-2 text-xs leading-6 text-muted">
-                  رسید را ارسال کنید. ثبت‌نام فقط پس از تأیید مدیریت فعال می‌شود.
-                </p>
+            {mode === 'onboarding' ? (
+              <div className="mt-6 space-y-5 text-right">
+                <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
+                  مبلغ را به یکی از اطلاعات زیر واریز کنید و تصویر رسید را نگه دارید. پس از ورود به
+                  پنل خانواده، از بخش «پرداخت‌ها» تصویر رسید را برای بررسی مدیریت ارسال می‌کنید.
+                </div>
+                <OfflinePaymentDestinationCard mode="onboarding" />
+                <label className="flex min-h-12 items-start gap-3 rounded-xl border border-border p-4">
+                  <input
+                    className="mt-1"
+                    type="checkbox"
+                    checked={paymentInstructionsAccepted}
+                    onChange={(event) => setPaymentInstructionsAccepted(event.target.checked)}
+                  />
+                  <span className="text-sm font-bold leading-7">
+                    مبلغ، اطلاعات حساب و لزوم نگهداری تصویر رسید را دیدم. پرداخت و ارسال رسید را از
+                    پنل خانواده انجام می‌دهم.
+                  </span>
+                </label>
               </div>
-              <div
-                className="rounded-2xl border border-border p-4 text-right"
-                aria-describedby="enrollment-online-unavailable"
-              >
-                <Button className="w-full" size="lg" disabled aria-disabled="true">
-                  پرداخت آنلاین
-                </Button>
-                <p id="enrollment-online-unavailable" className="mt-2 text-xs text-muted">
-                  به‌زودی فعال می‌شود.
-                </p>
+            ) : (
+              <div className="mt-5 text-right">
+                <OfflinePaymentForm
+                  items={[
+                    { id: result.scheduleItemId, label: 'پیش‌پرداخت ثبت‌نام — ۴٬۹۹۷٬۸۰۰ تومان' },
+                  ]}
+                  mode={mode}
+                />
               </div>
-            </div>
-            <div className="mt-5 text-right">
-              <OfflinePaymentForm
-                items={[
-                  { id: result.scheduleItemId, label: 'پیش‌پرداخت ثبت‌نام — ۴٬۹۹۷٬۸۰۰ تومان' },
-                ]}
-                mode={mode}
-              />
-            </div>
+            )}
             {mode === 'onboarding' && (
               <Button
                 className="mt-4 w-full"
                 variant="secondary"
                 loading={pending}
+                disabled={!paymentInstructionsAccepted || pending}
                 onClick={async () => {
                   if (submissionLockRef.current) return;
                   submissionLockRef.current = true;
                   setPending(true);
                   setError(undefined);
                   try {
-                    const submissions = await getOfflineSubmissions('onboarding');
-                    const approved = submissions.some(
-                      (submission) =>
-                        submission.paymentScheduleItemId === result.scheduleItemId &&
-                        submission.status === 'APPROVED',
-                    );
-                    if (!approved) {
-                      setError(
-                        'رسید هنوز توسط مدیریت تأیید نشده است. پس از دریافت اعلان دوباره بررسی کنید.',
-                      );
-                      return;
-                    }
                     await finalizeOnboarding();
                     await Promise.all([
                       updateNotificationConsent('IN_APP', optionalInAppConsent, 'ONBOARDING'),
@@ -1385,7 +1391,7 @@ export function CreateEnrollmentForm({
                   }
                 }}
               >
-                بررسی تأیید رسید و فعال‌سازی پنل
+                تأیید اطلاعات پرداخت و ورود به پنل خانواده
               </Button>
             )}
             {error && <p className="mt-3 text-sm text-danger">{error}</p>}

@@ -15,7 +15,6 @@ const notificationsApi = vi.hoisted(() => ({ updateNotificationConsent: vi.fn() 
 const paymentsApi = vi.hoisted(() => ({
   getOfflineDestination: vi.fn(),
   submitOfflinePayment: vi.fn(),
-  getOfflineSubmissions: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -102,6 +101,7 @@ const fillIn = (
 describe('onboarding guided enrollment funnel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    enrollmentApi.finalizeOnboarding.mockRejectedValue(new Error('ثبت‌نام هنوز آماده پنل نیست'));
     enrollmentApi.createGuidedEnrollment.mockResolvedValue({
       registrationId: 'reg-1',
       studentId: 'std-1',
@@ -122,15 +122,6 @@ describe('onboarding guided enrollment funnel', () => {
       accountNumber: null,
       instructions: 'پس از واریز، رسید را ثبت کنید.',
     });
-    paymentsApi.getOfflineSubmissions.mockResolvedValue([
-      {
-        id: 'sub-1',
-        paymentScheduleItemId: 'sch-1',
-        status: 'PENDING_REVIEW',
-        rejectionReason: null,
-        submittedAt: new Date(),
-      },
-    ]);
   });
 
   it('drives a new account through enrollment and contract to the offline receipt step', async () => {
@@ -176,25 +167,28 @@ describe('onboarding guided enrollment funnel', () => {
       [1, 2, 3],
       'onboarding',
     );
-    expect(screen.getByRole('button', { name: 'پرداخت آنلاین' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' })).toBeEnabled();
-    expect(screen.getByText(/ثبت‌نام فقط پس از تأیید مدیریت فعال می‌شود/)).toBeInTheDocument();
+    expect(screen.getByText('۴٬۹۹۷٬۸۰۰')).toBeInTheDocument();
+    expect(screen.getByText('6037991234567890')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ارسال رسید برای بررسی مدیر' })).toBeNull();
+    const enterPanel = screen.getByRole('button', {
+      name: 'تأیید اطلاعات پرداخت و ورود به پنل خانواده',
+    });
+    expect(enterPanel).toBeDisabled();
     expect(navigation.replace).not.toHaveBeenCalledWith('/student/dashboard');
-    await user.click(screen.getByRole('button', { name: 'بررسی تأیید رسید و فعال‌سازی پنل' }));
-    expect(enrollmentApi.finalizeOnboarding).not.toHaveBeenCalled();
-    paymentsApi.getOfflineSubmissions.mockResolvedValue([
-      {
-        id: 'sub-1',
-        paymentScheduleItemId: 'sch-1',
-        status: 'APPROVED',
-        rejectionReason: null,
-        submittedAt: new Date(),
-      },
-    ]);
-    await user.click(screen.getByRole('button', { name: 'بررسی تأیید رسید و فعال‌سازی پنل' }));
-    await waitFor(() => expect(enrollmentApi.finalizeOnboarding).toHaveBeenCalledOnce());
+    await user.click(
+      screen.getByRole('checkbox', { name: /مبلغ، اطلاعات حساب و لزوم نگهداری تصویر رسید را دیدم/ }),
+    );
+    enrollmentApi.finalizeOnboarding.mockResolvedValue(undefined);
+    await user.click(enterPanel);
+    await waitFor(() => expect(enrollmentApi.finalizeOnboarding).toHaveBeenCalled());
     expect(navigation.replace).toHaveBeenCalledWith('/student/dashboard');
   }, 30_000);
+
+  it('routes a returning accepted enrollment directly to the saved family panel', async () => {
+    enrollmentApi.finalizeOnboarding.mockResolvedValue(undefined);
+    renderOnboarding();
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith('/student/dashboard'));
+  });
 
   it('rejects pasted extra digits in prefix fields instead of truncating them', async () => {
     const user = userEvent.setup();

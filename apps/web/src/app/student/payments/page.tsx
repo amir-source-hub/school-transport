@@ -10,6 +10,13 @@ import { OnlinePaymentButton } from '@/features/finance/online-payment-button';
 export const metadata = { title: 'پرداخت‌ها' };
 export const dynamic = 'force-dynamic';
 
+const planStatusLabels: Record<string, string> = {
+  PENDING: 'در انتظار پیش‌پرداخت',
+  ACTIVE: 'فعال',
+  COMPLETED: 'تسویه‌شده',
+  CANCELLED: 'لغوشده',
+};
+
 export default async function PaymentsPage() {
   const [overviews, offlineSubmissions] = await Promise.all([
     getPayments(),
@@ -56,7 +63,7 @@ export default async function PaymentsPage() {
                 </p>
               </div>
               <Badge tone={overview.plan.planStatus === 'COMPLETED' ? 'success' : 'warning'}>
-                {overview.plan.planStatus}
+                {planStatusLabels[overview.plan.planStatus] ?? overview.plan.planStatus}
               </Badge>
             </div>
             <div className="mt-5 space-y-2">
@@ -118,6 +125,16 @@ export default async function PaymentsPage() {
                 </p>
                 {submission.rejectionReason && (
                   <p className="mt-2 text-danger">{submission.rejectionReason}</p>
+                )}
+                {submission.status === 'PENDING_REVIEW' && (
+                  <p className="mt-2 text-muted">
+                    رسید ثبت شده است؛ نتیجه بررسی مدیریت در همین بخش نمایش داده می‌شود.
+                  </p>
+                )}
+                {submission.status === 'REJECTED' && (
+                  <p className="mt-2 font-bold text-danger">
+                    پس از اصلاح مورد اعلام‌شده، از فرم بالا رسید تازه ارسال کنید.
+                  </p>
                 )}
               </div>
             ))}

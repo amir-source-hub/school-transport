@@ -366,9 +366,9 @@ export class AuthService {
     if (!session) {
       throw new AuthenticationError('Invalid or expired onboarding session.');
     }
-    if (!(await this.onboarding.hasPaidPrepayment(session.userId))) {
+    if (!(await this.onboarding.isPanelReady(session.userId))) {
       throw new ValidationError(
-        'Onboarding cannot be completed until the enrollment prepayment is verified.',
+        'Onboarding cannot be completed until an enrollment contract is accepted.',
       );
     }
     await this.onboarding.completeOnboarding(session.id, session.userId);

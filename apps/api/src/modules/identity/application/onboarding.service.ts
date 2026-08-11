@@ -8,8 +8,9 @@ import {
   onboardingSessions,
   users,
   parents,
-  paymentScheduleItems,
-  paymentTransactions,
+  contracts,
+  serviceRegistrations,
+  students,
 } from '../../../database/schemas';
 import { generateId } from '../../../common/utils';
 import { OnboardingSessionResult } from '../domain/auth.types';
@@ -106,20 +107,20 @@ export class OnboardingService {
     return session;
   }
 
-  async hasPaidPrepayment(userId: string): Promise<boolean> {
+  async isPanelReady(userId: string): Promise<boolean> {
     const [row] = await this.db.db
-      .select({ id: paymentScheduleItems.id })
-      .from(paymentScheduleItems)
+      .select({ id: contracts.id })
+      .from(contracts)
       .innerJoin(
-        paymentTransactions,
-        eq(paymentTransactions.paymentScheduleItemId, paymentScheduleItems.id),
+        serviceRegistrations,
+        eq(serviceRegistrations.id, contracts.registrationId),
       )
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
       .where(
         and(
-          eq(paymentTransactions.userId, userId),
-          eq(paymentTransactions.transactionStatus, 'SUCCEEDED'),
-          eq(paymentScheduleItems.itemType, 'PREPAYMENT'),
-          eq(paymentScheduleItems.itemStatus, 'PAID'),
+          eq(students.userId, userId),
+          eq(contracts.contractStatus, 'ACCEPTED'),
+          inArray(serviceRegistrations.registrationStatus, ['CONTRACT_ACCEPTED', 'ENROLLED']),
         ),
       )
       .limit(1);
@@ -151,7 +152,7 @@ export class OnboardingService {
         userId,
         notificationType: 'ACCOUNT_REGISTERED',
         title: 'ثبت‌نام حساب با موفقیت انجام شد',
-        message: 'حساب خانواده ایجاد شد و پس از پرداخت پیش‌پرداخت فعال شد.',
+        message: 'حساب خانواده ایجاد شد. پیش‌پرداخت و وضعیت رسید را از پنل پیگیری کنید.',
         relatedEntityType: 'USER',
         relatedEntityId: userId,
       });
