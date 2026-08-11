@@ -73,4 +73,26 @@ describe('JalaliDateInput', () => {
     await user.keyboard('{Backspace}');
     expect(screen.getByLabelText('سال')).toHaveFocus();
   });
+
+  it('selects a valid Persian date from the calendar', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <JalaliDateInput
+        value=""
+        onChange={onChange}
+        minDate="2024-03-20"
+        maxDate="2025-03-20"
+      />,
+    );
+
+    await user.click(screen.getByText('انتخاب از تقویم شمسی'));
+    await user.selectOptions(screen.getByLabelText('ماه تقویم'), '7');
+    await user.click(screen.getByRole('button', { name: '۱۵' }));
+
+    expect(onChange).toHaveBeenLastCalledWith('2024-10-06');
+    expect(screen.getByLabelText('سال')).toHaveValue('1403');
+    expect(screen.getByLabelText('ماه')).toHaveValue('07');
+    expect(screen.getByLabelText('روز')).toHaveValue('15');
+  });
 });

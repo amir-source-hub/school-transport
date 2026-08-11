@@ -1,5 +1,6 @@
 type SecurityHeaderOptions = {
   apiBaseUrl?: string;
+  privateUploadOrigin?: string;
   production: boolean;
 };
 
@@ -16,9 +17,21 @@ const getApiOrigin = (apiBaseUrl?: string) => {
   }
 };
 
-const createContentSecurityPolicy = ({ apiBaseUrl, production }: SecurityHeaderOptions) => {
+const getOrigin = (value?: string) => {
+  try {
+    return value ? new URL(value).origin : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const createContentSecurityPolicy = ({
+  apiBaseUrl,
+  privateUploadOrigin,
+  production,
+}: SecurityHeaderOptions) => {
   const apiOrigin = getApiOrigin(apiBaseUrl);
-  const connectSources = ["'self'", apiOrigin, 'blob:'];
+  const connectSources = ["'self'", apiOrigin, getOrigin(privateUploadOrigin), 'blob:'];
 
   if (!production) {
     connectSources.push('ws:', 'wss:');

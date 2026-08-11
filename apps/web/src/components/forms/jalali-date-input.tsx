@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { isoToJalaliDate, jalaliToIsoDate } from '@/lib/jalali-date';
 
@@ -40,6 +40,10 @@ export function JalaliDateInput({
   label?: string;
 }) {
   const [segments, setSegments] = useState(() => splitJalali(value));
+  const initialJalali = splitJalali(value || maxDate || new Date().toISOString().slice(0, 10));
+  const [calendarYear, setCalendarYear] = useState(Number(initialJalali.year) || 1405);
+  const [calendarMonth, setCalendarMonth] = useState(Number(initialJalali.month) || 1);
+  const calendarRef = useRef<HTMLDetailsElement>(null);
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const errorId = `${inputId}-error`;
@@ -112,6 +116,42 @@ export function JalaliDateInput({
     className: 'text-center tabular-nums',
   };
 
+  const minYear = Number(splitJalali(minDate ?? '1921-03-21').year) || 1300;
+  const maxYear = Number(splitJalali(maxDate ?? '2122-03-20').year) || 1500;
+  const years = Array.from({ length: Math.max(1, maxYear - minYear + 1) }, (_, index) =>
+    maxYear - index,
+  );
+  const monthNames = [
+    'فروردین',
+    'اردیبهشت',
+    'خرداد',
+    'تیر',
+    'مرداد',
+    'شهریور',
+    'مهر',
+    'آبان',
+    'آذر',
+    'دی',
+    'بهمن',
+    'اسفند',
+  ];
+  const calendarDays = Array.from({ length: 31 }, (_, index) => index + 1).filter((day) =>
+    Boolean(
+      jalaliToIsoDate(
+        `${calendarYear}/${String(calendarMonth).padStart(2, '0')}/${String(day).padStart(2, '0')}`,
+      ),
+    ),
+  );
+
+  const selectCalendarDay = (day: number) => {
+    const jalali = `${calendarYear}/${String(calendarMonth).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
+    const iso = jalaliToIsoDate(jalali);
+    if (!iso || (minDate && iso < minDate) || (maxDate && iso > maxDate)) return;
+    setSegments(splitJalali(iso));
+    onChange(iso);
+    if (calendarRef.current) calendarRef.current.open = false;
+  };
+
   return (
     <div>
       <div role="group" aria-label={label} className="flex items-center gap-2" dir="ltr">
@@ -156,6 +196,58 @@ export function JalaliDateInput({
           onKeyDown={(event) => backTo(event, 'day')}
         />
       </div>
+      <details ref={calendarRef} className="relative mt-2">
+        <summary className="inline-flex cursor-pointer list-none items-center rounded-lg border border-border bg-surface-paper px-3 py-2 text-xs font-bold text-primary hover:bg-surface-inset">
+          انتخاب از تقویم شمسی
+        </summary>
+        <div className="absolute z-30 mt-2 w-[min(20rem,calc(100vw-3rem))] rounded-xl border border-border bg-surface-paper p-3 shadow-xl" dir="rtl">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs font-bold">
+              سال تقویم
+              <select
+                aria-label="سال تقویم"
+                className="mt-1 min-h-10 w-full rounded-lg border border-input bg-background px-2"
+                value={calendarYear}
+                onChange={(event) => setCalendarYear(Number(event.target.value))}
+              >
+                {years.map((year) => (
+                  <option key={year} value={year}>{year.toLocaleString('fa-IR', { useGrouping: false })}</option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-bold">
+              ماه تقویم
+              <select
+                aria-label="ماه تقویم"
+                className="mt-1 min-h-10 w-full rounded-lg border border-input bg-background px-2"
+                value={calendarMonth}
+                onChange={(event) => setCalendarMonth(Number(event.target.value))}
+              >
+                {monthNames.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="mt-3 grid grid-cols-7 gap-1" aria-label="روزهای ماه">
+            {calendarDays.map((day) => {
+              const iso = jalaliToIsoDate(`${calendarYear}/${calendarMonth}/${day}`);
+              const unavailable = !iso || Boolean((minDate && iso < minDate) || (maxDate && iso > maxDate));
+              const selected = segments.year === String(calendarYear) && Number(segments.month) === calendarMonth && Number(segments.day) === day;
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  disabled={unavailable}
+                  aria-pressed={selected}
+                  onClick={() => selectCalendarDay(day)}
+                  className="aspect-square rounded-md text-xs font-bold hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-30 aria-pressed:bg-primary aria-pressed:text-white"
+                >
+                  {day.toLocaleString('fa-IR')}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </details>
       {invalid && (
         <p id={errorId} role="alert" className="mt-1 text-xs text-danger">
           {errorMessage}

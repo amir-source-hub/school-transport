@@ -2,6 +2,7 @@ const LOCAL_API_BASE_URL = 'http://localhost:5000/api/v1';
 
 type WebEnvironmentInput = {
   apiBaseUrl?: string;
+  privateUploadOrigin?: string;
   deploymentId?: string;
   serverActionsEncryptionKey?: string;
   production: boolean;
@@ -9,12 +10,14 @@ type WebEnvironmentInput = {
 
 type WebEnvironment = {
   apiBaseUrl: string;
+  privateUploadOrigin?: string;
   deploymentId?: string;
   production: boolean;
 };
 
 export const validateWebEnvironment = ({
   apiBaseUrl,
+  privateUploadOrigin,
   deploymentId,
   serverActionsEncryptionKey,
   production,
@@ -62,8 +65,24 @@ export const validateWebEnvironment = ({
     throw new Error('NEXT_PUBLIC_API_BASE_URL must use HTTPS in production.');
   }
 
+  const uploadValue = privateUploadOrigin?.trim();
+  let normalizedUploadOrigin: string | undefined;
+  if (uploadValue) {
+    let uploadUrl: URL;
+    try {
+      uploadUrl = new URL(uploadValue);
+    } catch {
+      throw new Error('NEXT_PUBLIC_PRIVATE_UPLOAD_ORIGIN must be an absolute URL.');
+    }
+    if (uploadUrl.protocol !== 'https:' && !['localhost', '127.0.0.1', '::1'].includes(uploadUrl.hostname)) {
+      throw new Error('NEXT_PUBLIC_PRIVATE_UPLOAD_ORIGIN must use HTTPS.');
+    }
+    normalizedUploadOrigin = uploadUrl.origin;
+  }
+
   return {
     apiBaseUrl: resolvedApiBaseUrl.replace(/\/$/, ''),
+    privateUploadOrigin: normalizedUploadOrigin,
     deploymentId: normalizedDeploymentId,
     production,
   };

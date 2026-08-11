@@ -1,5 +1,5 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, gt, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { ConfigService } from '../../config/config.service';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -51,6 +51,7 @@ export class StudentPhotosService {
 
   async authorizeUpload(userId: string, input: AuthorizePhotoUploadDto, ip?: string) {
     if (input.studentId) await this.assertOwnedStudent(userId, input.studentId);
+    const now = new Date();
     const active = await this.db.db
       .select({ count: count() })
       .from(studentPhotoUploads)
@@ -63,6 +64,10 @@ export class StudentPhotosService {
             'VALIDATING',
             'PENDING_REVIEW',
           ]),
+          or(
+            ne(studentPhotoUploads.status, 'AUTHORIZED'),
+            gt(studentPhotoUploads.uploadAuthorizationExpiry, now),
+          ),
         ),
       );
     if (Number(active[0].count) >= this.config.studentPhotoMaxActiveUploads) {
@@ -78,7 +83,6 @@ export class StudentPhotosService {
     }
     const extension = input.declaredMime === 'image/png' ? '.png' : '.jpg';
     const rawKey = keyOfPrefix(RAW_PREFIX, extension);
-    const now = new Date();
     const ttl = this.config.studentPhotoUploadUrlTtlSeconds;
     const expiry = new Date(now.getTime() + ttl * 1_000);
     const uploadUrl = this.storage.presignPut(rawKey, input.declaredMime, ttl);

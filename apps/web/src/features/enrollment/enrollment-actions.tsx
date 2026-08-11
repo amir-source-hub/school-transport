@@ -665,7 +665,10 @@ export function CreateEnrollmentForm({
       <label htmlFor={`enrollment-${key}`} className="text-sm font-bold text-foreground">
         {label}
       </label>
-      <div className="mt-2 flex items-center overflow-hidden rounded-lg border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
+      <div
+        dir="ltr"
+        className="mt-2 flex items-center overflow-hidden rounded-lg border border-input bg-background focus-within:ring-2 focus-within:ring-ring"
+      >
         <span className="select-none border-r border-input bg-surface-muted px-3 py-2 text-sm font-bold text-muted ltr">
           {prefix}
         </span>
@@ -699,7 +702,7 @@ export function CreateEnrollmentForm({
           }
           aria-invalid={Boolean(fieldErrors[key])}
           aria-describedby={fieldErrors[key] ? `enrollment-${key}-error` : undefined}
-          className="h-auto rounded-none border-0 bg-transparent text-left tabular-nums shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
+          className="h-auto flex-1 rounded-none border-0 bg-transparent px-3 !text-left tabular-nums shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
         />
       </div>
       {fieldErrors[key] && (
