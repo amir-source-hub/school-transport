@@ -628,8 +628,11 @@ export function CreateEnrollmentForm({
     ...emergencyKeys,
   ]);
   const field = (key: keyof typeof form, label: string, type = 'text') => (
-    <div>
-      <label htmlFor={`enrollment-${key}`} className="text-sm font-bold text-foreground">
+    <div className="group/field">
+      <label
+        htmlFor={`enrollment-${key}`}
+        className="text-sm font-extrabold text-slate-700 transition-colors group-focus-within/field:text-primary"
+      >
         {label}
       </label>
       <Input
@@ -655,7 +658,7 @@ export function CreateEnrollmentForm({
         }
         aria-invalid={Boolean(fieldErrors[key])}
         aria-describedby={fieldErrors[key] ? `enrollment-${key}-error` : undefined}
-        className={`mt-2 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted ${type === 'tel' ? 'text-left tabular-nums' : ''}`}
+        className={`mt-2 border-slate-200 bg-white shadow-sm hover:border-primary/40 focus:bg-primary/[0.02] disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted ${type === 'tel' ? 'text-left tabular-nums' : ''}`}
       />
       {fieldErrors[key] && (
         <p id={`enrollment-${key}-error`} className="mt-1 text-xs text-danger">
@@ -670,15 +673,18 @@ export function CreateEnrollmentForm({
     prefix: string,
     maxDigits: number,
   ) => (
-    <div>
-      <label htmlFor={`enrollment-${key}`} className="text-sm font-bold text-foreground">
+    <div className="group/field">
+      <label
+        htmlFor={`enrollment-${key}`}
+        className="text-sm font-extrabold text-slate-700 transition-colors group-focus-within/field:text-primary"
+      >
         {label}
       </label>
       <div
         dir="ltr"
-        className="mt-2 flex items-center overflow-hidden rounded-lg border border-input bg-background focus-within:ring-2 focus-within:ring-ring"
+        className="mt-2 flex min-h-12 items-stretch overflow-hidden rounded-[var(--radius-control)] border border-slate-200 bg-white shadow-sm transition-[border-color,box-shadow,background-color] hover:border-primary/40 focus-within:border-primary focus-within:bg-primary/[0.02] focus-within:shadow-[var(--shadow-focus)]"
       >
-        <span className="select-none border-r border-input bg-surface-muted px-3 py-2 text-sm font-bold text-muted ltr">
+        <span className="flex select-none items-center border-r border-slate-200 px-3.5 text-sm font-bold text-slate-500 ltr">
           {prefix}
         </span>
         <Input
@@ -711,7 +717,7 @@ export function CreateEnrollmentForm({
           }
           aria-invalid={Boolean(fieldErrors[key])}
           aria-describedby={fieldErrors[key] ? `enrollment-${key}-error` : undefined}
-          className="h-auto flex-1 rounded-none border-0 bg-transparent px-3 !text-left tabular-nums shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
+          className="min-h-0 flex-1 rounded-none border-0 bg-transparent px-3.5 !text-left tabular-nums shadow-none hover:border-0 focus:border-0 focus:shadow-none disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
         />
       </div>
       {fieldErrors[key] && (
@@ -1415,8 +1421,11 @@ export function CreateEnrollmentForm({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section>
-      <h3 className="mb-4 text-lg font-black">{title}</h3>
+    <section className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white via-white to-primary/[0.025] p-4 shadow-[0_12px_35px_-30px_rgba(15,23,42,.6)] transition-shadow hover:shadow-[0_16px_40px_-28px_rgba(15,23,42,.5)] sm:p-5">
+      <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-3">
+        <span aria-hidden="true" className="h-6 w-1 rounded-full bg-gradient-to-b from-primary to-sky-400" />
+        <h3 className="text-lg font-black text-slate-800">{title}</h3>
+      </div>
       {children}
     </section>
   );

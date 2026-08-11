@@ -183,6 +183,18 @@ export function PhotoUploadCard({
         <span className="text-xs text-muted">فرمت JPG یا PNG، حداکثر ۵ مگابایت</span>
       </label>
 
+      <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-slate-700">
+        <p className="font-black text-sky-900">شرایط قابل قبول عکس دانش‌آموز</p>
+        <ul className="mt-2 grid list-inside list-disc gap-1.5 leading-6 sm:grid-cols-2">
+          <li>عکس رنگی، جدید و تک‌نفره</li>
+          <li>نمای روبه‌رو و چهره کاملاً مشخص</li>
+          <li>نور یکنواخت و پس‌زمینه ساده</li>
+          <li>بدون فیلتر یا عینک آفتابی</li>
+          <li>فرمت JPEG یا PNG</li>
+          <li>حداکثر حجم فایل ۵ مگابایت</li>
+        </ul>
+      </div>
+
       {selected && (
         <div className="grid gap-4 rounded-[var(--radius-card)] border border-border p-4 sm:grid-cols-[120px_1fr]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
