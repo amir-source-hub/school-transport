@@ -177,28 +177,27 @@ export function normalizeAndValidateGuidedEnrollment(
       'A relationship description is required when the guardian relationship is other.',
     );
   }
-  const selectedParent =
+  if (data.guardian.relationshipType === 'FATHER') data.father = null;
+  if (data.guardian.relationshipType === 'MOTHER') data.mother = null;
+  if (data.guardian.relationshipType === 'OTHER') {
+    data.father = null;
+    data.mother = null;
+  }
+  const otherParent =
     data.guardian.relationshipType === 'FATHER'
-      ? data.father
+      ? data.mother
       : data.guardian.relationshipType === 'MOTHER'
-        ? data.mother
+        ? data.father
         : null;
-  if (data.guardian.relationshipType !== 'OTHER') {
-    if (
-      !selectedParent ||
-      !sectionIsComplete(selectedParent, ['firstName', 'lastName', 'nationalId', 'phoneNumber'])
-    ) {
-      throw new ConflictError(
-        'INCOMPLETE_CONTACT',
-        'The selected guardian parent must have a complete parent record.',
-      );
-    }
-    data.guardian = {
-      firstName: selectedParent.firstName,
-      lastName: selectedParent.lastName,
-      nationalId: selectedParent.nationalId,
-      relationshipType: data.guardian.relationshipType,
-    };
+  if (
+    data.guardian.relationshipType !== 'OTHER' &&
+    (!otherParent ||
+      !sectionIsComplete(otherParent, ['firstName', 'lastName', 'nationalId', 'phoneNumber']))
+  ) {
+    throw new ConflictError(
+      'INCOMPLETE_CONTACT',
+      'The non-attendant parent must have a complete parent record.',
+    );
   }
   if (![data.student.nationalId, data.guardian.nationalId].every(isIranianNationalId)) {
     throw new ConflictError(

@@ -79,8 +79,8 @@ describe('guided enrollment policy', () => {
     const result = normalizeAndValidateGuidedEnrollment(input);
 
     expect(result.student.nationalId).toBe('0023518805');
-    expect(result.guardian.nationalId).toBe('0023518805');
-    expect(result.father?.nationalId).toBe('0023518805');
+    expect(result.guardian.nationalId).toBe('123');
+    expect(result.father).toBeNull();
     expect(result.mother?.nationalId).toBe('4567');
   });
 
@@ -112,12 +112,32 @@ describe('guided enrollment policy', () => {
     );
   });
 
-  it('rejects partially completed optional parent sections', () => {
+  it('does not require or retain a duplicate record for the selected father', () => {
     const input = validEnrollment();
     input.father = { ...input.father!, phoneNumber: '' };
 
+    const result = normalizeAndValidateGuidedEnrollment(input);
+
+    expect(result.father).toBeNull();
+    expect(result.mother).toEqual(input.mother);
+  });
+
+  it('keeps only the father record when the selected attendant is the mother', () => {
+    const input = validEnrollment();
+    input.guardian.relationshipType = 'MOTHER';
+
+    const result = normalizeAndValidateGuidedEnrollment(input);
+
+    expect(result.father).toEqual(input.father);
+    expect(result.mother).toBeNull();
+  });
+
+  it('requires the non-attendant parent record', () => {
+    const input = validEnrollment();
+    input.mother = null;
+
     expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow(
-      'The selected guardian parent must have a complete parent record.',
+      'The non-attendant parent must have a complete parent record.',
     );
   });
 
@@ -130,6 +150,9 @@ describe('guided enrollment policy', () => {
     input.guardian.relationshipDescription = 'Aunt';
 
     expect(() => normalizeAndValidateGuidedEnrollment(input)).not.toThrow();
+    const result = normalizeAndValidateGuidedEnrollment(input);
+    expect(result.father).toBeNull();
+    expect(result.mother).toBeNull();
   });
 
   it('requires a 021 Tehran home phone', () => {

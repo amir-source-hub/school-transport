@@ -131,14 +131,15 @@ test('combined enrollment rules survive retry and submit normalized values', asy
   await guardianSection.getByRole('combobox', { name: 'نسبت' }).click();
   await page.getByRole('option', { name: 'پدر' }).click();
   await expect(guardianSection.getByLabel('نام', { exact: true })).toHaveCount(0);
-  const fatherSection = page.getByRole('heading', { name: 'اطلاعات پدر' }).locator('..');
-  await fatherSection.getByLabel('نام', { exact: true }).fill('حسین');
-  await fatherSection.getByLabel('نام خانوادگی').fill('احمدی');
-  await fatherSection.getByLabel('کد ملی').fill('۰۰۲۳۵۱۸۸۰۵');
-  const fatherPhone = fatherSection.getByLabel('شماره همراه');
-  await expect(fatherPhone).toHaveValue('09');
-  await fatherPhone.fill('۰۹۰۹۱۲۳۴۵۶۷۸۹');
-  await expect(fatherPhone).toHaveValue('09123456789');
+  await expect(page.getByRole('heading', { name: 'اطلاعات پدر' })).toHaveCount(0);
+  const motherSection = page.getByRole('heading', { name: 'اطلاعات مادر' }).locator('..');
+  await motherSection.getByLabel('نام', { exact: true }).fill('مریم');
+  await motherSection.getByLabel('نام خانوادگی').fill('احمدی');
+  await motherSection.getByLabel('کد ملی').fill('۰۰۶۷۷۴۹۸۱۱');
+  const motherPhone = motherSection.getByLabel('شماره همراه');
+  await expect(motherPhone).toHaveValue('09');
+  await motherPhone.fill('۰۹۰۹۱۲۳۴۵۶۷۸۹');
+  await expect(motherPhone).toHaveValue('09123456789');
 
   await guardianSection.getByRole('combobox', { name: 'نسبت' }).click();
   await page.getByRole('option', { name: 'سایر' }).click();
@@ -146,7 +147,8 @@ test('combined enrollment rules survive retry and submit normalized values', asy
   await guardianSection.getByLabel('نام خانوادگی').fill('کاظمی');
   await guardianSection.getByLabel('کد ملی').fill('۱۲۳');
   await guardianSection.getByLabel('شرح نسبت').fill('خاله');
-  await expect(fatherSection.getByLabel('کد ملی')).toHaveValue('0023518805');
+  await expect(page.getByRole('heading', { name: 'اطلاعات پدر' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'اطلاعات مادر' })).toHaveCount(0);
 
   const photoInput = page.getByLabel(/انتخاب عکس/);
   await photoInput.setInputFiles({
@@ -181,12 +183,14 @@ test('combined enrollment rules survive retry and submit normalized values', asy
   const payload = submitted as {
     student: { nationalId: string; birthDate: string };
     guardian: { nationalId: string; relationshipType: string };
-    father: { nationalId: string; phoneNumber: string };
+    father: null;
+    mother: null;
     homePhone: string;
   };
   expect(payload.student.nationalId).toBe('0023');
   expect(payload.guardian).toMatchObject({ nationalId: '123', relationshipType: 'OTHER' });
-  expect(payload.father).toMatchObject({ nationalId: '0023518805', phoneNumber: '09123456789' });
+  expect(payload.father).toBeNull();
+  expect(payload.mother).toBeNull();
   expect(payload.homePhone).toBe('02122113333');
   expect(payload.student.birthDate).toMatch(/^20\d{2}-\d{2}-\d{2}$/);
   await expect

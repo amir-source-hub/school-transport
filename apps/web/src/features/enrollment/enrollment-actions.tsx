@@ -181,10 +181,9 @@ export function CreateEnrollmentForm({
     'emergencyPhone',
   ];
   function sectionStarted(name: 'father' | 'mother' | 'emergency') {
-    if (name === 'father' && form.guardianRelationshipType === 'FATHER') return true;
-    if (name === 'mother' && form.guardianRelationshipType === 'MOTHER') return true;
-    const keys = name === 'father' ? fatherKeys : name === 'mother' ? motherKeys : emergencyKeys;
-    return keys.some((key) => {
+    if (name === 'father') return form.guardianRelationshipType === 'MOTHER';
+    if (name === 'mother') return form.guardianRelationshipType === 'FATHER';
+    return emergencyKeys.some((key) => {
       const value = String(form[key]).trim();
       return value !== '' && !(key.toString().endsWith('Phone') && value === '09');
     });
@@ -213,9 +212,9 @@ export function CreateEnrollmentForm({
       'streetAddress',
       'postalCode',
     ];
-    if (!['FATHER', 'MOTHER'].includes(form.guardianRelationshipType)) {
-      requiredFields.push('guardianFirst', 'guardianLast', 'guardianNationalId');
-    }
+    requiredFields.push('guardianFirst', 'guardianLast', 'guardianNationalId');
+    if (form.guardianRelationshipType === 'FATHER') requiredFields.push(...motherKeys);
+    if (form.guardianRelationshipType === 'MOTHER') requiredFields.push(...fatherKeys);
     const section = sectionOf(key);
     if (section && !sectionStarted(section)) return undefined;
     if (requiredFields.includes(key) && !text) return 'پر کردن این فیلد اجباری است';
@@ -287,8 +286,8 @@ export function CreateEnrollmentForm({
             'guardianRelationshipType',
             'guardianRelationshipDescription',
             'homePhone',
-            ...fatherKeys,
-            ...motherKeys,
+            ...(form.guardianRelationshipType === 'MOTHER' ? fatherKeys : []),
+            ...(form.guardianRelationshipType === 'FATHER' ? motherKeys : []),
             ...emergencyKeys,
           ]
         : currentStep === 2
@@ -407,17 +406,13 @@ export function CreateEnrollmentForm({
   function validateStep(currentStep: number): string | null {
     if (currentStep === 1) {
       const requiredNames = [form.studentFirst, form.studentLast, form.guardianRelationshipType];
-      if (form.guardianRelationshipType === 'OTHER') {
-        requiredNames.push(form.guardianFirst, form.guardianLast);
-      }
+      requiredNames.push(form.guardianFirst, form.guardianLast);
       if (requiredNames.some((value) => !value.trim()))
         return 'تمام مشخصات فردی ضروری را تکمیل کنید.';
     }
     const ids = [
       { key: 'کد ملی دانش‌آموز', value: form.studentNationalId },
-      ...(form.guardianRelationshipType === 'OTHER'
-        ? [{ key: 'کد ملی سرپرست', value: form.guardianNationalId }]
-        : []),
+      { key: 'کد ملی سرپرست', value: form.guardianNationalId },
     ];
     if (currentStep === 1 || currentStep === 4) {
       for (const { key, value } of ids) {
@@ -487,47 +482,33 @@ export function CreateEnrollmentForm({
             ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
           },
           guardian: {
-            firstName:
-              form.guardianRelationshipType === 'FATHER'
-                ? form.fatherFirst
-                : form.guardianRelationshipType === 'MOTHER'
-                  ? form.motherFirst
-                  : form.guardianFirst,
-            lastName:
-              form.guardianRelationshipType === 'FATHER'
-                ? form.fatherLast
-                : form.guardianRelationshipType === 'MOTHER'
-                  ? form.motherLast
-                  : form.guardianLast,
-            nationalId: normalizeDigits(
-              form.guardianRelationshipType === 'FATHER'
-                ? form.fatherNationalId
-                : form.guardianRelationshipType === 'MOTHER'
-                  ? form.motherNationalId
-                  : form.guardianNationalId,
-            ),
+            firstName: form.guardianFirst,
+            lastName: form.guardianLast,
+            nationalId: normalizeDigits(form.guardianNationalId),
             relationshipType: form.guardianRelationshipType as GuardianInput['relationshipType'],
             relationshipDescription:
               form.guardianRelationshipType === 'OTHER'
                 ? form.guardianRelationshipDescription || undefined
                 : undefined,
           },
-          father: sectionStarted('father')
-            ? {
-                firstName: form.fatherFirst,
-                lastName: form.fatherLast,
-                nationalId: normalizeDigits(form.fatherNationalId),
-                phoneNumber: normalizeDigits(form.fatherPhone),
-              }
-            : null,
-          mother: sectionStarted('mother')
-            ? {
-                firstName: form.motherFirst,
-                lastName: form.motherLast,
-                nationalId: normalizeDigits(form.motherNationalId),
-                phoneNumber: normalizeDigits(form.motherPhone),
-              }
-            : null,
+          father:
+            form.guardianRelationshipType === 'MOTHER'
+              ? {
+                  firstName: form.fatherFirst,
+                  lastName: form.fatherLast,
+                  nationalId: normalizeDigits(form.fatherNationalId),
+                  phoneNumber: normalizeDigits(form.fatherPhone),
+                }
+              : null,
+          mother:
+            form.guardianRelationshipType === 'FATHER'
+              ? {
+                  firstName: form.motherFirst,
+                  lastName: form.motherLast,
+                  nationalId: normalizeDigits(form.motherNationalId),
+                  phoneNumber: normalizeDigits(form.motherPhone),
+                }
+              : null,
           emergencyContact: sectionStarted('emergency')
             ? {
                 firstName: form.emergencyFirst,
@@ -952,32 +933,38 @@ export function CreateEnrollmentForm({
                 </div>
               </div>
             </Section>
-            <Section title="اطلاعات پدر">
-              {savedParents.father && (
-                <p className="mb-4 text-sm text-muted">
-                  اطلاعات ذخیره‌شده پدر از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر نیست.
-                </p>
-              )}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {field('fatherFirst', 'نام')}
-                {field('fatherLast', 'نام خانوادگی')}
-                {field('fatherNationalId', 'کد ملی', 'tel')}
-                {field('fatherPhone', 'شماره همراه', 'tel')}
-              </div>
-            </Section>
-            <Section title="اطلاعات مادر">
-              {savedParents.mother && (
-                <p className="mb-4 text-sm text-muted">
-                  اطلاعات ذخیره‌شده مادر از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر نیست.
-                </p>
-              )}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {field('motherFirst', 'نام')}
-                {field('motherLast', 'نام خانوادگی')}
-                {field('motherNationalId', 'کد ملی', 'tel')}
-                {field('motherPhone', 'شماره همراه', 'tel')}
-              </div>
-            </Section>
+            {form.guardianRelationshipType === 'MOTHER' && (
+              <Section title="اطلاعات پدر">
+                {savedParents.father && (
+                  <p className="mb-4 text-sm text-muted">
+                    اطلاعات ذخیره‌شده پدر از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر
+                    نیست.
+                  </p>
+                )}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {field('fatherFirst', 'نام')}
+                  {field('fatherLast', 'نام خانوادگی')}
+                  {field('fatherNationalId', 'کد ملی', 'tel')}
+                  {field('fatherPhone', 'شماره همراه', 'tel')}
+                </div>
+              </Section>
+            )}
+            {form.guardianRelationshipType === 'FATHER' && (
+              <Section title="اطلاعات مادر">
+                {savedParents.mother && (
+                  <p className="mb-4 text-sm text-muted">
+                    اطلاعات ذخیره‌شده مادر از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر
+                    نیست.
+                  </p>
+                )}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {field('motherFirst', 'نام')}
+                  {field('motherLast', 'نام خانوادگی')}
+                  {field('motherNationalId', 'کد ملی', 'tel')}
+                  {field('motherPhone', 'شماره همراه', 'tel')}
+                </div>
+              </Section>
+            )}
             <Section title="تماس اضطراری">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {field('emergencyFirst', 'نام')}
