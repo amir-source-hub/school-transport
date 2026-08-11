@@ -43,6 +43,7 @@ export function JalaliDateInput({
   const initialJalali = splitJalali(value || maxDate || new Date().toISOString().slice(0, 10));
   const [calendarYear, setCalendarYear] = useState(Number(initialJalali.year) || 1405);
   const [calendarMonth, setCalendarMonth] = useState(Number(initialJalali.month) || 1);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const calendarRef = useRef<HTMLDetailsElement>(null);
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -153,7 +154,7 @@ export function JalaliDateInput({
   };
 
   return (
-    <div>
+    <div className={calendarOpen ? 'min-h-[22rem]' : undefined}>
       <div role="group" aria-label={label} className="flex items-center gap-2" dir="ltr">
         <Input
           {...common}
@@ -196,7 +197,11 @@ export function JalaliDateInput({
           onKeyDown={(event) => backTo(event, 'day')}
         />
       </div>
-      <details ref={calendarRef} className="mt-2 w-full">
+      <details
+        ref={calendarRef}
+        className="mt-2 w-full"
+        onToggle={(event) => setCalendarOpen(event.currentTarget.open)}
+      >
         <summary className="inline-flex cursor-pointer list-none items-center rounded-lg border border-border bg-surface-paper px-3 py-2 text-xs font-bold text-primary hover:bg-surface-inset">
           انتخاب از تقویم شمسی
         </summary>

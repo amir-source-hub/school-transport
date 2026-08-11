@@ -87,6 +87,9 @@ describe('JalaliDateInput', () => {
     );
 
     await user.click(screen.getByText('انتخاب از تقویم شمسی'));
+    expect(screen.getByRole('group', { name: 'تاریخ شمسی' }).parentElement).toHaveClass(
+      'min-h-[22rem]',
+    );
     await user.selectOptions(screen.getByLabelText('ماه تقویم'), '7');
     await user.click(screen.getByRole('button', { name: '۱۵' }));
 
