@@ -23,6 +23,7 @@ export function OnboardingSessionGuard({ children }: { children: ReactNode }) {
       phoneNumber: string;
       expiresAt: string;
       currentStep: string | null;
+      nationalId: string;
     }>('/auth/onboarding/me', {
       cache: 'no-store',
       redirectOnAuthFailure: false,
@@ -32,6 +33,7 @@ export function OnboardingSessionGuard({ children }: { children: ReactNode }) {
         setOnboardingState({
           sessionId: null,
           phoneNumber: response.data.phoneNumber,
+          nationalId: response.data.nationalId,
           expiresAt: response.data.expiresAt,
           currentStep: response.data.currentStep,
         });

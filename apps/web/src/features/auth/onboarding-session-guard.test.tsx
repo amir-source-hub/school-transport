@@ -41,6 +41,7 @@ describe('OnboardingSessionGuard', () => {
       data: {
         status: 'PENDING',
         phoneNumber: '09121112222',
+        nationalId: '0084575948',
         expiresAt: '2026-08-18T12:00:00.000Z',
         currentStep: null,
       },
@@ -57,6 +58,7 @@ describe('OnboardingSessionGuard', () => {
       redirectOnAuthFailure: false,
     });
     expect(getOnboardingState().phoneNumber).toBe('09121112222');
+    expect(getOnboardingState().nationalId).toBe('0084575948');
   });
 
   it('redirects an invalid or expired onboarding token to login', async () => {
@@ -81,6 +83,7 @@ describe('OnboardingSessionGuard', () => {
         data: {
           status: 'PENDING',
           phoneNumber: '09121112222',
+          nationalId: '0084575948',
           expiresAt: '2026-08-18T12:00:00.000Z',
           currentStep: null,
         },

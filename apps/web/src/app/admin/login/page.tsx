@@ -11,7 +11,6 @@ import { RouteLoading } from '@/components/feedback/route-loading';
 import { apiRequest } from '@/lib/api-client';
 import { SITE_NAME } from '@/lib/route-metadata';
 import { AdminLoginForm } from '@/features/auth/auth-forms';
-import { featureFlags } from '@/lib/feature-flags';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -76,17 +75,10 @@ export default function AdminLoginPage() {
           <p className="text-xs font-black text-primary">ورود مدیریت</p>
           <h1 className="mt-2 text-2xl font-black tracking-tight">ورود مدیران سامانه</h1>
           <p className="mt-3 text-sm leading-7 text-muted">
-            نام کاربری و رمز عبور را وارد کنید؛ سپس کد تأیید پیامک‌شده را برای ورود دو مرحله‌ای وارد
-            کنید.
+            برای ورود، نام کاربری و رمز عبور مدیریت را وارد کنید.
           </p>
           <div className="mt-7">
-            {featureFlags.adminTwoFactor ? (
-              <AdminLoginForm />
-            ) : (
-              <p role="status" className="rounded-2xl bg-warning/10 p-4 text-sm leading-7">
-                ورود مدیریت در این انتشار موقتاً غیرفعال است.
-              </p>
-            )}
+            <AdminLoginForm />
           </div>
         </div>
         <div className="mt-7 flex items-center justify-center gap-3 border-t border-slate-200/70 pt-5 text-xs text-muted">

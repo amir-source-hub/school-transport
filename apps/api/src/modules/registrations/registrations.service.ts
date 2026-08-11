@@ -60,6 +60,22 @@ export class RegistrationsService {
   ) {
     const data = normalizeAndValidateGuidedEnrollment(input);
     const actions = normalizeAndValidateAdminEnrollmentActions(adminActions);
+    if (!adminAudit) {
+      const [account] = await this.db.db
+        .select({ username: users.username, status: users.accountStatus, phoneNumber: users.phoneNumber })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      if (account?.status === 'PENDING') {
+        const expectedUsername = `${account.phoneNumber}:${data.guardian.nationalId}`;
+        if (account.username !== expectedUsername) {
+          throw new ConflictError(
+            'GUARDIAN_CREDENTIAL_MISMATCH',
+            'Guardian identity must match the fixed registration credentials.',
+          );
+        }
+      }
+    }
     const [school] = await this.db.db
       .select({
         id: schools.id,

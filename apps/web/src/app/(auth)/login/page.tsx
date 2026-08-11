@@ -11,7 +11,7 @@ export default function LoginPage() {
       <p className="text-xs font-black text-primary">خوش آمدید</p>
       <h1 className="mt-2 text-3xl font-black tracking-tight">ورود یا ساخت حساب</h1>
       <p className="mt-3 text-sm leading-7 text-muted">
-        خانواده‌ها با تأیید شماره همراه وارد می‌شوند یا حساب تازه می‌سازند.
+        خانواده‌ها با شماره همراه و کد ملی ثابت سرپرست وارد می‌شوند یا حساب تازه می‌سازند.
       </p>
       <div className="mt-7">
         <LoginForm />

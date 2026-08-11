@@ -142,6 +142,28 @@ export class RequestOtpDto {
   role?: 'PARENT';
 }
 
+export class ParentCredentialsDto {
+  @Transform(digits)
+  @IsString()
+  @Matches(/^09\d{9}$/)
+  phoneNumber!: string;
+
+  @Transform(digits)
+  @IsString()
+  @Matches(/^\d{1,10}$/)
+  nationalId!: string;
+
+  @IsOptional()
+  @Transform(toBoolean)
+  rememberMe?: boolean;
+}
+
+export class AdminLoginDto extends AdminPasswordChallengeDto {
+  @IsOptional()
+  @Transform(toBoolean)
+  rememberMe?: boolean;
+}
+
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')
 @Controller('admin/admins')
@@ -233,6 +255,67 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly config: ConfigService,
   ) {}
+
+  @Public()
+  @Post('parent/credentials')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(TrustedOriginGuard)
+  async parentCredentials(
+    @Req() req: FastifyRequest,
+    @Body() dto: ParentCredentialsDto,
+    @Res({ passthrough: true }) reply: CookieReply,
+  ) {
+    const context = {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      deviceName: req.headers['user-agent']?.slice(0, 255),
+    };
+    const result = await this.authService.authenticateParent(
+      dto.phoneNumber,
+      dto.nationalId,
+      context,
+      dto.rememberMe ?? false,
+    );
+    if (result.user === null) {
+      this.setOnboardingCookie(reply, result.onboarding.token, result.onboarding.expiresAt);
+      return successResponse({
+        user: null,
+        onboarding: {
+          sessionId: result.onboarding.sessionId,
+          expiresAt: result.onboarding.expiresAt,
+          currentStep: result.onboarding.currentStep,
+          nationalId: result.onboarding.nationalId,
+        },
+      });
+    }
+    this.setRefreshCookie(reply, result.refreshToken, false, dto.rememberMe ?? false);
+    this.setAccessCookie(reply, result.accessToken, false);
+    return successResponse({ user: result.user, accessToken: result.accessToken });
+  }
+
+  @Public()
+  @Post('admin/login')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(TrustedOriginGuard)
+  async adminLogin(
+    @Req() req: FastifyRequest,
+    @Body() dto: AdminLoginDto,
+    @Res({ passthrough: true }) reply: CookieReply,
+  ) {
+    const result = await this.authService.loginAdmin(
+      dto.username,
+      dto.password,
+      {
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        deviceName: req.headers['user-agent']?.slice(0, 255),
+      },
+      dto.rememberMe ?? false,
+    );
+    this.setRefreshCookie(reply, result.refreshToken, true, dto.rememberMe ?? false);
+    this.setAccessCookie(reply, result.accessToken, true);
+    return successResponse({ user: result.user, accessToken: result.accessToken });
+  }
 
   @Public()
   @Post('request-otp')
@@ -339,12 +422,14 @@ export class AuthController {
     if (this.config.featureOnboarding === false) {
       throw new ValidationError('Onboarding is temporarily unavailable.');
     }
+    const nationalId = await this.authService.getPendingParentNationalId(req.onboarding.userId);
     return successResponse({
       accountId: req.onboarding.userId,
       phoneNumber: req.onboarding.phoneNumber,
       status: 'PENDING',
       expiresAt: req.onboarding.expiresAt,
       currentStep: req.onboarding.currentStep,
+      nationalId,
     });
   }
 

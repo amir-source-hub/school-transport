@@ -32,6 +32,11 @@ export interface AdminChallengeResult {
   developmentCode?: string;
 }
 
+export type ParentCredentialResult = LoginResult | {
+  user: null;
+  onboarding: Awaited<ReturnType<OnboardingService['beginOrResume']>> & { nationalId: string };
+};
+
 export const ADMIN_IDENTITY_LIST_LIMIT = 500;
 
 @Injectable()
@@ -269,6 +274,75 @@ export class AuthService {
     return this.sendOtp(phoneNumber, 'AUTH_PARENT', requestIp);
   }
 
+  async authenticateParent(
+    phoneNumber: string,
+    nationalId: string,
+    context?: SessionContext,
+    rememberMe = false,
+  ): Promise<ParentCredentialResult> {
+    const genericError = () =>
+      new AuthenticationError('شماره همراه سرپرست یا کد ملی صحیح نیست.');
+    const account = await this.findAccountByPhone(phoneNumber, 'PARENT');
+    const needsOnboarding =
+      !account || account.status === 'PENDING' || account.status === 'EXPIRED';
+
+    if (needsOnboarding) {
+      if (this.config.featureOnboarding === false) throw genericError();
+      let userId = account?.id;
+      const pendingUsername = `${phoneNumber}:${nationalId}`;
+      if (!userId) {
+        userId = generateId();
+        await this.db.db.insert(users).values({
+          id: userId,
+          username: pendingUsername,
+          phoneNumber,
+          accountStatus: 'PENDING',
+        });
+      } else {
+        if (account?.username !== pendingUsername) throw genericError();
+        await this.db.db
+          .update(users)
+          .set({ accountStatus: 'PENDING', phoneNumber, updatedAt: new Date() })
+          .where(eq(users.id, userId));
+      }
+      if (!this.onboarding) throw new AuthenticationError('Onboarding is not configured.');
+      const onboarding = await this.onboarding.beginOrResume(userId, phoneNumber);
+      this.logger.log('Parent onboarding session issued with fixed credentials.');
+      return { user: null, onboarding: { ...onboarding, nationalId } };
+    }
+
+    if (account.status !== 'ACTIVE') throw genericError();
+    const familyParents = await this.db.db
+      .select({ id: parents.id, phoneNumber: parents.phoneNumber, nationalId: parents.nationalId })
+      .from(parents)
+      .where(eq(parents.userId, account.id));
+    const matchingParent = familyParents.find(
+      (parent) => parent.phoneNumber === phoneNumber && parent.nationalId === nationalId,
+    );
+    if (!matchingParent) throw genericError();
+
+    await this.db.db.transaction(async (txn) => {
+      await txn
+        .update(parents)
+        .set({ isPrimaryContact: false, updatedAt: new Date() })
+        .where(eq(parents.userId, account.id));
+      await txn
+        .update(parents)
+        .set({ isPrimaryContact: true, updatedAt: new Date() })
+        .where(eq(parents.id, matchingParent.id));
+      await txn
+        .update(users)
+        .set({ phoneNumber, lastLoginAt: new Date(), updatedAt: new Date() })
+        .where(eq(users.id, account.id));
+    });
+    const tokens = await this.generateTokens(account.id, 'PARENT', context, undefined, rememberMe);
+    this.logger.log('PARENT logged in with fixed credentials.');
+    return {
+      user: { id: account.id, username: account.username, phoneNumber, role: 'PARENT' },
+      ...tokens,
+    };
+  }
+
   async verifyAuthOtp(
     phoneNumber: string,
     code: string,
@@ -372,6 +446,10 @@ export class AuthService {
       );
     }
     await this.onboarding.completeOnboarding(session.id, session.userId);
+    await this.db.db
+      .update(users)
+      .set({ username: session.phoneNumber, updatedAt: new Date() })
+      .where(eq(users.id, session.userId));
     const tokens = await this.generateTokens(
       session.userId,
       'PARENT',
@@ -389,6 +467,20 @@ export class AuthService {
       },
       ...tokens,
     };
+  }
+
+  async getPendingParentNationalId(userId: string): Promise<string> {
+    const [account] = await this.db.db
+      .select({ username: users.username, status: users.accountStatus })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!account || account.status !== 'PENDING') {
+      throw new AuthenticationError('Invalid onboarding identity.');
+    }
+    const separator = account.username.indexOf(':');
+    if (separator < 0) throw new AuthenticationError('Invalid onboarding identity.');
+    return account.username.slice(separator + 1);
   }
 
   async createAdminChallenge(
@@ -432,6 +524,43 @@ export class AuthService {
       expiresAt: otp.expiresAt,
       cooldownSeconds: otp.cooldownSeconds,
       developmentCode: otp.developmentCode,
+    };
+  }
+
+  async loginAdmin(
+    username: string,
+    password: string,
+    context?: SessionContext,
+    rememberMe = false,
+  ): Promise<LoginResult> {
+    const genericError = () => new AuthenticationError('The username or password is incorrect.');
+    const [record] = await this.db.db
+      .select({
+        id: adminUsers.id,
+        username: adminUsers.username,
+        phoneNumber: adminUsers.phoneNumber,
+        status: adminUsers.status,
+        passwordHash: adminUsers.passwordHash,
+      })
+      .from(adminUsers)
+      .where(eq(adminUsers.username, username))
+      .limit(1);
+    if (!record || record.status !== 'ACTIVE' || !record.passwordHash) throw genericError();
+    if (!(await argon2.verify(record.passwordHash, password))) throw genericError();
+    await this.db.db
+      .update(adminUsers)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(adminUsers.id, record.id));
+    const tokens = await this.generateTokens(record.id, 'ADMIN', context, undefined, rememberMe);
+    this.logger.log('Admin logged in with username and password.');
+    return {
+      user: {
+        id: record.id,
+        username: record.username,
+        phoneNumber: record.phoneNumber,
+        role: 'ADMIN',
+      },
+      ...tokens,
     };
   }
 
