@@ -53,3 +53,37 @@ export class RateLimitError extends AppError {
     super('RATE_LIMIT_EXCEEDED', message, 429);
   }
 }
+
+export class OtpInvalidError extends AppError {
+  constructor(message = 'کد واردشده نادرست است. دوباره بررسی کنید.') {
+    super('OTP_INVALID', message, 400);
+  }
+}
+
+export class OtpExpiredError extends AppError {
+  constructor(message = 'کد تأیید منقضی شده است. کد جدیدی درخواست کنید.') {
+    super('OTP_EXPIRED', message, 400);
+  }
+}
+
+export class OtpNotFoundError extends AppError {
+  constructor(message = 'درخواست کد معتبری یافت نشد. کد جدیدی درخواست کنید.') {
+    super('OTP_NOT_FOUND', message, 400);
+  }
+}
+
+export class OtpTooManyAttemptsError extends AppError {
+  constructor(message = 'تعداد تلاش‌های ناموفق بیش از حد مجاز است. کد جدیدی درخواست کنید.') {
+    super('OTP_TOO_MANY_ATTEMPTS', message, 400);
+  }
+}
+
+export class OtpCooldownError extends AppError {
+  constructor(seconds: number) {
+    super(
+      'OTP_COOLDOWN',
+      `برای دریافت کد جدید، ${Math.max(1, seconds)} ثانیه دیگر صبر کنید.`,
+      400,
+    );
+  }
+}

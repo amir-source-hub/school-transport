@@ -14,7 +14,15 @@ import {
   parents,
   authSessions,
 } from '../../../database/schemas';
-import { AuthenticationError, ValidationError } from '../../../common/errors';
+import {
+  AuthenticationError,
+  OtpCooldownError,
+  OtpExpiredError,
+  OtpInvalidError,
+  OtpNotFoundError,
+  OtpTooManyAttemptsError,
+  ValidationError,
+} from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
 import { AuthTokens, LoginResult, OtpResult, VerifyAuthOtpResult } from '../domain/auth.types';
@@ -396,7 +404,7 @@ export class AuthService {
     password: string,
     requestIp?: string,
   ): Promise<AdminChallengeResult> {
-    const genericError = () => new AuthenticationError('The username or password is incorrect.');
+    const genericError = () => new AuthenticationError('نام کاربری یا رمز عبور درست نیست.');
 
     const records = await this.db.db
       .select({
@@ -441,7 +449,7 @@ export class AuthService {
     context?: SessionContext,
     rememberMe = false,
   ): Promise<LoginResult> {
-    const genericError = () => new AuthenticationError('The username or password is incorrect.');
+    const genericError = () => new AuthenticationError('نام کاربری یا رمز عبور درست نیست.');
     const challengeHash = this.hashToken(challengeId);
 
     let admin: { id: string; username: string; phoneNumber: string } | undefined;
@@ -627,9 +635,7 @@ export class AuthService {
         const elapsed = (Date.now() - new Date(recent[0].createdAt).getTime()) / 1000;
         if (elapsed < this.config.otpResendCooldownSeconds) {
           this.metrics?.recordMessage('otp', 'rate_limited');
-          throw new ValidationError(
-            `Please wait ${Math.ceil(this.config.otpResendCooldownSeconds - elapsed)} seconds before requesting a new code.`,
-          );
+          throw new OtpCooldownError(this.config.otpResendCooldownSeconds - elapsed);
         }
       }
       await txn
@@ -705,16 +711,16 @@ export class AuthService {
       return this.consumeOtpInTransaction(txn, phoneNumber, purpose, code);
     });
     if (outcome === 'NOT_FOUND') {
-      throw new ValidationError('No valid OTP request found. Please request a new code.');
+      throw new OtpNotFoundError();
     }
     if (outcome === 'TOO_MANY_ATTEMPTS') {
       this.metrics?.recordMessage('otp', 'rate_limited');
-      throw new ValidationError('Too many failed attempts. Please request a new code.');
+      throw new OtpTooManyAttemptsError();
     }
     if (outcome === 'EXPIRED') {
-      throw new ValidationError('OTP code has expired. Please request a new code.');
+      throw new OtpExpiredError();
     }
-    if (outcome === 'INVALID') throw new ValidationError('Invalid verification code.');
+    if (outcome === 'INVALID') throw new OtpInvalidError();
 
     this.logger.log(`OTP verified for ${purpose}.`);
     return {};
@@ -755,15 +761,16 @@ export class AuthService {
     const valid = await argon2.verify(request.codeHash, code);
     const attemptCount = request.attemptCount + 1;
     if (!valid) {
+      const exhausted = attemptCount >= request.maxAttempts;
       await txn
         .update(otpRequests)
         .set({
           attemptCount,
-          invalidatedAt: attemptCount >= request.maxAttempts ? new Date() : null,
+          invalidatedAt: exhausted ? new Date() : null,
         })
         .where(eq(otpRequests.id, request.id));
       this.logger.warn(`Failed OTP attempt for ${purpose}.`);
-      return 'INVALID' as const;
+      return exhausted ? ('TOO_MANY_ATTEMPTS' as const) : ('INVALID' as const);
     }
     await txn
       .update(otpRequests)

@@ -175,15 +175,83 @@ describe('OTP concurrency', () => {
     const expiredDb = otpDatabase([row(await argon2.hash('123456'), new Date(0))]);
     await expect(
       createService(expiredDb.service).auth.verifyOtp('09120000000', 'AUTH_PARENT', '123456'),
-    ).rejects.toThrow('expired');
+    ).rejects.toMatchObject({ code: 'OTP_EXPIRED' });
     expect(expiredDb.rows[0].invalidatedAt).toBeInstanceOf(Date);
 
     const bruteDb = otpDatabase([row(await argon2.hash('123456'))]);
     const auth = createService(bruteDb.service).auth;
-    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toThrow('Invalid');
-    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toThrow('Invalid');
+    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toMatchObject({
+      code: 'OTP_INVALID',
+    });
+    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toMatchObject({
+      code: 'OTP_TOO_MANY_ATTEMPTS',
+    });
     expect(bruteDb.rows[0].attemptCount).toBe(2);
     expect(bruteDb.rows[0].invalidatedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe('OTP error states', () => {
+  it('reports a missing or invalidated request as OTP_NOT_FOUND', async () => {
+    const { auth } = createService(otpDatabase().service);
+    await expect(
+      auth.verifyOtp('09120000000', 'AUTH_PARENT', '123456'),
+    ).rejects.toMatchObject({ code: 'OTP_NOT_FOUND' });
+  });
+
+  it('reports an invalidated request as OTP_NOT_FOUND, not OTP_INVALID', async () => {
+    const { auth } = createService(
+      otpDatabase([{ ...row(await argon2.hash('123456')), invalidatedAt: new Date() }]).service,
+    );
+    await expect(
+      auth.verifyOtp('09120000000', 'AUTH_PARENT', '123456'),
+    ).rejects.toMatchObject({ code: 'OTP_NOT_FOUND' });
+  });
+
+  it('reports an expired code as OTP_EXPIRED', async () => {
+    const { auth } = createService(
+      otpDatabase([row(await argon2.hash('123456'), new Date(0))]).service,
+    );
+    await expect(
+      auth.verifyOtp('09120000000', 'AUTH_PARENT', '123456'),
+    ).rejects.toMatchObject({ code: 'OTP_EXPIRED' });
+  });
+
+  it('reports a wrong code as OTP_INVALID while attempts remain', async () => {
+    const { auth } = createService(
+      otpDatabase([row(await argon2.hash('123456'))]).service,
+    );
+    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '999999')).rejects.toMatchObject({
+      code: 'OTP_INVALID',
+    });
+  });
+
+  it('reports exhausting the attempt limit as OTP_TOO_MANY_ATTEMPTS', async () => {
+    const { auth } = createService(
+      otpDatabase([{ ...row(await argon2.hash('123456')), attemptCount: 1 }]).service,
+    );
+    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '999999')).rejects.toMatchObject({
+      code: 'OTP_TOO_MANY_ATTEMPTS',
+    });
+  });
+
+  it('reports a resend inside the cooldown as OTP_COOLDOWN', async () => {
+    const database = otpDatabase();
+    const { auth, delivery } = createService(database.service);
+    await auth.sendOtp('09120000000', 'AUTH_PARENT');
+    delivery.send.mockClear();
+    await expect(auth.sendOtp('09120000000', 'AUTH_PARENT')).rejects.toMatchObject({
+      code: 'OTP_COOLDOWN',
+    });
+  });
+
+  it('reports OTP errors with Persian messages and no account reveal', async () => {
+    const { auth } = createService(
+      otpDatabase([row(await argon2.hash('123456'))]).service,
+    );
+    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '999999')).rejects.toMatchObject({
+      message: expect.stringContaining('کد'),
+    });
   });
 });
 
@@ -209,7 +277,7 @@ describe('OTP expiry window', () => {
     if (shouldSucceed) {
       await expect(promise).resolves.toBeDefined();
     } else {
-      await expect(promise).rejects.toThrow('expired');
+      await expect(promise).rejects.toMatchObject({ code: 'OTP_EXPIRED' });
     }
     vi.useRealTimers();
   });
@@ -452,9 +520,9 @@ describe('admin two-factor challenge', () => {
     });
     const { auth } = createTwoFactorService(database.service);
 
-    await expect(auth.verifyAdminOtp('challenge-token', '000000')).rejects.toThrow(
-      'username or password',
-    );
+    await expect(auth.verifyAdminOtp('challenge-token', '000000')).rejects.toMatchObject({
+      code: 'INVALID_CREDENTIALS',
+    });
     expect(database.rows.challenges[0].attemptCount).toBe(1);
     expect(database.rows.otps[0].attemptCount).toBe(1);
   });
