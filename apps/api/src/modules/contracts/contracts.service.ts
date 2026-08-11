@@ -33,6 +33,9 @@ type ContractAcceptanceContext = {
   templateHash?: string;
   ipAddress?: string;
   userAgent?: string;
+  adminId?: string;
+  signerReason?: string;
+  signerSource?: string;
 };
 
 export function assertContractAcceptanceProof(
@@ -428,7 +431,19 @@ export class ContractsService {
   }
 
   async accept(contractId: string, userId: string, context: ContractAcceptanceContext = {}) {
-    await this.getById(contractId, userId);
+    await this.getById(contractId, context.adminId ? undefined : userId);
+    let ownerUserId = userId;
+    if (context.adminId) {
+      const [owner] = await this.db.db
+        .select({ userId: students.userId })
+        .from(contracts)
+        .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, contracts.registrationId))
+        .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+        .where(eq(contracts.id, contractId))
+        .limit(1);
+      if (!owner) throw new NotFoundError('Contract', contractId);
+      ownerUserId = owner.userId;
+    }
     await this.db.db.transaction(async (txn) => {
       const [contract] = await txn
         .select()
@@ -470,16 +485,18 @@ export class ContractsService {
           contractStatus: 'ACCEPTED',
           acceptedAt: new Date(),
           paymentPlanId: plan[0].id,
-          acceptedByAdminId: null,
-          signerRole: 'PARENT',
+          acceptedByAdminId: context.adminId ?? null,
+          signerRole: context.adminId ? 'ADMIN' : 'PARENT',
+          signerReason: context.adminId ? context.signerReason ?? null : null,
+          signerSource: context.adminId ? context.signerSource ?? 'admin_console' : null,
           contractDataSnapshot: immutableSnapshot
             ? JSON.stringify({
                 ...immutableSnapshot,
                 acceptance: {
                   acceptedAt: new Date().toISOString(),
-                  actorType: 'PARENT',
-                  actorId: userId,
-                  accountId: userId,
+                  actorType: context.adminId ? 'ADMIN' : 'PARENT',
+                  actorId: context.adminId ?? ownerUserId,
+                  accountId: ownerUserId,
                   studentId:
                     (immutableSnapshot.enrollment as { student?: { id?: string } } | undefined)
                       ?.student?.id ?? null,
@@ -509,8 +526,8 @@ export class ContractsService {
         throw new ValidationError('Registration state changed during contract acceptance.');
       }
       await this.notifications.enqueueInTransaction(txn, {
-        eventId: `CONTRACT_ACCEPTED:${contractId}:${userId}`,
-        userId,
+        eventId: `CONTRACT_ACCEPTED:${contractId}:${ownerUserId}`,
+        userId: ownerUserId,
         notificationType: 'CONTRACT_ACCEPTED',
         title: 'قرارداد پذیرفته شد',
         message: 'پذیرش قرارداد با موفقیت ثبت شد.',
@@ -518,9 +535,9 @@ export class ContractsService {
         relatedEntityId: contractId,
       });
       await this.audit.recordInTransaction(txn, {
-        actorType: 'PARENT',
-        actorId: userId,
-        action: 'CONTRACT_ACCEPTED',
+        actorType: context.adminId ? 'ADMIN' : 'PARENT',
+        actorId: context.adminId ?? ownerUserId,
+        action: context.adminId ? 'CONTRACT_ACCEPTED_BY_ADMIN' : 'CONTRACT_ACCEPTED',
         entityType: 'CONTRACT',
         entityId: contractId,
         previousValues: { contractStatus: contract.contractStatus },
@@ -535,7 +552,7 @@ export class ContractsService {
       });
     });
 
-    return this.getDetails(contractId, userId);
+    return this.getDetails(contractId, context.adminId ? undefined : ownerUserId);
   }
 
   async reject(contractId: string, userId: string) {

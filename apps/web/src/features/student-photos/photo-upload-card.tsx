@@ -43,11 +43,13 @@ export function PhotoUploadCard({
   studentId,
   initialItems,
   mode = 'panel',
+  familyId,
   onUploadCompleted,
 }: {
   studentId?: string;
   initialItems: PhotoUploadView[];
   mode?: PhotoUploadMode;
+  familyId?: string;
   onUploadCompleted?: (uploadId: string) => void;
 }) {
   const router = useRouter();
@@ -106,10 +108,14 @@ export function PhotoUploadCard({
     setProgress(0);
     setMessage(undefined);
     try {
-      const authorization = await authorizePhotoUpload(
-        { studentId, declaredMime: selected.mime, declaredSize: file.size },
-        mode,
-      );
+      const authorizationInput = {
+        studentId,
+        declaredMime: selected.mime,
+        declaredSize: file.size,
+      };
+      const authorization = familyId
+        ? await authorizePhotoUpload(authorizationInput, mode, familyId)
+        : await authorizePhotoUpload(authorizationInput, mode);
       try {
         await putPhotoObject(authorization.uploadUrl, file, {
           signal: controller.signal,
@@ -123,7 +129,9 @@ export function PhotoUploadCard({
         setMessage('ارسال فایل به ذخیره‌گاه ناموفق بود. اتصال را بررسی و دوباره تلاش کنید.');
         return;
       }
-      const completed = await completePhotoUpload(authorization.uploadId, mode);
+      const completed = familyId
+        ? await completePhotoUpload(authorization.uploadId, mode, familyId)
+        : await completePhotoUpload(authorization.uploadId, mode);
       onUploadCompleted?.(completed.uploadId);
       if (mode === 'panel') setItems(await getMyPhotoUploads(studentId));
       else setItems([completed]);

@@ -57,6 +57,11 @@ import { OfflinePaymentDestinationCard } from '@/features/finance/offline-paymen
 import { ContractReview } from '@/features/finance/contract-review';
 import { updateNotificationConsent } from '@/features/notifications/notifications-api';
 import { clearEnrollmentDraft } from './enrollment-draft';
+import {
+  acceptAdminFamilyContract,
+  createAdminFamilyEnrollment,
+} from '@/features/admin-families/admin-families-api';
+import { RecordPaymentOnBehalfDialog } from '@/features/admin-payments/payment-actions';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const vehicleOptions = [
@@ -94,6 +99,7 @@ export function CreateEnrollmentForm({
   mode = 'panel',
   guardianPhone,
   capacityRemaining,
+  adminFamilyId,
 }: {
   schools: SchoolOption[];
   savedParents: SavedParents;
@@ -102,6 +108,7 @@ export function CreateEnrollmentForm({
   mode?: EnrollmentMode;
   guardianPhone?: string;
   capacityRemaining?: number;
+  adminFamilyId?: string;
 }) {
   const router = useRouter();
   const firstSchool = schools[0];
@@ -492,8 +499,7 @@ export function CreateEnrollmentForm({
     setPending(true);
     setError(undefined);
     try {
-      const created = await createGuidedEnrollment(
-        {
+      const enrollmentInput = {
           studentPhotoUploadId: photoUploadId,
           student: {
             id: form.existingStudentId || undefined,
@@ -560,9 +566,10 @@ export function CreateEnrollmentForm({
             paymentPlanType: form.paymentPlanType as ServiceInput['paymentPlanType'],
             parentNotes: form.parentNotes || undefined,
           },
-        },
-        mode,
-      );
+        };
+      const created = adminFamilyId
+        ? (await createAdminFamilyEnrollment(adminFamilyId, enrollmentInput)).data
+        : await createGuidedEnrollment(enrollmentInput, mode);
       setResult(created);
     } catch (caught) {
       const feedback = getApiErrorFeedback(caught);
@@ -891,7 +898,8 @@ export function CreateEnrollmentForm({
               <PhotoUploadCard
                 studentId={form.existingStudentId || undefined}
                 initialItems={[]}
-                mode={mode}
+                mode={adminFamilyId ? 'admin' : mode}
+                familyId={adminFamilyId}
                 onUploadCompleted={(uploadId) => {
                   if (!form.existingStudentId) setPhotoUploadId(uploadId);
                 }}
@@ -1276,12 +1284,20 @@ export function CreateEnrollmentForm({
                 setPending(true);
                 setError(undefined);
                 try {
-                  await acceptGuidedContract(
-                    result.contractId,
-                    result.contractTemplateHash,
-                    reviewedContractPages,
-                    mode,
-                  );
+                  if (adminFamilyId) {
+                    await acceptAdminFamilyContract(
+                      result.contractId,
+                      result.contractTemplateHash,
+                      reviewedContractPages,
+                    );
+                  } else {
+                    await acceptGuidedContract(
+                      result.contractId,
+                      result.contractTemplateHash,
+                      reviewedContractPages,
+                      mode,
+                    );
+                  }
                   setAccepted(true);
                 } catch (caught) {
                   setError(getApiErrorFeedback(caught).message);
@@ -1311,7 +1327,7 @@ export function CreateEnrollmentForm({
                 ? 'مبلغ باقی‌مانده و تاریخ پرداخت یکجا پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'
                 : 'تعداد، مبلغ و تاریخ اقساط پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'}
             </div>
-            <fieldset className="mt-5 space-y-3 rounded-2xl border border-border p-4 text-right">
+            {!adminFamilyId && <fieldset className="mt-5 space-y-3 rounded-2xl border border-border p-4 text-right">
               <legend className="px-2 text-sm font-black">رضایت اختیاری اطلاع‌رسانی</legend>
               <p className="text-xs leading-6 text-muted">
                 مایلم پیام‌های اختیاری درباره تغییرات سرویس و یادآوری‌های غیرالزامی را دریافت کنم.
@@ -1334,8 +1350,21 @@ export function CreateEnrollmentForm({
                 />
                 <span className="text-sm font-bold">پیامک</span>
               </label>
-            </fieldset>
-            {mode === 'onboarding' ? (
+            </fieldset>}
+            {adminFamilyId ? (
+              <div className="mt-6 space-y-4 text-right">
+                <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
+                  قرارداد با ثبت حسابرسی مدیریت پذیرفته شد. می‌توانید پیش‌پرداخت را اکنون همراه با
+                  تصویر رسید ثبت کنید یا پرداخت را برای خانواده باقی بگذارید.
+                </div>
+                <OfflinePaymentDestinationCard />
+                <RecordPaymentOnBehalfDialog
+                  scheduleItemId={result.scheduleItemId}
+                  label="پیش‌پرداخت"
+                  onCompleted={() => setPaid(true)}
+                />
+              </div>
+            ) : mode === 'onboarding' ? (
               <div className="mt-6 space-y-5 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
                   مبلغ را به یکی از اطلاعات زیر واریز کنید و تصویر رسید را نگه دارید. پس از ورود به

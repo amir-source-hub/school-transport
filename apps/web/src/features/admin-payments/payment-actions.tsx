@@ -21,9 +21,11 @@ import {
 export function RecordPaymentOnBehalfDialog({
   scheduleItemId,
   label,
+  onCompleted,
 }: {
   scheduleItemId: string;
   label: string;
+  onCompleted?: () => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -59,6 +61,7 @@ export function RecordPaymentOnBehalfDialog({
       );
       idempotencyKey.current = crypto.randomUUID();
       setOpen(false);
+      onCompleted?.();
       router.refresh();
     } catch (caught) {
       setError(getApiErrorFeedback(caught).message);

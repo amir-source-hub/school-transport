@@ -85,4 +85,29 @@ export class AdminContractsController {
     const list = await this.contractsService.getAll();
     return successResponse(list);
   }
+
+  @Post('contracts/:id/accept')
+  async acceptOnBehalf(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body()
+    body: {
+      reviewedPages?: number[];
+      templateHash?: string;
+      reason?: string;
+      source?: string;
+    },
+  ) {
+    return successResponse(
+      await this.contractsService.accept(id, req.user.id, {
+        reviewedPages: body.reviewedPages,
+        templateHash: body.templateHash,
+        signerReason: body.reason,
+        signerSource: body.source,
+        adminId: req.user.id,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      }),
+    );
+  }
 }

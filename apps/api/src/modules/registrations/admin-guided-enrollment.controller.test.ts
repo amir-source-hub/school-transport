@@ -41,6 +41,9 @@ describe('admin guided enrollment handoff', () => {
       contractId: 'contract-1',
       scheduleItemId: 'schedule-1',
       prepaymentAmount: 49_978_000,
+      contractText: 'contract',
+      contractTemplateHash: undefined,
+      contractPages: undefined,
       status: 'CONTRACT_READY',
       parentActionRequired: true,
     });
@@ -84,6 +87,9 @@ describe('admin guided enrollment handoff', () => {
       contractId: 'contract-1',
       scheduleItemId: 'schedule-1',
       prepaymentAmount: 49_978_000,
+      contractText: 'contract',
+      contractTemplateHash: undefined,
+      contractPages: undefined,
       status: 'ENROLLED',
       parentActionRequired: false,
     });
