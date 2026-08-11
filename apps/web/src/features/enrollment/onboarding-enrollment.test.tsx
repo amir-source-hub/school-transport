@@ -109,6 +109,8 @@ describe('onboarding guided enrollment funnel', () => {
       scheduleItemId: 'sch-1',
       prepaymentAmount: 4_000_000,
       contractText: 'متن قرارداد سرویس مدرسه.\nبندهای کافی برای اسکرول.'.repeat(5),
+      contractTemplateHash: 'template-hash-1',
+      contractPages: [['صفحه اول'], ['صفحه دوم'], ['صفحه سوم']],
     });
     paymentsApi.getOfflineDestination.mockResolvedValue({
       id: 'destination-1',
@@ -144,10 +146,6 @@ describe('onboarding guided enrollment funnel', () => {
     await fillIn(user, 'سرپرست', 'کد ملی', '1234567891');
     await user.click(within(section('سرپرست')).getByRole('combobox', { name: 'نسبت' }));
     await user.click(await screen.findByRole('option', { name: 'پدر' }));
-    await fillIn(user, 'اطلاعات پدر', 'نام', 'حسین');
-    await fillIn(user, 'اطلاعات پدر', 'نام خانوادگی', 'احمدی');
-    await fillIn(user, 'اطلاعات پدر', 'کد ملی', '1234567891');
-    await fillIn(user, 'اطلاعات پدر', 'شماره همراه', '09123456789');
     await fillIn(user, 'اطلاعات مادر', 'نام', 'مریم');
     await fillIn(user, 'اطلاعات مادر', 'نام خانوادگی', 'رضایی');
     await fillIn(user, 'اطلاعات مادر', 'کد ملی', '1234567891');
@@ -168,12 +166,16 @@ describe('onboarding guided enrollment funnel', () => {
       ),
     );
 
-    const contract = document.querySelector('[class*="overflow-y-auto"]') as HTMLElement;
-    fireEvent.scroll(contract);
-    await user.click(screen.getByLabelText(/تمام بندهای قرارداد را مطالعه/));
+    await user.click(screen.getByRole('button', { name: 'صفحه بعد' }));
+    await user.click(screen.getByRole('button', { name: 'صفحه بعد' }));
     await user.click(screen.getByRole('button', { name: /پذیرش قرارداد و ادامه/ }));
 
-    expect(enrollmentApi.acceptGuidedContract).toHaveBeenCalledWith('contract-1', 'onboarding');
+    expect(enrollmentApi.acceptGuidedContract).toHaveBeenCalledWith(
+      'contract-1',
+      'template-hash-1',
+      [1, 2, 3],
+      'onboarding',
+    );
     expect(screen.getByRole('button', { name: 'پرداخت آنلاین' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' })).toBeEnabled();
     expect(screen.getByText(/ثبت‌نام فقط پس از تأیید مدیریت فعال می‌شود/)).toBeInTheDocument();
@@ -226,10 +228,10 @@ describe('onboarding guided enrollment funnel', () => {
     await fillIn(user, 'سرپرست', 'کد ملی', '1234567891');
     await user.click(within(section('سرپرست')).getByRole('combobox', { name: 'نسبت' }));
     await user.click(await screen.findByRole('option', { name: 'پدر' }));
-    await fillIn(user, 'اطلاعات پدر', 'نام', 'حسین');
-    await fillIn(user, 'اطلاعات پدر', 'نام خانوادگی', 'احمدی');
-    await fillIn(user, 'اطلاعات پدر', 'کد ملی', '1234567891');
-    await fillIn(user, 'اطلاعات پدر', 'شماره همراه', '09123456789');
+    await fillIn(user, 'اطلاعات مادر', 'نام', 'مریم');
+    await fillIn(user, 'اطلاعات مادر', 'نام خانوادگی', 'رضایی');
+    await fillIn(user, 'اطلاعات مادر', 'کد ملی', '1234567891');
+    await fillIn(user, 'اطلاعات مادر', 'شماره همراه', '09129998877');
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
 
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));

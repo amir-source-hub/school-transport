@@ -53,6 +53,7 @@ import {
 import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-schema';
 import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
 import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
+import { ContractReview } from '@/features/finance/contract-review';
 import { getOfflineSubmissions } from '@/features/finance/payments-api';
 import { updateNotificationConsent } from '@/features/notifications/notifications-api';
 import { clearEnrollmentDraft, loadEnrollmentDraft, saveEnrollmentDraft } from './enrollment-draft';
@@ -118,8 +119,7 @@ export function CreateEnrollmentForm({
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(createInitialForm);
   const [result, setResult] = useState<GuidedEnrollmentResult>();
-  const [contractRead, setContractRead] = useState(false);
-  const [contractChecked, setContractChecked] = useState(false);
+  const [reviewedContractPages, setReviewedContractPages] = useState<number[]>([]);
   const [accepted, setAccepted] = useState(false);
   const [paid, setPaid] = useState(false);
   const [optionalInAppConsent, setOptionalInAppConsent] = useState(false);
@@ -1230,32 +1230,16 @@ export function CreateEnrollmentForm({
                 </p>
               </div>
             </div>
-            <div
-              onScroll={(event) => {
-                const el = event.currentTarget;
-                if (el.scrollHeight - el.scrollTop - el.clientHeight < 24) setContractRead(true);
-              }}
-              className="h-72 overflow-y-auto whitespace-pre-line rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm leading-8"
-            >
-              {result.contractText}
-              <div className="mt-8 border-t border-slate-200 pt-6 font-bold">پایان قرارداد</div>
-            </div>
-            <label
-              className={`flex items-start gap-3 rounded-2xl border p-4 ${contractRead ? 'cursor-pointer border-primary/30' : 'cursor-not-allowed border-slate-200 opacity-55'}`}
-            >
-              <input
-                type="checkbox"
-                checked={contractChecked}
-                onChange={(event) => setContractChecked(event.target.checked)}
-                disabled={!contractRead}
-                className="mt-1 size-4"
-              />
-              <span className="text-sm leading-6">
-                تمام بندهای قرارداد را مطالعه کرده‌ام و آن را می‌پذیرم.
-              </span>
-            </label>
+            <ContractReview
+              contractId={result.contractId}
+              version={1}
+              templateHash={result.contractTemplateHash}
+              pages={result.contractPages}
+              canAct={false}
+              onReviewedPagesChange={setReviewedContractPages}
+            />
             <Button
-              disabled={pending || !contractRead || !contractChecked}
+              disabled={pending || reviewedContractPages.join(',') !== '1,2,3'}
               loading={pending}
               onClick={async () => {
                 if (submissionLockRef.current) return;
@@ -1263,7 +1247,12 @@ export function CreateEnrollmentForm({
                 setPending(true);
                 setError(undefined);
                 try {
-                  await acceptGuidedContract(result.contractId, mode);
+                  await acceptGuidedContract(
+                    result.contractId,
+                    result.contractTemplateHash,
+                    reviewedContractPages,
+                    mode,
+                  );
                   setAccepted(true);
                 } catch (caught) {
                   setError(getApiErrorFeedback(caught).message);

@@ -55,8 +55,11 @@ export async function getContract(id: string) {
   return contractSchema.parse(response.data);
 }
 
-export async function acceptContract(id: string) {
-  await apiRequest(`/contracts/${id}/accept`, { method: 'POST' });
+export async function acceptContract(id: string, templateHash: string, reviewedPages: number[]) {
+  await apiRequest(`/contracts/${id}/accept`, {
+    method: 'POST',
+    body: JSON.stringify({ templateHash, reviewedPages }),
+  });
 }
 
 export async function rejectContract(id: string) {

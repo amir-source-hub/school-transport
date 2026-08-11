@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  guidedContractText,
   normalizeAndValidateGuidedEnrollment,
   type GuidedEnrollmentData,
 } from './guided-enrollment';
@@ -200,7 +199,4 @@ describe('guided enrollment policy', () => {
     );
   });
 
-  it('keeps contract generation independent from persistence', () => {
-    expect(guidedContractText('Ali', 'Ahmadi')).toContain('Ali Ahmadi');
-  });
 });

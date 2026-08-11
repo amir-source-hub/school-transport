@@ -102,6 +102,8 @@ test('combined enrollment rules survive retry and submit normalized values', asy
           scheduleItemId: 'schedule-e2e',
           prepaymentAmount: 4_000_000,
           contractText: 'قرارداد آزمایشی',
+          contractTemplateHash: 'e2e-template-hash',
+          contractPages: [['قرارداد آزمایشی'], ['صفحه دوم'], ['صفحه سوم']],
         },
       }),
     });
@@ -177,7 +179,7 @@ test('combined enrollment rules survive retry and submit normalized values', asy
   await expect(page.getByText(/مشکلی در سرویس رخ داده است/)).toBeVisible();
   expect(attempts).toBe(1);
   await page.getByRole('button', { name: /مشاهده قرارداد/ }).click();
-  await expect(page.getByText('قرارداد آزمایشی')).toBeVisible();
+  await expect(page.getByRole('article').getByText('قرارداد آزمایشی')).toBeVisible();
   expect(attempts).toBe(2);
 
   const payload = submitted as {

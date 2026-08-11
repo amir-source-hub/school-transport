@@ -1,4 +1,4 @@
-﻿import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminFamilyEnrollmentForm } from './admin-family-enrollment-form';
@@ -82,11 +82,14 @@ async function fillStudentForm(user: ReturnType<typeof userEvent.setup>) {
     within(studentFieldset).getByLabelText('کد ملی', { selector: 'input' }),
     '1234567891',
   );
-  await user.type(
+  fireEvent.change(
     within(studentFieldset).getByLabelText('تلفن منزل (۰۲۱)', { selector: 'input' }),
-    '22113333',
+    { target: { value: '02122113333' } },
   );
-  await user.type(screen.getByPlaceholderText('۱۴۰۵/۰۱/۰۱'), '13980101');
+  const birthDate = screen.getByRole('group', { name: 'تاریخ تولد' });
+  await user.type(within(birthDate).getByLabelText('سال'), '1398');
+  await user.type(within(birthDate).getByLabelText('ماه'), '01');
+  await user.type(within(birthDate).getByLabelText('روز'), '01');
 }
 
 describe('AdminFamilyEnrollmentForm', () => {

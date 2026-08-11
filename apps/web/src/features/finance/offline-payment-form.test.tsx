@@ -61,9 +61,9 @@ describe('OfflinePaymentForm', () => {
       <OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت — ۴٬۰۰۰٬۰۰۰ تومان' }]} />,
     );
     expect(await screen.findByText('6037991234567890')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('تاریخ پرداخت (شمسی)'), {
-      target: { value: '1405/05/18' },
-    });
+    fireEvent.change(screen.getByLabelText('سال'), { target: { value: '1405' } });
+    fireEvent.change(screen.getByLabelText('ماه'), { target: { value: '05' } });
+    fireEvent.change(screen.getByLabelText('روز'), { target: { value: '18' } });
     await user.type(screen.getByLabelText('شماره پیگیری بانکی'), '123456');
     const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'receipt.jpg', {
       type: 'image/jpeg',

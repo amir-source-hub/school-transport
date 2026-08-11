@@ -8,6 +8,10 @@ import {
   paymentScheduleItems,
   paymentTransactions,
   students,
+  parents,
+  familyAddresses,
+  emergencyContacts,
+  schools,
 } from '../../database/schemas';
 import { eq, and, inArray, desc } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
@@ -15,6 +19,38 @@ import { NotFoundError, ValidationError } from '../../common/errors';
 import { generateId, generateContractNumber } from '../../common/utils';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
+import {
+  OFFLINE_CONTRACT_TEMPLATE_HASH,
+  OFFLINE_PREPAYMENT_AMOUNT_IRR,
+} from '../../common/offline-contract-template';
+import {
+  buildOfflineContractSnapshot,
+  type OfflineContractEnrollmentData,
+} from '../../common/offline-contract-snapshot';
+
+type ContractAcceptanceContext = {
+  reviewedPages?: number[];
+  templateHash?: string;
+  ipAddress?: string;
+  userAgent?: string;
+};
+
+export function assertContractAcceptanceProof(
+  snapshot: Record<string, unknown>,
+  context: ContractAcceptanceContext,
+) {
+  if (!snapshot.templateHash) return;
+  const reviewed = context.reviewedPages ?? [];
+  if (
+    snapshot.templateHash !== OFFLINE_CONTRACT_TEMPLATE_HASH ||
+    context.templateHash !== snapshot.templateHash ||
+    reviewed.join(',') !== '1,2,3'
+  ) {
+    throw new ValidationError(
+      'پیش از پذیرش، هر سه صفحه همین نسخه قرارداد را به ترتیب مطالعه کنید.',
+    );
+  }
+}
 
 export const FAMILY_CONTRACT_LIST_LIMIT = 100;
 export const ADMIN_CONTRACT_LIST_LIMIT = 500;
@@ -210,6 +246,119 @@ export class ContractsService {
       const newContractId = generateId();
       const contractNumber = generateContractNumber();
 
+      if (price[0].prepaymentAmount !== OFFLINE_PREPAYMENT_AMOUNT_IRR) {
+        throw new ValidationError('مبلغ پیش‌پرداخت با نسخه مصوب قرارداد همخوانی ندارد.');
+      }
+      const [contractSource] = await txn
+        .select({
+          studentId: students.id,
+          userId: students.userId,
+          studentFirstName: students.firstName,
+          studentLastName: students.lastName,
+          studentNationalId: students.nationalId,
+          studentBirthDate: students.birthDate,
+          studentGender: students.gender,
+          grade: students.grade,
+          educationLevel: students.className,
+          schoolId: schools.id,
+          schoolName: schools.name,
+        })
+        .from(serviceRegistrations)
+        .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+        .innerJoin(schools, eq(schools.id, students.schoolId))
+        .where(eq(serviceRegistrations.id, enrollmentId))
+        .limit(1);
+      const familyParents = await txn
+        .select()
+        .from(parents)
+        .where(eq(parents.userId, contractSource.userId));
+      const guardian =
+        familyParents.find((item) => item.parentType === 'GUARDIAN') ??
+        familyParents.find((item) => item.isPrimaryContact);
+      const [address] = await txn
+        .select()
+        .from(familyAddresses)
+        .where(eq(familyAddresses.id, reg[0].selectedAddressId!))
+        .limit(1);
+      const [emergency] = await txn
+        .select()
+        .from(emergencyContacts)
+        .where(
+          and(
+            eq(emergencyContacts.userId, contractSource.userId),
+            eq(emergencyContacts.isActive, true),
+          ),
+        )
+        .limit(1);
+      if (!guardian || !address || !contractSource.educationLevel || !contractSource.grade) {
+        throw new ValidationError(
+          'اطلاعات الزامی اولیاء، آدرس، مقطع یا پایه برای صدور قرارداد ناقص است.',
+        );
+      }
+      const parentData = (type: 'FATHER' | 'MOTHER') => {
+        const value = familyParents.find((item) => item.parentType === type);
+        return value
+          ? {
+              firstName: value.firstName,
+              lastName: value.lastName,
+              nationalId: value.nationalId,
+              phoneNumber: value.phoneNumber,
+            }
+          : null;
+      };
+      const snapshotInput: OfflineContractEnrollmentData = {
+        student: {
+          id: contractSource.studentId,
+          firstName: contractSource.studentFirstName,
+          lastName: contractSource.studentLastName,
+          nationalId: contractSource.studentNationalId,
+          birthDate: contractSource.studentBirthDate ?? undefined,
+          gender: contractSource.studentGender ?? undefined,
+        },
+        guardian: {
+          firstName: guardian.firstName,
+          lastName: guardian.lastName,
+          nationalId: guardian.nationalId,
+          relationshipType: (guardian.relationshipType || 'OTHER') as 'FATHER' | 'MOTHER' | 'OTHER',
+          relationshipDescription: guardian.relationshipDescription ?? undefined,
+        },
+        homePhone: guardian.homePhone ?? '',
+        father: parentData('FATHER'),
+        mother: parentData('MOTHER'),
+        emergencyContact: emergency
+          ? {
+              firstName: emergency.firstName,
+              lastName: emergency.lastName,
+              relationship: emergency.relationship,
+              phoneNumber: emergency.phoneNumber,
+            }
+          : null,
+        address: {
+          title: address.title,
+          province: address.province,
+          city: address.city,
+          streetAddress: address.streetAddress,
+          postalCode: address.postalCode ?? '',
+          latitude: address.latitude ?? 0,
+          longitude: address.longitude ?? 0,
+        },
+        school: {
+          schoolId: contractSource.schoolId,
+          educationLevel: contractSource.educationLevel,
+          grade: contractSource.grade,
+        },
+        service: { serviceType: reg[0].serviceType, paymentPlanType: 'INSTALLMENTS' },
+      };
+      const generatedAt = new Date();
+      const immutableSnapshot = buildOfflineContractSnapshot(
+        snapshotInput,
+        guardian.phoneNumber,
+        contractSource.schoolName,
+        generatedAt,
+        contractSource.studentId,
+        reg[0].academicYear,
+      );
+
       await txn.insert(contracts).values({
         id: newContractId,
         registrationId: enrollmentId,
@@ -218,8 +367,8 @@ export class ContractsService {
         contractStatus: 'GENERATED',
         selectedAddressId: reg[0].selectedAddressId,
         generatedByAdminId: adminId,
-        generatedAt: new Date(),
-        contractDataSnapshot: JSON.stringify({ price: price[0] }),
+        generatedAt,
+        contractDataSnapshot: JSON.stringify(immutableSnapshot),
         versionNumber: (existing?.versionNumber ?? 0) + 1,
       });
 
@@ -278,7 +427,7 @@ export class ContractsService {
     return this.getById(contractId);
   }
 
-  async accept(contractId: string, userId: string) {
+  async accept(contractId: string, userId: string, context: ContractAcceptanceContext = {}) {
     await this.getById(contractId, userId);
     await this.db.db.transaction(async (txn) => {
       const [contract] = await txn
@@ -291,6 +440,18 @@ export class ContractsService {
 
       if (contract.contractStatus !== 'GENERATED') {
         throw new ValidationError('Contract cannot be accepted in its current state.');
+      }
+
+      let immutableSnapshot: Record<string, unknown> | null = null;
+      if (contract.contractDataSnapshot) {
+        try {
+          immutableSnapshot = JSON.parse(contract.contractDataSnapshot) as Record<string, unknown>;
+        } catch {
+          throw new ValidationError('نسخه قرارداد قابل اعتماد نیست و امکان پذیرش ندارد.');
+        }
+      }
+      if (immutableSnapshot?.templateHash) {
+        assertContractAcceptanceProof(immutableSnapshot, context);
       }
 
       const plan = await txn
@@ -311,6 +472,24 @@ export class ContractsService {
           paymentPlanId: plan[0].id,
           acceptedByAdminId: null,
           signerRole: 'PARENT',
+          contractDataSnapshot: immutableSnapshot
+            ? JSON.stringify({
+                ...immutableSnapshot,
+                acceptance: {
+                  acceptedAt: new Date().toISOString(),
+                  actorType: 'PARENT',
+                  actorId: userId,
+                  accountId: userId,
+                  studentId:
+                    (immutableSnapshot.enrollment as { student?: { id?: string } } | undefined)
+                      ?.student?.id ?? null,
+                  reviewedPages: [1, 2, 3],
+                  templateHash: immutableSnapshot.templateHash,
+                  ipAddress: context.ipAddress ?? null,
+                  userAgent: context.userAgent?.slice(0, 500) ?? null,
+                },
+              })
+            : contract.contractDataSnapshot,
         })
         .where(and(eq(contracts.id, contractId), eq(contracts.contractStatus, 'GENERATED')))
         .returning({ id: contracts.id });
@@ -349,7 +528,10 @@ export class ContractsService {
           contractStatus: 'ACCEPTED',
           registrationStatus: 'CONTRACT_ACCEPTED',
           planId: plan[0].id,
+          templateHash: immutableSnapshot?.templateHash,
+          reviewedPages: immutableSnapshot?.templateHash ? [1, 2, 3] : undefined,
         },
+        ipAddress: context.ipAddress,
       });
     });
 

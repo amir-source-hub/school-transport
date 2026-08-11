@@ -2,6 +2,7 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ContractActions } from '@/features/finance/contract-actions';
+import { ContractReview } from '@/features/finance/contract-review';
 import { getContract, getPaymentPlan } from '@/features/finance/contracts-api';
 import { formatIrr } from '@/lib/formatters';
 import { metadataFor } from '@/lib/route-metadata';
@@ -49,7 +50,10 @@ function parseContractSnapshot(snapshot: string | null) {
   try {
     const parsed = JSON.parse(snapshot) as Record<string, unknown>;
     return Object.entries(parsed)
-      .filter(([group]) => group !== 'contractText')
+      .filter(
+        ([group]) =>
+          !['contractText', 'pages', 'bindings', 'templateHash', 'enrollment'].includes(group),
+      )
       .map(([group, value]) => ({
         title: groupLabels[group] ?? contractLabels[group] ?? group,
         fields:
@@ -60,6 +64,26 @@ function parseContractSnapshot(snapshot: string | null) {
   } catch {
     return [{ title: 'متن قرارداد', fields: [['text', snapshot] as [string, unknown]] }];
   }
+}
+
+function getVersionedContract(snapshot: string | null) {
+  if (!snapshot) return null;
+  try {
+    const parsed = JSON.parse(snapshot) as Record<string, unknown>;
+    if (
+      typeof parsed.templateHash === 'string' &&
+      Array.isArray(parsed.pages) &&
+      parsed.pages.length === 3 &&
+      parsed.pages.every(
+        (page) => Array.isArray(page) && page.every((item) => typeof item === 'string'),
+      )
+    ) {
+      return { templateHash: parsed.templateHash, pages: parsed.pages as string[][] };
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 function getContractText(snapshot: string | null, studentName: string) {
@@ -104,6 +128,7 @@ export default async function ContractPage({
     contract.contractDataSnapshot,
     `${contract.studentName} ${contract.studentLastName}`,
   );
+  const versionedContract = getVersionedContract(contract.contractDataSnapshot);
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -186,12 +211,24 @@ export default async function ContractPage({
           </div>
         )}
       </Card>
-      <Card>
-        <h2 className="text-lg font-black">متن قرارداد</h2>
-        <div className="mt-4 whitespace-pre-line rounded-xl border border-border bg-surface-muted/40 p-5 text-sm leading-8">
-          {contractText}
-        </div>
-      </Card>
+      {versionedContract ? (
+        <Card>
+          <ContractReview
+            contractId={contract.id}
+            version={contract.versionNumber}
+            templateHash={versionedContract.templateHash}
+            pages={versionedContract.pages}
+            canAct={contract.contractStatus === 'GENERATED'}
+          />
+        </Card>
+      ) : (
+        <Card>
+          <h2 className="text-lg font-black">متن قرارداد قدیمی</h2>
+          <div className="mt-4 whitespace-pre-line rounded-xl border border-border bg-surface-muted/40 p-5 text-sm leading-8">
+            {contractText}
+          </div>
+        </Card>
+      )}
       {payment && (
         <Card>
           <h2 className="text-lg font-black">برنامه پرداخت</h2>
@@ -213,7 +250,9 @@ export default async function ContractPage({
           </div>
         </Card>
       )}
-      {contract.contractStatus === 'GENERATED' && <ContractActions id={contract.id} />}
+      {contract.contractStatus === 'GENERATED' && !versionedContract && (
+        <ContractActions id={contract.id} />
+      )}
     </div>
   );
 }
