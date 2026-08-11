@@ -14,7 +14,7 @@ import {
   parents,
   authSessions,
 } from '../../../database/schemas';
-import { AuthenticationError, ValidationError } from '../../../common/errors';
+import { AppError, AuthenticationError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
 import { AuthTokens, LoginResult, OtpResult, VerifyAuthOtpResult } from '../domain/auth.types';
@@ -607,7 +607,11 @@ export class AuthService {
           );
         if (recentFromIp.length >= 10) {
           this.metrics?.recordMessage('otp', 'rate_limited');
-          throw new ValidationError('Too many verification codes requested. Please try later.');
+          throw new AppError(
+            'OTP_RATE_LIMIT',
+            'تعداد درخواست‌های کد تأیید بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.',
+            429,
+          );
         }
       }
       const recent = await txn
@@ -627,8 +631,10 @@ export class AuthService {
         const elapsed = (Date.now() - new Date(recent[0].createdAt).getTime()) / 1000;
         if (elapsed < this.config.otpResendCooldownSeconds) {
           this.metrics?.recordMessage('otp', 'rate_limited');
-          throw new ValidationError(
-            `Please wait ${Math.ceil(this.config.otpResendCooldownSeconds - elapsed)} seconds before requesting a new code.`,
+          throw new AppError(
+            'OTP_RESEND_COOLDOWN',
+            `برای دریافت کد جدید ${Math.ceil(this.config.otpResendCooldownSeconds - elapsed)} ثانیه صبر کنید.`,
+            429,
           );
         }
       }
@@ -705,16 +711,30 @@ export class AuthService {
       return this.consumeOtpInTransaction(txn, phoneNumber, purpose, code);
     });
     if (outcome === 'NOT_FOUND') {
-      throw new ValidationError('No valid OTP request found. Please request a new code.');
+      throw new AppError(
+        'OTP_REQUEST_MISSING',
+        'درخواست کد تأیید معتبر نیست یا با کد جدید جایگزین شده است. دوباره کد بگیرید.',
+        400,
+      );
     }
     if (outcome === 'TOO_MANY_ATTEMPTS') {
       this.metrics?.recordMessage('otp', 'rate_limited');
-      throw new ValidationError('Too many failed attempts. Please request a new code.');
+      throw new AppError(
+        'OTP_ATTEMPTS_EXCEEDED',
+        'تعداد تلاش‌های ناموفق بیش از حد مجاز است. کد جدید دریافت کنید.',
+        429,
+      );
     }
     if (outcome === 'EXPIRED') {
-      throw new ValidationError('OTP code has expired. Please request a new code.');
+      throw new AppError(
+        'OTP_EXPIRED',
+        'زمان اعتبار کد تأیید به پایان رسیده است. کد جدید بگیرید.',
+        400,
+      );
     }
-    if (outcome === 'INVALID') throw new ValidationError('Invalid verification code.');
+    if (outcome === 'INVALID') {
+      throw new AppError('OTP_INVALID', 'کد تأیید واردشده صحیح نیست.', 400);
+    }
 
     this.logger.log(`OTP verified for ${purpose}.`);
     return {};

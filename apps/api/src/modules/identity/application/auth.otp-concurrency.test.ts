@@ -175,13 +175,17 @@ describe('OTP concurrency', () => {
     const expiredDb = otpDatabase([row(await argon2.hash('123456'), new Date(0))]);
     await expect(
       createService(expiredDb.service).auth.verifyOtp('09120000000', 'AUTH_PARENT', '123456'),
-    ).rejects.toThrow('expired');
+    ).rejects.toMatchObject({ code: 'OTP_EXPIRED' });
     expect(expiredDb.rows[0].invalidatedAt).toBeInstanceOf(Date);
 
     const bruteDb = otpDatabase([row(await argon2.hash('123456'))]);
     const auth = createService(bruteDb.service).auth;
-    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toThrow('Invalid');
-    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toThrow('Invalid');
+    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toMatchObject({
+      code: 'OTP_INVALID',
+    });
+    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toMatchObject({
+      code: 'OTP_INVALID',
+    });
     expect(bruteDb.rows[0].attemptCount).toBe(2);
     expect(bruteDb.rows[0].invalidatedAt).toBeInstanceOf(Date);
   });
@@ -209,7 +213,7 @@ describe('OTP expiry window', () => {
     if (shouldSucceed) {
       await expect(promise).resolves.toBeDefined();
     } else {
-      await expect(promise).rejects.toThrow('expired');
+      await expect(promise).rejects.toMatchObject({ code: 'OTP_EXPIRED' });
     }
     vi.useRealTimers();
   });

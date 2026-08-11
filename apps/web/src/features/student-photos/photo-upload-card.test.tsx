@@ -84,13 +84,13 @@ describe('PhotoUploadCard', () => {
     expect(authorizePhotoUpload).not.toHaveBeenCalled();
   });
 
-  it('rejects a file larger than 25 MB without calling the API', async () => {
+  it('rejects a file larger than 5 MiB without calling the API', async () => {
     const user = userEvent.setup();
     render(<PhotoUploadCard studentId="student-1" initialItems={[]} />);
 
-    await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile(26 * 1024 * 1024));
+    await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile(5 * 1024 * 1024 + 1));
 
-    expect(await screen.findByText(/۲۵ مگابایت بیشتر/)).toBeInTheDocument();
+    expect(await screen.findByText(/۵ مگابایت بیشتر/)).toBeInTheDocument();
     expect(authorizePhotoUpload).not.toHaveBeenCalled();
   });
 
@@ -101,7 +101,7 @@ describe('PhotoUploadCard', () => {
       uploadUrl: 'https://s3.example/put-url',
       expiresInSeconds: 300,
       acceptedFormats: ['image/jpeg', 'image/png'],
-      maxBytes: 25 * 1024 * 1024,
+      maxBytes: 5 * 1024 * 1024,
       status: 'AUTHORIZED',
     });
     putPhotoObject.mockResolvedValue(undefined);
@@ -152,7 +152,7 @@ describe('PhotoUploadCard', () => {
       uploadUrl: 'https://s3.example/put-url',
       expiresInSeconds: 300,
       acceptedFormats: ['image/jpeg', 'image/png'],
-      maxBytes: 25 * 1024 * 1024,
+      maxBytes: 5 * 1024 * 1024,
       status: 'AUTHORIZED',
     });
     putPhotoObject.mockRejectedValue(new Error('PHOTO_UPLOAD_HTTP_500'));
@@ -185,7 +185,7 @@ describe('PhotoUploadCard', () => {
       uploadUrl: 'https://s3.example/put-url',
       expiresInSeconds: 300,
       acceptedFormats: ['image/png'],
-      maxBytes: 25 * 1024 * 1024,
+      maxBytes: 5 * 1024 * 1024,
       status: 'AUTHORIZED',
     });
     putPhotoObject.mockImplementation(

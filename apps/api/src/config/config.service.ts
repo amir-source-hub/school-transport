@@ -105,8 +105,8 @@ const envSchema = z
       .number()
       .int()
       .min(1024)
-      .max(50 * 1024 * 1024)
-      .default(26_214_400),
+      .max(5 * 1024 * 1024)
+      .default(5 * 1024 * 1024),
     STUDENT_PHOTO_MAX_PIXELS: z.coerce.number().int().min(100_000).default(12_500_000),
     STUDENT_PHOTO_MAX_AXIS: z.coerce.number().int().min(1_000).max(16_000).default(8_000),
     STUDENT_PHOTO_OUTPUT_WIDTH: z.coerce.number().int().min(200).max(1_000).default(600),

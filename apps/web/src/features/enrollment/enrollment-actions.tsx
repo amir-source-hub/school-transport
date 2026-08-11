@@ -28,7 +28,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { getOnboardingState } from '@/features/auth/onboarding-session';
-import { isValidIranianNationalId, normalizeDigits } from './national-id';
+import { isValidIranianNationalId, nationalIdError, normalizeDigits } from './national-id';
 import { composeMobileNumber } from './input-normalizers';
 import {
   acceptEnrollmentPrice,
@@ -177,8 +177,13 @@ export function CreateEnrollmentForm({
     'emergencyPhone',
   ];
   function sectionStarted(name: 'father' | 'mother' | 'emergency') {
+    if (name === 'father' && form.guardianRelationshipType === 'FATHER') return true;
+    if (name === 'mother' && form.guardianRelationshipType === 'MOTHER') return true;
     const keys = name === 'father' ? fatherKeys : name === 'mother' ? motherKeys : emergencyKeys;
-    return keys.some((key) => String(form[key]).trim() !== '');
+    return keys.some((key) => {
+      const value = String(form[key]).trim();
+      return value !== '' && !(key.toString().endsWith('Phone') && value === '09');
+    });
   }
   function sectionOf(key: keyof typeof form): 'father' | 'mother' | 'emergency' | null {
     if (fatherKeys.includes(key)) return 'father';
@@ -196,9 +201,6 @@ export function CreateEnrollmentForm({
       'studentFirst',
       'studentLast',
       'studentNationalId',
-      'guardianFirst',
-      'guardianLast',
-      'guardianNationalId',
       'guardianRelationshipType',
       'homePhone',
       'addressTitle',
@@ -207,6 +209,9 @@ export function CreateEnrollmentForm({
       'streetAddress',
       'postalCode',
     ];
+    if (!['FATHER', 'MOTHER'].includes(form.guardianRelationshipType)) {
+      requiredFields.push('guardianFirst', 'guardianLast', 'guardianNationalId');
+    }
     const section = sectionOf(key);
     if (section && !sectionStarted(section)) return undefined;
     if (requiredFields.includes(key) && !text) return 'پر کردن این فیلد اجباری است';
@@ -231,9 +236,7 @@ export function CreateEnrollmentForm({
         key,
       )
     ) {
-      return isValidIranianNationalId(text)
-        ? undefined
-        : 'کد ملی نامعتبر است. فقط عدد و حداکثر ۲۰ رقم وارد کنید.';
+      return isValidIranianNationalId(text) ? undefined : nationalIdError;
     }
     if (['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)) {
       return /^09\d{9}$/.test(normalizeDigits(text))
@@ -247,7 +250,16 @@ export function CreateEnrollmentForm({
   }
 
   function set(key: keyof typeof form, value: string | number) {
-    setForm((current) => ({ ...current, [key]: value }));
+    let normalizedValue = value;
+    if (
+      typeof value === 'string' &&
+      ['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)
+    ) {
+      let digits = normalizeDigits(value).replace(/\D/g, '');
+      if (digits.startsWith('0909')) digits = `09${digits.slice(4)}`;
+      normalizedValue = digits.startsWith('09') ? digits.slice(0, 11) : `09${digits}`.slice(0, 11);
+    }
+    setForm((current) => ({ ...current, [key]: normalizedValue }));
     setFieldErrors((current) => ({ ...current, [key]: validateField(key, value) }));
   }
 
@@ -258,9 +270,6 @@ export function CreateEnrollmentForm({
             'studentFirst',
             'studentLast',
             'studentNationalId',
-            'guardianFirst',
-            'guardianLast',
-            'guardianNationalId',
             'guardianRelationshipType',
             'guardianRelationshipDescription',
             'homePhone',
@@ -271,6 +280,9 @@ export function CreateEnrollmentForm({
         : currentStep === 2
           ? ['addressTitle', 'province', 'city', 'streetAddress', 'postalCode']
           : [];
+    if (currentStep === 1 && form.guardianRelationshipType === 'OTHER') {
+      keys.splice(4, 0, 'guardianFirst', 'guardianLast', 'guardianNationalId');
+    }
     const nextErrors = Object.fromEntries(
       keys.map((key) => [key, validateField(key, form[key])]).filter(([, message]) => message),
     );
@@ -380,24 +392,23 @@ export function CreateEnrollmentForm({
 
   function validateStep(currentStep: number): string | null {
     if (currentStep === 1) {
-      const requiredNames = [
-        form.studentFirst,
-        form.studentLast,
-        form.guardianFirst,
-        form.guardianLast,
-        form.guardianRelationshipType,
-      ];
+      const requiredNames = [form.studentFirst, form.studentLast, form.guardianRelationshipType];
+      if (form.guardianRelationshipType === 'OTHER') {
+        requiredNames.push(form.guardianFirst, form.guardianLast);
+      }
       if (requiredNames.some((value) => !value.trim()))
         return 'تمام مشخصات فردی ضروری را تکمیل کنید.';
     }
     const ids = [
       { key: 'کد ملی دانش‌آموز', value: form.studentNationalId },
-      { key: 'کد ملی سرپرست', value: form.guardianNationalId },
+      ...(form.guardianRelationshipType === 'OTHER'
+        ? [{ key: 'کد ملی سرپرست', value: form.guardianNationalId }]
+        : []),
     ];
     if (currentStep === 1 || currentStep === 4) {
       for (const { key, value } of ids) {
         if (!isValidIranianNationalId(value)) {
-          return `${key} نامعتبر است. فقط عدد و حداکثر ۲۰ رقم وارد کنید.`;
+          return `${key} ${nationalIdError}`;
         }
       }
       if (
@@ -407,12 +418,14 @@ export function CreateEnrollmentForm({
         return 'شرح نسبت را وارد کنید.';
       }
       if (sectionStarted('father')) {
-        if (!isValidIranianNationalId(form.fatherNationalId)) return 'کد ملی پدر نامعتبر است.';
+        if (!isValidIranianNationalId(form.fatherNationalId))
+          return `کد ملی پدر ${nationalIdError}`;
         if (!/^09\d{9}$/.test(normalizeDigits(form.fatherPhone)))
           return 'شماره همراه پدر نامعتبر است.';
       }
       if (sectionStarted('mother')) {
-        if (!isValidIranianNationalId(form.motherNationalId)) return 'کد ملی مادر نامعتبر است.';
+        if (!isValidIranianNationalId(form.motherNationalId))
+          return `کد ملی مادر ${nationalIdError}`;
         if (!/^09\d{9}$/.test(normalizeDigits(form.motherPhone)))
           return 'شماره همراه مادر نامعتبر است.';
       }
@@ -460,9 +473,25 @@ export function CreateEnrollmentForm({
             ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
           },
           guardian: {
-            firstName: form.guardianFirst,
-            lastName: form.guardianLast,
-            nationalId: normalizeDigits(form.guardianNationalId),
+            firstName:
+              form.guardianRelationshipType === 'FATHER'
+                ? form.fatherFirst
+                : form.guardianRelationshipType === 'MOTHER'
+                  ? form.motherFirst
+                  : form.guardianFirst,
+            lastName:
+              form.guardianRelationshipType === 'FATHER'
+                ? form.fatherLast
+                : form.guardianRelationshipType === 'MOTHER'
+                  ? form.motherLast
+                  : form.guardianLast,
+            nationalId: normalizeDigits(
+              form.guardianRelationshipType === 'FATHER'
+                ? form.fatherNationalId
+                : form.guardianRelationshipType === 'MOTHER'
+                  ? form.motherNationalId
+                  : form.guardianNationalId,
+            ),
             relationshipType: form.guardianRelationshipType as GuardianInput['relationshipType'],
             relationshipDescription:
               form.guardianRelationshipType === 'OTHER'
@@ -518,7 +547,50 @@ export function CreateEnrollmentForm({
       );
       setResult(created);
     } catch (caught) {
-      setError(getApiErrorFeedback(caught).message);
+      const feedback = getApiErrorFeedback(caught);
+      const pathToField: Record<string, keyof typeof form> = {
+        'student.firstName': 'studentFirst',
+        'student.lastName': 'studentLast',
+        'student.nationalId': 'studentNationalId',
+        'student.birthDate': 'birthDate',
+        'student.phoneNumber': 'studentPhone',
+        'guardian.firstName': 'guardianFirst',
+        'guardian.lastName': 'guardianLast',
+        'guardian.nationalId': 'guardianNationalId',
+        'guardian.relationshipType': 'guardianRelationshipType',
+        'guardian.relationshipDescription': 'guardianRelationshipDescription',
+        'father.firstName': 'fatherFirst',
+        'father.lastName': 'fatherLast',
+        'father.nationalId': 'fatherNationalId',
+        'father.phoneNumber': 'fatherPhone',
+        'mother.firstName': 'motherFirst',
+        'mother.lastName': 'motherLast',
+        'mother.nationalId': 'motherNationalId',
+        'mother.phoneNumber': 'motherPhone',
+        'emergencyContact.firstName': 'emergencyFirst',
+        'emergencyContact.lastName': 'emergencyLast',
+        'emergencyContact.relationship': 'emergencyRelationship',
+        'emergencyContact.phoneNumber': 'emergencyPhone',
+        homePhone: 'homePhone',
+        'address.title': 'addressTitle',
+        'address.province': 'province',
+        'address.city': 'city',
+        'address.streetAddress': 'streetAddress',
+        'address.postalCode': 'postalCode',
+      };
+      const serverErrors = Object.entries(feedback.fieldErrors ?? {}).flatMap(
+        ([path, messages]) => {
+          const key = pathToField[path];
+          return key ? ([[key, messages[0]]] as const) : [];
+        },
+      );
+      if (serverErrors.length > 0) {
+        setFieldErrors((current) => ({ ...current, ...Object.fromEntries(serverErrors) }));
+        requestAnimationFrame(() =>
+          document.getElementById(`enrollment-${serverErrors[0][0]}`)?.focus(),
+        );
+      }
+      setError(feedback.message);
     } finally {
       submissionLockRef.current = false;
       setPending(false);
@@ -563,6 +635,8 @@ export function CreateEnrollmentForm({
         value={String(form[key])}
         dir={['tel', 'number'].includes(type) ? 'ltr' : undefined}
         disabled={lockedParentFields.has(key)}
+        inputMode={type === 'tel' ? 'numeric' : undefined}
+        autoComplete={type === 'tel' ? 'off' : undefined}
         onChange={(event) => set(key, event.target.value)}
         onBlur={(event) =>
           setFieldErrors((current) => ({
@@ -757,8 +831,11 @@ export function CreateEnrollmentForm({
                   تاریخ تولد (شمسی)
                   <div className="mt-2">
                     <JalaliDateInput
+                      id="enrollment-birthDate"
                       value={form.birthDate}
                       onChange={(value) => set('birthDate', value)}
+                      required
+                      maxDate={new Date().toISOString().slice(0, 10)}
                     />
                   </div>
                 </label>
@@ -798,15 +875,21 @@ export function CreateEnrollmentForm({
                 </p>
               )}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {field('guardianFirst', 'نام')}
-                {field('guardianLast', 'نام خانوادگی')}
-                {field('guardianNationalId', 'کد ملی', 'tel')}
                 <label className="text-sm font-bold">
                   نسبت
                   <Select
                     className="mt-2"
                     value={form.guardianRelationshipType}
-                    onValueChange={(value) => set('guardianRelationshipType', value)}
+                    onValueChange={(value) => {
+                      set('guardianRelationshipType', value);
+                      setFieldErrors((current) => ({
+                        ...current,
+                        guardianFirst: undefined,
+                        guardianLast: undefined,
+                        guardianNationalId: undefined,
+                        guardianRelationshipDescription: undefined,
+                      }));
+                    }}
                     disabled={lockedParentFields.has('guardianRelationshipType')}
                     options={[
                       { value: 'FATHER', label: 'پدر' },
@@ -815,6 +898,12 @@ export function CreateEnrollmentForm({
                     ]}
                   />
                 </label>
+                {!['FATHER', 'MOTHER'].includes(form.guardianRelationshipType) &&
+                  field('guardianFirst', 'نام')}
+                {!['FATHER', 'MOTHER'].includes(form.guardianRelationshipType) &&
+                  field('guardianLast', 'نام خانوادگی')}
+                {!['FATHER', 'MOTHER'].includes(form.guardianRelationshipType) &&
+                  field('guardianNationalId', 'کد ملی', 'tel')}
                 {form.guardianRelationshipType === 'OTHER' && (
                   <div className="lg:col-span-2">
                     {field('guardianRelationshipDescription', 'شرح نسبت')}

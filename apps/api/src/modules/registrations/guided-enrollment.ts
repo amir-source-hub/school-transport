@@ -95,12 +95,20 @@ export function normalizeAndValidateGuidedEnrollment(
     data.father = {
       ...input.father,
       nationalId: normalizeIranianDigits(input.father.nationalId).trim(),
+      phoneNumber: normalizeIranianDigits(input.father.phoneNumber).replace(/\D/g, ''),
     };
   }
   if (input.mother) {
     data.mother = {
       ...input.mother,
       nationalId: normalizeIranianDigits(input.mother.nationalId).trim(),
+      phoneNumber: normalizeIranianDigits(input.mother.phoneNumber).replace(/\D/g, ''),
+    };
+  }
+  if (input.emergencyContact) {
+    data.emergencyContact = {
+      ...input.emergencyContact,
+      phoneNumber: normalizeIranianDigits(input.emergencyContact.phoneNumber).replace(/\D/g, ''),
     };
   }
 
@@ -150,6 +158,29 @@ export function normalizeAndValidateGuidedEnrollment(
       'RELATIONSHIP_DESCRIPTION_REQUIRED',
       'A relationship description is required when the guardian relationship is other.',
     );
+  }
+  const selectedParent =
+    data.guardian.relationshipType === 'FATHER'
+      ? data.father
+      : data.guardian.relationshipType === 'MOTHER'
+        ? data.mother
+        : null;
+  if (data.guardian.relationshipType !== 'OTHER') {
+    if (
+      !selectedParent ||
+      !sectionIsComplete(selectedParent, ['firstName', 'lastName', 'nationalId', 'phoneNumber'])
+    ) {
+      throw new ConflictError(
+        'INCOMPLETE_CONTACT',
+        'The selected guardian parent must have a complete parent record.',
+      );
+    }
+    data.guardian = {
+      firstName: selectedParent.firstName,
+      lastName: selectedParent.lastName,
+      nationalId: selectedParent.nationalId,
+      relationshipType: data.guardian.relationshipType,
+    };
   }
   if (![data.student.nationalId, data.guardian.nationalId].every(isIranianNationalId)) {
     throw new ConflictError(

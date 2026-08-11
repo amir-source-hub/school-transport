@@ -72,8 +72,8 @@ export class StudentPhotosService {
       );
     }
     if (input.declaredSize > this.config.studentPhotoMaxBytes) {
-      throw new ValidationError('حجم فایل از حد مجاز بیشتر است. حداکثر ۲۵ مگابایت.', {
-        declaredSize: ['حداکثر ۲۵ مگابایت مجاز است.'],
+      throw new ValidationError('حجم فایل از حد مجاز بیشتر است. حداکثر ۵ مگابایت.', {
+        declaredSize: ['حداکثر ۵ مگابایت مجاز است.'],
       });
     }
     const extension = input.declaredMime === 'image/png' ? '.png' : '.jpg';
@@ -143,7 +143,7 @@ export class StudentPhotosService {
     }
     if (head.size > this.config.studentPhotoMaxBytes) {
       await this.markFailed(upload.id, 'TOO_LARGE', ip);
-      throw new ValidationError('فایل بارگذاری‌شده از حد مجاز ۲۵ مگابایت بزرگ‌تر است.');
+      throw new ValidationError('فایل بارگذاری‌شده از حد مجاز ۵ مگابایت بزرگ‌تر است.');
     }
     if (head.size !== upload.declaredSize) {
       await this.markFailed(upload.id, 'SIZE_MISMATCH', ip);

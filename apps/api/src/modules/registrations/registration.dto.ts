@@ -28,7 +28,7 @@ class IdentityInputDto {
   @Length(1, 100, { message: 'نام خانوادگی باید بین ۱ تا ۱۰۰ نویسه باشد.' })
   lastName!: string;
   @Transform(digits)
-  @Matches(/^\d{10}$/, { message: 'کد ملی باید ۱۰ رقم باشد.' })
+  @Matches(/^\d{1,10}$/, { message: 'کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.' })
   nationalId!: string;
 }
 

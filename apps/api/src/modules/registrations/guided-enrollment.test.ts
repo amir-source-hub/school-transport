@@ -69,6 +69,21 @@ describe('guided enrollment policy', () => {
     expect(input.student.nationalId).toBe('۰۰۱۳۵۴۰۳۹۴');
   });
 
+  it('accepts leading-zero and short national IDs preserving the normalized value', () => {
+    const input = validEnrollment();
+    input.student.nationalId = '0023518805';
+    input.guardian.nationalId = '123';
+    input.father = { ...input.father!, nationalId: '0023518805' };
+    input.mother = { ...input.mother!, nationalId: '4567' };
+
+    const result = normalizeAndValidateGuidedEnrollment(input);
+
+    expect(result.student.nationalId).toBe('0023518805');
+    expect(result.guardian.nationalId).toBe('0023518805');
+    expect(result.father?.nationalId).toBe('0023518805');
+    expect(result.mother?.nationalId).toBe('4567');
+  });
+
   it('rejects unsupported service types', () => {
     const input = validEnrollment();
     input.service.serviceType = 'MOTORCYCLE';
@@ -102,7 +117,7 @@ describe('guided enrollment policy', () => {
     input.father = { ...input.father!, phoneNumber: '' };
 
     expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow(
-      'Partially completed parent information must include all fields.',
+      'The selected guardian parent must have a complete parent record.',
     );
   });
 
@@ -111,6 +126,8 @@ describe('guided enrollment policy', () => {
     input.father = null;
     input.mother = null;
     input.emergencyContact = null;
+    input.guardian.relationshipType = 'OTHER';
+    input.guardian.relationshipDescription = 'Aunt';
 
     expect(() => normalizeAndValidateGuidedEnrollment(input)).not.toThrow();
   });

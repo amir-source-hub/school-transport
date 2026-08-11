@@ -12,7 +12,7 @@ function config(overrides: Partial<Record<keyof ConfigService, unknown>> = {}): 
   return {
     studentPhotoUploadUrlTtlSeconds: 300,
     studentPhotoViewUrlTtlSeconds: 300,
-    studentPhotoMaxBytes: 2 * 1024 * 1024,
+    studentPhotoMaxBytes: 5 * 1024 * 1024,
     studentPhotoMaxPixels: 12_500_000,
     studentPhotoMaxAxis: 8000,
     studentPhotoOutputWidth: 600,
@@ -145,7 +145,7 @@ describe('StudentPhotosService authorizeUpload', () => {
     await expect(
       service.authorizeUpload('user-1', {
         declaredMime: 'image/png',
-        declaredSize: 25 * 1024 * 1024,
+        declaredSize: 5 * 1024 * 1024 + 1,
       }),
     ).rejects.toBeInstanceOf(ValidationError);
   });
@@ -163,7 +163,7 @@ describe('StudentPhotosService authorizeUpload', () => {
 
     const result = await service.authorizeUpload('user-1', {
       declaredMime: 'image/jpeg',
-      declaredSize: 100_000,
+      declaredSize: 5 * 1024 * 1024,
     });
     expect(result.uploadId).toBe('upload-9');
     expect(result.uploadUrl).toBe('https://s3.example/presigned-put');

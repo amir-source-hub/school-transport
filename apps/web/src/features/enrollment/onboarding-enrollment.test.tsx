@@ -226,6 +226,10 @@ describe('onboarding guided enrollment funnel', () => {
     await fillIn(user, 'سرپرست', 'کد ملی', '1234567891');
     await user.click(within(section('سرپرست')).getByRole('combobox', { name: 'نسبت' }));
     await user.click(await screen.findByRole('option', { name: 'پدر' }));
+    await fillIn(user, 'اطلاعات پدر', 'نام', 'حسین');
+    await fillIn(user, 'اطلاعات پدر', 'نام خانوادگی', 'احمدی');
+    await fillIn(user, 'اطلاعات پدر', 'کد ملی', '1234567891');
+    await fillIn(user, 'اطلاعات پدر', 'شماره همراه', '09123456789');
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
 
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));

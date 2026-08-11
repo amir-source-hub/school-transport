@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { isoToJalaliDate, jalaliToIsoDate } from '@/lib/jalali-date';
 
@@ -20,18 +20,26 @@ export function JalaliDateInput({
   required,
   id,
   disabled,
+  maxDate,
 }: {
   value: string;
   onChange: (isoDate: string) => void;
   required?: boolean;
   id?: string;
   disabled?: boolean;
+  maxDate?: string;
 }) {
   const [display, setDisplay] = useState(() => isoToJalaliDate(value));
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const errorId = `${inputId}-error`;
-  const valid = !display || jalaliToIsoDate(display) !== null;
+  useEffect(() => setDisplay(isoToJalaliDate(value)), [value]);
+  const isoDate = display ? jalaliToIsoDate(display) : null;
+  const valid = !display || (isoDate !== null && (!maxDate || isoDate <= maxDate));
+  const errorMessage =
+    isoDate && maxDate && isoDate > maxDate
+      ? 'تاریخ نمی‌تواند در آینده باشد.'
+      : 'تاریخ شمسی را به شکل ۱۴۰۵/۰۱/۰۱ وارد کنید.';
 
   return (
     <div>
@@ -54,7 +62,7 @@ export function JalaliDateInput({
       />
       {!valid && (
         <p id={errorId} className="mt-1 text-xs text-danger">
-          تاریخ شمسی را به شکل ۱۴۰۵/۰۱/۰۱ وارد کنید.
+          {errorMessage}
         </p>
       )}
     </div>

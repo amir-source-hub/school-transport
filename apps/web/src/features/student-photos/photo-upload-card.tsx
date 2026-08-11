@@ -18,7 +18,7 @@ import {
   type PhotoUploadMode,
 } from './student-photos-api';
 
-const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 const STATUS_META: Record<
   PhotoUploadView['status'],
@@ -81,7 +81,7 @@ export function PhotoUploadCard({
       return;
     }
     if (file.size > MAX_PHOTO_BYTES) {
-      setMessage('حجم فایل از ۲۵ مگابایت بیشتر است. تصویر کوچک‌تری انتخاب کنید.');
+      setMessage('حجم فایل از ۵ مگابایت بیشتر است. تصویر کوچک‌تری انتخاب کنید.');
       return;
     }
 
@@ -180,7 +180,7 @@ export function PhotoUploadCard({
         <span className="text-sm font-black">
           {pending ? 'در حال بارگذاری و بررسی…' : 'انتخاب عکس'}
         </span>
-        <span className="text-xs text-muted">فرمت JPG یا PNG، حداکثر ۲۵ مگابایت</span>
+        <span className="text-xs text-muted">فرمت JPG یا PNG، حداکثر ۵ مگابایت</span>
       </label>
 
       {selected && (

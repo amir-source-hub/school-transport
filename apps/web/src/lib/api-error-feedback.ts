@@ -45,6 +45,41 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
 
   const base = { requestId: error.requestId };
 
+  const otpMessages: Record<string, { title: string; message: string; canRetry: boolean }> = {
+    OTP_INVALID: {
+      title: 'کد تأیید صحیح نیست',
+      message: 'کد تأیید واردشده صحیح نیست. دوباره بررسی کنید.',
+      canRetry: true,
+    },
+    OTP_EXPIRED: {
+      title: 'مهلت کد به پایان رسیده است',
+      message: 'زمان اعتبار کد تأیید به پایان رسیده است. کد جدید دریافت کنید.',
+      canRetry: true,
+    },
+    OTP_REQUEST_MISSING: {
+      title: 'درخواست کد معتبر نیست',
+      message: 'درخواست کد معتبر نیست یا با کد جدید جایگزین شده است. دوباره کد بگیرید.',
+      canRetry: true,
+    },
+    OTP_RESEND_COOLDOWN: {
+      title: 'برای ارسال دوباره کمی صبر کنید',
+      message: error.message,
+      canRetry: true,
+    },
+    OTP_ATTEMPTS_EXCEEDED: {
+      title: 'تعداد تلاش‌ها بیش از حد مجاز است',
+      message: 'برای حفظ امنیت، کد فعلی غیرفعال شد. کد جدید دریافت کنید.',
+      canRetry: true,
+    },
+    OTP_RATE_LIMIT: {
+      title: 'تعداد درخواست‌ها زیاد است',
+      message: 'کمی صبر کنید و سپس کد جدید درخواست کنید.',
+      canRetry: true,
+    },
+  };
+  const otpFeedback = otpMessages[error.code];
+  if (otpFeedback) return { ...base, target: 'form', ...otpFeedback };
+
   if (['QUEUE_UNAVAILABLE', 'JOB_QUEUE_UNAVAILABLE'].includes(error.code)) {
     return {
       ...base,
@@ -124,7 +159,7 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
 
   if (error.status === 409) {
     const conflictMessages: Record<string, string> = {
-      INVALID_NATIONAL_ID: 'کد ملی واردشده معتبر نیست. فقط عدد و حداکثر ۲۰ رقم وارد کنید.',
+      INVALID_NATIONAL_ID: 'کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.',
       INVALID_PHONE_NUMBER: 'شماره همراه واردشده معتبر نیست. باید با ۰۹ شروع شود.',
       INCOMPLETE_ENROLLMENT: 'تمام فیلدهای ضروری را پر کنید.',
       INVALID_LOCATION: 'موقعیت مکانی معتبر انتخاب کنید.',
