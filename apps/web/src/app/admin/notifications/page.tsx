@@ -8,6 +8,7 @@ import {
   getAdminNotifications,
   type AdminNotification,
 } from '@/features/admin-notifications/admin-notifications-api';
+import { AdminNotificationDateFilter } from '@/features/admin-notifications/admin-notification-date-filter';
 import { formatJalaliDateTime } from '@/lib/formatters';
 
 export const metadata = { title: 'اعلان‌ها' };
@@ -114,24 +115,16 @@ export default async function NotificationsPage({
               <option value="FAILED">ناموفق</option>
             </select>
           </label>
-          <label className="text-sm font-bold">
-            از تاریخ
-            <input
-              name="dateFrom"
-              type="date"
-              defaultValue={filters.dateFrom ?? ''}
-              className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2"
-            />
-          </label>
-          <label className="text-sm font-bold">
-            تا تاریخ
-            <input
-              name="dateTo"
-              type="date"
-              defaultValue={filters.dateTo ?? ''}
-              className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2"
-            />
-          </label>
+          <AdminNotificationDateFilter
+            name="dateFrom"
+            label="از تاریخ"
+            initialValue={filters.dateFrom}
+          />
+          <AdminNotificationDateFilter
+            name="dateTo"
+            label="تا تاریخ"
+            initialValue={filters.dateTo}
+          />
           <div className="flex items-end gap-2">
             <button
               className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white"
