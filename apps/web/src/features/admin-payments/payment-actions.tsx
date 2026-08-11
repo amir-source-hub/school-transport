@@ -153,8 +153,8 @@ export function ConfigureInstallmentsDialog({
             const dueDateErrors = fieldErrors?.[`items.${index}.dueDate`] ?? [];
             return (
               <div key={index} className="space-y-2">
-                <div className="grid grid-cols-[auto_1fr_1fr] items-end gap-3 rounded-xl bg-surface-muted p-3">
-                  <span className="pb-3 text-sm font-black">
+                <div className="grid grid-cols-1 items-end gap-3 rounded-xl bg-surface-muted p-3 md:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)]">
+                  <span className="text-sm font-black md:pb-3">
                     {fullPayment ? 'باقی‌مانده' : `قسط ${(index + 1).toLocaleString('fa-IR')}`}
                   </span>
                   <label className="text-xs font-bold">

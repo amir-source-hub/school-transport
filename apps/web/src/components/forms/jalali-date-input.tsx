@@ -196,11 +196,14 @@ export function JalaliDateInput({
           onKeyDown={(event) => backTo(event, 'day')}
         />
       </div>
-      <details ref={calendarRef} className="relative mt-2">
+      <details ref={calendarRef} className="mt-2 w-full">
         <summary className="inline-flex cursor-pointer list-none items-center rounded-lg border border-border bg-surface-paper px-3 py-2 text-xs font-bold text-primary hover:bg-surface-inset">
           انتخاب از تقویم شمسی
         </summary>
-        <div className="absolute z-30 mt-2 w-[min(20rem,calc(100vw-3rem))] rounded-xl border border-border bg-surface-paper p-3 shadow-xl" dir="rtl">
+        <div
+          className="mt-2 w-full max-w-sm rounded-xl border border-border bg-surface-paper p-3 shadow-lg"
+          dir="rtl"
+        >
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs font-bold">
               سال تقویم
