@@ -168,7 +168,7 @@ describe('onboarding guided enrollment funnel', () => {
       'onboarding',
     );
     expect(screen.getByText('۴٬۹۹۷٬۸۰۰')).toBeInTheDocument();
-    expect(screen.getByText('6037991234567890')).toBeInTheDocument();
+    expect(await screen.findByText('6037991234567890')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ارسال رسید برای بررسی مدیر' })).toBeNull();
     const enterPanel = screen.getByRole('button', {
       name: 'تأیید اطلاعات پرداخت و ورود به پنل خانواده',

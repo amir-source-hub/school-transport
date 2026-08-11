@@ -15,6 +15,7 @@ import {
   ConfigureInstallmentsDialog,
   RejectPaymentDialog,
   ReceiptPreviewDialog,
+  RecordPaymentOnBehalfDialog,
 } from '@/features/admin-payments/payment-actions';
 import { formatIrr, formatJalaliDate, formatJalaliDateTime } from '@/lib/formatters';
 
@@ -327,6 +328,15 @@ export default async function AdminPaymentsPage({
                     <ReceiptPreviewDialog submissionId={payment.prepayment.transaction.id} />
                   </div>
                 )}
+                {!payment.prepayment.paid &&
+                  payment.prepayment.transaction?.status !== 'در انتظار بررسی' && (
+                    <div className="mt-4 border-t border-border pt-4">
+                      <RecordPaymentOnBehalfDialog
+                        scheduleItemId={payment.prepayment.id}
+                        label="پیش‌پرداخت"
+                      />
+                    </div>
+                  )}
                 {canConfigure && (
                   <div className="mt-4 border-t border-border pt-4">
                     <ConfigureInstallmentsDialog planId={payment.planId} fullPayment={false} />
@@ -407,6 +417,15 @@ export default async function AdminPaymentsPage({
                               <ReceiptPreviewDialog submissionId={installment.transaction.id} />
                             </div>
                           )}
+                          {!installment.paid &&
+                            installment.transaction?.status !== 'در انتظار بررسی' && (
+                              <div className="mt-4 border-t border-border pt-4">
+                                <RecordPaymentOnBehalfDialog
+                                  scheduleItemId={installment.id}
+                                  label={`قسط ${installment.sequenceNumber.toLocaleString('fa-IR')}`}
+                                />
+                              </div>
+                            )}
                         </div>
                       );
                     })}

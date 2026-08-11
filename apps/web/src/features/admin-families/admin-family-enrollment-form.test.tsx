@@ -4,10 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { AdminFamilyEnrollmentForm } from './admin-family-enrollment-form';
 
 const createAdminFamilyEnrollment = vi.hoisted(() => vi.fn());
+const recordPaymentOnBehalf = vi.hoisted(() => vi.fn());
 vi.mock('./admin-families-api', async (importOriginal) => {
   const original = await importOriginal<typeof import('./admin-families-api')>();
   return { ...original, createAdminFamilyEnrollment };
 });
+vi.mock('@/features/admin-payments/admin-payments-api', () => ({ recordPaymentOnBehalf }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const family = {
@@ -129,10 +131,15 @@ describe('AdminFamilyEnrollmentForm', () => {
     expect(screen.queryByRole('button', { name: /پذیرش قرارداد|پرداخت/ })).not.toBeInTheDocument();
   }, 30_000);
 
-  it('signs the contract on behalf and records a cash prepayment with the required receipt reference', async () => {
+  it('signs the contract and records prepayment only with a receipt image', async () => {
     createAdminFamilyEnrollment.mockResolvedValue({
-      data: { status: 'ENROLLED', parentActionRequired: false },
+      data: {
+        status: 'CONTRACT_ACCEPTED',
+        parentActionRequired: false,
+        scheduleItemId: 'schedule-1',
+      },
     });
+    recordPaymentOnBehalf.mockResolvedValue(undefined);
     const user = userEvent.setup();
     render(<AdminFamilyEnrollmentForm family={family} schools={schools} />);
 
@@ -141,6 +148,12 @@ describe('AdminFamilyEnrollmentForm', () => {
     await user.click(screen.getByRole('checkbox', { name: /ثبت پیش‌پرداخت نقدی/ }));
     expect(screen.getByText('هشدار پیش‌پرداخت نقدی')).toBeInTheDocument();
     await user.type(screen.getByLabelText('شماره رسید / مرجع پرداخت'), 'receipt-001');
+    const paidAt = screen.getByRole('group', { name: 'تاریخ شمسی' });
+    await user.type(within(paidAt).getByLabelText('سال'), '1405');
+    await user.type(within(paidAt).getByLabelText('ماه'), '05');
+    await user.type(within(paidAt).getByLabelText('روز'), '19');
+    const receipt = new File(['receipt'], 'receipt.png', { type: 'image/png' });
+    await user.upload(screen.getByLabelText(/تصویر رسید پرداخت/), receipt);
     await user.click(
       screen.getByRole('button', { name: 'ایجاد ثبت‌نام و تکمیل به نمایندگی والد' }),
     );
@@ -150,12 +163,13 @@ describe('AdminFamilyEnrollmentForm', () => {
       expect.objectContaining({ student: expect.objectContaining({ firstName: 'علی' }) }),
       {
         signContractOnBehalf: { reason: undefined, source: 'admin_console' },
-        cashPrepayment: {
-          referenceNumber: 'receipt-001',
-          paidAt: undefined,
-          description: undefined,
-        },
       },
+    );
+    expect(recordPaymentOnBehalf).toHaveBeenCalledWith(
+      'schedule-1',
+      expect.objectContaining({ referenceNumber: 'receipt-001' }),
+      receipt,
+      expect.any(String),
     );
     expect(
       await screen.findByText(/قرارداد به نمایندگی از والد پذیرفته شد و پیش‌پرداخت نقدی ثبت گردید/),
@@ -175,6 +189,6 @@ describe('AdminFamilyEnrollmentForm', () => {
     );
 
     expect(createAdminFamilyEnrollment).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent('شماره رسید یا مرجع پرداخت');
+    expect(screen.getByRole('alert')).toHaveTextContent('تصویر رسید');
   }, 30_000);
 });

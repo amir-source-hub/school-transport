@@ -482,6 +482,77 @@ export class PaymentsService {
     return id;
   }
 
+  private async getScheduleItemOwner(scheduleItemId: string) {
+    const [owner] = await this.db.db
+      .select({ userId: students.userId })
+      .from(paymentScheduleItems)
+      .innerJoin(paymentPlans, eq(paymentPlans.id, paymentScheduleItems.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(eq(paymentScheduleItems.id, scheduleItemId))
+      .limit(1);
+    if (!owner) throw new NotFoundError('Schedule item');
+    return owner.userId;
+  }
+
+  async createOfflineSubmissionForAdmin(
+    scheduleItemId: string,
+    adminId: string,
+    data: {
+      paidAt: string;
+      referenceNumber: string;
+      description?: string;
+      payerName?: string;
+      sourceCardLastFour?: string;
+      idempotencyKey: string;
+    },
+  ) {
+    const userId = await this.getScheduleItemOwner(scheduleItemId);
+    const submissionId = await this.createOfflineSubmission(scheduleItemId, userId, data);
+    await this.audit?.record({
+      actorType: 'ADMIN',
+      actorId: adminId,
+      action: 'ADMIN_OFFLINE_PAYMENT_DRAFT_CREATED',
+      entityType: 'OFFLINE_PAYMENT_SUBMISSION',
+      entityId: submissionId,
+      newValues: { scheduleItemId, payerUserId: userId },
+    });
+    return { submissionId };
+  }
+
+  private async getSubmissionOwner(submissionId: string) {
+    const [submission] = await this.db.db
+      .select({ payerUserId: offlinePaymentSubmissions.payerUserId })
+      .from(offlinePaymentSubmissions)
+      .where(eq(offlinePaymentSubmissions.id, submissionId))
+      .limit(1);
+    if (!submission) throw new NotFoundError('Offline payment submission');
+    return submission.payerUserId;
+  }
+
+  async authorizeReceiptUploadForAdmin(
+    submissionId: string,
+    input: { declaredMime: 'image/jpeg' | 'image/png'; declaredSize: number },
+  ) {
+    return this.authorizeReceiptUpload(
+      submissionId,
+      await this.getSubmissionOwner(submissionId),
+      input,
+    );
+  }
+
+  async completeAndApproveReceiptForAdmin(submissionId: string, adminId: string) {
+    const completed = await this.completeReceiptUpload(
+      submissionId,
+      await this.getSubmissionOwner(submissionId),
+    );
+    return this.approveOfflinePayment(submissionId, adminId, completed.version);
+  }
+
   async authorizeReceiptUpload(
     submissionId: string,
     userId: string,

@@ -105,6 +105,7 @@ export function SchoolFormDialog(props: Props) {
       }
       setOpen(false);
       router.refresh();
+      if (!isEdit) window.location.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'خطا در ذخیره مدرسه');
     } finally {

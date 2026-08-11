@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,110 @@ import {
   approvePayment,
   rejectPayment,
   getReceiptView,
+  recordPaymentOnBehalf,
 } from '@/features/admin-payments/admin-payments-api';
+
+export function RecordPaymentOnBehalfDialog({
+  scheduleItemId,
+  label,
+}: {
+  scheduleItemId: string;
+  label: string;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [paidAt, setPaidAt] = useState('');
+  const [referenceNumber, setReferenceNumber] = useState('');
+  const [description, setDescription] = useState('');
+  const [receipt, setReceipt] = useState<File>();
+  const [error, setError] = useState<string>();
+  const idempotencyKey = useRef(crypto.randomUUID());
+
+  const submit = async () => {
+    if (!paidAt || !referenceNumber.trim() || !receipt) {
+      setError('تاریخ پرداخت، شماره مرجع و تصویر رسید همگی الزامی هستند.');
+      return;
+    }
+    if (!['image/jpeg', 'image/png'].includes(receipt.type)) {
+      setError('تصویر رسید باید با فرمت JPEG یا PNG باشد.');
+      return;
+    }
+    setLoading(true);
+    setError(undefined);
+    try {
+      await recordPaymentOnBehalf(
+        scheduleItemId,
+        {
+          paidAt,
+          referenceNumber: referenceNumber.trim(),
+          description: description.trim() || undefined,
+        },
+        receipt,
+        idempotencyKey.current,
+      );
+      idempotencyKey.current = crypto.randomUUID();
+      setOpen(false);
+      router.refresh();
+    } catch (caught) {
+      setError(getApiErrorFeedback(caught).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="secondary">ثبت پرداخت به نمایندگی خانواده</Button>
+      </DialogTrigger>
+      <DialogContent
+        title={`ثبت پرداخت ${label}`}
+        description="پرداخت فقط همراه با تصویر رسید معتبر ثبت و قطعی می‌شود."
+      >
+        <div className="space-y-4">
+          <label className="block text-sm font-bold">
+            تاریخ پرداخت (شمسی) *
+            <div className="mt-2">
+              <JalaliDateInput required value={paidAt} onChange={setPaidAt} />
+            </div>
+          </label>
+          <label className="block text-sm font-bold">
+            شماره رسید / مرجع پرداخت *
+            <Input
+              className="mt-2"
+              dir="ltr"
+              value={referenceNumber}
+              onChange={(event) => setReferenceNumber(event.target.value)}
+            />
+          </label>
+          <label className="block text-sm font-bold">
+            تصویر رسید (JPEG یا PNG) *
+            <Input
+              className="mt-2"
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={(event) => setReceipt(event.target.files?.[0])}
+            />
+          </label>
+          <label className="block text-sm font-bold">
+            توضیحات پرداخت
+            <Textarea
+              className="mt-2"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </label>
+          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+          <div className="flex gap-3">
+            <Button variant="ghost" onClick={() => setOpen(false)}>انصراف</Button>
+            <Button loading={loading} onClick={submit}>ثبت پرداخت و رسید</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function ReceiptPreviewDialog({ submissionId }: { submissionId: string }) {
   const [open, setOpen] = useState(false);

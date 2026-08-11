@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { recordPaymentOnBehalf } from '@/features/admin-payments/admin-payments-api';
 import { normalizeDigits } from '@/features/enrollment/national-id';
 import {
   normalizeMobileInput,
@@ -105,6 +106,8 @@ export function AdminFamilyEnrollmentForm({
   const [cashReference, setCashReference] = useState('');
   const [cashPaidAt, setCashPaidAt] = useState('');
   const [cashDescription, setCashDescription] = useState('');
+  const [cashReceipt, setCashReceipt] = useState<File>();
+  const cashIdempotencyKey = useRef(crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const [done, setDone] = useState<string | false>(false);
@@ -247,8 +250,8 @@ export function AdminFamilyEnrollmentForm({
       setPending(false);
       return;
     }
-    if (recordCash && !cashReference.trim()) {
-      setError('برای ثبت پیش‌پرداخت نقدی، شماره رسید یا مرجع پرداخت را وارد کنید.');
+    if (recordCash && (!cashReference.trim() || !cashPaidAt || !cashReceipt)) {
+      setError('برای ثبت پیش‌پرداخت، تاریخ، شماره مرجع و تصویر رسید همگی الزامی هستند.');
       setPending(false);
       return;
     }
@@ -258,23 +261,28 @@ export function AdminFamilyEnrollmentForm({
       return;
     }
     const actions: AdminEnrollmentActions | undefined =
-      signOnBehalf || recordCash
+      signOnBehalf
         ? {
             signContractOnBehalf: signOnBehalf
               ? { reason: signReason.trim() || undefined, source: signSource }
-              : undefined,
-            cashPrepayment: recordCash
-              ? {
-                  referenceNumber: normalizeDigits(cashReference),
-                  paidAt: cashPaidAt || undefined,
-                  description: cashDescription.trim() || undefined,
-                }
               : undefined,
           }
         : undefined;
     try {
       const result = await createAdminFamilyEnrollment(family.id, parsed.data, actions);
-      setDone(result.data.status);
+      if (recordCash && cashReceipt) {
+        await recordPaymentOnBehalf(
+          result.data.scheduleItemId,
+          {
+            paidAt: cashPaidAt,
+            referenceNumber: normalizeDigits(cashReference),
+            description: cashDescription.trim() || undefined,
+          },
+          cashReceipt,
+          cashIdempotencyKey.current,
+        );
+      }
+      setDone(recordCash ? 'ENROLLED' : result.data.status);
       router.refresh();
     } catch (caught) {
       setError(getApiErrorFeedback(caught).message);
@@ -567,6 +575,16 @@ export function AdminFamilyEnrollmentForm({
                     />
                   </label>
                 </div>
+                <label className="text-sm font-bold sm:col-span-2">
+                  تصویر رسید پرداخت (JPEG یا PNG) *
+                  <Input
+                    required
+                    className="mt-1"
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    onChange={(event) => setCashReceipt(event.target.files?.[0])}
+                  />
+                </label>
               </div>
             </div>
           )}
