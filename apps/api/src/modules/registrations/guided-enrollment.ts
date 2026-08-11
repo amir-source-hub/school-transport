@@ -144,6 +144,24 @@ export function normalizeAndValidateGuidedEnrollment(
       'A valid Iranian mobile number is required for the student.',
     );
   }
+  if (data.student.birthDate) {
+    const today = new Date().toISOString().slice(0, 10);
+    const parsedBirthDate = new Date(`${data.student.birthDate}T00:00:00.000Z`);
+    const canonicalBirthDate = Number.isNaN(parsedBirthDate.getTime())
+      ? ''
+      : parsedBirthDate.toISOString().slice(0, 10);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(data.student.birthDate) ||
+      canonicalBirthDate !== data.student.birthDate ||
+      data.student.birthDate < '1900-01-01' ||
+      data.student.birthDate > today
+    ) {
+      throw new ConflictError(
+        'INVALID_BIRTH_DATE',
+        'Birth date must be a real date between 1900-01-01 and today.',
+      );
+    }
+  }
   if (!relationshipTypes.has(data.guardian.relationshipType)) {
     throw new ConflictError(
       'INVALID_RELATIONSHIP',

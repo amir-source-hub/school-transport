@@ -161,6 +161,7 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
     const conflictMessages: Record<string, string> = {
       INVALID_NATIONAL_ID: 'کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.',
       INVALID_PHONE_NUMBER: 'شماره همراه واردشده معتبر نیست. باید با ۰۹ شروع شود.',
+      INVALID_BIRTH_DATE: 'تاریخ تولد باید یک تاریخ شمسی واقعی، غیرآینده و در بازه مجاز باشد.',
       INCOMPLETE_ENROLLMENT: 'تمام فیلدهای ضروری را پر کنید.',
       INVALID_LOCATION: 'موقعیت مکانی معتبر انتخاب کنید.',
       INVALID_VEHICLE_TYPE: 'نوع وسیله نقلیه انتخاب‌شده معتبر نیست.',

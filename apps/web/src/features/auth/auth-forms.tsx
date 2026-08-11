@@ -22,6 +22,10 @@ import {
 } from './auth-api';
 import { setAuthSession } from './auth-session';
 import { setOnboardingState } from './onboarding-session';
+import {
+  normalizeMobileInput,
+  placeCaretAfterPrefix,
+} from '@/features/enrollment/input-normalizers';
 
 const phoneSchema = z.object({
   phoneNumber: z.string().regex(/^09\d{9}$/, 'شماره همراه را با قالب 09xxxxxxxxx وارد کنید.'),
@@ -100,7 +104,10 @@ function OtpAuthForm() {
   const [resendNonce, setResendNonce] = useState(0);
   const [resending, setResending] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const phoneForm = useForm<Phone>({ resolver: zodResolver(phoneSchema) });
+  const phoneForm = useForm<Phone>({
+    resolver: zodResolver(phoneSchema),
+    defaultValues: { phoneNumber: '09' },
+  });
   const codeForm = useForm<Code>({ resolver: zodResolver(codeSchema) });
 
   const now = useNow();
@@ -201,6 +208,7 @@ function OtpAuthForm() {
             id="auth-code"
             dir="ltr"
             inputMode="numeric"
+            className="text-left tabular-nums"
             autoComplete="one-time-code"
             maxLength={6}
             autoFocus
@@ -321,9 +329,16 @@ function OtpAuthForm() {
           id="auth-phone"
           dir="ltr"
           inputMode="tel"
+          className="text-left tabular-nums"
           autoComplete="tel"
           placeholder="09123456789"
-          {...phoneForm.register('phoneNumber')}
+          {...phoneForm.register('phoneNumber', {
+            onChange: (event) =>
+              phoneForm.setValue('phoneNumber', normalizeMobileInput(event.target.value), {
+                shouldValidate: phoneForm.formState.isSubmitted,
+              }),
+          })}
+          onFocus={(event) => placeCaretAfterPrefix(event.currentTarget, 2)}
         />
       </Field>
       <Button
@@ -442,6 +457,7 @@ function AdminLoginFormInner() {
             id="admin-otp-code"
             dir="ltr"
             inputMode="numeric"
+            className="text-left tabular-nums"
             autoComplete="one-time-code"
             maxLength={6}
             autoFocus

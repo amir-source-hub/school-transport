@@ -159,6 +159,24 @@ describe('guided enrollment policy', () => {
     );
   });
 
+  it('accepts a canonical birth date and rejects future or out-of-policy values', () => {
+    const valid = validEnrollment();
+    valid.student.birthDate = '2020-03-20';
+    expect(normalizeAndValidateGuidedEnrollment(valid).student.birthDate).toBe('2020-03-20');
+
+    const future = validEnrollment();
+    future.student.birthDate = '2999-01-01';
+    expect(() => normalizeAndValidateGuidedEnrollment(future)).toThrow(
+      'Birth date must be a real date between 1900-01-01 and today.',
+    );
+
+    const old = validEnrollment();
+    old.student.birthDate = '1899-12-31';
+    expect(() => normalizeAndValidateGuidedEnrollment(old)).toThrow(
+      'Birth date must be a real date between 1900-01-01 and today.',
+    );
+  });
+
   it('keeps contract generation independent from persistence', () => {
     expect(guidedContractText('Ali', 'Ahmadi')).toContain('Ali Ahmadi');
   });

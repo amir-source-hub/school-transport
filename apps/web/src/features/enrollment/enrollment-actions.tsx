@@ -29,7 +29,11 @@ import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { getOnboardingState } from '@/features/auth/onboarding-session';
 import { isValidIranianNationalId, nationalIdError, normalizeDigits } from './national-id';
-import { composeMobileNumber } from './input-normalizers';
+import {
+  composeMobileNumber,
+  normalizeMobileInput,
+  placeCaretAfterPrefix,
+} from './input-normalizers';
 import {
   acceptEnrollmentPrice,
   acceptGuidedContract,
@@ -255,9 +259,19 @@ export function CreateEnrollmentForm({
       typeof value === 'string' &&
       ['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)
     ) {
-      let digits = normalizeDigits(value).replace(/\D/g, '');
-      if (digits.startsWith('0909')) digits = `09${digits.slice(4)}`;
-      normalizedValue = digits.startsWith('09') ? digits.slice(0, 11) : `09${digits}`.slice(0, 11);
+      normalizedValue = normalizeMobileInput(value);
+    }
+    if (
+      typeof value === 'string' &&
+      [
+        'studentNationalId',
+        'guardianNationalId',
+        'fatherNationalId',
+        'motherNationalId',
+        'postalCode',
+      ].includes(key)
+    ) {
+      normalizedValue = normalizeDigits(value).replace(/\D/g, '').slice(0, 10);
     }
     setForm((current) => ({ ...current, [key]: normalizedValue }));
     setFieldErrors((current) => ({ ...current, [key]: validateField(key, value) }));
@@ -637,6 +651,11 @@ export function CreateEnrollmentForm({
         disabled={lockedParentFields.has(key)}
         inputMode={type === 'tel' ? 'numeric' : undefined}
         autoComplete={type === 'tel' ? 'off' : undefined}
+        onFocus={(event) => {
+          if (['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)) {
+            placeCaretAfterPrefix(event.currentTarget, 2);
+          }
+        }}
         onChange={(event) => set(key, event.target.value)}
         onBlur={(event) =>
           setFieldErrors((current) => ({
@@ -646,7 +665,7 @@ export function CreateEnrollmentForm({
         }
         aria-invalid={Boolean(fieldErrors[key])}
         aria-describedby={fieldErrors[key] ? `enrollment-${key}-error` : undefined}
-        className="mt-2 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
+        className={`mt-2 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted ${type === 'tel' ? 'text-left tabular-nums' : ''}`}
       />
       {fieldErrors[key] && (
         <p id={`enrollment-${key}-error`} className="mt-1 text-xs text-danger">
@@ -699,7 +718,7 @@ export function CreateEnrollmentForm({
           }
           aria-invalid={Boolean(fieldErrors[key])}
           aria-describedby={fieldErrors[key] ? `enrollment-${key}-error` : undefined}
-          className="h-auto rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
+          className="h-auto rounded-none border-0 bg-transparent text-left tabular-nums shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
         />
       </div>
       {fieldErrors[key] && (
@@ -827,18 +846,20 @@ export function CreateEnrollmentForm({
                 {field('studentLast', 'نام خانوادگی')}
                 {field('studentNationalId', 'کد ملی', 'tel')}
                 {prefixField('studentPhone', 'شماره همراه دانش‌آموز', '09', 9)}
-                <label className="text-sm font-bold">
-                  تاریخ تولد (شمسی)
+                <div className="text-sm font-bold">
+                  <span>تاریخ تولد (شمسی)</span>
                   <div className="mt-2">
                     <JalaliDateInput
                       id="enrollment-birthDate"
                       value={form.birthDate}
                       onChange={(value) => set('birthDate', value)}
                       required
+                      label="تاریخ تولد (شمسی)"
+                      minDate="1900-01-01"
                       maxDate={new Date().toISOString().slice(0, 10)}
                     />
                   </div>
-                </label>
+                </div>
                 <label className="text-sm font-bold">
                   جنسیت
                   <Select
@@ -923,7 +944,7 @@ export function CreateEnrollmentForm({
                     value={form.guardianPhone}
                     disabled
                     readOnly
-                    className="mt-2 cursor-not-allowed bg-surface-muted text-muted"
+                    className="mt-2 cursor-not-allowed bg-surface-muted text-left tabular-nums text-muted"
                   />
                   <p className="mt-1 text-xs text-muted">
                     شماره تأییدشده هنگام ورود به حساب؛ قابل تغییر نیست.

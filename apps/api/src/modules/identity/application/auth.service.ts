@@ -444,8 +444,7 @@ export class AuthService {
     const genericError = () => new AuthenticationError('The username or password is incorrect.');
     const challengeHash = this.hashToken(challengeId);
 
-    let admin: { id: string; username: string; phoneNumber: string } | undefined;
-    await this.db.db.transaction(async (txn) => {
+    const result = await this.db.db.transaction(async (txn) => {
       await txn.execute(
         sql`select pg_advisory_xact_lock(hashtext(${`admin-challenge:${challengeHash}`}))`,
       );
@@ -455,17 +454,17 @@ export class AuthService {
         .where(eq(adminAuthChallenges.challengeHash, challengeHash))
         .limit(1);
       if (!challenge || challenge.usedAt || challenge.invalidatedAt) {
-        throw genericError();
+        return { outcome: 'NOT_FOUND' as const };
       }
       if (isPast(new Date(challenge.expiresAt))) {
         await txn
           .update(adminAuthChallenges)
           .set({ invalidatedAt: new Date() })
           .where(eq(adminAuthChallenges.id, challenge.id));
-        throw genericError();
+        return { outcome: 'EXPIRED' as const };
       }
       if (challenge.attemptCount >= challenge.maxAttempts) {
-        throw genericError();
+        return { outcome: 'TOO_MANY_ATTEMPTS' as const };
       }
 
       const admins = await txn
@@ -498,21 +497,49 @@ export class AuthService {
             invalidatedAt: attempts >= challenge.maxAttempts ? new Date() : null,
           })
           .where(eq(adminAuthChallenges.id, challenge.id));
-        throw genericError();
+        return { outcome: otpOutcome };
       }
 
       await txn
         .update(adminAuthChallenges)
         .set({ usedAt: new Date() })
         .where(eq(adminAuthChallenges.id, challenge.id));
-      admin = {
-        id: adminRecord.id,
-        username: adminRecord.username,
-        phoneNumber: adminRecord.phoneNumber,
+      return {
+        outcome: 'VERIFIED' as const,
+        admin: {
+          id: adminRecord.id,
+          username: adminRecord.username,
+          phoneNumber: adminRecord.phoneNumber,
+        },
       };
     });
 
-    if (!admin) throw genericError();
+    if (result.outcome === 'NOT_FOUND') {
+      throw new AppError(
+        'OTP_REQUEST_MISSING',
+        'درخواست کد تأیید معتبر نیست یا با کد جدید جایگزین شده است. دوباره کد بگیرید.',
+        400,
+      );
+    }
+    if (result.outcome === 'EXPIRED') {
+      throw new AppError(
+        'OTP_EXPIRED',
+        'زمان اعتبار کد تأیید به پایان رسیده است. کد جدید بگیرید.',
+        400,
+      );
+    }
+    if (result.outcome === 'TOO_MANY_ATTEMPTS') {
+      throw new AppError(
+        'OTP_ATTEMPTS_EXCEEDED',
+        'تعداد تلاش‌های ناموفق بیش از حد مجاز است. کد جدید دریافت کنید.',
+        429,
+      );
+    }
+    if (result.outcome === 'INVALID') {
+      throw new AppError('OTP_INVALID', 'کد تأیید واردشده صحیح نیست.', 400);
+    }
+    if (!result.admin) throw genericError();
+    const admin = result.admin;
     await this.db.db
       .update(adminUsers)
       .set({ lastLoginAt: new Date() })

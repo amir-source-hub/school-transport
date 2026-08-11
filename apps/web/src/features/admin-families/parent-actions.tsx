@@ -13,6 +13,11 @@ import {
   updateFamilyParent,
   type AdminParent,
 } from './admin-families-api';
+import {
+  normalizeMobileInput,
+  placeCaretAfterPrefix,
+} from '@/features/enrollment/input-normalizers';
+import { normalizeDigits } from '@/features/enrollment/national-id';
 
 export function ParentEditor({ familyId, parent }: { familyId: string; parent?: AdminParent }) {
   const router = useRouter();
@@ -24,7 +29,7 @@ export function ParentEditor({ familyId, parent }: { familyId: string; parent?: 
     firstName: parent?.firstName ?? '',
     lastName: parent?.lastName ?? '',
     nationalId: parent?.nationalId ?? '',
-    phoneNumber: parent?.phoneNumber ?? '',
+    phoneNumber: parent?.phoneNumber ?? '09',
     isPrimaryContact: parent?.isPrimaryContact ?? false,
   });
   const set = (key: keyof typeof form, value: string | boolean) =>
@@ -94,15 +99,23 @@ export function ParentEditor({ familyId, parent }: { familyId: string; parent?: 
               {label}
               <Input
                 required
-                className="mt-2"
+                className={`mt-2 ${key === 'nationalId' || key === 'phoneNumber' ? 'text-left tabular-nums' : ''}`}
                 dir={key === 'nationalId' || key === 'phoneNumber' ? 'ltr' : undefined}
+                inputMode={
+                  key === 'nationalId' ? 'numeric' : key === 'phoneNumber' ? 'tel' : undefined
+                }
                 value={String(form[key as keyof typeof form])}
+                onFocus={(event) => {
+                  if (key === 'phoneNumber') placeCaretAfterPrefix(event.currentTarget, 2);
+                }}
                 onChange={(event) =>
                   set(
                     key as keyof typeof form,
-                    key === 'nationalId' || key === 'phoneNumber'
-                      ? event.target.value.replace(/\D/g, '')
-                      : event.target.value,
+                    key === 'nationalId'
+                      ? normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, 10)
+                      : key === 'phoneNumber'
+                        ? normalizeMobileInput(event.target.value)
+                        : event.target.value,
                   )
                 }
               />

@@ -49,6 +49,9 @@ export const studentSchema = z.object({
     .refine((value) => value <= new Date().toISOString().slice(0, 10), {
       message: 'تاریخ تولد نمی‌تواند در آینده باشد.',
     })
+    .refine((value) => value >= '1900-01-01', {
+      message: 'تاریخ تولد از بازه مجاز قدیمی‌تر است.',
+    })
     .optional(),
   gender: z.enum(['MALE', 'FEMALE']).optional(),
   phoneNumber: mobile.optional(),

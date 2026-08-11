@@ -10,6 +10,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { normalizeDigits } from '@/features/enrollment/national-id';
 import {
+  normalizeMobileInput,
+  placeCaretAfterPrefix,
+} from '@/features/enrollment/input-normalizers';
+import {
   guidedEnrollmentSchema,
   type GuidedEnrollmentInput,
 } from '@/features/enrollment/enrollment-schema';
@@ -60,8 +64,8 @@ export function AdminFamilyEnrollmentForm({
     studentNationalId: '',
     birthDate: '',
     gender: 'FEMALE',
-    studentPhone: '',
-    homePhone: '',
+    studentPhone: '09',
+    homePhone: '021',
     guardianFirst: guardian?.firstName ?? '',
     guardianLast: guardian?.lastName ?? '',
     guardianNationalId: guardian?.nationalId ?? '',
@@ -70,15 +74,15 @@ export function AdminFamilyEnrollmentForm({
     fatherFirst: father?.firstName ?? '',
     fatherLast: father?.lastName ?? '',
     fatherNationalId: father?.nationalId ?? '',
-    fatherPhone: father?.phoneNumber ?? '',
+    fatherPhone: father?.phoneNumber ?? '09',
     motherFirst: mother?.firstName ?? '',
     motherLast: mother?.lastName ?? '',
     motherNationalId: mother?.nationalId ?? '',
-    motherPhone: mother?.phoneNumber ?? '',
+    motherPhone: mother?.phoneNumber ?? '09',
     emergencyFirst: emergency?.firstName ?? '',
     emergencyLast: emergency?.lastName ?? '',
     emergencyRelationship: emergency?.relationship ?? '',
-    emergencyPhone: emergency?.phoneNumber ?? '',
+    emergencyPhone: emergency?.phoneNumber ?? '09',
     addressTitle: address?.title ?? 'منزل',
     province: address?.province ?? 'تهران',
     city: address?.city ?? 'تهران',
@@ -117,15 +121,41 @@ export function AdminFamilyEnrollmentForm({
       {label}
       <Input
         required={required}
-        className="mt-1"
+        className={`mt-1 ${dir ? 'text-left tabular-nums' : ''}`}
         dir={dir}
+        inputMode={dir ? 'numeric' : undefined}
         value={form[key]}
-        onChange={(event) => set(key, event.target.value)}
+        onFocus={(event) => {
+          if (['fatherPhone', 'motherPhone', 'emergencyPhone', 'studentPhone'].includes(key)) {
+            placeCaretAfterPrefix(event.currentTarget, 2);
+          }
+          if (key === 'homePhone') placeCaretAfterPrefix(event.currentTarget, 3);
+        }}
+        onChange={(event) => {
+          if (['fatherPhone', 'motherPhone', 'emergencyPhone', 'studentPhone'].includes(key)) {
+            set(key, normalizeMobileInput(event.target.value));
+            return;
+          }
+          if (key === 'homePhone') {
+            let digits = normalizeDigits(event.target.value).replace(/\D/g, '');
+            while (digits.startsWith('021021')) digits = `021${digits.slice(6)}`;
+            set(key, digits.startsWith('021') ? digits.slice(0, 11) : `021${digits}`.slice(0, 11));
+            return;
+          }
+          if (key.toLowerCase().includes('nationalid') || key === 'postalCode') {
+            set(key, normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, 10));
+            return;
+          }
+          set(key, event.target.value);
+        }}
       />
     </label>
   );
   const sectionStarted = (keys: readonly (keyof typeof form)[]) =>
-    keys.some((key) => String(form[key]).trim() !== '');
+    keys.some((key) => {
+      const value = String(form[key]).trim();
+      return value !== '' && !(key.toLowerCase().includes('phone') && value === '09');
+    });
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -139,11 +169,27 @@ export function AdminFamilyEnrollmentForm({
         birthDate: form.birthDate || undefined,
         gender: form.gender as 'MALE' | 'FEMALE',
       },
-      homePhone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
+      homePhone: normalizeDigits(form.homePhone),
       guardian: {
-        firstName: form.guardianFirst,
-        lastName: form.guardianLast,
-        nationalId: normalizeDigits(form.guardianNationalId),
+        firstName:
+          form.guardianRelationshipType === 'FATHER'
+            ? form.fatherFirst
+            : form.guardianRelationshipType === 'MOTHER'
+              ? form.motherFirst
+              : form.guardianFirst,
+        lastName:
+          form.guardianRelationshipType === 'FATHER'
+            ? form.fatherLast
+            : form.guardianRelationshipType === 'MOTHER'
+              ? form.motherLast
+              : form.guardianLast,
+        nationalId: normalizeDigits(
+          form.guardianRelationshipType === 'FATHER'
+            ? form.fatherNationalId
+            : form.guardianRelationshipType === 'MOTHER'
+              ? form.motherNationalId
+              : form.guardianNationalId,
+        ),
         relationshipType: form.guardianRelationshipType as 'FATHER' | 'MOTHER' | 'OTHER',
         relationshipDescription:
           form.guardianRelationshipType === 'OTHER'
@@ -260,14 +306,17 @@ export function AdminFamilyEnrollmentForm({
           {textField('studentLast', 'نام خانوادگی')}
           {textField('studentNationalId', 'کد ملی', 'ltr')}
           {textField('homePhone', 'تلفن منزل (۰۲۱)', 'ltr')}
-          <label className="text-sm font-bold">
-            تاریخ تولد
+          <div className="text-sm font-bold">
+            <span>تاریخ تولد</span>
             <JalaliDateInput
               value={form.birthDate}
               onChange={(value) => set('birthDate', value)}
               required
+              label="تاریخ تولد"
+              minDate="1900-01-01"
+              maxDate={new Date().toISOString().slice(0, 10)}
             />
-          </label>
+          </div>
           <label className="text-sm font-bold">
             جنسیت
             <Select
@@ -284,9 +333,6 @@ export function AdminFamilyEnrollmentForm({
       <fieldset>
         <legend className="mb-3 font-black">سرپرست</legend>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {textField('guardianFirst', 'نام')}
-          {textField('guardianLast', 'نام خانوادگی')}
-          {textField('guardianNationalId', 'کد ملی', 'ltr')}
           <label className="text-sm font-bold">
             نسبت
             <Select
@@ -299,6 +345,10 @@ export function AdminFamilyEnrollmentForm({
               ]}
             />
           </label>
+          {form.guardianRelationshipType === 'OTHER' && textField('guardianFirst', 'نام')}
+          {form.guardianRelationshipType === 'OTHER' && textField('guardianLast', 'نام خانوادگی')}
+          {form.guardianRelationshipType === 'OTHER' &&
+            textField('guardianNationalId', 'کد ملی', 'ltr')}
           {form.guardianRelationshipType === 'OTHER' && (
             <div className="lg:col-span-2">
               {textField('guardianRelationshipDescription', 'شرح نسبت')}

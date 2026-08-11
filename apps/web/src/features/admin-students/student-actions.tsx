@@ -16,6 +16,7 @@ import {
   type AdminStudent,
 } from '@/features/admin-students/admin-students-api';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { normalizeDigits } from '@/features/enrollment/national-id';
 
 export function ArchiveStudentDialog({
   studentId,
@@ -239,8 +240,15 @@ export function AdminStudentForm({
             <Input
               required
               dir="ltr"
+              inputMode="numeric"
+              className="text-left tabular-nums"
               value={form.nationalId}
-              onChange={(event) => set('nationalId', event.target.value)}
+              onChange={(event) =>
+                set(
+                  'nationalId',
+                  normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, 10),
+                )
+              }
             />
           </label>
         )}

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LoginForm } from './auth-forms';
+import { ApiClientError } from '@/lib/api-client';
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
 
@@ -56,6 +57,45 @@ const sendCode = async (user: ReturnType<typeof setup>) => {
 };
 
 describe('OTP code entry', () => {
+  it.each([
+    ['OTP_INVALID', 'کد تأیید صحیح نیست'],
+    ['OTP_EXPIRED', 'مهلت کد به پایان رسیده است'],
+    ['OTP_REQUEST_MISSING', 'درخواست کد معتبر نیست'],
+    ['OTP_ATTEMPTS_EXCEEDED', 'تعداد تلاش‌ها بیش از حد مجاز است'],
+  ] as const)(
+    'shows the Persian %s verification state with its tracking ID',
+    async (code, title) => {
+      authApi.verifyParentOtp.mockRejectedValueOnce(
+        new ApiClientError(400, code, 'private provider message', 'track-123'),
+      );
+      const user = setup();
+      await sendCode(user);
+      await user.type(screen.getByLabelText(/کد تأیید/), '000000');
+      await user.click(screen.getByRole('button', { name: 'تأیید و ادامه' }));
+
+      expect(await screen.findByText(title)).toBeInTheDocument();
+      expect(screen.getByText('شناسه پیگیری: track-123')).toBeInTheDocument();
+      expect(screen.queryByText('private provider message')).not.toBeInTheDocument();
+    },
+  );
+
+  it('shows the Persian resend-cooldown response', async () => {
+    authApi.requestParentOtp.mockRejectedValueOnce(
+      new ApiClientError(
+        429,
+        'OTP_RESEND_COOLDOWN',
+        'برای دریافت کد جدید ۴۲ ثانیه صبر کنید.',
+        'track-cooldown',
+      ),
+    );
+    const user = setup();
+    await user.type(screen.getByLabelText(/شماره همراه/), '09123456789');
+    await user.click(screen.getByRole('button', { name: 'دریافت کد تأیید' }));
+
+    expect(await screen.findByText('برای ارسال دوباره کمی صبر کنید')).toBeInTheDocument();
+    expect(screen.getByText(/۴۲ ثانیه/)).toBeInTheDocument();
+  });
+
   it('counts down from the server expiry and shows the resend cooldown', async () => {
     const user = setup();
     await sendCode(user);
