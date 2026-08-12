@@ -65,10 +65,13 @@ export async function authorizePhotoUpload(
   },
   mode: PhotoUploadMode = 'panel',
   familyId?: string,
+  signal?: AbortSignal,
 ) {
   const response = await apiRequest<unknown>(`${photoBase(mode, familyId)}/uploads`, {
     method: 'POST',
     body: input,
+    signal,
+    timeoutMs: 20_000,
   });
   return authorizePhotoUploadSchema.parse(response.data);
 }
@@ -81,21 +84,31 @@ export async function putPhotoObject(
   await new Promise<void>((resolve, reject) => {
     const request = new XMLHttpRequest();
     const abort = () => request.abort();
+    const cleanup = () => options.signal?.removeEventListener('abort', abort);
     request.open('PUT', uploadUrl);
+    request.timeout = 60_000;
     request.setRequestHeader('Content-Type', file.type);
     request.upload.addEventListener('progress', (event) => {
       if (event.lengthComputable)
         options.onProgress?.(Math.round((event.loaded / event.total) * 100));
     });
     request.addEventListener('load', () => {
-      options.signal?.removeEventListener('abort', abort);
+      cleanup();
       if (request.status >= 200 && request.status < 300) resolve();
       else reject(new Error(`PHOTO_UPLOAD_HTTP_${request.status}`));
     });
-    request.addEventListener('error', () => reject(new Error('PHOTO_UPLOAD_NETWORK')));
-    request.addEventListener('abort', () =>
-      reject(new DOMException('Upload cancelled', 'AbortError')),
-    );
+    request.addEventListener('error', () => {
+      cleanup();
+      reject(new Error('PHOTO_UPLOAD_NETWORK'));
+    });
+    request.addEventListener('timeout', () => {
+      cleanup();
+      reject(new Error('PHOTO_UPLOAD_TIMEOUT'));
+    });
+    request.addEventListener('abort', () => {
+      cleanup();
+      reject(new DOMException('Upload cancelled', 'AbortError'));
+    });
     options.signal?.addEventListener('abort', abort, { once: true });
     if (options.signal?.aborted) abort();
     else request.send(file);
@@ -106,9 +119,12 @@ export async function completePhotoUpload(
   uploadId: string,
   mode: PhotoUploadMode = 'panel',
   familyId?: string,
+  signal?: AbortSignal,
 ) {
   const response = await apiRequest<unknown>(`${photoBase(mode, familyId)}/uploads/${uploadId}/complete`, {
     method: 'POST',
+    signal,
+    timeoutMs: 20_000,
   });
   return photoUploadViewSchema.parse(response.data);
 }

@@ -39,6 +39,10 @@ function isAcceptedMime(type: string): type is (typeof ACCEPTED_PHOTO_MIMES)[num
   return (ACCEPTED_PHOTO_MIMES as readonly string[]).includes(type);
 }
 
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
 export function PhotoUploadCard({
   studentId,
   initialItems,
@@ -114,15 +118,15 @@ export function PhotoUploadCard({
         declaredSize: file.size,
       };
       const authorization = familyId
-        ? await authorizePhotoUpload(authorizationInput, mode, familyId)
-        : await authorizePhotoUpload(authorizationInput, mode);
+        ? await authorizePhotoUpload(authorizationInput, mode, familyId, controller.signal)
+        : await authorizePhotoUpload(authorizationInput, mode, undefined, controller.signal);
       try {
         await putPhotoObject(authorization.uploadUrl, file, {
           signal: controller.signal,
           onProgress: setProgress,
         });
       } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
+        if (isAbortError(error)) {
           setMessage('بارگذاری لغو شد. می‌توانید همین عکس یا عکس دیگری را انتخاب کنید.');
           return;
         }
@@ -130,8 +134,8 @@ export function PhotoUploadCard({
         return;
       }
       const completed = familyId
-        ? await completePhotoUpload(authorization.uploadId, mode, familyId)
-        : await completePhotoUpload(authorization.uploadId, mode);
+        ? await completePhotoUpload(authorization.uploadId, mode, familyId, controller.signal)
+        : await completePhotoUpload(authorization.uploadId, mode, undefined, controller.signal);
       onUploadCompleted?.(completed.uploadId);
       if (mode === 'panel' && studentId) setItems(await getMyPhotoUploads(studentId));
       else setItems([completed]);
@@ -139,7 +143,11 @@ export function PhotoUploadCard({
       setMessage('عکس کارت سرویس بارگذاری شد و در صف بررسی قرار گرفت.');
       router.refresh();
     } catch (error) {
-      setMessage(getApiErrorFeedback(error).message);
+      setMessage(
+        isAbortError(error)
+          ? 'بارگذاری لغو شد. می‌توانید همین عکس یا عکس دیگری را انتخاب کنید.'
+          : getApiErrorFeedback(error).message,
+      );
     } finally {
       setPending(false);
       abortRef.current = undefined;
@@ -236,7 +244,15 @@ export function PhotoUploadCard({
                 بارگذاری و ارسال برای بررسی
               </Button>
               {pending ? (
-                <Button size="sm" variant="danger" onClick={() => abortRef.current?.abort()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="danger"
+                  onClick={() => {
+                    abortRef.current?.abort();
+                    setMessage('در حال لغو بارگذاری…');
+                  }}
+                >
                   <X aria-hidden="true" className="size-4" />
                   لغو
                 </Button>

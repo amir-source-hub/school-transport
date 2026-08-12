@@ -128,6 +128,8 @@ describe('PhotoUploadCard', () => {
           declaredSize: 10_000,
         },
         'panel',
+        undefined,
+        expect.any(AbortSignal),
       ),
     );
     await waitFor(() =>
@@ -140,7 +142,14 @@ describe('PhotoUploadCard', () => {
         }),
       ),
     );
-    await waitFor(() => expect(completePhotoUpload).toHaveBeenCalledWith('upload-9', 'panel'));
+    await waitFor(() =>
+      expect(completePhotoUpload).toHaveBeenCalledWith(
+        'upload-9',
+        'panel',
+        undefined,
+        expect.any(AbortSignal),
+      ),
+    );
     expect(await screen.findByText(/در صف بررسی قرار گرفت/)).toBeInTheDocument();
     expect(screen.getByText('در انتظار تایید')).toBeInTheDocument();
   });
@@ -209,5 +218,30 @@ describe('PhotoUploadCard', () => {
     await user.click(screen.getByRole('button', { name: /لغو/ }));
     expect(await screen.findByRole('status')).toHaveTextContent('بارگذاری لغو شد');
     expect(completePhotoUpload).not.toHaveBeenCalled();
+  });
+
+  it('can cancel while the authorization request is still pending at zero percent', async () => {
+    authorizePhotoUpload.mockImplementation(
+      (
+        _input: unknown,
+        _mode: unknown,
+        _familyId: unknown,
+        signal: AbortSignal,
+      ) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener('abort', () =>
+            reject(new DOMException('cancelled', 'AbortError')),
+          );
+        }),
+    );
+
+    const user = userEvent.setup();
+    render(<PhotoUploadCard studentId="student-1" initialItems={[]} />);
+    await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile());
+    await user.click(screen.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }));
+    expect(await screen.findByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+    await user.click(screen.getByRole('button', { name: /لغو/ }));
+    expect(await screen.findByRole('status')).toHaveTextContent('بارگذاری لغو شد');
+    expect(putPhotoObject).not.toHaveBeenCalled();
   });
 });
