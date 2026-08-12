@@ -1,6 +1,7 @@
 type SecurityHeaderOptions = {
   apiBaseUrl?: string;
   privateUploadOrigin?: string;
+  publicAssetBaseUrl?: string;
   production: boolean;
 };
 
@@ -28,10 +29,12 @@ const getOrigin = (value?: string) => {
 const createContentSecurityPolicy = ({
   apiBaseUrl,
   privateUploadOrigin,
+  publicAssetBaseUrl,
   production,
 }: SecurityHeaderOptions) => {
   const apiOrigin = getApiOrigin(apiBaseUrl);
   const privateStorageOrigin = getOrigin(privateUploadOrigin);
+  const publicAssetOrigin = getOrigin(publicAssetBaseUrl);
   const connectSources = ["'self'", apiOrigin, privateStorageOrigin, 'blob:'];
   const imageSources = [
     "'self'",
@@ -40,6 +43,7 @@ const createContentSecurityPolicy = ({
     'https://tile.openstreetmap.org',
     'https://*.tile.openstreetmap.org',
     privateStorageOrigin,
+    publicAssetOrigin,
   ];
 
   if (!production) {

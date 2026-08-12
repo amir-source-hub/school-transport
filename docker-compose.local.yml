@@ -138,6 +138,7 @@ services:
       target: web
       args:
         NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api/v1
+        NEXT_PUBLIC_ASSET_BASE_URL: ${NEXT_PUBLIC_ASSET_BASE_URL:-https://samingasht-public-production.s3.ir-thr-at1.arvanstorage.ir/public/site/release-2026-08-12}
         NEXT_PUBLIC_PRIVATE_UPLOAD_ORIGIN: ${ARVAN_S3_ENDPOINT:-}
         NEXT_DEPLOYMENT_ID: ${NEXT_DEPLOYMENT_ID:-development-local}
       secrets:
@@ -148,6 +149,7 @@ services:
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api/v1
+      NEXT_PUBLIC_ASSET_BASE_URL: ${NEXT_PUBLIC_ASSET_BASE_URL:-https://samingasht-public-production.s3.ir-thr-at1.arvanstorage.ir/public/site/release-2026-08-12}
       NEXT_PUBLIC_PRIVATE_UPLOAD_ORIGIN: ${ARVAN_S3_ENDPOINT:-}
       API_INTERNAL_BASE_URL: http://api:5000/api/v1
       NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
