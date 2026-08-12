@@ -426,12 +426,11 @@ export class PaymentsService {
     const destination = await this.getActiveOfflineDestination();
     const paidAt = new Date(data.paidAt);
     if (Number.isNaN(paidAt.getTime())) throw new ValidationError('تاریخ پرداخت معتبر نیست.');
-    if (paidAt > new Date())
-      throw new ValidationError('تاریخ پرداخت نمی‌تواند در آینده باشد.');
+    if (paidAt > new Date()) throw new ValidationError('تاریخ پرداخت نمی‌تواند در آینده باشد.');
     if (!data.referenceNumber.trim())
       throw new ValidationError('شماره پیگیری یا مرجع پرداخت الزامی است.');
     if (data.sourceCardLastFour && !/^\d{4}$/.test(data.sourceCardLastFour)) {
-      throw new ValidationError('Source card suffix must contain exactly four digits.');
+      throw new ValidationError('چهار رقم آخر کارت مبدأ باید دقیقاً چهار رقم باشد.');
     }
     const id = generateId();
     const [created] = await this.db.db
@@ -724,7 +723,7 @@ export class PaymentsService {
       if (submission.status !== 'PENDING_REVIEW' || submission.version !== version) {
         throw new ConflictError(
           'OFFLINE_PAYMENT_NOT_PENDING',
-          'This receipt is no longer pending at the reviewed version.',
+          'این رسید قبلاً بررسی شده یا وضعیت آن تغییر کرده است. صفحه را تازه کنید.',
         );
       }
       const [item] = await txn
@@ -783,7 +782,7 @@ export class PaymentsService {
       if (!approved)
         throw new ConflictError(
           'OFFLINE_PAYMENT_NOT_PENDING',
-          'Receipt review changed concurrently.',
+          'وضعیت رسید هم‌زمان تغییر کرده است. صفحه را تازه کنید.',
         );
       await txn
         .update(paymentScheduleItems)

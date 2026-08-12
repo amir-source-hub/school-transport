@@ -11,7 +11,7 @@ describe('AuthController OTP client IP', () => {
           sessionId: 'session-1',
           expiresAt: new Date(Date.now() + 60_000),
           currentStep: null,
-          studentNationalId: '0084575948',
+          nationalId: '0084575948',
         },
       }),
     };
@@ -19,7 +19,7 @@ describe('AuthController OTP client IP', () => {
     const controller = new AuthController(auth as never, { nodeEnv: 'test' } as never);
     await controller.parentCredentials(
       { ip: '203.0.113.8', headers: {} } as never,
-      { phoneNumber: '09120000000', studentNationalId: '0084575948' },
+      { phoneNumber: '09120000000', nationalId: '0084575948' },
       reply as never,
     );
     expect(auth.authenticateParent).toHaveBeenCalledWith(

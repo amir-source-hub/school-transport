@@ -33,6 +33,7 @@ export interface FamilyProfile {
   username: string;
   mother: ParentProfile | null;
   father: ParentProfile | null;
+  guardian: ParentProfile | null;
   addresses: AddressProfile[];
   emergencyContacts: EmergencyContactProfile[];
 }

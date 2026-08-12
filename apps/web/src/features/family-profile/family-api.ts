@@ -36,6 +36,7 @@ export const familyProfileSchema = z.object({
   username: z.string(),
   mother: parentSchema.nullable(),
   father: parentSchema.nullable(),
+  guardian: parentSchema.nullable(),
   addresses: z.array(addressSchema),
   emergencyContacts: z.array(emergencySchema),
 });

@@ -1,7 +1,7 @@
 export type OnboardingState = {
   sessionId: string | null;
   phoneNumber: string | null;
-  studentNationalId: string | null;
+  nationalId: string | null;
   expiresAt: string | null;
   currentStep: string | null;
 };
@@ -9,7 +9,7 @@ export type OnboardingState = {
 let onboardingState: OnboardingState = {
   sessionId: null,
   phoneNumber: null,
-  studentNationalId: null,
+  nationalId: null,
   expiresAt: null,
   currentStep: null,
 };
@@ -26,7 +26,7 @@ export function clearOnboardingState() {
   onboardingState = {
     sessionId: null,
     phoneNumber: null,
-    studentNationalId: null,
+    nationalId: null,
     expiresAt: null,
     currentStep: null,
   };

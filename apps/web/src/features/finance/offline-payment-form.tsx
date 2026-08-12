@@ -17,6 +17,7 @@ import {
 } from './payments-api';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { ApiClientError } from '@/lib/api-client';
 
 export function OfflinePaymentForm({
   items = [],
@@ -135,34 +136,42 @@ export function OfflinePaymentForm({
           setFormVersion((current) => current + 1);
           router.refresh();
         } catch (caught) {
+          if (caught instanceof ApiClientError && caught.code === 'RECEIPT_NOT_DRAFT') {
+            setSubmitted(true);
+            setReceipt(undefined);
+            setPreviewUrl(undefined);
+            setProgress(0);
+            router.refresh();
+            return;
+          }
           setError(getApiErrorFeedback(caught).message);
         } finally {
           setPending(false);
         }
       }}
     >
-      <div className="rounded-2xl border border-primary/20 bg-gradient-to-l from-primary/10 to-sky-50 p-4 text-sm leading-7 text-slate-700">
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-l from-primary/15 via-sky-50 to-amber-50 p-5 text-sm leading-7 text-slate-700 shadow-sm">
         اگر مبلغ را خارج از درگاه سامانه، مانند کارت‌به‌کارت یا واریز بانکی، پرداخت کرده‌اید؛ قسط،
         تاریخ شمسی و شماره پیگیری بانکی را ثبت کنید. پرداخت پس از تأیید مدیر «پرداخت‌شده» می‌شود.
       </div>
       {destination && (
-        <dl className="grid gap-3 rounded-2xl border border-sky-100 bg-sky-50/60 p-4 text-sm sm:grid-cols-2">
-          <div>
+        <dl className="grid gap-3 rounded-3xl border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-amber-50 p-4 text-sm shadow-[0_18px_45px_-32px_rgba(2,132,199,.6)] sm:grid-cols-2 sm:p-5">
+          <div className="rounded-2xl border border-white bg-white/80 p-3 shadow-sm">
             <dt className="text-muted">صاحب حساب</dt>
             <dd className="font-bold">{destination.accountOwner}</dd>
           </div>
-          <div>
+          <div className="rounded-2xl border border-white bg-white/80 p-3 shadow-sm">
             <dt className="text-muted">بانک</dt>
             <dd className="font-bold">{destination.bankName}</dd>
           </div>
-          <div>
+          <div className="rounded-2xl border border-white bg-white/80 p-3 shadow-sm">
             <dt className="text-muted">شماره کارت</dt>
             <dd className="font-bold" dir="ltr">
               {destination.cardNumber}
             </dd>
           </div>
           {destination.iban && (
-            <div>
+            <div className="rounded-2xl border border-white bg-white/80 p-3 shadow-sm">
               <dt className="text-muted">شبا</dt>
               <dd className="font-bold" dir="ltr">
                 {destination.iban}
@@ -170,15 +179,15 @@ export function OfflinePaymentForm({
             </div>
           )}
           {destination.accountNumber && (
-            <div>
+            <div className="rounded-2xl border border-white bg-white/80 p-3 shadow-sm">
               <dt className="text-muted">شماره حساب</dt>
               <dd className="font-bold" dir="ltr">
                 {destination.accountNumber}
               </dd>
             </div>
           )}
-          <div className="sm:col-span-2">
-            <dt className="text-muted">راهنما</dt>
+          <div className="rounded-2xl bg-navy p-4 text-white sm:col-span-2">
+            <dt className="text-sm font-black text-sun">راهنمای واریز</dt>
             <dd className="whitespace-pre-line">{destination.instructions}</dd>
           </div>
         </dl>
@@ -339,7 +348,13 @@ export function OfflinePaymentForm({
         </Alert>
       )}
       {error && <p className="text-sm text-danger">{error}</p>}
-      <Button className="w-full sm:w-auto" size="lg" type="submit" loading={pending} disabled={disabled || pending}>
+      <Button
+        className="w-full sm:w-auto"
+        size="lg"
+        type="submit"
+        loading={pending}
+        disabled={disabled || pending}
+      >
         ارسال رسید برای بررسی مدیر
       </Button>
     </form>

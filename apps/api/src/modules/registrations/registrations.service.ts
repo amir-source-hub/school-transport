@@ -65,12 +65,16 @@ export class RegistrationsService {
     }
     if (!adminAudit) {
       const [account] = await this.db.db
-        .select({ username: users.username, status: users.accountStatus, phoneNumber: users.phoneNumber })
+        .select({
+          username: users.username,
+          status: users.accountStatus,
+          phoneNumber: users.phoneNumber,
+        })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
       if (account?.status === 'PENDING') {
-        const expectedUsername = `${account.phoneNumber}:${data.student.nationalId}`;
+        const expectedUsername = `${account.phoneNumber}:${data.guardian.nationalId}`;
         if (account.username !== expectedUsername) {
           throw new ConflictError(
             'GUARDIAN_CREDENTIAL_MISMATCH',

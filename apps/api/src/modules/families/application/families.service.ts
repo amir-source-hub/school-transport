@@ -150,6 +150,7 @@ export class FamiliesService {
 
     const mother = parentRecords.find((p) => p.parentType === 'MOTHER') || null;
     const father = parentRecords.find((p) => p.parentType === 'FATHER') || null;
+    const guardian = parentRecords.find((p) => p.parentType === 'GUARDIAN') || null;
 
     const mapParent = (p: (typeof parentRecords)[0]): ParentProfile => ({
       id: p.id,
@@ -167,6 +168,7 @@ export class FamiliesService {
       username: user[0].username,
       mother: mother ? mapParent(mother) : null,
       father: father ? mapParent(father) : null,
+      guardian: guardian ? mapParent(guardian) : null,
       addresses: addressRecords.map((a) => ({
         id: a.id,
         title: a.title,

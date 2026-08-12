@@ -101,7 +101,8 @@ export function FamilyProfileForm({ profile }: { profile: FamilyProfile }) {
           </Button>
         </div>
         <div className="grid gap-5 lg:grid-cols-2">
-          <ProfileSection icon={UsersRound} title="اطلاعات والدین">
+          <ProfileSection icon={UsersRound} title="اطلاعات سرپرست و والدین">
+            <ParentDetails label="سرپرست" parent={profile.guardian} />
             <ParentDetails label="مادر" parent={profile.mother} />
             <ParentDetails label="پدر" parent={profile.father} />
           </ProfileSection>
@@ -110,7 +111,6 @@ export function FamilyProfileForm({ profile }: { profile: FamilyProfile }) {
               <dl className="grid gap-3 text-sm sm:grid-cols-2">
                 <Detail label="عنوان" value={address.title} />
                 <Detail label="استان و شهر" value={`${address.province}، ${address.city}`} />
-                <Detail label="منطقه" value={address.district ?? '—'} />
                 <Detail label="کد پستی" value={address.postalCode ?? '—'} ltr />
                 <div className="sm:col-span-2">
                   <Detail label="نشانی کامل" value={address.streetAddress} />

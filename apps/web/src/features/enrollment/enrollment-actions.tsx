@@ -115,8 +115,8 @@ export function CreateEnrollmentForm({
   const firstLevel = firstSchool?.educationOptions[0];
   const effectiveGuardianPhone =
     guardianPhone ?? (mode === 'onboarding' ? (getOnboardingState().phoneNumber ?? '') : '');
-  const onboardingStudentNationalId =
-    mode === 'onboarding' ? (getOnboardingState().studentNationalId ?? '') : '';
+  const onboardingGuardianNationalId =
+    mode === 'onboarding' ? (getOnboardingState().nationalId ?? '') : '';
   const createInitialForm = () =>
     createEnrollmentFormState({
       schools,
@@ -126,8 +126,8 @@ export function CreateEnrollmentForm({
       guardianPhone: effectiveGuardianPhone,
     });
   const initialForm = createInitialForm();
-  if (onboardingStudentNationalId) {
-    initialForm.studentNationalId = onboardingStudentNationalId;
+  if (onboardingGuardianNationalId) {
+    initialForm.guardianNationalId = onboardingGuardianNationalId;
   }
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(initialForm);
@@ -282,10 +282,23 @@ export function CreateEnrollmentForm({
   function set(key: keyof typeof form, value: string | number) {
     let normalizedValue = value;
     const persianOnlyKeys: (keyof typeof form)[] = [
-      'studentFirst', 'studentLast', 'guardianFirst', 'guardianLast',
-      'guardianRelationshipDescription', 'fatherFirst', 'fatherLast', 'motherFirst', 'motherLast',
-      'emergencyFirst', 'emergencyLast', 'emergencyRelationship', 'addressTitle', 'province', 'city',
-      'streetAddress', 'parentNotes',
+      'studentFirst',
+      'studentLast',
+      'guardianFirst',
+      'guardianLast',
+      'guardianRelationshipDescription',
+      'fatherFirst',
+      'fatherLast',
+      'motherFirst',
+      'motherLast',
+      'emergencyFirst',
+      'emergencyLast',
+      'emergencyRelationship',
+      'addressTitle',
+      'province',
+      'city',
+      'streetAddress',
+      'parentNotes',
     ];
     if (typeof value === 'string' && persianOnlyKeys.includes(key)) {
       normalizedValue = value.replace(/[A-Za-z]/g, '');
@@ -508,73 +521,73 @@ export function CreateEnrollmentForm({
     setError(undefined);
     try {
       const enrollmentInput = {
-          studentPhotoUploadId: photoUploadId,
-          student: {
-            id: form.existingStudentId || undefined,
-            firstName: form.studentFirst,
-            lastName: form.studentLast,
-            nationalId: normalizeDigits(form.studentNationalId),
-            birthDate: form.birthDate || undefined,
-            gender: (form.gender || undefined) as StudentInput['gender'],
-            ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
-          },
-          guardian: {
-            firstName: form.guardianFirst,
-            lastName: form.guardianLast,
-            nationalId: normalizeDigits(form.guardianNationalId),
-            relationshipType: form.guardianRelationshipType as GuardianInput['relationshipType'],
-            relationshipDescription:
-              form.guardianRelationshipType === 'OTHER'
-                ? form.guardianRelationshipDescription || undefined
-                : undefined,
-          },
-          father:
-            form.guardianRelationshipType === 'MOTHER'
-              ? {
-                  firstName: form.fatherFirst,
-                  lastName: form.fatherLast,
-                  nationalId: normalizeDigits(form.fatherNationalId),
-                  phoneNumber: normalizeDigits(form.fatherPhone),
-                }
-              : null,
-          mother:
-            form.guardianRelationshipType === 'FATHER'
-              ? {
-                  firstName: form.motherFirst,
-                  lastName: form.motherLast,
-                  nationalId: normalizeDigits(form.motherNationalId),
-                  phoneNumber: normalizeDigits(form.motherPhone),
-                }
-              : null,
-          emergencyContact: sectionStarted('emergency')
+        studentPhotoUploadId: photoUploadId,
+        student: {
+          id: form.existingStudentId || undefined,
+          firstName: form.studentFirst,
+          lastName: form.studentLast,
+          nationalId: normalizeDigits(form.studentNationalId),
+          birthDate: form.birthDate || undefined,
+          gender: (form.gender || undefined) as StudentInput['gender'],
+          ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
+        },
+        guardian: {
+          firstName: form.guardianFirst,
+          lastName: form.guardianLast,
+          nationalId: normalizeDigits(form.guardianNationalId),
+          relationshipType: form.guardianRelationshipType as GuardianInput['relationshipType'],
+          relationshipDescription:
+            form.guardianRelationshipType === 'OTHER'
+              ? form.guardianRelationshipDescription || undefined
+              : undefined,
+        },
+        father:
+          form.guardianRelationshipType === 'MOTHER'
             ? {
-                firstName: form.emergencyFirst,
-                lastName: form.emergencyLast,
-                relationship: form.emergencyRelationship,
-                phoneNumber: normalizeDigits(form.emergencyPhone),
+                firstName: form.fatherFirst,
+                lastName: form.fatherLast,
+                nationalId: normalizeDigits(form.fatherNationalId),
+                phoneNumber: normalizeDigits(form.fatherPhone),
               }
             : null,
-          homePhone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
-          address: {
-            title: form.addressTitle,
-            province: form.province,
-            city: form.city,
-            streetAddress: form.streetAddress,
-            postalCode: normalizeDigits(form.postalCode),
-            latitude: form.latitude,
-            longitude: form.longitude,
-          },
-          school: {
-            schoolId: form.schoolId,
-            educationLevel: form.educationLevel,
-            grade: form.grade,
-          },
-          service: {
-            serviceType: form.serviceType as ServiceInput['serviceType'],
-            paymentPlanType: form.paymentPlanType as ServiceInput['paymentPlanType'],
-            parentNotes: form.parentNotes || undefined,
-          },
-        };
+        mother:
+          form.guardianRelationshipType === 'FATHER'
+            ? {
+                firstName: form.motherFirst,
+                lastName: form.motherLast,
+                nationalId: normalizeDigits(form.motherNationalId),
+                phoneNumber: normalizeDigits(form.motherPhone),
+              }
+            : null,
+        emergencyContact: sectionStarted('emergency')
+          ? {
+              firstName: form.emergencyFirst,
+              lastName: form.emergencyLast,
+              relationship: form.emergencyRelationship,
+              phoneNumber: normalizeDigits(form.emergencyPhone),
+            }
+          : null,
+        homePhone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
+        address: {
+          title: form.addressTitle,
+          province: form.province,
+          city: form.city,
+          streetAddress: form.streetAddress,
+          postalCode: normalizeDigits(form.postalCode),
+          latitude: form.latitude,
+          longitude: form.longitude,
+        },
+        school: {
+          schoolId: form.schoolId,
+          educationLevel: form.educationLevel,
+          grade: form.grade,
+        },
+        service: {
+          serviceType: form.serviceType as ServiceInput['serviceType'],
+          paymentPlanType: form.paymentPlanType as ServiceInput['paymentPlanType'],
+          parentNotes: form.parentNotes || undefined,
+        },
+      };
       const created = adminFamilyId
         ? (await createAdminFamilyEnrollment(adminFamilyId, enrollmentInput)).data
         : await createGuidedEnrollment(enrollmentInput, mode);
@@ -651,8 +664,8 @@ export function CreateEnrollmentForm({
     lockedParentFields.add('studentLast');
     lockedParentFields.add('studentNationalId');
   }
-  if (mode === 'onboarding' && onboardingStudentNationalId) {
-    lockedParentFields.add('studentNationalId');
+  if (mode === 'onboarding' && onboardingGuardianNationalId) {
+    lockedParentFields.add('guardianNationalId');
   }
   const optionalSectionKeys = new Set<keyof typeof form>([
     ...fatherKeys,
@@ -876,11 +889,6 @@ export function CreateEnrollmentForm({
                 {field('studentFirst', 'نام دانش‌آموز')}
                 {field('studentLast', 'نام خانوادگی')}
                 {field('studentNationalId', 'کد ملی', 'tel')}
-                {mode === 'onboarding' && onboardingStudentNationalId && (
-                  <p className="-mt-2 text-xs text-muted sm:col-span-2 lg:col-span-3">
-                    کد ملی دانش‌آموز هنگام ورود ثبت شده و قابل تغییر نیست.
-                  </p>
-                )}
                 {prefixField('studentPhone', 'شماره همراه دانش‌آموز', '09', 9)}
                 <div className="text-sm font-bold">
                   <span>تاریخ تولد (شمسی)</span>
@@ -1343,30 +1351,32 @@ export function CreateEnrollmentForm({
                 ? 'مبلغ باقی‌مانده و تاریخ پرداخت یکجا پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'
                 : 'تعداد، مبلغ و تاریخ اقساط پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'}
             </div>
-            {!adminFamilyId && <fieldset className="mt-5 space-y-3 rounded-2xl border border-border p-4 text-right">
-              <legend className="px-2 text-sm font-black">رضایت اختیاری اطلاع‌رسانی</legend>
-              <p className="text-xs leading-6 text-muted">
-                مایلم پیام‌های اختیاری درباره تغییرات سرویس و یادآوری‌های غیرالزامی را دریافت کنم.
-                این انتخاب از پنل قابل تغییر است و پیام‌های ضروری قرارداد، پرداخت و ایمنی را متوقف
-                نمی‌کند.
-              </p>
-              <label className="flex min-h-11 items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={optionalInAppConsent}
-                  onChange={(event) => setOptionalInAppConsent(event.target.checked)}
-                />
-                <span className="text-sm font-bold">داخل سامانه</span>
-              </label>
-              <label className="flex min-h-11 items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={optionalSmsConsent}
-                  onChange={(event) => setOptionalSmsConsent(event.target.checked)}
-                />
-                <span className="text-sm font-bold">پیامک</span>
-              </label>
-            </fieldset>}
+            {!adminFamilyId && (
+              <fieldset className="mt-5 space-y-3 rounded-2xl border border-border p-4 text-right">
+                <legend className="px-2 text-sm font-black">رضایت اختیاری اطلاع‌رسانی</legend>
+                <p className="text-xs leading-6 text-muted">
+                  مایلم پیام‌های اختیاری درباره تغییرات سرویس و یادآوری‌های غیرالزامی را دریافت کنم.
+                  این انتخاب از پنل قابل تغییر است و پیام‌های ضروری قرارداد، پرداخت و ایمنی را متوقف
+                  نمی‌کند.
+                </p>
+                <label className="flex min-h-11 items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={optionalInAppConsent}
+                    onChange={(event) => setOptionalInAppConsent(event.target.checked)}
+                  />
+                  <span className="text-sm font-bold">داخل سامانه</span>
+                </label>
+                <label className="flex min-h-11 items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={optionalSmsConsent}
+                    onChange={(event) => setOptionalSmsConsent(event.target.checked)}
+                  />
+                  <span className="text-sm font-bold">پیامک</span>
+                </label>
+              </fieldset>
+            )}
             {adminFamilyId ? (
               <div className="mt-6 space-y-4 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
@@ -1474,7 +1484,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white via-white to-primary/[0.025] p-4 shadow-[0_12px_35px_-30px_rgba(15,23,42,.6)] transition-shadow hover:shadow-[0_16px_40px_-28px_rgba(15,23,42,.5)] sm:p-5">
       <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-3">
-        <span aria-hidden="true" className="h-6 w-1 rounded-full bg-gradient-to-b from-primary to-sky-400" />
+        <span
+          aria-hidden="true"
+          className="h-6 w-1 rounded-full bg-gradient-to-b from-primary to-sky-400"
+        />
         <h3 className="text-lg font-black text-slate-800">{title}</h3>
       </div>
       {children}

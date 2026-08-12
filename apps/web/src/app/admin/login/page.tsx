@@ -23,9 +23,9 @@ export default function AdminLoginPage() {
       redirectOnAuthFailure: false,
     })
       .then(({ data }) => {
-        if (active) {
-          router.replace(data.user.role === 'ADMIN' ? '/admin/dashboard' : '/student/dashboard');
-        }
+        if (!active) return;
+        if (data.user.role === 'ADMIN') router.replace('/admin/dashboard');
+        else setChecked(true);
       })
       .catch(() => {
         if (active) setChecked(true);

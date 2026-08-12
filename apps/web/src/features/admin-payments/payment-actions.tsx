@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { ApiClientError } from '@/lib/api-client';
 import {
   configureInstallments,
   approvePayment,
@@ -112,10 +113,18 @@ export function RecordPaymentOnBehalfDialog({
               onChange={(event) => setDescription(event.target.value)}
             />
           </label>
-          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          )}
           <div className="flex gap-3">
-            <Button variant="ghost" onClick={() => setOpen(false)}>انصراف</Button>
-            <Button loading={loading} onClick={submit}>ثبت پرداخت و رسید</Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              انصراف
+            </Button>
+            <Button loading={loading} onClick={submit}>
+              ثبت پرداخت و رسید
+            </Button>
           </div>
         </div>
       </DialogContent>
@@ -192,7 +201,10 @@ export function ApprovePaymentDialog({
       setOpen(false);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'خطا در تأیید پرداخت');
+      setError(getApiErrorFeedback(e).message);
+      if (e instanceof ApiClientError && e.code === 'OFFLINE_PAYMENT_NOT_PENDING') {
+        router.refresh();
+      }
     } finally {
       setLoading(false);
     }

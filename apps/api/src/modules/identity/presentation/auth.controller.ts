@@ -151,7 +151,7 @@ export class ParentCredentialsDto {
   @Transform(digits)
   @IsString()
   @Matches(/^\d{1,10}$/)
-  studentNationalId!: string;
+  nationalId!: string;
 
   @IsOptional()
   @Transform(toBoolean)
@@ -272,7 +272,7 @@ export class AuthController {
     };
     const result = await this.authService.authenticateParent(
       dto.phoneNumber,
-      dto.studentNationalId,
+      dto.nationalId,
       context,
       dto.rememberMe ?? false,
     );
@@ -284,7 +284,7 @@ export class AuthController {
           sessionId: result.onboarding.sessionId,
           expiresAt: result.onboarding.expiresAt,
           currentStep: result.onboarding.currentStep,
-          studentNationalId: result.onboarding.studentNationalId,
+          nationalId: result.onboarding.nationalId,
         },
       });
     }
@@ -422,16 +422,14 @@ export class AuthController {
     if (this.config.featureOnboarding === false) {
       throw new ValidationError('Onboarding is temporarily unavailable.');
     }
-    const studentNationalId = await this.authService.getPendingStudentNationalId(
-      req.onboarding.userId,
-    );
+    const nationalId = await this.authService.getPendingNationalId(req.onboarding.userId);
     return successResponse({
       accountId: req.onboarding.userId,
       phoneNumber: req.onboarding.phoneNumber,
       status: 'PENDING',
       expiresAt: req.onboarding.expiresAt,
       currentStep: req.onboarding.currentStep,
-      studentNationalId,
+      nationalId,
     });
   }
 

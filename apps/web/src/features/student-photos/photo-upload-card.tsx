@@ -133,7 +133,7 @@ export function PhotoUploadCard({
         ? await completePhotoUpload(authorization.uploadId, mode, familyId)
         : await completePhotoUpload(authorization.uploadId, mode);
       onUploadCompleted?.(completed.uploadId);
-      if (mode === 'panel') setItems(await getMyPhotoUploads(studentId));
+      if (mode === 'panel' && studentId) setItems(await getMyPhotoUploads(studentId));
       else setItems([completed]);
       removeSelection();
       setMessage('عکس کارت سرویس بارگذاری شد و در صف بررسی قرار گرفت.');
