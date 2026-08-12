@@ -25,7 +25,7 @@ describe('family fixed-credential authentication', () => {
           sessionId: 'onboarding-1',
           expiresAt: '2026-08-20T00:00:00.000Z',
           currentStep: null,
-          nationalId: '0084575948',
+          studentNationalId: '0084575948',
         },
       },
     });
@@ -34,7 +34,7 @@ describe('family fixed-credential authentication', () => {
 
     await user.clear(screen.getByLabelText(/شماره همراه سرپرست/));
     await user.type(screen.getByLabelText(/شماره همراه سرپرست/), '09123456789');
-    await user.type(screen.getByLabelText(/کد ملی سرپرست/), '0084575948');
+    await user.type(screen.getByLabelText(/کد ملی دانش‌آموز/), '0084575948');
     await user.click(screen.getByRole('button', { name: 'ورود یا ثبت‌نام و ادامه' }));
 
     expect(authApi.loginOrRegisterParent).toHaveBeenCalledWith(
@@ -57,7 +57,7 @@ describe('family fixed-credential authentication', () => {
     render(<LoginForm />);
     await user.clear(screen.getByLabelText(/شماره همراه سرپرست/));
     await user.type(screen.getByLabelText(/شماره همراه سرپرست/), '09123456789');
-    await user.type(screen.getByLabelText(/کد ملی سرپرست/), '0084575948');
+    await user.type(screen.getByLabelText(/کد ملی دانش‌آموز/), '0084575948');
     await user.click(screen.getByRole('button', { name: 'ورود یا ثبت‌نام و ادامه' }));
     expect(navigation.replace).toHaveBeenCalledWith('/student/dashboard');
   });

@@ -23,7 +23,7 @@ export type OnboardingResponse = {
     sessionId: string;
     expiresAt: string;
     currentStep: string | null;
-    nationalId: string;
+    studentNationalId: string;
   };
 };
 
@@ -31,12 +31,12 @@ export type VerifyParentOtpResponse = LoginResponse | OnboardingResponse;
 
 export function loginOrRegisterParent(
   phoneNumber: string,
-  nationalId: string,
+  studentNationalId: string,
   rememberMe = false,
 ) {
   return apiRequest<VerifyParentOtpResponse>('/auth/parent/credentials', {
     method: 'POST',
-    body: { phoneNumber, nationalId, rememberMe },
+    body: { phoneNumber, studentNationalId, rememberMe },
     timeoutMs: 10_000,
   });
 }

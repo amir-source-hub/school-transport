@@ -51,6 +51,15 @@ describe('student mobile shell', () => {
     expect(dock.querySelector('a[href="/student/dashboard"]')).not.toHaveAttribute('aria-current');
   });
 
+  it('keeps the desktop sidebar fixed to the viewport and places the homepage action in the header', () => {
+    const { container } = render(<StudentShell>content</StudentShell>);
+    const aside = container.querySelector('aside');
+    expect(aside).toHaveClass('sticky', 'top-16', 'h-[calc(100vh-4rem)]');
+    expect(within(aside as HTMLElement).queryByRole('link', { name: /صفحه اصلی/ })).toBeNull();
+    expect(screen.getByRole('link', { name: 'صفحه اصلی' })).toHaveAttribute('href', '/');
+    expect(within(aside as HTMLElement).getAllByRole('link', { name: 'ثبت‌نام' })).toHaveLength(1);
+  });
+
   it('removes the fixed dock while an editing control opens a virtual keyboard', async () => {
     const listeners = new Set<EventListener>();
     const viewport = {

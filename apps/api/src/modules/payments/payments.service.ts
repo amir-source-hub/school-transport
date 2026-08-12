@@ -425,9 +425,11 @@ export class PaymentsService {
     }
     const destination = await this.getActiveOfflineDestination();
     const paidAt = new Date(data.paidAt);
-    if (Number.isNaN(paidAt.getTime()) || paidAt > new Date() || !data.referenceNumber.trim()) {
-      throw new ValidationError('A valid payment date and reference number are required.');
-    }
+    if (Number.isNaN(paidAt.getTime())) throw new ValidationError('تاریخ پرداخت معتبر نیست.');
+    if (paidAt > new Date())
+      throw new ValidationError('تاریخ پرداخت نمی‌تواند در آینده باشد.');
+    if (!data.referenceNumber.trim())
+      throw new ValidationError('شماره پیگیری یا مرجع پرداخت الزامی است.');
     if (data.sourceCardLastFour && !/^\d{4}$/.test(data.sourceCardLastFour)) {
       throw new ValidationError('Source card suffix must contain exactly four digits.');
     }

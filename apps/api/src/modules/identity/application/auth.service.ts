@@ -13,6 +13,7 @@ import {
   otpRequests,
   parents,
   authSessions,
+  students,
 } from '../../../database/schemas';
 import { AppError, AuthenticationError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
@@ -34,7 +35,7 @@ export interface AdminChallengeResult {
 
 export type ParentCredentialResult = LoginResult | {
   user: null;
-  onboarding: Awaited<ReturnType<OnboardingService['beginOrResume']>> & { nationalId: string };
+  onboarding: Awaited<ReturnType<OnboardingService['beginOrResume']>> & { studentNationalId: string };
 };
 
 export const ADMIN_IDENTITY_LIST_LIMIT = 500;
@@ -276,7 +277,7 @@ export class AuthService {
 
   async authenticateParent(
     phoneNumber: string,
-    nationalId: string,
+    studentNationalId: string,
     context?: SessionContext,
     rememberMe = false,
   ): Promise<ParentCredentialResult> {
@@ -289,7 +290,7 @@ export class AuthService {
     if (needsOnboarding) {
       if (this.config.featureOnboarding === false) throw genericError();
       let userId = account?.id;
-      const pendingUsername = `${phoneNumber}:${nationalId}`;
+      const pendingUsername = `${phoneNumber}:${studentNationalId}`;
       if (!userId) {
         userId = generateId();
         await this.db.db.insert(users).values({
@@ -308,18 +309,21 @@ export class AuthService {
       if (!this.onboarding) throw new AuthenticationError('Onboarding is not configured.');
       const onboarding = await this.onboarding.beginOrResume(userId, phoneNumber);
       this.logger.log('Parent onboarding session issued with fixed credentials.');
-      return { user: null, onboarding: { ...onboarding, nationalId } };
+      return { user: null, onboarding: { ...onboarding, studentNationalId } };
     }
 
     if (account.status !== 'ACTIVE') throw genericError();
     const familyParents = await this.db.db
-      .select({ id: parents.id, phoneNumber: parents.phoneNumber, nationalId: parents.nationalId })
+      .select({ id: parents.id, phoneNumber: parents.phoneNumber })
       .from(parents)
       .where(eq(parents.userId, account.id));
-    const matchingParent = familyParents.find(
-      (parent) => parent.phoneNumber === phoneNumber && parent.nationalId === nationalId,
-    );
-    if (!matchingParent) throw genericError();
+    const matchingParent = familyParents.find((parent) => parent.phoneNumber === phoneNumber);
+    const [matchingStudent] = await this.db.db
+      .select({ id: students.id })
+      .from(students)
+      .where(and(eq(students.userId, account.id), eq(students.nationalId, studentNationalId)))
+      .limit(1);
+    if (!matchingParent || !matchingStudent) throw genericError();
 
     await this.db.db.transaction(async (txn) => {
       await txn
@@ -469,7 +473,7 @@ export class AuthService {
     };
   }
 
-  async getPendingParentNationalId(userId: string): Promise<string> {
+  async getPendingStudentNationalId(userId: string): Promise<string> {
     const [account] = await this.db.db
       .select({ username: users.username, status: users.accountStatus })
       .from(users)

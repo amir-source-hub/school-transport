@@ -60,7 +60,7 @@ export function OfflinePaymentForm({
   const disabled = items.length === 0 || !destination;
   return (
     <form
-      className="space-y-5"
+      className="space-y-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_18px_50px_-36px_rgba(15,23,42,.45)] sm:p-6"
       onSubmit={async (event) => {
         event.preventDefault();
         setSubmitted(false);
@@ -141,12 +141,12 @@ export function OfflinePaymentForm({
         }
       }}
     >
-      <div className="rounded-xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-l from-primary/10 to-sky-50 p-4 text-sm leading-7 text-slate-700">
         اگر مبلغ را خارج از درگاه سامانه، مانند کارت‌به‌کارت یا واریز بانکی، پرداخت کرده‌اید؛ قسط،
         تاریخ شمسی و شماره پیگیری بانکی را ثبت کنید. پرداخت پس از تأیید مدیر «پرداخت‌شده» می‌شود.
       </div>
       {destination && (
-        <dl className="grid gap-3 rounded-xl border border-border bg-white p-4 text-sm sm:grid-cols-2">
+        <dl className="grid gap-3 rounded-2xl border border-sky-100 bg-sky-50/60 p-4 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-muted">صاحب حساب</dt>
             <dd className="font-bold">{destination.accountOwner}</dd>
@@ -189,13 +189,17 @@ export function OfflinePaymentForm({
           دوباره قابل انتخاب نیستند.
         </div>
       )}
-      <Select
-        value={scheduleItemId}
-        onValueChange={setScheduleItemId}
-        options={items.map((item) => ({ value: item.id, label: item.label }))}
-        placeholder="قسط را انتخاب کنید"
-        disabled={disabled}
-      />
+      <label className="block rounded-2xl bg-slate-50 p-4 text-sm font-bold">
+        قسط موردنظر
+        <Select
+          className="mt-2 bg-white"
+          value={scheduleItemId}
+          onValueChange={setScheduleItemId}
+          options={items.map((item) => ({ value: item.id, label: item.label }))}
+          placeholder="قسط را انتخاب کنید"
+          disabled={disabled}
+        />
+      </label>
       <label className="text-sm font-bold">
         تاریخ پرداخت (شمسی)
         <div className="mt-2">
@@ -205,6 +209,7 @@ export function OfflinePaymentForm({
             disabled={disabled}
             value={paidAt}
             onChange={setPaidAt}
+            maxDate={new Date().toISOString().slice(0, 10)}
           />
         </div>
       </label>
@@ -267,7 +272,7 @@ export function OfflinePaymentForm({
           />
         </label>
       </div>
-      <label className="block text-sm font-bold">
+      <label className="block rounded-2xl border-2 border-dashed border-primary/25 bg-primary/[0.025] p-4 text-sm font-bold">
         تصویر رسید (JPEG یا PNG)
         <Input
           type="file"
@@ -334,7 +339,7 @@ export function OfflinePaymentForm({
         </Alert>
       )}
       {error && <p className="text-sm text-danger">{error}</p>}
-      <Button type="submit" loading={pending} disabled={disabled || pending}>
+      <Button className="w-full sm:w-auto" size="lg" type="submit" loading={pending} disabled={disabled || pending}>
         ارسال رسید برای بررسی مدیر
       </Button>
     </form>

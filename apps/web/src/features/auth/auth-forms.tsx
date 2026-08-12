@@ -20,7 +20,7 @@ import { setOnboardingState } from './onboarding-session';
 
 const parentCredentialsSchema = z.object({
   phoneNumber: z.string().regex(/^09\d{9}$/, 'شماره همراه را با قالب 09xxxxxxxxx وارد کنید.'),
-  nationalId: z.string().regex(/^\d{1,10}$/, 'کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.'),
+  studentNationalId: z.string().regex(/^\d{1,10}$/, 'کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.'),
 });
 const adminCredentialsSchema = z.object({
   username: z.string().min(3, 'نام کاربری باید حداقل ۳ نویسه باشد.'),
@@ -49,17 +49,17 @@ function ParentCredentialsForm() {
   const [rememberMe, setRememberMe] = useState(false);
   const form = useForm<ParentCredentials>({
     resolver: zodResolver(parentCredentialsSchema),
-    defaultValues: { phoneNumber: '09', nationalId: '' },
+    defaultValues: { phoneNumber: '09', studentNationalId: '' },
   });
-  const submit = form.handleSubmit(async ({ phoneNumber, nationalId }) => {
+  const submit = form.handleSubmit(async ({ phoneNumber, studentNationalId }) => {
     setError(undefined);
     try {
-      const response = await loginOrRegisterParent(phoneNumber, nationalId, rememberMe);
+      const response = await loginOrRegisterParent(phoneNumber, studentNationalId, rememberMe);
       if (response.data.user === null) {
         setOnboardingState({
           sessionId: response.data.onboarding.sessionId,
           phoneNumber,
-          nationalId: response.data.onboarding.nationalId,
+          studentNationalId: response.data.onboarding.studentNationalId,
           expiresAt: response.data.onboarding.expiresAt,
           currentStep: response.data.onboarding.currentStep,
         });
@@ -76,14 +76,14 @@ function ParentCredentialsForm() {
   return (
     <form className="space-y-5" onSubmit={submit} noValidate>
       <Alert tone="info" title="ورود و ثبت‌نام خانواده">
-        شماره همراه سرپرست و کد ملی او، مشخصات ثابت ورود شما هستند و پس از ثبت‌نام قابل تغییر نیستند.
+        شماره همراه سرپرست و کد ملی دانش‌آموز، مشخصات ثابت ورود شما هستند و پس از ثبت‌نام قابل تغییر نیستند.
       </Alert>
       <FormError error={error} />
       <Field label="شماره همراه سرپرست دانش‌آموز" htmlFor="auth-phone" required error={form.formState.errors.phoneNumber?.message}>
         <Input id="auth-phone" dir="ltr" inputMode="tel" className="text-left tabular-nums" autoComplete="username" placeholder="09123456789" {...form.register('phoneNumber', { onChange: (event) => form.setValue('phoneNumber', normalizeMobileInput(event.target.value), { shouldValidate: form.formState.isSubmitted }) })} onFocus={(event) => placeCaretAfterPrefix(event.currentTarget, 2)} />
       </Field>
-      <Field label="کد ملی سرپرست" htmlFor="auth-national-id" required error={form.formState.errors.nationalId?.message}>
-        <Input id="auth-national-id" dir="ltr" inputMode="numeric" className="text-left tabular-nums" autoComplete="current-password" maxLength={10} {...form.register('nationalId', { onChange: (event) => form.setValue('nationalId', normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, 10), { shouldValidate: form.formState.isSubmitted }) })} />
+      <Field label="کد ملی دانش‌آموز" htmlFor="auth-student-national-id" required error={form.formState.errors.studentNationalId?.message}>
+        <Input id="auth-student-national-id" dir="ltr" inputMode="numeric" className="text-left tabular-nums" autoComplete="current-password" maxLength={10} {...form.register('studentNationalId', { onChange: (event) => form.setValue('studentNationalId', normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, 10), { shouldValidate: form.formState.isSubmitted }) })} />
       </Field>
       <Checkbox checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} label="در این دستگاه به خاطر بسپار (۷ روز)" />
       <Button className="w-full rounded-xl" size="lg" type="submit" disabled={form.formState.isSubmitting}>
@@ -129,5 +129,5 @@ export function LoginForm() { return <ParentCredentialsForm />; }
 export function RegisterForm() { return <ParentCredentialsForm />; }
 export function AdminLoginForm() { return <AdminLoginFormInner />; }
 export function ForgotPasswordForm() {
-  return <Alert title="مشخصات ورود ثابت">برای ورود خانواده از شماره همراه و کد ملی سرپرست استفاده کنید.</Alert>;
+  return <Alert title="مشخصات ورود ثابت">برای ورود خانواده از شماره همراه سرپرست و کد ملی دانش‌آموز استفاده کنید.</Alert>;
 }

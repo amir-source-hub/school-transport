@@ -60,6 +60,9 @@ export class RegistrationsService {
   ) {
     const data = normalizeAndValidateGuidedEnrollment(input);
     const actions = normalizeAndValidateAdminEnrollmentActions(adminActions);
+    if (!adminAudit && !data.student.id && !data.studentPhotoUploadId) {
+      throw new ValidationError('ارسال عکس دانش‌آموز برای ثبت‌نام الزامی است.');
+    }
     if (!adminAudit) {
       const [account] = await this.db.db
         .select({ username: users.username, status: users.accountStatus, phoneNumber: users.phoneNumber })
@@ -67,7 +70,7 @@ export class RegistrationsService {
         .where(eq(users.id, userId))
         .limit(1);
       if (account?.status === 'PENDING') {
-        const expectedUsername = `${account.phoneNumber}:${data.guardian.nationalId}`;
+        const expectedUsername = `${account.phoneNumber}:${data.student.nationalId}`;
         if (account.username !== expectedUsername) {
           throw new ConflictError(
             'GUARDIAN_CREDENTIAL_MISMATCH',

@@ -23,6 +23,13 @@ vi.mock('next/navigation', () => ({
 vi.mock('./enrollments-api', () => enrollmentApi);
 vi.mock('@/features/finance/payments-api', () => paymentsApi);
 vi.mock('@/features/notifications/notifications-api', () => notificationsApi);
+vi.mock('@/features/student-photos/photo-upload-card', () => ({
+  PhotoUploadCard: ({ onUploadCompleted }: { onUploadCompleted?: (id: string) => void }) => (
+    <button type="button" onClick={() => onUploadCompleted?.('photo-upload-1')}>
+      ثبت عکس آزمایشی
+    </button>
+  ),
+}));
 vi.mock('leaflet', () => ({}));
 
 const schools = [
@@ -141,6 +148,7 @@ describe('onboarding guided enrollment funnel', () => {
     await fillIn(user, 'اطلاعات مادر', 'نام خانوادگی', 'رضایی');
     await fillIn(user, 'اطلاعات مادر', 'کد ملی', '1234567891');
     await fillIn(user, 'اطلاعات مادر', 'شماره همراه', '09129998877');
+    await user.click(screen.getByRole('button', { name: 'ثبت عکس آزمایشی' }));
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
 
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
@@ -226,6 +234,7 @@ describe('onboarding guided enrollment funnel', () => {
     await fillIn(user, 'اطلاعات مادر', 'نام خانوادگی', 'رضایی');
     await fillIn(user, 'اطلاعات مادر', 'کد ملی', '1234567891');
     await fillIn(user, 'اطلاعات مادر', 'شماره همراه', '09129998877');
+    await user.click(screen.getByRole('button', { name: 'ثبت عکس آزمایشی' }));
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
 
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));

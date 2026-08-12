@@ -115,29 +115,22 @@ export function CreateEnrollmentForm({
   const firstLevel = firstSchool?.educationOptions[0];
   const effectiveGuardianPhone =
     guardianPhone ?? (mode === 'onboarding' ? (getOnboardingState().phoneNumber ?? '') : '');
-  const onboardingNationalId =
-    mode === 'onboarding' ? (getOnboardingState().nationalId ?? '') : '';
+  const onboardingStudentNationalId =
+    mode === 'onboarding' ? (getOnboardingState().studentNationalId ?? '') : '';
   const createInitialForm = () =>
     createEnrollmentFormState({
       schools,
       savedParents,
       existingStudents,
-      defaults:
-        mode === 'onboarding' && onboardingNationalId
-          ? {
-              ...defaults,
-              guardian: {
-                firstName: defaults.guardian?.firstName ?? '',
-                lastName: defaults.guardian?.lastName ?? '',
-                relationshipType: defaults.guardian?.relationshipType ?? 'FATHER',
-                nationalId: onboardingNationalId,
-              },
-            }
-          : defaults,
+      defaults,
       guardianPhone: effectiveGuardianPhone,
     });
+  const initialForm = createInitialForm();
+  if (onboardingStudentNationalId) {
+    initialForm.studentNationalId = onboardingStudentNationalId;
+  }
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState(createInitialForm);
+  const [form, setForm] = useState(initialForm);
   const [result, setResult] = useState<GuidedEnrollmentResult>();
   const [reviewedContractPages, setReviewedContractPages] = useState<number[]>([]);
   const [accepted, setAccepted] = useState(false);
@@ -452,6 +445,8 @@ export function CreateEnrollmentForm({
       requiredNames.push(form.guardianFirst, form.guardianLast);
       if (requiredNames.some((value) => !value.trim()))
         return 'تمام مشخصات فردی ضروری را تکمیل کنید.';
+      if (!form.existingStudentId && !photoUploadId)
+        return 'ارسال عکس دانش‌آموز برای ادامه ثبت‌نام الزامی است.';
     }
     const ids = [
       { key: 'کد ملی دانش‌آموز', value: form.studentNationalId },
@@ -654,6 +649,9 @@ export function CreateEnrollmentForm({
   if (form.existingStudentId) {
     lockedParentFields.add('studentFirst');
     lockedParentFields.add('studentLast');
+    lockedParentFields.add('studentNationalId');
+  }
+  if (mode === 'onboarding' && onboardingStudentNationalId) {
     lockedParentFields.add('studentNationalId');
   }
   const optionalSectionKeys = new Set<keyof typeof form>([
@@ -878,6 +876,11 @@ export function CreateEnrollmentForm({
                 {field('studentFirst', 'نام دانش‌آموز')}
                 {field('studentLast', 'نام خانوادگی')}
                 {field('studentNationalId', 'کد ملی', 'tel')}
+                {mode === 'onboarding' && onboardingStudentNationalId && (
+                  <p className="-mt-2 text-xs text-muted sm:col-span-2 lg:col-span-3">
+                    کد ملی دانش‌آموز هنگام ورود ثبت شده و قابل تغییر نیست.
+                  </p>
+                )}
                 {prefixField('studentPhone', 'شماره همراه دانش‌آموز', '09', 9)}
                 <div className="text-sm font-bold">
                   <span>تاریخ تولد (شمسی)</span>
@@ -955,23 +958,7 @@ export function CreateEnrollmentForm({
                 </label>
                 {field('guardianFirst', 'نام')}
                 {field('guardianLast', 'نام خانوادگی')}
-                {mode === 'onboarding' && onboardingNationalId ? (
-                  <label className="text-sm font-bold">
-                    کد ملی
-                    <Input
-                      className="mt-2 cursor-not-allowed bg-surface-muted text-left tabular-nums text-muted"
-                      dir="ltr"
-                      value={form.guardianNationalId}
-                      disabled
-                      readOnly
-                    />
-                    <span className="mt-1 block text-xs font-normal text-muted">
-                      کد ملی ثبت‌شده هنگام ورود؛ قابل تغییر نیست.
-                    </span>
-                  </label>
-                ) : (
-                  field('guardianNationalId', 'کد ملی', 'tel')
-                )}
+                {field('guardianNationalId', 'کد ملی', 'tel')}
                 {form.guardianRelationshipType === 'OTHER' && (
                   <div className="lg:col-span-2">
                     {field('guardianRelationshipDescription', 'شرح نسبت')}
