@@ -116,13 +116,33 @@ export default async function PaymentsPage() {
           <div className="space-y-3">
             {offlineSubmissions.map((submission) => (
               <div key={submission.id} className="rounded-xl border border-border p-4 text-sm">
-                <p className="font-bold">
-                  {submission.status === 'PENDING_REVIEW'
-                    ? 'در انتظار بررسی'
-                    : submission.status === 'APPROVED'
-                      ? 'تأییدشده'
-                      : 'نیازمند اصلاح'}
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-black">
+                    {submission.studentFirstName ?? 'دانش‌آموز'} {submission.studentLastName ?? ''}{' '}
+                    —{' '}
+                    {submission.itemType === 'PREPAYMENT'
+                      ? 'پیش‌پرداخت'
+                      : `قسط ${(submission.sequenceNumber ?? 1).toLocaleString('fa-IR')}`}
+                  </p>
+                  <Badge
+                    tone={
+                      submission.status === 'APPROVED'
+                        ? 'success'
+                        : submission.status === 'REJECTED'
+                          ? 'danger'
+                          : 'warning'
+                    }
+                  >
+                    {submission.status === 'PENDING_REVIEW'
+                      ? 'در انتظار بررسی'
+                      : submission.status === 'APPROVED'
+                        ? 'تأییدشده'
+                        : 'نیازمند اصلاح'}
+                  </Badge>
+                </div>
+                {submission.expectedAmount !== undefined && (
+                  <p className="mt-2 text-muted">مبلغ: {formatIrr(submission.expectedAmount)}</p>
+                )}
                 {submission.rejectionReason && (
                   <p className="mt-2 text-danger">{submission.rejectionReason}</p>
                 )}

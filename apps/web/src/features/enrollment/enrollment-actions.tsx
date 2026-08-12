@@ -52,7 +52,6 @@ import {
 } from './enrollment-form-model';
 import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-schema';
 import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
-import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
 import { OfflinePaymentDestinationCard } from '@/features/finance/offline-payment-destination-card';
 import { ContractReview } from '@/features/finance/contract-review';
 import { updateNotificationConsent } from '@/features/notifications/notifications-api';
@@ -878,6 +877,16 @@ export function CreateEnrollmentForm({
                 </p>
               </Section>
             )}
+            {existingStudents.length > 0 && !form.existingStudentId && (
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-sm leading-7 text-amber-950 shadow-sm">
+                <p className="font-black">تعهد ثبت دانش‌آموز جدید</p>
+                <p className="mt-1">
+                  با افزودن این دانش‌آموز، مسئولیت صحت اطلاعات، پذیرش قرارداد، پرداخت پیش‌پرداخت و
+                  اقساط، پیگیری سررسیدها و رعایت همه تعهدات سرویس بر عهده صاحب این حساب خانواده است.
+                  ثبت دانش‌آموز جدید را فقط در صورت پذیرش این مسئولیت‌ها ادامه دهید.
+                </p>
+              </div>
+            )}
             <Section title="مشخصات دانش‌آموز">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {prefixField('homePhone', 'شماره تلفن منزل', '021', 8)}
@@ -1407,13 +1416,16 @@ export function CreateEnrollmentForm({
                 </label>
               </div>
             ) : (
-              <div className="mt-5 text-right">
-                <OfflinePaymentForm
-                  items={[
-                    { id: result.scheduleItemId, label: 'پیش‌پرداخت ثبت‌نام — ۴٬۹۹۷٬۸۰۰ تومان' },
-                  ]}
-                  mode={mode}
-                />
+              <div className="mt-6 space-y-5 text-right">
+                <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
+                  قرارداد پذیرفته شد و تعهد پیش‌پرداخت برای این دانش‌آموز در پنل شما ایجاد شده است.
+                  مبلغ را به اطلاعات زیر واریز کنید و ثبت تاریخ، شماره پیگیری و تصویر رسید را فقط از
+                  بخش «پرداخت‌ها» انجام دهید.
+                </div>
+                <OfflinePaymentDestinationCard />
+                <Button className="w-full" onClick={() => router.push('/student/payments')}>
+                  رفتن به بخش پرداخت‌ها و ارسال رسید
+                </Button>
               </div>
             )}
             {mode === 'onboarding' && (

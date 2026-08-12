@@ -929,11 +929,30 @@ export class PaymentsService {
 
   async listOfflineSubmissions(userId: string) {
     return this.db.db
-      .select()
+      .select({
+        submission: offlinePaymentSubmissions,
+        itemType: paymentScheduleItems.itemType,
+        sequenceNumber: paymentScheduleItems.sequenceNumber,
+        expectedAmount: paymentScheduleItems.amount,
+        studentFirstName: students.firstName,
+        studentLastName: students.lastName,
+      })
       .from(offlinePaymentSubmissions)
+      .innerJoin(
+        paymentScheduleItems,
+        eq(paymentScheduleItems.id, offlinePaymentSubmissions.paymentScheduleItemId),
+      )
+      .innerJoin(paymentPlans, eq(paymentPlans.id, offlinePaymentSubmissions.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
       .where(eq(offlinePaymentSubmissions.payerUserId, userId))
       .orderBy(desc(offlinePaymentSubmissions.createdAt), desc(offlinePaymentSubmissions.id))
-      .limit(100);
+      .limit(100)
+      .then((rows) => rows.map(({ submission, ...context }) => ({ ...submission, ...context })));
   }
 
   async listOfflineSubmissionsForAdmin(

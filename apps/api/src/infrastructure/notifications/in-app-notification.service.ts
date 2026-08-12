@@ -36,6 +36,23 @@ export class InAppNotificationService {
   async enqueueInTransaction(txn: DatabaseTransaction, data: InAppNotification): Promise<string> {
     const eventId = data.eventId ?? generateId();
     await txn
+      .insert(notifications)
+      .values({
+        id: generateId(),
+        eventId,
+        userId: data.userId,
+        notificationType: data.notificationType,
+        channel: 'IN_APP',
+        purpose: notificationPurpose(data.notificationType),
+        title: data.title,
+        message: data.message,
+        relatedEntityType: data.relatedEntityType || null,
+        relatedEntityId: data.relatedEntityId || null,
+        notificationStatus: 'SENT',
+        sentAt: new Date(),
+      })
+      .onConflictDoNothing({ target: notifications.eventId });
+    await txn
       .insert(notificationOutbox)
       .values({
         id: generateId(),

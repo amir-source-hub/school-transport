@@ -37,7 +37,9 @@ export function OfflinePaymentForm({
   const [receipt, setReceipt] = useState<File>();
   const [previewUrl, setPreviewUrl] = useState<string>();
   const [progress, setProgress] = useState(0);
-  const [uploadRequest, setUploadRequest] = useState<XMLHttpRequest>();
+  const operationRef = useRef<
+    { controller: AbortController; request?: XMLHttpRequest } | undefined
+  >(undefined);
   const idempotencyKey = useRef(crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -58,6 +60,24 @@ export function OfflinePaymentForm({
     },
     [previewUrl],
   );
+  useEffect(() => () => operationRef.current?.controller.abort(), []);
+  function resetPaymentFields(nextScheduleItemId: string) {
+    operationRef.current?.controller.abort();
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setScheduleItemId(nextScheduleItemId);
+    setPaidAt('');
+    setReferenceNumber('');
+    setDescription('');
+    setPayerName('');
+    setSourceCardLastFour('');
+    setReceipt(undefined);
+    setPreviewUrl(undefined);
+    setProgress(0);
+    setError(undefined);
+    setSubmitted(false);
+    setFormVersion((current) => current + 1);
+    idempotencyKey.current = crypto.randomUUID();
+  }
   const disabled = items.length === 0 || !destination;
   return (
     <form
@@ -91,6 +111,8 @@ export function OfflinePaymentForm({
           return;
         }
         setPending(true);
+        const controller = new AbortController();
+        operationRef.current = { controller };
         try {
           const submissionId = await submitOfflinePayment(
             scheduleItemId,
@@ -104,11 +126,17 @@ export function OfflinePaymentForm({
             mode,
             idempotencyKey.current,
           );
-          const uploadUrl = await authorizeReceiptUpload(submissionId, receipt, mode);
+          const uploadUrl = await authorizeReceiptUpload(
+            submissionId,
+            receipt,
+            mode,
+            controller.signal,
+          );
           await new Promise<void>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            setUploadRequest(xhr);
+            operationRef.current = { controller, request: xhr };
             xhr.open('PUT', uploadUrl);
+            xhr.timeout = 60_000;
             xhr.setRequestHeader('Content-Type', receipt.type);
             xhr.upload.onprogress = (event) =>
               event.lengthComputable && setProgress(Math.round((event.loaded / event.total) * 100));
@@ -117,10 +145,13 @@ export function OfflinePaymentForm({
                 ? resolve()
                 : reject(new Error('بارگذاری رسید ناموفق بود.'));
             xhr.onerror = () => reject(new Error('ارتباط با ذخیره‌گاه رسید قطع شد.'));
-            xhr.onabort = () => reject(new Error('بارگذاری رسید لغو شد.'));
+            xhr.ontimeout = () =>
+              reject(new Error('مهلت بارگذاری رسید تمام شد. دوباره تلاش کنید.'));
+            xhr.onabort = () => reject(new DOMException('cancelled', 'AbortError'));
+            controller.signal.addEventListener('abort', () => xhr.abort(), { once: true });
             xhr.send(receipt);
           });
-          await completeReceiptUpload(submissionId, mode);
+          await completeReceiptUpload(submissionId, mode, controller.signal);
           setSubmitted(true);
           setScheduleItemId('');
           setPaidAt('');
@@ -131,11 +162,15 @@ export function OfflinePaymentForm({
           setReceipt(undefined);
           setPreviewUrl(undefined);
           setProgress(0);
-          setUploadRequest(undefined);
+          operationRef.current = undefined;
           idempotencyKey.current = crypto.randomUUID();
           setFormVersion((current) => current + 1);
           router.refresh();
         } catch (caught) {
+          if (caught instanceof DOMException && caught.name === 'AbortError') {
+            setError('ارسال رسید لغو شد. می‌توانید همین رسید یا رسید دیگری را دوباره ارسال کنید.');
+            return;
+          }
           if (caught instanceof ApiClientError && caught.code === 'RECEIPT_NOT_DRAFT') {
             setSubmitted(true);
             setReceipt(undefined);
@@ -147,6 +182,7 @@ export function OfflinePaymentForm({
           setError(getApiErrorFeedback(caught).message);
         } finally {
           setPending(false);
+          operationRef.current = undefined;
         }
       }}
     >
@@ -203,7 +239,7 @@ export function OfflinePaymentForm({
         <Select
           className="mt-2 bg-white"
           value={scheduleItemId}
-          onValueChange={setScheduleItemId}
+          onValueChange={resetPaymentFields}
           options={items.map((item) => ({ value: item.id, label: item.label }))}
           placeholder="قسط را انتخاب کنید"
           disabled={disabled}
@@ -327,7 +363,7 @@ export function OfflinePaymentForm({
           </Button>
         </div>
       )}
-      {pending && progress > 0 && (
+      {pending && (
         <div role="status" aria-live="polite">
           <div className="h-2 overflow-hidden rounded-full bg-slate-200">
             <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
@@ -335,11 +371,14 @@ export function OfflinePaymentForm({
           <p className="mt-1 text-xs text-muted">
             بارگذاری رسید: {progress.toLocaleString('fa-IR')}٪
           </p>
-          {uploadRequest && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => uploadRequest.abort()}>
-              لغو بارگذاری
-            </Button>
-          )}
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            onClick={() => operationRef.current?.controller.abort()}
+          >
+            لغو ارسال
+          </Button>
         </div>
       )}
       {submitted && (
