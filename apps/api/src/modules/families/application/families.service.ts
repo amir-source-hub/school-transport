@@ -159,6 +159,8 @@ export class FamiliesService {
       lastName: p.lastName,
       nationalId: p.nationalId,
       phoneNumber: p.phoneNumber,
+      relationshipType: p.relationshipType ?? undefined,
+      relationshipDescription: p.relationshipDescription ?? undefined,
       isPrimaryContact: p.isPrimaryContact,
       phoneVerified: !!p.phoneVerifiedAt,
     });

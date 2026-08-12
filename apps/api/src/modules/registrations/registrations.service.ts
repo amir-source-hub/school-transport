@@ -240,14 +240,25 @@ export class RegistrationsService {
               existing.lastName === section.lastName &&
               existing.nationalId === section.nationalId &&
               existing.phoneNumber === section.phoneNumber &&
-              (existing.homePhone ?? null) === (section.homePhone ?? null) &&
-              (!existing.relationshipType ||
-                existing.relationshipType === section.relationshipType);
+              (existing.homePhone ?? null) === (section.homePhone ?? null);
             if (!unchanged) {
               throw new ConflictError(
                 'PARENT_PROFILE_CHANGED',
                 'Saved parent information must be changed from the family profile.',
               );
+            }
+            if (parentType === 'GUARDIAN') {
+              await txn
+                .update(parents)
+                .set({
+                  relationshipType: section.relationshipType,
+                  relationshipDescription:
+                    section.relationshipType === 'OTHER'
+                      ? (section.relationshipDescription ?? null)
+                      : null,
+                  updatedAt: new Date(),
+                })
+                .where(eq(parents.id, existing.id));
             }
           } else {
             await txn.insert(parents).values({

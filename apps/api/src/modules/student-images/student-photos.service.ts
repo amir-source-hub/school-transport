@@ -52,6 +52,22 @@ export class StudentPhotosService {
   async authorizeUpload(userId: string, input: AuthorizePhotoUploadDto, ip?: string) {
     if (input.studentId) await this.assertOwnedStudent(userId, input.studentId);
     const now = new Date();
+    const abandoned = await this.db.db
+      .update(studentPhotoUploads)
+      .set({ status: 'EXPIRED', updatedAt: now })
+      .where(
+        and(
+          eq(studentPhotoUploads.accountUserId, userId),
+          eq(studentPhotoUploads.status, 'AUTHORIZED'),
+          input.studentId
+            ? eq(studentPhotoUploads.studentId, input.studentId)
+            : isNull(studentPhotoUploads.studentId),
+        ),
+      )
+      .returning({ rawKey: studentPhotoUploads.rawKey });
+    await Promise.all(
+      abandoned.map(({ rawKey }) => this.storage.deleteObject(rawKey).catch(() => undefined)),
+    );
     const active = await this.db.db
       .select({ count: count() })
       .from(studentPhotoUploads)
@@ -382,6 +398,7 @@ export class StudentPhotosService {
         .where(eq(studentPhotoUploads.id, uploadId))
         .limit(1);
       if (!upload) throw new NotFoundError('Student photo upload');
+      if (upload.status === 'APPROVED') return upload;
       assertStudentPhotoTransition(upload.status as StudentPhotoStatus, 'APPROVED');
       if (!upload.canonicalKey) throw new ValidationError('The photo has no canonical image.');
       if (!upload.studentId) {
@@ -415,7 +432,7 @@ export class StudentPhotosService {
         .update(studentPhotoUploads)
         .set({
           status: 'APPROVED',
-          version: version + 1,
+          version: upload.version + 1,
           reviewerAdminId: adminId,
           reviewedAt: now,
           approvedAt: now,
@@ -425,7 +442,7 @@ export class StudentPhotosService {
           and(
             eq(studentPhotoUploads.id, upload.id),
             eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
-            eq(studentPhotoUploads.version, version),
+            eq(studentPhotoUploads.version, upload.version),
           ),
         )
         .returning();

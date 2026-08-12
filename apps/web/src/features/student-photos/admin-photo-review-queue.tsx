@@ -35,6 +35,7 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
   const [detail, setDetail] = useState<Record<string, string>>({});
   const [pending, setPending] = useState<string>();
   const [message, setMessage] = useState<string>();
+  const [visibleItems, setVisibleItems] = useState(items);
 
   async function act(item: AdminPhoto, action: 'preview' | 'approve' | 'reject') {
     if (pending) return;
@@ -46,6 +47,8 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
         setPreview((current) => ({ ...current, [item.uploadId]: result.viewUrl }));
       } else if (action === 'approve') {
         await approveAdminPhoto(item.uploadId, item.version);
+        setVisibleItems((current) => current.filter(({ uploadId }) => uploadId !== item.uploadId));
+        setMessage('عکس تأیید شد و از صف انتظار بررسی خارج شد.');
         router.refresh();
       } else {
         await rejectAdminPhoto(
@@ -54,10 +57,13 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
           reason[item.uploadId],
           detail[item.uploadId],
         );
+        setVisibleItems((current) => current.filter(({ uploadId }) => uploadId !== item.uploadId));
+        setMessage('عکس رد شد و نتیجه برای خانواده ثبت شد.');
         router.refresh();
       }
     } catch (error) {
       setMessage(getApiErrorFeedback(error).message);
+      router.refresh();
     } finally {
       setPending(undefined);
     }
@@ -76,7 +82,7 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
           {message}
         </p>
       )}
-      {items.map((item) => (
+      {visibleItems.map((item) => (
         <Card key={item.uploadId} variant="outlined">
           <div className="grid gap-5 lg:grid-cols-[minmax(220px,320px)_1fr]">
             <div className="aspect-[3/4] overflow-hidden rounded-xl border border-border bg-surface-muted">

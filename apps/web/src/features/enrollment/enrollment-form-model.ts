@@ -50,6 +50,7 @@ export type EnrollmentDefaults = {
     lastName: string;
     nationalId: string;
     relationshipType: 'FATHER' | 'MOTHER' | 'OTHER';
+    relationshipDescription?: string;
   };
 };
 
@@ -174,7 +175,7 @@ export function createEnrollmentFormState({
     guardianLast: defaults.guardian?.lastName ?? '',
     guardianNationalId: defaults.guardian?.nationalId ?? '',
     guardianRelationshipType: defaults.guardian?.relationshipType ?? '',
-    guardianRelationshipDescription: '',
+    guardianRelationshipDescription: defaults.guardian?.relationshipDescription ?? '',
     guardianPhone: guardianPhone ?? '',
     fatherFirst: savedParents.father?.firstName ?? '',
     fatherLast: savedParents.father?.lastName ?? '',

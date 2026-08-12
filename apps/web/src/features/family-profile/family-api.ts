@@ -8,6 +8,8 @@ const parentSchema = z.object({
   lastName: z.string(),
   nationalId: z.string(),
   phoneNumber: z.string(),
+  relationshipType: z.string().optional(),
+  relationshipDescription: z.string().optional(),
   isPrimaryContact: z.boolean(),
   phoneVerified: z.boolean(),
 });

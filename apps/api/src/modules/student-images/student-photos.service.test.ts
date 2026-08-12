@@ -121,6 +121,7 @@ describe('StudentPhotosService authorizeUpload', () => {
   it('throws ConflictError when the active-upload cap is reached', async () => {
     const db = {
       db: {
+        update: vi.fn(() => updateReturning([])),
         select: vi.fn(() => selectWhere([{ count: '3' }])),
         insert: vi.fn(),
       },
@@ -136,6 +137,7 @@ describe('StudentPhotosService authorizeUpload', () => {
   it('rejects a declared size above the byte cap', async () => {
     const db = {
       db: {
+        update: vi.fn(() => updateReturning([])),
         select: vi.fn(() => selectWhere([{ count: '0' }])),
         insert: vi.fn(),
       },
@@ -154,6 +156,7 @@ describe('StudentPhotosService authorizeUpload', () => {
     const saved = baseRow({ id: 'upload-9', status: 'AUTHORIZED' });
     const db = {
       db: {
+        update: vi.fn(() => updateReturning([])),
         select: vi.fn(() => selectWhere([{ count: '0' }])),
         insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn(async () => [saved]) })) })),
       },

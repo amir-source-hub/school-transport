@@ -98,11 +98,13 @@ export default async function EnrollmentsPage() {
                   lastName: primaryParent.lastName,
                   nationalId: primaryParent.nationalId,
                   relationshipType:
-                    primaryParent.parentType === 'MOTHER'
+                    (family.guardian?.relationshipType as 'FATHER' | 'MOTHER' | 'OTHER') ??
+                    (primaryParent.parentType === 'MOTHER'
                       ? 'MOTHER'
                       : primaryParent.parentType === 'FATHER'
                         ? 'FATHER'
-                        : 'OTHER',
+                        : 'OTHER'),
+                  relationshipDescription: family.guardian?.relationshipDescription,
                 }
               : undefined,
           }}

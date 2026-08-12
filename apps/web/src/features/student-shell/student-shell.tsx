@@ -22,6 +22,7 @@ import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/
 import { BrandMark } from '@/components/brand/brand-mark';
 import { LogoutMenuItem } from '@/features/auth/logout-menu-item';
 import { cn } from '@/lib/cn';
+import { getUnreadNotificationCount } from '@/features/notifications/notifications-api';
 
 const navGroups = [
   {
@@ -145,6 +146,17 @@ function StudentNavigation({ mobile = false }: { mobile?: boolean }) {
 export function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const keyboardOpen = useVirtualKeyboardOpen();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    getUnreadNotificationCount()
+      .then((count) => active && setUnreadCount(count))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [pathname]);
 
   return (
     <div className="min-h-screen overflow-x-clip bg-[var(--paper)] [--parent-mobile-dock-height:4rem]">
@@ -190,10 +202,19 @@ export function StudentShell({ children }: { children: ReactNode }) {
             </ButtonLink>
             <Link
               href="/student/notifications"
-              className="grid size-11 place-items-center rounded-[var(--radius-control)] text-muted hover:bg-surface-inset hover:text-foreground transition-colors"
-              aria-label="مشاهده اعلان‌ها"
+              className="relative grid size-11 place-items-center rounded-[var(--radius-control)] text-muted hover:bg-surface-inset hover:text-foreground transition-colors"
+              aria-label={
+                unreadCount > 0
+                  ? `${unreadCount.toLocaleString('fa-IR')} اعلان خوانده‌نشده`
+                  : 'مشاهده اعلان‌ها'
+              }
             >
               <Bell aria-hidden="true" className="size-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -left-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-danger px-1 text-[10px] font-black text-white ring-2 ring-white">
+                  {Math.min(unreadCount, 99).toLocaleString('fa-IR')}
+                </span>
+              )}
             </Link>
           </div>
         </div>

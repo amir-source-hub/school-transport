@@ -651,12 +651,7 @@ export function CreateEnrollmentForm({
       ? (['motherFirst', 'motherLast', 'motherNationalId', 'motherPhone'] as const)
       : []),
     ...(defaults.guardian
-      ? ([
-          'guardianFirst',
-          'guardianLast',
-          'guardianNationalId',
-          'guardianRelationshipType',
-        ] as const)
+      ? (['guardianFirst', 'guardianLast', 'guardianNationalId'] as const)
       : []),
   ]);
   if (form.existingStudentId) {
@@ -937,7 +932,8 @@ export function CreateEnrollmentForm({
             <Section title="سرپرست">
               {defaults.guardian && (
                 <p className="mb-4 text-sm text-muted">
-                  اطلاعات سرپرست از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر نیست.
+                  مشخصات هویتی سرپرست از پروفایل خانواده خوانده شده است. نسبت سرپرست را می‌توانید
+                  برای این ثبت‌نام اصلاح کنید.
                 </p>
               )}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

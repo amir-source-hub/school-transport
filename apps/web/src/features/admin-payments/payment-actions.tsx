@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
-import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -157,14 +156,15 @@ export function ReceiptPreviewDialog({ submissionId }: { submissionId: string })
         description="این پیوند کوتاه‌عمر و فقط برای بررسی مجاز است."
       >
         {viewUrl ? (
-          <Image
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
             src={viewUrl}
             alt="رسید پرداخت ارسالی"
-            width={1200}
-            height={1200}
-            sizes="(max-width: 640px) 100vw, 640px"
-            unoptimized
-            className="max-h-[65vh] w-full object-contain"
+            className="max-h-[65vh] w-full rounded-xl bg-surface-muted object-contain"
+            onError={() => {
+              setViewUrl(undefined);
+              setError('نمایش رسید ناموفق بود. پنجره را ببندید و دوباره تلاش کنید.');
+            }}
           />
         ) : (
           <p role="status" className="text-sm text-muted">
