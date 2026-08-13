@@ -692,13 +692,13 @@ Use the existing transportation identity as a “school operations control desk�
 
 ### Phase 1 — identity and database
 
-- [ ] Add manager account/assignment schemas and migration.
-- [ ] Add `SCHOOL_MANAGER` to server and web role types.
-- [ ] Extend session generation, refresh, revocation, `/auth/me`, guard account lookup, and cookie handling.
-- [ ] Implement secure manager provisioning path.
-- [ ] Implement manager login and lockout/rate-limit behavior.
-- [ ] Add forced credential-change state and mutation.
-- [ ] Add unit/integration tests before building protected pages.
+- [x] Add manager account/assignment schemas and migration.
+- [x] Add `SCHOOL_MANAGER` to server and web role types.
+- [x] Extend session generation, refresh, revocation, `/auth/me`, guard account lookup, and cookie handling.
+- [x] Implement secure manager provisioning path.
+- [x] Implement manager login and lockout/rate-limit behavior.
+- [x] Add forced credential-change state and mutation.
+- [x] Add unit/integration tests before building protected pages.
 
 ### Phase 2 — shared portal login
 

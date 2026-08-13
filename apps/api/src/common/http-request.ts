@@ -1,7 +1,7 @@
 import type { FastifyRequest } from 'fastify';
 
 export type AuthenticatedRequest = FastifyRequest & {
-  user: { id: string; role: 'PARENT' | 'ADMIN'; sessionId: string };
+  user: { id: string; role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER'; sessionId: string };
 };
 
 export type OnboardingRequest = FastifyRequest & {

@@ -47,6 +47,16 @@ const envSchema = z
     OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().default(60),
     ADMIN_CHALLENGE_TTL_SECONDS: z.coerce.number().default(120),
     ONBOARDING_SESSION_TTL_SECONDS: z.coerce.number().default(604800),
+    MANAGER_MAX_FAILED_LOGIN_ATTEMPTS: z.coerce.number().int().min(3).max(20).default(5),
+    MANAGER_LOCKOUT_SECONDS: z.coerce.number().int().min(60).max(86400).default(1800),
+    FEATURE_MANAGER_PORTAL: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
+    FEATURE_MANAGER_LOGIN: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
     FEATURE_ADMIN_2FA: z
       .enum(['true', 'false'])
       .default('true')
@@ -274,6 +284,18 @@ export class ConfigService implements OnApplicationShutdown {
   }
   get adminChallengeTtlSeconds(): number {
     return this.env.ADMIN_CHALLENGE_TTL_SECONDS;
+  }
+  get managerMaxFailedLoginAttempts(): number {
+    return this.env.MANAGER_MAX_FAILED_LOGIN_ATTEMPTS;
+  }
+  get managerLockoutSeconds(): number {
+    return this.env.MANAGER_LOCKOUT_SECONDS;
+  }
+  get featureManagerPortal(): boolean {
+    return this.env.FEATURE_MANAGER_PORTAL;
+  }
+  get featureManagerLogin(): boolean {
+    return this.env.FEATURE_MANAGER_LOGIN;
   }
   get onboardingSessionTtlSeconds(): number {
     return this.env.ONBOARDING_SESSION_TTL_SECONDS;

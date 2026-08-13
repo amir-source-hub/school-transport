@@ -4,7 +4,13 @@ export interface AuthTokens {
 }
 
 export interface LoginResult {
-  user: { id: string; username: string; phoneNumber: string; role: string };
+  user: {
+    id: string;
+    username: string;
+    phoneNumber: string;
+    role: string;
+    mustChangeCredentials?: boolean;
+  };
   accessToken: string;
   refreshToken: string;
 }

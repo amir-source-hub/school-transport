@@ -218,6 +218,13 @@
       "when": 1786723200000,
       "tag": "0030_school_hours_company_payment",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1786809600000,
+      "tag": "0031_school_manager_portal",
+      "breakpoints": true
     }
   ]
 }

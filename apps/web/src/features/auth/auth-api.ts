@@ -1,15 +1,21 @@
 import { apiRequest } from '@/lib/api-client';
 
-export type AuthRole = 'PARENT' | 'ADMIN';
+export type AuthRole = 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER';
 
-export type UiRoleIdentifier =
-  'STUDENT_PORTAL' | 'SCHOOL_MANAGER_COMING_SOON' | 'DRIVER_COMING_SOON';
+export const PORTAL_PATH_BY_ROLE: Record<AuthRole, string> = {
+  PARENT: '/student/dashboard',
+  ADMIN: '/admin/dashboard',
+  SCHOOL_MANAGER: '/manager/dashboard',
+};
+
+export type UiRoleIdentifier = 'STUDENT_PORTAL' | 'SCHOOL_MANAGER' | 'DRIVER_COMING_SOON';
 
 type AuthUser = {
   id: string;
   username: string;
   phoneNumber: string;
   role: AuthRole;
+  mustChangeCredentials?: boolean;
 };
 
 type LoginResponse = {
@@ -83,6 +89,14 @@ export function verifyAdminOtp(challengeId: string, code: string, rememberMe = f
 
 export function loginAdmin(username: string, password: string, rememberMe = false) {
   return apiRequest<LoginResponse>('/auth/admin/login', {
+    method: 'POST',
+    body: { username, password, rememberMe },
+    timeoutMs: 10_000,
+  });
+}
+
+export function loginManager(username: string, password: string, rememberMe = false) {
+  return apiRequest<LoginResponse>('/auth/manager/login', {
     method: 'POST',
     body: { username, password, rememberMe },
     timeoutMs: 10_000,
