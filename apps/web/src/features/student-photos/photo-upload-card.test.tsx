@@ -176,6 +176,46 @@ describe('PhotoUploadCard', () => {
     expect(completePhotoUpload).not.toHaveBeenCalled();
   });
 
+  it('reuses the same authorization when an uncertain direct upload is retried', async () => {
+    authorizePhotoUpload.mockResolvedValue({
+      uploadId: 'upload-retry',
+      objectKey: 'key',
+      uploadUrl: 'https://s3.example/put-url',
+      expiresInSeconds: 300,
+      acceptedFormats: ['image/png'],
+      maxBytes: 5 * 1024 * 1024,
+      status: 'AUTHORIZED',
+    });
+    putPhotoObject
+      .mockRejectedValueOnce(new TypeError('DIRECT_UPLOAD_NETWORK'))
+      .mockResolvedValueOnce(undefined);
+    completePhotoUpload.mockResolvedValue(
+      upload({ uploadId: 'upload-retry', status: 'VALIDATING' }),
+    );
+    getMyPhotoUploads.mockResolvedValue([
+      upload({ uploadId: 'upload-retry', status: 'VALIDATING' }),
+    ]);
+
+    const user = userEvent.setup();
+    render(<PhotoUploadCard studentId="student-1" initialItems={[]} />);
+    await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile());
+
+    await user.click(screen.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(/دوباره تلاش کنید/);
+    await user.click(screen.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }));
+
+    await waitFor(() =>
+      expect(completePhotoUpload).toHaveBeenCalledWith(
+        'upload-retry',
+        'panel',
+        undefined,
+        expect.any(AbortSignal),
+      ),
+    );
+    expect(authorizePhotoUpload).toHaveBeenCalledTimes(1);
+    expect(putPhotoObject).toHaveBeenCalledTimes(2);
+  });
+
   it('removes a local selection before upload', async () => {
     const user = userEvent.setup();
     render(<PhotoUploadCard studentId="student-1" initialItems={[]} />);

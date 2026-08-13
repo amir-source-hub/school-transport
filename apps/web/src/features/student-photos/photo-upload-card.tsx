@@ -69,6 +69,15 @@ export function PhotoUploadCard({
   }>();
   const [progress, setProgress] = useState(0);
   const abortRef = useRef<AbortController | undefined>(undefined);
+  const authorizationRef = useRef<
+    | {
+        uploadId: string;
+        uploadUrl: string;
+        expiresAt: number;
+        file: File;
+      }
+    | undefined
+  >(undefined);
   const hasCompletedUpload = items.some((item) =>
     ['PENDING_REVIEW', 'APPROVED', 'UPLOADED', 'VALIDATING'].includes(item.status),
   );
@@ -97,12 +106,14 @@ export function PhotoUploadCard({
 
     if (selected) URL.revokeObjectURL(selected.previewUrl);
     setSelected({ file, previewUrl: URL.createObjectURL(file), mime: file.type });
+    authorizationRef.current = undefined;
     setProgress(0);
   }
 
   function removeSelection() {
     if (selected) URL.revokeObjectURL(selected.previewUrl);
     setSelected(undefined);
+    authorizationRef.current = undefined;
     setProgress(0);
     setMessage(undefined);
   }
@@ -116,14 +127,24 @@ export function PhotoUploadCard({
     setProgress(0);
     setMessage(undefined);
     try {
-      const authorizationInput = {
-        studentId,
-        declaredMime: selected.mime,
-        declaredSize: file.size,
-      };
-      const authorization = familyId
-        ? await authorizePhotoUpload(authorizationInput, mode, familyId, controller.signal)
-        : await authorizePhotoUpload(authorizationInput, mode, undefined, controller.signal);
+      let authorization = authorizationRef.current;
+      if (!authorization || authorization.file !== file || authorization.expiresAt <= Date.now()) {
+        const authorizationInput = {
+          studentId,
+          declaredMime: selected.mime,
+          declaredSize: file.size,
+        };
+        const created = familyId
+          ? await authorizePhotoUpload(authorizationInput, mode, familyId, controller.signal)
+          : await authorizePhotoUpload(authorizationInput, mode, undefined, controller.signal);
+        authorization = {
+          uploadId: created.uploadId,
+          uploadUrl: created.uploadUrl,
+          expiresAt: Date.now() + created.expiresInSeconds * 1000,
+          file,
+        };
+        authorizationRef.current = authorization;
+      }
       try {
         await putPhotoObject(authorization.uploadUrl, file, {
           signal: controller.signal,

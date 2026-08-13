@@ -146,7 +146,11 @@ export class StudentPhotosService {
     if (upload.status === 'EXPIRED') {
       throw new AppError('PHOTO_UPLOAD_EXPIRED', 'زمان بارگذاری عکس به پایان رسیده است.', 410);
     }
-    if (upload.status === 'PENDING_REVIEW' || upload.status === 'APPROVED') {
+    if (
+      upload.status === 'VALIDATING' ||
+      upload.status === 'PENDING_REVIEW' ||
+      upload.status === 'APPROVED'
+    ) {
       return this.toOwnerView(upload);
     }
     assertStudentPhotoTransition(upload.status as StudentPhotoStatus, 'UPLOADED');
@@ -246,14 +250,26 @@ export class StudentPhotosService {
         .returning();
       if (!updated) throw new Error('Photo processing claim was lost.');
     } catch {
-      await Promise.all([
-        this.storage.deleteObject(canonicalKey).catch(() => undefined),
-        this.storage.deleteObject(upload.rawKey).catch(() => undefined),
-      ]);
-      await this.markFailed(upload.id, 'PERSISTENCE_FAILED', ip).catch(() => undefined);
+      // A client retry can overlap the original completion request after the direct PUT
+      // reached storage. Never destroy the shared raw object or fail the row merely because
+      // another request won the optimistic update. Remove only this request's unused output
+      // and return the authoritative state so completion is idempotent.
+      await this.storage.deleteObject(canonicalKey).catch(() => undefined);
+      const [current] = await this.db.db
+        .select()
+        .from(studentPhotoUploads)
+        .where(eq(studentPhotoUploads.id, upload.id))
+        .limit(1);
+      if (
+        current &&
+        current.accountUserId === userId &&
+        ['VALIDATING', 'PENDING_REVIEW', 'APPROVED'].includes(current.status)
+      ) {
+        return this.toOwnerView(current);
+      }
       throw new ConflictError(
         'PHOTO_PROCESSING_CONFLICT',
-        'وضعیت عکس هم‌زمان تغییر کرد. بارگذاری جدیدی انجام دهید.',
+        'وضعیت عکس تغییر کرده است. وضعیت فعلی را دوباره دریافت کنید.',
       );
     }
     await this.storage.deleteObject(upload.rawKey).catch(() => undefined);

@@ -326,7 +326,7 @@ describe('StudentPhotosService completeUpload', () => {
     expect(store.deleteObject).toHaveBeenCalledWith('student-photos/raw/raw-1.jpg');
   });
 
-  it('removes canonical and raw objects when final persistence loses the optimistic claim', async () => {
+  it('returns the authoritative state and preserves raw data when a retry loses the optimistic claim', async () => {
     const png = await sharp({
       create: { width: 1200, height: 1600, channels: 3, background: '#336699' },
     })
@@ -338,7 +338,10 @@ describe('StudentPhotosService completeUpload', () => {
     });
     const db = {
       db: {
-        select: vi.fn(() => selectLimit([baseRow({ declaredSize: png.length })])),
+        select: vi
+          .fn()
+          .mockReturnValueOnce(selectLimit([baseRow({ declaredSize: png.length })]))
+          .mockReturnValueOnce(selectLimit([baseRow({ status: 'VALIDATING' })])),
         update: vi
           .fn()
           .mockReturnValueOnce(updateSimple())
@@ -348,13 +351,27 @@ describe('StudentPhotosService completeUpload', () => {
     } as unknown as DatabaseService;
     const service = new StudentPhotosService(db, config(), notifications(), store, audit());
 
-    await expect(service.completeUpload('user-1', 'upload-1')).rejects.toMatchObject({
-      code: 'PHOTO_PROCESSING_CONFLICT',
+    await expect(service.completeUpload('user-1', 'upload-1')).resolves.toMatchObject({
+      status: 'VALIDATING',
     });
-    expect(store.deleteObject).toHaveBeenCalledWith('student-photos/raw/raw-1.jpg');
+    expect(store.deleteObject).not.toHaveBeenCalledWith('student-photos/raw/raw-1.jpg');
     expect(store.deleteObject).toHaveBeenCalledWith(
       expect.stringMatching(/^student-photos\/canonical\/.+\.jpg$/),
     );
+  });
+
+  it('makes a completion retry idempotent while the original request is validating', async () => {
+    const validating = baseRow({ status: 'VALIDATING' });
+    const db = {
+      db: { select: vi.fn(() => selectLimit([validating])), update: vi.fn() },
+    } as unknown as DatabaseService;
+    const store = storage();
+    const service = new StudentPhotosService(db, config(), notifications(), store, audit());
+
+    await expect(service.completeUpload('user-1', 'upload-1')).resolves.toMatchObject({
+      status: 'VALIDATING',
+    });
+    expect(store.headObject).not.toHaveBeenCalled();
   });
 
   it('marks a corrupt image as FAILED and removes the raw object', async () => {
