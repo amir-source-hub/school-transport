@@ -50,6 +50,7 @@ export type EnrollmentDefaults = {
     lastName: string;
     nationalId: string;
     relationshipType: 'FATHER' | 'MOTHER' | 'OTHER';
+    relationshipDescription?: string;
   };
 };
 
@@ -114,15 +115,15 @@ const emptyForm: EnrollmentFormState = {
   fatherFirst: '',
   fatherLast: '',
   fatherNationalId: '',
-  fatherPhone: '',
+  fatherPhone: '09',
   motherFirst: '',
   motherLast: '',
   motherNationalId: '',
-  motherPhone: '',
+  motherPhone: '09',
   emergencyFirst: '',
   emergencyLast: '',
   emergencyRelationship: '',
-  emergencyPhone: '',
+  emergencyPhone: '09',
   addressTitle: 'منزل',
   province: 'تهران',
   city: 'تهران',
@@ -174,20 +175,20 @@ export function createEnrollmentFormState({
     guardianLast: defaults.guardian?.lastName ?? '',
     guardianNationalId: defaults.guardian?.nationalId ?? '',
     guardianRelationshipType: defaults.guardian?.relationshipType ?? '',
-    guardianRelationshipDescription: '',
+    guardianRelationshipDescription: defaults.guardian?.relationshipDescription ?? '',
     guardianPhone: guardianPhone ?? '',
     fatherFirst: savedParents.father?.firstName ?? '',
     fatherLast: savedParents.father?.lastName ?? '',
     fatherNationalId: savedParents.father?.nationalId ?? '',
-    fatherPhone: savedParents.father?.phoneNumber ?? '',
+    fatherPhone: savedParents.father?.phoneNumber ?? '09',
     motherFirst: savedParents.mother?.firstName ?? '',
     motherLast: savedParents.mother?.lastName ?? '',
     motherNationalId: savedParents.mother?.nationalId ?? '',
-    motherPhone: savedParents.mother?.phoneNumber ?? '',
+    motherPhone: savedParents.mother?.phoneNumber ?? '09',
     emergencyFirst: defaults.emergencyContact?.firstName ?? '',
     emergencyLast: defaults.emergencyContact?.lastName ?? '',
     emergencyRelationship: defaults.emergencyContact?.relationship ?? '',
-    emergencyPhone: defaults.emergencyContact?.phoneNumber ?? '',
+    emergencyPhone: defaults.emergencyContact?.phoneNumber ?? '09',
     addressTitle: defaults.address?.title ?? emptyForm.addressTitle,
     province: defaults.address?.province ?? emptyForm.province,
     city: defaults.address?.city ?? emptyForm.city,

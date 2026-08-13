@@ -31,6 +31,8 @@ export class SchoolsService {
         district: schools.district,
         address: schools.address,
         phoneNumber: schools.phoneNumber,
+        openingTime: schools.openingTime,
+        closingTime: schools.closingTime,
         educationOptions: schools.educationOptions,
       })
       .from(schools)
@@ -57,6 +59,8 @@ export class SchoolsService {
         district: schools.district,
         address: schools.address,
         phoneNumber: schools.phoneNumber,
+        openingTime: schools.openingTime,
+        closingTime: schools.closingTime,
         educationOptions: schools.educationOptions,
       })
       .from(schools)
@@ -77,6 +81,8 @@ export class SchoolsService {
     phoneNumber?: string;
     managerName?: string;
     managerPhone?: string;
+    openingTime: string;
+    closingTime: string;
     educationOptions?: SchoolEducationOption[];
   }) {
     const id = generateId();
@@ -105,6 +111,8 @@ export class SchoolsService {
       phoneNumber: string;
       managerName: string;
       managerPhone: string;
+      openingTime: string;
+      closingTime: string;
       educationOptions: SchoolEducationOption[];
       isActive: boolean;
     }>,

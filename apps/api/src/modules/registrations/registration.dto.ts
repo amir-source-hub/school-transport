@@ -19,16 +19,20 @@ import { REGISTRATION_STATUS_GROUP_VALUES } from './registration-status-groups';
 
 const digits = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? normalizeIranianDigits(value).trim() : value;
+const persianOnly = /^[^A-Za-z]*$/;
+const persianOnlyMessage = 'فقط حروف فارسی مجاز است.';
 
 class IdentityInputDto {
   @IsString({ message: 'نام باید متن باشد.' })
   @Length(1, 100, { message: 'نام باید بین ۱ تا ۱۰۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
   firstName!: string;
   @IsString({ message: 'نام خانوادگی باید متن باشد.' })
   @Length(1, 100, { message: 'نام خانوادگی باید بین ۱ تا ۱۰۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
   lastName!: string;
   @Transform(digits)
-  @Matches(/^\d{10}$/, { message: 'کد ملی باید ۱۰ رقم باشد.' })
+  @Matches(/^\d{1,10}$/, { message: 'کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.' })
   nationalId!: string;
 }
 
@@ -59,18 +63,22 @@ export class GuardianInputDto extends IdentityInputDto {
   @ValidateIf((o: GuardianInputDto) => o.relationshipType === 'OTHER')
   @IsString({ message: 'شرح نسبت را وارد کنید.' })
   @Length(1, 100, { message: 'شرح نسبت باید بین ۱ تا ۱۰۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
   relationshipDescription?: string;
 }
 
 export class EmergencyContactInputDto {
   @IsString({ message: 'نام باید متن باشد.' })
   @Length(1, 100, { message: 'نام باید بین ۱ تا ۱۰۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
   firstName!: string;
   @IsString({ message: 'نام خانوادگی باید متن باشد.' })
   @Length(1, 100, { message: 'نام خانوادگی باید بین ۱ تا ۱۰۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
   lastName!: string;
   @IsString({ message: 'نسبت باید متن باشد.' })
   @Length(1, 50, { message: 'نسبت باید بین ۱ تا ۵۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
   relationship!: string;
   @Transform(digits)
   @Matches(/^09\d{9}$/, { message: 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.' })
@@ -80,15 +88,19 @@ export class EmergencyContactInputDto {
 export class AddressInputDto {
   @IsString({ message: 'عنوان نشانی باید متن باشد.' })
   @Length(1, 100, { message: 'عنوان نشانی باید بین ۱ تا ۱۰۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
   title!: string;
   @IsString({ message: 'استان باید متن باشد.' })
   @Length(1, 100, { message: 'استان باید بین ۱ تا ۱۰۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
   province!: string;
   @IsString({ message: 'شهر باید متن باشد.' })
   @Length(1, 100, { message: 'شهر باید بین ۱ تا ۱۰۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
   city!: string;
   @IsString({ message: 'نشانی کامل باید متن باشد.' })
   @Length(1, 500, { message: 'نشانی کامل باید بین ۱ تا ۵۰۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
   streetAddress!: string;
   @Transform(digits)
   @Matches(/^\d{10}$/, { message: 'کد پستی باید ۱۰ رقم باشد.' })
@@ -123,6 +135,7 @@ export class ServiceInputDto {
   @IsOptional()
   @IsString({ message: 'توضیحات والد باید متن باشد.' })
   @Length(1, 1000, { message: 'توضیحات والد باید حداکثر ۱۰۰۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
   parentNotes?: string;
 }
 

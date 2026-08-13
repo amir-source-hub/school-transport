@@ -17,6 +17,11 @@ import {
 } from './payments-api';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { ApiClientError } from '@/lib/api-client';
+import { DIRECT_UPLOAD_RETRY_MESSAGE, putFileDirectly } from '@/lib/direct-object-upload';
+
+const receiptDraftKey = (mode: string, scheduleItemId: string) =>
+  `offline-receipt-draft:${mode}:${scheduleItemId}`;
 
 export function OfflinePaymentForm({
   items = [],
@@ -36,7 +41,7 @@ export function OfflinePaymentForm({
   const [receipt, setReceipt] = useState<File>();
   const [previewUrl, setPreviewUrl] = useState<string>();
   const [progress, setProgress] = useState(0);
-  const [uploadRequest, setUploadRequest] = useState<XMLHttpRequest>();
+  const uploadAbort = useRef<AbortController | undefined>(undefined);
   const idempotencyKey = useRef(crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -60,7 +65,8 @@ export function OfflinePaymentForm({
   const disabled = items.length === 0 || !destination;
   return (
     <form
-      className="space-y-5"
+      noValidate
+      className="space-y-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_18px_50px_-36px_rgba(15,23,42,.45)] sm:p-6"
       onSubmit={async (event) => {
         event.preventDefault();
         setSubmitted(false);
@@ -77,6 +83,10 @@ export function OfflinePaymentForm({
           setError('شماره پیگیری یا مرجع پرداخت را وارد کنید.');
           return;
         }
+        if (/[A-Za-z]/.test(description) || /[A-Za-z]/.test(payerName)) {
+          setError('در فیلدهای متنی فقط حروف فارسی مجاز است.');
+          return;
+        }
         if (sourceCardLastFour && !/^\d{4}$/.test(sourceCardLastFour)) {
           setError('چهار رقم آخر کارت مبدأ باید دقیقاً ۴ رقم باشد.');
           return;
@@ -87,35 +97,32 @@ export function OfflinePaymentForm({
         }
         setPending(true);
         try {
-          const submissionId = await submitOfflinePayment(
-            scheduleItemId,
-            {
-              paidAt,
-              referenceNumber: referenceNumber.trim(),
-              description: description || undefined,
-              payerName: payerName || undefined,
-              sourceCardLastFour: sourceCardLastFour || undefined,
-            },
-            mode,
-            idempotencyKey.current,
-          );
+          const storageKey = receiptDraftKey(mode, scheduleItemId);
+          const savedSubmissionId = window.sessionStorage.getItem(storageKey);
+          const submissionId =
+            savedSubmissionId ??
+            (await submitOfflinePayment(
+              scheduleItemId,
+              {
+                paidAt,
+                referenceNumber: referenceNumber.trim(),
+                description: description || undefined,
+                payerName: payerName || undefined,
+                sourceCardLastFour: sourceCardLastFour || undefined,
+              },
+              mode,
+              idempotencyKey.current,
+            ));
+          window.sessionStorage.setItem(storageKey, submissionId);
           const uploadUrl = await authorizeReceiptUpload(submissionId, receipt, mode);
-          await new Promise<void>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            setUploadRequest(xhr);
-            xhr.open('PUT', uploadUrl);
-            xhr.setRequestHeader('Content-Type', receipt.type);
-            xhr.upload.onprogress = (event) =>
-              event.lengthComputable && setProgress(Math.round((event.loaded / event.total) * 100));
-            xhr.onload = () =>
-              xhr.status >= 200 && xhr.status < 300
-                ? resolve()
-                : reject(new Error('بارگذاری رسید ناموفق بود.'));
-            xhr.onerror = () => reject(new Error('ارتباط با ذخیره‌گاه رسید قطع شد.'));
-            xhr.onabort = () => reject(new Error('بارگذاری رسید لغو شد.'));
-            xhr.send(receipt);
+          const controller = new AbortController();
+          uploadAbort.current = controller;
+          await putFileDirectly(uploadUrl, receipt, {
+            signal: controller.signal,
+            onProgress: (percent) => setProgress(percent ?? 0),
           });
           await completeReceiptUpload(submissionId, mode);
+          window.sessionStorage.removeItem(storageKey);
           setSubmitted(true);
           setScheduleItemId('');
           setPaidAt('');
@@ -126,47 +133,64 @@ export function OfflinePaymentForm({
           setReceipt(undefined);
           setPreviewUrl(undefined);
           setProgress(0);
-          setUploadRequest(undefined);
+          uploadAbort.current = undefined;
           idempotencyKey.current = crypto.randomUUID();
           setFormVersion((current) => current + 1);
           router.refresh();
         } catch (caught) {
-          setError(getApiErrorFeedback(caught).message);
+          if (caught instanceof ApiClientError && caught.code === 'RECEIPT_NOT_DRAFT') {
+            setSubmitted(true);
+            setReceipt(undefined);
+            setPreviewUrl(undefined);
+            setProgress(0);
+            router.refresh();
+            return;
+          }
+          const feedback = getApiErrorFeedback(caught);
+          setError(feedback.canRetry ? DIRECT_UPLOAD_RETRY_MESSAGE : feedback.message);
         } finally {
           setPending(false);
         }
       }}
     >
-      <div className="rounded-xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-l from-primary/15 via-sky-50 to-amber-50 p-5 text-sm leading-7 text-slate-700 shadow-sm">
         اگر مبلغ را خارج از درگاه سامانه، مانند کارت‌به‌کارت یا واریز بانکی، پرداخت کرده‌اید؛ قسط،
         تاریخ شمسی و شماره پیگیری بانکی را ثبت کنید. پرداخت پس از تأیید مدیر «پرداخت‌شده» می‌شود.
       </div>
       {destination && (
-        <dl className="grid gap-3 rounded-xl border border-border bg-white p-4 text-sm sm:grid-cols-2">
-          <div>
+        <dl className="grid gap-3 rounded-3xl border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-amber-50 p-4 text-sm shadow-[0_18px_45px_-32px_rgba(2,132,199,.6)] sm:grid-cols-2 sm:p-5">
+          <div className="rounded-2xl border border-white bg-white/80 p-3 shadow-sm">
             <dt className="text-muted">صاحب حساب</dt>
             <dd className="font-bold">{destination.accountOwner}</dd>
           </div>
-          <div>
+          <div className="rounded-2xl border border-white bg-white/80 p-3 shadow-sm">
             <dt className="text-muted">بانک</dt>
             <dd className="font-bold">{destination.bankName}</dd>
           </div>
-          <div>
+          <div className="rounded-2xl border border-white bg-white/80 p-3 shadow-sm">
             <dt className="text-muted">شماره کارت</dt>
             <dd className="font-bold" dir="ltr">
               {destination.cardNumber}
             </dd>
           </div>
           {destination.iban && (
-            <div>
+            <div className="rounded-2xl border border-white bg-white/80 p-3 shadow-sm">
               <dt className="text-muted">شبا</dt>
               <dd className="font-bold" dir="ltr">
                 {destination.iban}
               </dd>
             </div>
           )}
-          <div className="sm:col-span-2">
-            <dt className="text-muted">راهنما</dt>
+          {destination.accountNumber && (
+            <div className="rounded-2xl border border-white bg-white/80 p-3 shadow-sm">
+              <dt className="text-muted">شماره حساب</dt>
+              <dd className="font-bold" dir="ltr">
+                {destination.accountNumber}
+              </dd>
+            </div>
+          )}
+          <div className="rounded-2xl bg-navy p-4 text-white sm:col-span-2">
+            <dt className="text-sm font-black text-sun">راهنمای واریز</dt>
             <dd className="whitespace-pre-line">{destination.instructions}</dd>
           </div>
         </dl>
@@ -177,13 +201,20 @@ export function OfflinePaymentForm({
           دوباره قابل انتخاب نیستند.
         </div>
       )}
-      <Select
-        value={scheduleItemId}
-        onValueChange={setScheduleItemId}
-        options={items.map((item) => ({ value: item.id, label: item.label }))}
-        placeholder="قسط را انتخاب کنید"
-        disabled={disabled}
-      />
+      <label className="block rounded-2xl bg-slate-50 p-4 text-sm font-bold">
+        قسط موردنظر
+        <Select
+          className="mt-2 bg-white"
+          value={scheduleItemId}
+          onValueChange={(value) => {
+            setScheduleItemId(value);
+            setSubmitted(false);
+          }}
+          options={items.map((item) => ({ value: item.id, label: item.label }))}
+          placeholder="قسط را انتخاب کنید"
+          disabled={disabled}
+        />
+      </label>
       <label className="text-sm font-bold">
         تاریخ پرداخت (شمسی)
         <div className="mt-2">
@@ -193,6 +224,7 @@ export function OfflinePaymentForm({
             disabled={disabled}
             value={paidAt}
             onChange={setPaidAt}
+            maxDate={new Date().toISOString().slice(0, 10)}
           />
         </div>
       </label>
@@ -203,9 +235,16 @@ export function OfflinePaymentForm({
           required
           className="mt-2"
           dir="ltr"
-          placeholder="مثلاً 123456789"
+          placeholder="مثلاً ۱۲۳۴۵۶۷۸۹"
           value={referenceNumber}
-          onChange={(event) => setReferenceNumber(event.target.value)}
+          onChange={(event) =>
+            setReferenceNumber(
+              event.target.value
+                .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+                .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+                .replace(/\D/g, ''),
+            )
+          }
         />
       </label>
       <label className="text-sm font-bold">
@@ -215,7 +254,7 @@ export function OfflinePaymentForm({
           className="mt-2"
           placeholder="اطلاعات تکمیلی پرداخت"
           value={description}
-          onChange={(event) => setDescription(event.target.value)}
+          onChange={(event) => setDescription(event.target.value.replace(/[A-Za-z]/g, ''))}
         />
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -225,7 +264,7 @@ export function OfflinePaymentForm({
             disabled={disabled}
             className="mt-2"
             value={payerName}
-            onChange={(event) => setPayerName(event.target.value)}
+            onChange={(event) => setPayerName(event.target.value.replace(/[A-Za-z]/g, ''))}
           />
         </label>
         <label className="text-sm font-bold">
@@ -237,30 +276,39 @@ export function OfflinePaymentForm({
             inputMode="numeric"
             maxLength={4}
             value={sourceCardLastFour}
-            onChange={(event) => setSourceCardLastFour(event.target.value.replace(/\D/g, ''))}
+            onChange={(event) =>
+              setSourceCardLastFour(
+                event.target.value
+                  .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+                  .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+                  .replace(/\D/g, ''),
+              )
+            }
           />
         </label>
       </div>
-      <label className="block text-sm font-bold">
-        تصویر رسید (JPEG یا PNG)
-        <Input
-          type="file"
-          accept="image/jpeg,image/png"
-          required
-          disabled={disabled}
-          className="mt-2"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (!file) return;
-            if (previewUrl) URL.revokeObjectURL(previewUrl);
-            setReceipt(file);
-            setPreviewUrl(URL.createObjectURL(file));
-            setProgress(0);
-            setError(undefined);
-          }}
-        />
-      </label>
-      {previewUrl && (
+      {!submitted && (
+        <label className="block rounded-2xl border-2 border-dashed border-primary/25 bg-primary/[0.025] p-4 text-sm font-bold">
+          تصویر رسید (JPEG یا PNG)
+          <Input
+            type="file"
+            accept="image/jpeg,image/png"
+            required
+            disabled={disabled}
+            className="mt-2"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              if (previewUrl) URL.revokeObjectURL(previewUrl);
+              setReceipt(file);
+              setPreviewUrl(URL.createObjectURL(file));
+              setProgress(0);
+              setError(undefined);
+            }}
+          />
+        </label>
+      )}
+      {!submitted && previewUrl && (
         <div className="rounded-xl border border-border p-3">
           <Image
             src={previewUrl}
@@ -295,22 +343,34 @@ export function OfflinePaymentForm({
           <p className="mt-1 text-xs text-muted">
             بارگذاری رسید: {progress.toLocaleString('fa-IR')}٪
           </p>
-          {uploadRequest && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => uploadRequest.abort()}>
-              لغو بارگذاری
-            </Button>
-          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => uploadAbort.current?.abort()}
+          >
+            لغو بارگذاری
+          </Button>
         </div>
       )}
       {submitted && (
-        <Alert title="پرداخت برای بررسی مدیریت ارسال شد">
-          پس از تأیید مدیر، وضعیت قسط به‌روزرسانی می‌شود.
+        <Alert title="رسید با موفقیت ارسال شد">
+          تصویر رسید در صف بررسی مدیریت است. می‌توانید از فهرست بالا پرداخت دیگری را انتخاب و ثبت
+          کنید؛ نتیجه این رسید در اعلان‌ها و سوابق پرداخت نمایش داده می‌شود.
         </Alert>
       )}
       {error && <p className="text-sm text-danger">{error}</p>}
-      <Button type="submit" loading={pending} disabled={disabled || pending}>
-        ارسال رسید برای بررسی مدیر
-      </Button>
+      {!submitted && (
+        <Button
+          className="w-full sm:w-auto"
+          size="lg"
+          type="submit"
+          loading={pending}
+          disabled={disabled || pending}
+        >
+          ارسال رسید برای بررسی مدیر
+        </Button>
+      )}
     </form>
   );
 }

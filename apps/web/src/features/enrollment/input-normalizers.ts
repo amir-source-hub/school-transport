@@ -21,3 +21,16 @@ export function mobileToNineDigits(value: string): string {
   const digits = normalizePhoneNumber(value);
   return digits.length === 11 && digits.startsWith('09') ? digits.slice(2) : '';
 }
+
+export function normalizeMobileInput(value: string): string {
+  let digits = normalizePhoneNumber(value);
+  while (digits.startsWith('0909')) digits = `09${digits.slice(4)}`;
+  if (!digits) return '09';
+  return digits.startsWith('09') ? digits.slice(0, 11) : `09${digits}`.slice(0, 11);
+}
+
+export function placeCaretAfterPrefix(input: HTMLInputElement, prefixLength: number): void {
+  if (input.value.length <= prefixLength) {
+    requestAnimationFrame(() => input.setSelectionRange(prefixLength, prefixLength));
+  }
+}

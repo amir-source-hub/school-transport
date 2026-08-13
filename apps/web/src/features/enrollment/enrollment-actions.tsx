@@ -28,8 +28,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { getOnboardingState } from '@/features/auth/onboarding-session';
-import { isValidIranianNationalId, normalizeDigits } from './national-id';
-import { composeMobileNumber } from './input-normalizers';
+import { isValidIranianNationalId, nationalIdError, normalizeDigits } from './national-id';
+import {
+  composeMobileNumber,
+  normalizeMobileInput,
+  placeCaretAfterPrefix,
+} from './input-normalizers';
 import {
   acceptEnrollmentPrice,
   acceptGuidedContract,
@@ -48,10 +52,15 @@ import {
 } from './enrollment-form-model';
 import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-schema';
 import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
-import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
-import { getOfflineSubmissions } from '@/features/finance/payments-api';
+import { OfflinePaymentDestinationCard } from '@/features/finance/offline-payment-destination-card';
+import { ContractReview } from '@/features/finance/contract-review';
 import { updateNotificationConsent } from '@/features/notifications/notifications-api';
-import { clearEnrollmentDraft, loadEnrollmentDraft, saveEnrollmentDraft } from './enrollment-draft';
+import { clearEnrollmentDraft } from './enrollment-draft';
+import {
+  acceptAdminFamilyContract,
+  createAdminFamilyEnrollment,
+} from '@/features/admin-families/admin-families-api';
+import { RecordPaymentOnBehalfDialog } from '@/features/admin-payments/payment-actions';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const vehicleOptions = [
@@ -89,6 +98,7 @@ export function CreateEnrollmentForm({
   mode = 'panel',
   guardianPhone,
   capacityRemaining,
+  adminFamilyId,
 }: {
   schools: SchoolOption[];
   savedParents: SavedParents;
@@ -97,12 +107,15 @@ export function CreateEnrollmentForm({
   mode?: EnrollmentMode;
   guardianPhone?: string;
   capacityRemaining?: number;
+  adminFamilyId?: string;
 }) {
   const router = useRouter();
   const firstSchool = schools[0];
   const firstLevel = firstSchool?.educationOptions[0];
   const effectiveGuardianPhone =
     guardianPhone ?? (mode === 'onboarding' ? (getOnboardingState().phoneNumber ?? '') : '');
+  const onboardingGuardianNationalId =
+    mode === 'onboarding' ? (getOnboardingState().nationalId ?? '') : '';
   const createInitialForm = () =>
     createEnrollmentFormState({
       schools,
@@ -111,15 +124,18 @@ export function CreateEnrollmentForm({
       defaults,
       guardianPhone: effectiveGuardianPhone,
     });
+  const initialForm = createInitialForm();
+  if (onboardingGuardianNationalId) {
+    initialForm.guardianNationalId = onboardingGuardianNationalId;
+  }
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState(createInitialForm);
+  const [form, setForm] = useState(initialForm);
   const [result, setResult] = useState<GuidedEnrollmentResult>();
-  const [contractRead, setContractRead] = useState(false);
-  const [contractChecked, setContractChecked] = useState(false);
+  const [reviewedContractPages, setReviewedContractPages] = useState<number[]>([]);
   const [accepted, setAccepted] = useState(false);
   const [paid, setPaid] = useState(false);
   const [optionalInAppConsent, setOptionalInAppConsent] = useState(false);
-  const [optionalSmsConsent, setOptionalSmsConsent] = useState(false);
+  const [paymentInstructionsAccepted, setPaymentInstructionsAccepted] = useState(false);
   const [photoUploadId, setPhotoUploadId] = useState<string>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -127,32 +143,23 @@ export function CreateEnrollmentForm({
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const submissionLockRef = useRef(false);
-  const draftHydratedRef = useRef(false);
 
   useEffect(() => {
-    let active = true;
-    queueMicrotask(() => {
-      if (!active) return;
-      const draft = loadEnrollmentDraft(window.sessionStorage, mode);
-      if (draft) {
-        setForm((current) => ({ ...current, ...draft.values }));
-        setStep(draft.step);
-      }
-      draftHydratedRef.current = true;
-    });
-    return () => {
-      active = false;
-    };
+    clearEnrollmentDraft(window.sessionStorage, mode);
   }, [mode]);
 
   useEffect(() => {
-    if (!draftHydratedRef.current || result) return;
-    saveEnrollmentDraft(window.sessionStorage, mode, step, form);
-  }, [form, mode, result, step]);
-
-  useEffect(() => {
-    if (result) clearEnrollmentDraft(window.sessionStorage, mode);
-  }, [mode, result]);
+    if (mode !== 'onboarding') return;
+    let active = true;
+    finalizeOnboarding()
+      .then(() => {
+        if (active) router.replace('/student/dashboard');
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [mode, router]);
 
   useEffect(() => {
     stepHeadingRef.current?.focus();
@@ -177,8 +184,12 @@ export function CreateEnrollmentForm({
     'emergencyPhone',
   ];
   function sectionStarted(name: 'father' | 'mother' | 'emergency') {
-    const keys = name === 'father' ? fatherKeys : name === 'mother' ? motherKeys : emergencyKeys;
-    return keys.some((key) => String(form[key]).trim() !== '');
+    if (name === 'father') return form.guardianRelationshipType === 'MOTHER';
+    if (name === 'mother') return form.guardianRelationshipType === 'FATHER';
+    return emergencyKeys.some((key) => {
+      const value = String(form[key]).trim();
+      return value !== '' && !(key.toString().endsWith('Phone') && value === '09');
+    });
   }
   function sectionOf(key: keyof typeof form): 'father' | 'mother' | 'emergency' | null {
     if (fatherKeys.includes(key)) return 'father';
@@ -192,13 +203,29 @@ export function CreateEnrollmentForm({
     value: string | number | boolean,
   ): string | undefined {
     const text = String(value).trim();
+    const persianTextFields = new Set<keyof typeof form>([
+      'studentFirst',
+      'studentLast',
+      'guardianFirst',
+      'guardianLast',
+      'guardianRelationshipDescription',
+      'fatherFirst',
+      'fatherLast',
+      'motherFirst',
+      'motherLast',
+      'emergencyFirst',
+      'emergencyLast',
+      'emergencyRelationship',
+      'addressTitle',
+      'province',
+      'city',
+      'streetAddress',
+      'parentNotes',
+    ]);
     const requiredFields: (keyof typeof form)[] = [
       'studentFirst',
       'studentLast',
       'studentNationalId',
-      'guardianFirst',
-      'guardianLast',
-      'guardianNationalId',
       'guardianRelationshipType',
       'homePhone',
       'addressTitle',
@@ -207,9 +234,15 @@ export function CreateEnrollmentForm({
       'streetAddress',
       'postalCode',
     ];
+    requiredFields.push('guardianFirst', 'guardianLast', 'guardianNationalId');
+    if (form.guardianRelationshipType === 'FATHER') requiredFields.push(...motherKeys);
+    if (form.guardianRelationshipType === 'MOTHER') requiredFields.push(...fatherKeys);
     const section = sectionOf(key);
     if (section && !sectionStarted(section)) return undefined;
     if (requiredFields.includes(key) && !text) return 'پر کردن این فیلد اجباری است';
+    if (persianTextFields.has(key) && /[A-Za-z]/.test(text)) {
+      return 'فقط حروف فارسی مجاز است.';
+    }
     if (key === 'guardianRelationshipDescription') {
       if (form.guardianRelationshipType === 'OTHER' && !text) return 'شرح نسبت را وارد کنید.';
       return undefined;
@@ -231,9 +264,7 @@ export function CreateEnrollmentForm({
         key,
       )
     ) {
-      return isValidIranianNationalId(text)
-        ? undefined
-        : 'کد ملی نامعتبر است. فقط عدد و حداکثر ۲۰ رقم وارد کنید.';
+      return isValidIranianNationalId(text) ? undefined : nationalIdError;
     }
     if (['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)) {
       return /^09\d{9}$/.test(normalizeDigits(text))
@@ -247,7 +278,48 @@ export function CreateEnrollmentForm({
   }
 
   function set(key: keyof typeof form, value: string | number) {
-    setForm((current) => ({ ...current, [key]: value }));
+    let normalizedValue = value;
+    const persianOnlyKeys: (keyof typeof form)[] = [
+      'studentFirst',
+      'studentLast',
+      'guardianFirst',
+      'guardianLast',
+      'guardianRelationshipDescription',
+      'fatherFirst',
+      'fatherLast',
+      'motherFirst',
+      'motherLast',
+      'emergencyFirst',
+      'emergencyLast',
+      'emergencyRelationship',
+      'addressTitle',
+      'province',
+      'city',
+      'streetAddress',
+      'parentNotes',
+    ];
+    if (typeof value === 'string' && persianOnlyKeys.includes(key)) {
+      normalizedValue = value.replace(/[A-Za-z]/g, '');
+    }
+    if (
+      typeof value === 'string' &&
+      ['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)
+    ) {
+      normalizedValue = normalizeMobileInput(value);
+    }
+    if (
+      typeof value === 'string' &&
+      [
+        'studentNationalId',
+        'guardianNationalId',
+        'fatherNationalId',
+        'motherNationalId',
+        'postalCode',
+      ].includes(key)
+    ) {
+      normalizedValue = normalizeDigits(value).replace(/\D/g, '').slice(0, 10);
+    }
+    setForm((current) => ({ ...current, [key]: normalizedValue }));
     setFieldErrors((current) => ({ ...current, [key]: validateField(key, value) }));
   }
 
@@ -258,14 +330,14 @@ export function CreateEnrollmentForm({
             'studentFirst',
             'studentLast',
             'studentNationalId',
+            'guardianRelationshipType',
+            'guardianRelationshipDescription',
             'guardianFirst',
             'guardianLast',
             'guardianNationalId',
-            'guardianRelationshipType',
-            'guardianRelationshipDescription',
             'homePhone',
-            ...fatherKeys,
-            ...motherKeys,
+            ...(form.guardianRelationshipType === 'MOTHER' ? fatherKeys : []),
+            ...(form.guardianRelationshipType === 'FATHER' ? motherKeys : []),
             ...emergencyKeys,
           ]
         : currentStep === 2
@@ -380,15 +452,12 @@ export function CreateEnrollmentForm({
 
   function validateStep(currentStep: number): string | null {
     if (currentStep === 1) {
-      const requiredNames = [
-        form.studentFirst,
-        form.studentLast,
-        form.guardianFirst,
-        form.guardianLast,
-        form.guardianRelationshipType,
-      ];
+      const requiredNames = [form.studentFirst, form.studentLast, form.guardianRelationshipType];
+      requiredNames.push(form.guardianFirst, form.guardianLast);
       if (requiredNames.some((value) => !value.trim()))
         return 'تمام مشخصات فردی ضروری را تکمیل کنید.';
+      if (!form.existingStudentId && !photoUploadId)
+        return 'ارسال عکس دانش‌آموز برای ادامه ثبت‌نام الزامی است.';
     }
     const ids = [
       { key: 'کد ملی دانش‌آموز', value: form.studentNationalId },
@@ -397,7 +466,7 @@ export function CreateEnrollmentForm({
     if (currentStep === 1 || currentStep === 4) {
       for (const { key, value } of ids) {
         if (!isValidIranianNationalId(value)) {
-          return `${key} نامعتبر است. فقط عدد و حداکثر ۲۰ رقم وارد کنید.`;
+          return `${key} ${nationalIdError}`;
         }
       }
       if (
@@ -407,12 +476,14 @@ export function CreateEnrollmentForm({
         return 'شرح نسبت را وارد کنید.';
       }
       if (sectionStarted('father')) {
-        if (!isValidIranianNationalId(form.fatherNationalId)) return 'کد ملی پدر نامعتبر است.';
+        if (!isValidIranianNationalId(form.fatherNationalId))
+          return `کد ملی پدر ${nationalIdError}`;
         if (!/^09\d{9}$/.test(normalizeDigits(form.fatherPhone)))
           return 'شماره همراه پدر نامعتبر است.';
       }
       if (sectionStarted('mother')) {
-        if (!isValidIranianNationalId(form.motherNationalId)) return 'کد ملی مادر نامعتبر است.';
+        if (!isValidIranianNationalId(form.motherNationalId))
+          return `کد ملی مادر ${nationalIdError}`;
         if (!/^09\d{9}$/.test(normalizeDigits(form.motherPhone)))
           return 'شماره همراه مادر نامعتبر است.';
       }
@@ -447,29 +518,29 @@ export function CreateEnrollmentForm({
     setPending(true);
     setError(undefined);
     try {
-      const created = await createGuidedEnrollment(
-        {
-          studentPhotoUploadId: photoUploadId,
-          student: {
-            id: form.existingStudentId || undefined,
-            firstName: form.studentFirst,
-            lastName: form.studentLast,
-            nationalId: normalizeDigits(form.studentNationalId),
-            birthDate: form.birthDate || undefined,
-            gender: (form.gender || undefined) as StudentInput['gender'],
-            ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
-          },
-          guardian: {
-            firstName: form.guardianFirst,
-            lastName: form.guardianLast,
-            nationalId: normalizeDigits(form.guardianNationalId),
-            relationshipType: form.guardianRelationshipType as GuardianInput['relationshipType'],
-            relationshipDescription:
-              form.guardianRelationshipType === 'OTHER'
-                ? form.guardianRelationshipDescription || undefined
-                : undefined,
-          },
-          father: sectionStarted('father')
+      const enrollmentInput = {
+        studentPhotoUploadId: photoUploadId,
+        student: {
+          id: form.existingStudentId || undefined,
+          firstName: form.studentFirst,
+          lastName: form.studentLast,
+          nationalId: normalizeDigits(form.studentNationalId),
+          birthDate: form.birthDate || undefined,
+          gender: (form.gender || undefined) as StudentInput['gender'],
+          ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
+        },
+        guardian: {
+          firstName: form.guardianFirst,
+          lastName: form.guardianLast,
+          nationalId: normalizeDigits(form.guardianNationalId),
+          relationshipType: form.guardianRelationshipType as GuardianInput['relationshipType'],
+          relationshipDescription:
+            form.guardianRelationshipType === 'OTHER'
+              ? form.guardianRelationshipDescription || undefined
+              : undefined,
+        },
+        father:
+          form.guardianRelationshipType === 'MOTHER'
             ? {
                 firstName: form.fatherFirst,
                 lastName: form.fatherLast,
@@ -477,7 +548,8 @@ export function CreateEnrollmentForm({
                 phoneNumber: normalizeDigits(form.fatherPhone),
               }
             : null,
-          mother: sectionStarted('mother')
+        mother:
+          form.guardianRelationshipType === 'FATHER'
             ? {
                 firstName: form.motherFirst,
                 lastName: form.motherLast,
@@ -485,40 +557,84 @@ export function CreateEnrollmentForm({
                 phoneNumber: normalizeDigits(form.motherPhone),
               }
             : null,
-          emergencyContact: sectionStarted('emergency')
-            ? {
-                firstName: form.emergencyFirst,
-                lastName: form.emergencyLast,
-                relationship: form.emergencyRelationship,
-                phoneNumber: normalizeDigits(form.emergencyPhone),
-              }
-            : null,
-          homePhone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
-          address: {
-            title: form.addressTitle,
-            province: form.province,
-            city: form.city,
-            streetAddress: form.streetAddress,
-            postalCode: normalizeDigits(form.postalCode),
-            latitude: form.latitude,
-            longitude: form.longitude,
-          },
-          school: {
-            schoolId: form.schoolId,
-            educationLevel: form.educationLevel,
-            grade: form.grade,
-          },
-          service: {
-            serviceType: form.serviceType as ServiceInput['serviceType'],
-            paymentPlanType: form.paymentPlanType as ServiceInput['paymentPlanType'],
-            parentNotes: form.parentNotes || undefined,
-          },
+        emergencyContact: sectionStarted('emergency')
+          ? {
+              firstName: form.emergencyFirst,
+              lastName: form.emergencyLast,
+              relationship: form.emergencyRelationship,
+              phoneNumber: normalizeDigits(form.emergencyPhone),
+            }
+          : null,
+        homePhone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
+        address: {
+          title: form.addressTitle,
+          province: form.province,
+          city: form.city,
+          streetAddress: form.streetAddress,
+          postalCode: normalizeDigits(form.postalCode),
+          latitude: form.latitude,
+          longitude: form.longitude,
         },
-        mode,
-      );
+        school: {
+          schoolId: form.schoolId,
+          educationLevel: form.educationLevel,
+          grade: form.grade,
+        },
+        service: {
+          serviceType: form.serviceType as ServiceInput['serviceType'],
+          paymentPlanType: form.paymentPlanType as ServiceInput['paymentPlanType'],
+          parentNotes: form.parentNotes || undefined,
+        },
+      };
+      const created = adminFamilyId
+        ? (await createAdminFamilyEnrollment(adminFamilyId, enrollmentInput)).data
+        : await createGuidedEnrollment(enrollmentInput, mode);
       setResult(created);
     } catch (caught) {
-      setError(getApiErrorFeedback(caught).message);
+      const feedback = getApiErrorFeedback(caught);
+      const pathToField: Record<string, keyof typeof form> = {
+        'student.firstName': 'studentFirst',
+        'student.lastName': 'studentLast',
+        'student.nationalId': 'studentNationalId',
+        'student.birthDate': 'birthDate',
+        'student.phoneNumber': 'studentPhone',
+        'guardian.firstName': 'guardianFirst',
+        'guardian.lastName': 'guardianLast',
+        'guardian.nationalId': 'guardianNationalId',
+        'guardian.relationshipType': 'guardianRelationshipType',
+        'guardian.relationshipDescription': 'guardianRelationshipDescription',
+        'father.firstName': 'fatherFirst',
+        'father.lastName': 'fatherLast',
+        'father.nationalId': 'fatherNationalId',
+        'father.phoneNumber': 'fatherPhone',
+        'mother.firstName': 'motherFirst',
+        'mother.lastName': 'motherLast',
+        'mother.nationalId': 'motherNationalId',
+        'mother.phoneNumber': 'motherPhone',
+        'emergencyContact.firstName': 'emergencyFirst',
+        'emergencyContact.lastName': 'emergencyLast',
+        'emergencyContact.relationship': 'emergencyRelationship',
+        'emergencyContact.phoneNumber': 'emergencyPhone',
+        homePhone: 'homePhone',
+        'address.title': 'addressTitle',
+        'address.province': 'province',
+        'address.city': 'city',
+        'address.streetAddress': 'streetAddress',
+        'address.postalCode': 'postalCode',
+      };
+      const serverErrors = Object.entries(feedback.fieldErrors ?? {}).flatMap(
+        ([path, messages]) => {
+          const key = pathToField[path];
+          return key ? ([[key, messages[0]]] as const) : [];
+        },
+      );
+      if (serverErrors.length > 0) {
+        setFieldErrors((current) => ({ ...current, ...Object.fromEntries(serverErrors) }));
+        requestAnimationFrame(() =>
+          document.getElementById(`enrollment-${serverErrors[0][0]}`)?.focus(),
+        );
+      }
+      setError(feedback.message);
     } finally {
       submissionLockRef.current = false;
       setPending(false);
@@ -533,12 +649,7 @@ export function CreateEnrollmentForm({
       ? (['motherFirst', 'motherLast', 'motherNationalId', 'motherPhone'] as const)
       : []),
     ...(defaults.guardian
-      ? ([
-          'guardianFirst',
-          'guardianLast',
-          'guardianNationalId',
-          'guardianRelationshipType',
-        ] as const)
+      ? (['guardianFirst', 'guardianLast', 'guardianNationalId'] as const)
       : []),
   ]);
   if (form.existingStudentId) {
@@ -546,14 +657,20 @@ export function CreateEnrollmentForm({
     lockedParentFields.add('studentLast');
     lockedParentFields.add('studentNationalId');
   }
+  if (mode === 'onboarding' && onboardingGuardianNationalId) {
+    lockedParentFields.add('guardianNationalId');
+  }
   const optionalSectionKeys = new Set<keyof typeof form>([
     ...fatherKeys,
     ...motherKeys,
     ...emergencyKeys,
   ]);
   const field = (key: keyof typeof form, label: string, type = 'text') => (
-    <div>
-      <label htmlFor={`enrollment-${key}`} className="text-sm font-bold text-foreground">
+    <div className="group/field">
+      <label
+        htmlFor={`enrollment-${key}`}
+        className="text-sm font-extrabold text-slate-700 transition-colors group-focus-within/field:text-primary"
+      >
         {label}
       </label>
       <Input
@@ -563,6 +680,13 @@ export function CreateEnrollmentForm({
         value={String(form[key])}
         dir={['tel', 'number'].includes(type) ? 'ltr' : undefined}
         disabled={lockedParentFields.has(key)}
+        inputMode={type === 'tel' ? 'numeric' : undefined}
+        autoComplete={type === 'tel' ? 'off' : undefined}
+        onFocus={(event) => {
+          if (['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)) {
+            placeCaretAfterPrefix(event.currentTarget, 2);
+          }
+        }}
         onChange={(event) => set(key, event.target.value)}
         onBlur={(event) =>
           setFieldErrors((current) => ({
@@ -572,7 +696,7 @@ export function CreateEnrollmentForm({
         }
         aria-invalid={Boolean(fieldErrors[key])}
         aria-describedby={fieldErrors[key] ? `enrollment-${key}-error` : undefined}
-        className="mt-2 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
+        className={`mt-2 border-slate-200 bg-white shadow-sm hover:border-primary/40 focus:bg-primary/[0.02] disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted ${type === 'tel' ? 'text-left tabular-nums' : ''}`}
       />
       {fieldErrors[key] && (
         <p id={`enrollment-${key}-error`} className="mt-1 text-xs text-danger">
@@ -587,12 +711,18 @@ export function CreateEnrollmentForm({
     prefix: string,
     maxDigits: number,
   ) => (
-    <div>
-      <label htmlFor={`enrollment-${key}`} className="text-sm font-bold text-foreground">
+    <div className="group/field">
+      <label
+        htmlFor={`enrollment-${key}`}
+        className="text-sm font-extrabold text-slate-700 transition-colors group-focus-within/field:text-primary"
+      >
         {label}
       </label>
-      <div className="mt-2 flex items-center overflow-hidden rounded-lg border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
-        <span className="select-none border-r border-input bg-surface-muted px-3 py-2 text-sm font-bold text-muted ltr">
+      <div
+        dir="ltr"
+        className="mt-2 flex min-h-12 items-stretch overflow-hidden rounded-[var(--radius-control)] border border-slate-200 bg-white shadow-sm transition-[border-color,box-shadow,background-color] hover:border-primary/40 focus-within:border-primary focus-within:bg-primary/[0.02] focus-within:shadow-[var(--shadow-focus)]"
+      >
+        <span className="flex select-none items-center border-r border-slate-200 px-3.5 text-sm font-bold text-slate-500 ltr">
           {prefix}
         </span>
         <Input
@@ -625,7 +755,7 @@ export function CreateEnrollmentForm({
           }
           aria-invalid={Boolean(fieldErrors[key])}
           aria-describedby={fieldErrors[key] ? `enrollment-${key}-error` : undefined}
-          className="h-auto rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
+          className="min-h-0 flex-1 rounded-none border-0 bg-transparent px-3.5 !text-left tabular-nums shadow-none hover:border-0 focus:border-0 focus:shadow-none disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted"
         />
       </div>
       {fieldErrors[key] && (
@@ -753,15 +883,20 @@ export function CreateEnrollmentForm({
                 {field('studentLast', 'نام خانوادگی')}
                 {field('studentNationalId', 'کد ملی', 'tel')}
                 {prefixField('studentPhone', 'شماره همراه دانش‌آموز', '09', 9)}
-                <label className="text-sm font-bold">
-                  تاریخ تولد (شمسی)
+                <div className="text-sm font-bold">
+                  <span>تاریخ تولد (شمسی)</span>
                   <div className="mt-2">
                     <JalaliDateInput
+                      id="enrollment-birthDate"
                       value={form.birthDate}
                       onChange={(value) => set('birthDate', value)}
+                      required
+                      label="تاریخ تولد (شمسی)"
+                      minDate="1900-01-01"
+                      maxDate={new Date().toISOString().slice(0, 10)}
                     />
                   </div>
-                </label>
+                </div>
                 <label className="text-sm font-bold">
                   جنسیت
                   <Select
@@ -780,7 +915,8 @@ export function CreateEnrollmentForm({
               <PhotoUploadCard
                 studentId={form.existingStudentId || undefined}
                 initialItems={[]}
-                mode={mode}
+                mode={adminFamilyId ? 'admin' : mode}
+                familyId={adminFamilyId}
                 onUploadCompleted={(uploadId) => {
                   if (!form.existingStudentId) setPhotoUploadId(uploadId);
                 }}
@@ -794,19 +930,26 @@ export function CreateEnrollmentForm({
             <Section title="سرپرست">
               {defaults.guardian && (
                 <p className="mb-4 text-sm text-muted">
-                  اطلاعات سرپرست از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر نیست.
+                  مشخصات هویتی سرپرست از پروفایل خانواده خوانده شده است. نسبت سرپرست را می‌توانید
+                  برای این ثبت‌نام اصلاح کنید.
                 </p>
               )}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {field('guardianFirst', 'نام')}
-                {field('guardianLast', 'نام خانوادگی')}
-                {field('guardianNationalId', 'کد ملی', 'tel')}
                 <label className="text-sm font-bold">
                   نسبت
                   <Select
                     className="mt-2"
                     value={form.guardianRelationshipType}
-                    onValueChange={(value) => set('guardianRelationshipType', value)}
+                    onValueChange={(value) => {
+                      set('guardianRelationshipType', value);
+                      setFieldErrors((current) => ({
+                        ...current,
+                        guardianFirst: undefined,
+                        guardianLast: undefined,
+                        guardianNationalId: undefined,
+                        guardianRelationshipDescription: undefined,
+                      }));
+                    }}
                     disabled={lockedParentFields.has('guardianRelationshipType')}
                     options={[
                       { value: 'FATHER', label: 'پدر' },
@@ -815,6 +958,9 @@ export function CreateEnrollmentForm({
                     ]}
                   />
                 </label>
+                {field('guardianFirst', 'نام')}
+                {field('guardianLast', 'نام خانوادگی')}
+                {field('guardianNationalId', 'کد ملی', 'tel')}
                 {form.guardianRelationshipType === 'OTHER' && (
                   <div className="lg:col-span-2">
                     {field('guardianRelationshipDescription', 'شرح نسبت')}
@@ -834,7 +980,7 @@ export function CreateEnrollmentForm({
                     value={form.guardianPhone}
                     disabled
                     readOnly
-                    className="mt-2 cursor-not-allowed bg-surface-muted text-muted"
+                    className="mt-2 cursor-not-allowed bg-surface-muted text-left tabular-nums text-muted"
                   />
                   <p className="mt-1 text-xs text-muted">
                     شماره تأییدشده هنگام ورود به حساب؛ قابل تغییر نیست.
@@ -842,32 +988,38 @@ export function CreateEnrollmentForm({
                 </div>
               </div>
             </Section>
-            <Section title="اطلاعات پدر">
-              {savedParents.father && (
-                <p className="mb-4 text-sm text-muted">
-                  اطلاعات ذخیره‌شده پدر از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر نیست.
-                </p>
-              )}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {field('fatherFirst', 'نام')}
-                {field('fatherLast', 'نام خانوادگی')}
-                {field('fatherNationalId', 'کد ملی', 'tel')}
-                {field('fatherPhone', 'شماره همراه', 'tel')}
-              </div>
-            </Section>
-            <Section title="اطلاعات مادر">
-              {savedParents.mother && (
-                <p className="mb-4 text-sm text-muted">
-                  اطلاعات ذخیره‌شده مادر از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر نیست.
-                </p>
-              )}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {field('motherFirst', 'نام')}
-                {field('motherLast', 'نام خانوادگی')}
-                {field('motherNationalId', 'کد ملی', 'tel')}
-                {field('motherPhone', 'شماره همراه', 'tel')}
-              </div>
-            </Section>
+            {form.guardianRelationshipType === 'MOTHER' && (
+              <Section title="اطلاعات پدر">
+                {savedParents.father && (
+                  <p className="mb-4 text-sm text-muted">
+                    اطلاعات ذخیره‌شده پدر از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر
+                    نیست.
+                  </p>
+                )}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {field('fatherFirst', 'نام')}
+                  {field('fatherLast', 'نام خانوادگی')}
+                  {field('fatherNationalId', 'کد ملی', 'tel')}
+                  {field('fatherPhone', 'شماره همراه', 'tel')}
+                </div>
+              </Section>
+            )}
+            {form.guardianRelationshipType === 'FATHER' && (
+              <Section title="اطلاعات مادر">
+                {savedParents.mother && (
+                  <p className="mb-4 text-sm text-muted">
+                    اطلاعات ذخیره‌شده مادر از پروفایل خانواده خوانده شده و در ثبت‌نام قابل تغییر
+                    نیست.
+                  </p>
+                )}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {field('motherFirst', 'نام')}
+                  {field('motherLast', 'نام خانوادگی')}
+                  {field('motherNationalId', 'کد ملی', 'tel')}
+                  {field('motherPhone', 'شماره همراه', 'tel')}
+                </div>
+              </Section>
+            )}
             <Section title="تماس اضطراری">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {field('emergencyFirst', 'نام')}
@@ -1101,7 +1253,7 @@ export function CreateEnrollmentForm({
                 ))}
               </div>
               <p className="mt-3 text-sm text-muted">
-                پیش‌پرداخت ثابت ۴٬۰۰۰٬۰۰۰ تومان در هر دو روش همین حالا پرداخت می‌شود.
+                پیش‌پرداخت ثابت ۴٬۹۹۷٬۸۰۰ تومان در هر دو روش همین حالا پرداخت می‌شود.
               </p>
             </Section>
             <label className="text-sm font-bold">
@@ -1133,32 +1285,16 @@ export function CreateEnrollmentForm({
                 </p>
               </div>
             </div>
-            <div
-              onScroll={(event) => {
-                const el = event.currentTarget;
-                if (el.scrollHeight - el.scrollTop - el.clientHeight < 24) setContractRead(true);
-              }}
-              className="h-72 overflow-y-auto whitespace-pre-line rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm leading-8"
-            >
-              {result.contractText}
-              <div className="mt-8 border-t border-slate-200 pt-6 font-bold">پایان قرارداد</div>
-            </div>
-            <label
-              className={`flex items-start gap-3 rounded-2xl border p-4 ${contractRead ? 'cursor-pointer border-primary/30' : 'cursor-not-allowed border-slate-200 opacity-55'}`}
-            >
-              <input
-                type="checkbox"
-                checked={contractChecked}
-                onChange={(event) => setContractChecked(event.target.checked)}
-                disabled={!contractRead}
-                className="mt-1 size-4"
-              />
-              <span className="text-sm leading-6">
-                تمام بندهای قرارداد را مطالعه کرده‌ام و آن را می‌پذیرم.
-              </span>
-            </label>
+            <ContractReview
+              contractId={result.contractId}
+              version={1}
+              templateHash={result.contractTemplateHash}
+              pages={result.contractPages}
+              canAct={false}
+              onReviewedPagesChange={setReviewedContractPages}
+            />
             <Button
-              disabled={pending || !contractRead || !contractChecked}
+              disabled={pending || reviewedContractPages.join(',') !== '1,2,3'}
               loading={pending}
               onClick={async () => {
                 if (submissionLockRef.current) return;
@@ -1166,7 +1302,20 @@ export function CreateEnrollmentForm({
                 setPending(true);
                 setError(undefined);
                 try {
-                  await acceptGuidedContract(result.contractId, mode);
+                  if (adminFamilyId) {
+                    await acceptAdminFamilyContract(
+                      result.contractId,
+                      result.contractTemplateHash,
+                      reviewedContractPages,
+                    );
+                  } else {
+                    await acceptGuidedContract(
+                      result.contractId,
+                      result.contractTemplateHash,
+                      reviewedContractPages,
+                      mode,
+                    );
+                  }
                   setAccepted(true);
                 } catch (caught) {
                   setError(getApiErrorFeedback(caught).message);
@@ -1189,91 +1338,98 @@ export function CreateEnrollmentForm({
             <h3 className="mt-5 text-2xl font-black">پرداخت پیش‌پرداخت ثبت‌نام</h3>
             <p className="mt-3 text-muted">مبلغ ثابت برای تمام دانش‌آموزان</p>
             <p className="mt-4 text-4xl font-black text-primary">
-              ۴٬۰۰۰٬۰۰۰ <span className="text-base">تومان</span>
+              ۴٬۹۹۷٬۸۰۰ <span className="text-base">تومان</span>
             </p>
             <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-right text-sm leading-7 text-muted">
               {form.paymentPlanType === 'FULL'
                 ? 'مبلغ باقی‌مانده و تاریخ پرداخت یکجا پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'
                 : 'تعداد، مبلغ و تاریخ اقساط پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'}
             </div>
-            <fieldset className="mt-5 space-y-3 rounded-2xl border border-border p-4 text-right">
-              <legend className="px-2 text-sm font-black">رضایت اختیاری اطلاع‌رسانی</legend>
-              <p className="text-xs leading-6 text-muted">
-                مایلم پیام‌های اختیاری درباره تغییرات سرویس و یادآوری‌های غیرالزامی را دریافت کنم.
-                این انتخاب از پنل قابل تغییر است و پیام‌های ضروری قرارداد، پرداخت و ایمنی را متوقف
-                نمی‌کند.
-              </p>
-              <label className="flex min-h-11 items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={optionalInAppConsent}
-                  onChange={(event) => setOptionalInAppConsent(event.target.checked)}
-                />
-                <span className="text-sm font-bold">داخل سامانه</span>
-              </label>
-              <label className="flex min-h-11 items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={optionalSmsConsent}
-                  onChange={(event) => setOptionalSmsConsent(event.target.checked)}
-                />
-                <span className="text-sm font-bold">پیامک</span>
-              </label>
-            </fieldset>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border p-4 text-right">
-                <p className="font-black">پرداخت آفلاین</p>
-                <p className="mt-2 text-xs leading-6 text-muted">
-                  رسید را ارسال کنید. ثبت‌نام فقط پس از تأیید مدیریت فعال می‌شود.
+            {!adminFamilyId && (
+              <fieldset className="mt-5 space-y-3 rounded-2xl border border-border p-4 text-right">
+                <legend className="px-2 text-sm font-black">رضایت اختیاری اطلاع‌رسانی</legend>
+                <p className="text-xs leading-6 text-muted">
+                  مایلم پیام‌های اختیاری درباره تغییرات سرویس و یادآوری‌های غیرالزامی را دریافت کنم.
+                  این انتخاب از پنل قابل تغییر است و پیام‌های ضروری قرارداد، پرداخت و ایمنی را متوقف
+                  نمی‌کند.
                 </p>
+                <label className="flex min-h-11 items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={optionalInAppConsent}
+                    onChange={(event) => setOptionalInAppConsent(event.target.checked)}
+                  />
+                  <span className="text-sm font-bold">داخل سامانه</span>
+                </label>
+                <div className="flex min-h-11 items-center justify-between gap-3 text-muted">
+                  <span className="text-sm font-bold">پیامک</span>
+                  <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold">
+                    فعلاً غیرفعال
+                  </span>
+                </div>
+              </fieldset>
+            )}
+            {adminFamilyId ? (
+              <div className="mt-6 space-y-4 text-right">
+                <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
+                  قرارداد با ثبت حسابرسی مدیریت پذیرفته شد. می‌توانید پیش‌پرداخت را اکنون همراه با
+                  تصویر رسید ثبت کنید یا پرداخت را برای خانواده باقی بگذارید.
+                </div>
+                <OfflinePaymentDestinationCard />
+                <RecordPaymentOnBehalfDialog
+                  scheduleItemId={result.scheduleItemId}
+                  label="پیش‌پرداخت"
+                  onCompleted={() => setPaid(true)}
+                />
               </div>
-              <div
-                className="rounded-2xl border border-border p-4 text-right"
-                aria-describedby="enrollment-online-unavailable"
-              >
-                <Button className="w-full" size="lg" disabled aria-disabled="true">
-                  پرداخت آنلاین
+            ) : mode === 'onboarding' ? (
+              <div className="mt-6 space-y-5 text-right">
+                <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
+                  مبلغ را به یکی از اطلاعات زیر واریز کنید و تصویر رسید را نگه دارید. پس از ورود به
+                  پنل خانواده، از بخش «پرداخت‌ها» تصویر رسید را برای بررسی مدیریت ارسال می‌کنید.
+                </div>
+                <OfflinePaymentDestinationCard mode="onboarding" />
+                <label className="flex min-h-12 items-start gap-3 rounded-xl border border-border p-4">
+                  <input
+                    className="mt-1"
+                    type="checkbox"
+                    checked={paymentInstructionsAccepted}
+                    onChange={(event) => setPaymentInstructionsAccepted(event.target.checked)}
+                  />
+                  <span className="text-sm font-bold leading-7">
+                    مبلغ، اطلاعات حساب و لزوم نگهداری تصویر رسید را دیدم. پرداخت و ارسال رسید را از
+                    پنل خانواده انجام می‌دهم.
+                  </span>
+                </label>
+              </div>
+            ) : (
+              <div className="mt-6 space-y-5 text-right">
+                <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
+                  قرارداد پذیرفته شد. برای جلوگیری از ثبت تکراری یا گم‌شدن وضعیت پرداخت، پرداخت و
+                  ارسال رسید فقط از بخش «پرداخت‌ها» انجام می‌شود.
+                </div>
+                <OfflinePaymentDestinationCard />
+                <Button className="w-full" onClick={() => router.push('/student/payments')}>
+                  رفتن به بخش پرداخت‌ها
                 </Button>
-                <p id="enrollment-online-unavailable" className="mt-2 text-xs text-muted">
-                  به‌زودی فعال می‌شود.
-                </p>
               </div>
-            </div>
-            <div className="mt-5 text-right">
-              <OfflinePaymentForm
-                items={[
-                  { id: result.scheduleItemId, label: 'پیش‌پرداخت ثبت‌نام — ۴٬۰۰۰٬۰۰۰ تومان' },
-                ]}
-                mode={mode}
-              />
-            </div>
+            )}
             {mode === 'onboarding' && (
               <Button
                 className="mt-4 w-full"
                 variant="secondary"
                 loading={pending}
+                disabled={!paymentInstructionsAccepted || pending}
                 onClick={async () => {
                   if (submissionLockRef.current) return;
                   submissionLockRef.current = true;
                   setPending(true);
                   setError(undefined);
                   try {
-                    const submissions = await getOfflineSubmissions('onboarding');
-                    const approved = submissions.some(
-                      (submission) =>
-                        submission.paymentScheduleItemId === result.scheduleItemId &&
-                        submission.status === 'APPROVED',
-                    );
-                    if (!approved) {
-                      setError(
-                        'رسید هنوز توسط مدیریت تأیید نشده است. پس از دریافت اعلان دوباره بررسی کنید.',
-                      );
-                      return;
-                    }
                     await finalizeOnboarding();
                     await Promise.all([
                       updateNotificationConsent('IN_APP', optionalInAppConsent, 'ONBOARDING'),
-                      updateNotificationConsent('SMS', optionalSmsConsent, 'ONBOARDING'),
+                      updateNotificationConsent('SMS', false, 'ONBOARDING'),
                     ]);
                     router.replace('/student/dashboard');
                   } catch (caught) {
@@ -1284,7 +1440,7 @@ export function CreateEnrollmentForm({
                   }
                 }}
               >
-                بررسی تأیید رسید و فعال‌سازی پنل
+                تأیید اطلاعات پرداخت و ورود به پنل خانواده
               </Button>
             )}
             {error && <p className="mt-3 text-sm text-danger">{error}</p>}
@@ -1320,8 +1476,14 @@ export function CreateEnrollmentForm({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section>
-      <h3 className="mb-4 text-lg font-black">{title}</h3>
+    <section className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white via-white to-primary/[0.025] p-4 shadow-[0_12px_35px_-30px_rgba(15,23,42,.6)] transition-shadow hover:shadow-[0_16px_40px_-28px_rgba(15,23,42,.5)] sm:p-5">
+      <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-3">
+        <span
+          aria-hidden="true"
+          className="h-6 w-1 rounded-full bg-gradient-to-b from-primary to-sky-400"
+        />
+        <h3 className="text-lg font-black text-slate-800">{title}</h3>
+      </div>
       {children}
     </section>
   );

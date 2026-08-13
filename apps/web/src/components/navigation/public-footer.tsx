@@ -13,7 +13,7 @@ const footerLinks = [
     items: [
       ['خدمات سرویس مدرسه', '/services'],
       ['مراحل ثبت‌نام', '/registration-guide'],
-      ['مدارس تحت پوشش', '/schools'],
+      ['مدارس ما', '/schools'],
     ],
   },
   {
@@ -77,6 +77,18 @@ export function PublicFooter() {
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/50">
               سامانه یکپارچه ثبت‌نام، قرارداد و پرداخت خدمات سرویس مدرسه. از خانه تا مدرسه، همراه
               شما.
+            </p>
+            <a
+              href="https://maps.app.goo.gl/rGetdanWqsAq6SAcA"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 block max-w-sm text-xs leading-6 text-white/60 hover:text-sun"
+            >
+              تهران، بزرگراه شهید بابایی، شهرک شهید بهشتی، خیابان سروستان دوم، کوچه نسترن ۲۷ و ۲۸،
+              مجتمع تجاری گلستان، پلاک ۲۲
+            </a>
+            <p className="mt-2 text-xs leading-6 text-white/60" dir="ltr">
+              09123859883 · 09126839458 · 021-77116782 · 021-77115832 · 021-77119045
             </p>
             <Link
               href="/login"

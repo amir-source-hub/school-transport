@@ -22,12 +22,7 @@ export const adminPhotoSchema = z.object({
 });
 export type AdminPhoto = z.infer<typeof adminPhotoSchema>;
 
-const listSchema = z.object({
-  items: z.array(adminPhotoSchema),
-  total: z.number(),
-  page: z.number(),
-  pageSize: z.number(),
-});
+const listSchema = z.array(adminPhotoSchema);
 
 export async function getAdminPhotos(params: { page?: number; status?: string } = {}) {
   const query = new URLSearchParams({
@@ -38,7 +33,13 @@ export async function getAdminPhotos(params: { page?: number; status?: string } 
   const response = await apiRequest<unknown>(`/admin/student-photos?${query}`, {
     cache: 'no-store',
   });
-  return listSchema.parse(response.data);
+  const items = listSchema.parse(response.data);
+  return {
+    items,
+    total: response.pagination?.totalItems ?? items.length,
+    page: response.pagination?.page ?? params.page ?? 1,
+    pageSize: response.pagination?.pageSize ?? 10,
+  };
 }
 
 export async function getAdminPhotoViewUrl(uploadId: string) {

@@ -8,6 +8,8 @@ const parentSchema = z.object({
   lastName: z.string(),
   nationalId: z.string(),
   phoneNumber: z.string(),
+  relationshipType: z.string().optional(),
+  relationshipDescription: z.string().optional(),
   isPrimaryContact: z.boolean(),
   phoneVerified: z.boolean(),
 });
@@ -36,6 +38,7 @@ export const familyProfileSchema = z.object({
   username: z.string(),
   mother: parentSchema.nullable(),
   father: parentSchema.nullable(),
+  guardian: parentSchema.nullable(),
   addresses: z.array(addressSchema),
   emergencyContacts: z.array(emergencySchema),
 });

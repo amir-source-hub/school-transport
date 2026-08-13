@@ -6,6 +6,8 @@ describe('createSecurityHeaders', () => {
   it('applies the documented browser security controls', () => {
     const headers = createSecurityHeaders({
       apiBaseUrl: 'https://api.example.test/api/v1',
+      privateUploadOrigin: 'https://s3.example.test/path-is-ignored',
+      publicAssetBaseUrl: 'https://assets.example.test/public/site/release-123',
       production: true,
     });
     const headerMap = new Map(headers.map(({ key, value }) => [key, value]));
@@ -15,7 +17,10 @@ describe('createSecurityHeaders', () => {
       "frame-src 'self' https://www.google.com",
     );
     expect(headerMap.get('Content-Security-Policy')).toContain(
-      "connect-src 'self' https://api.example.test blob:",
+      "connect-src 'self' https://api.example.test https://s3.example.test blob:",
+    );
+    expect(headerMap.get('Content-Security-Policy')).toContain(
+      "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://s3.example.test https://assets.example.test",
     );
     expect(headerMap.get('Strict-Transport-Security')).toBe('max-age=31536000; includeSubDomains');
     expect(headerMap.get('X-Content-Type-Options')).toBe('nosniff');

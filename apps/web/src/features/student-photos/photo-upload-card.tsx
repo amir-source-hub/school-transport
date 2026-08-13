@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { DIRECT_UPLOAD_RETRY_MESSAGE } from '@/lib/direct-object-upload';
 import {
   ACCEPTED_PHOTO_MIMES,
   authorizePhotoUpload,
@@ -18,7 +19,7 @@ import {
   type PhotoUploadMode,
 } from './student-photos-api';
 
-const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 const STATUS_META: Record<
   PhotoUploadView['status'],
@@ -39,15 +40,21 @@ function isAcceptedMime(type: string): type is (typeof ACCEPTED_PHOTO_MIMES)[num
   return (ACCEPTED_PHOTO_MIMES as readonly string[]).includes(type);
 }
 
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
 export function PhotoUploadCard({
   studentId,
   initialItems,
   mode = 'panel',
+  familyId,
   onUploadCompleted,
 }: {
   studentId?: string;
   initialItems: PhotoUploadView[];
   mode?: PhotoUploadMode;
+  familyId?: string;
   onUploadCompleted?: (uploadId: string) => void;
 }) {
   const router = useRouter();
@@ -62,6 +69,9 @@ export function PhotoUploadCard({
   }>();
   const [progress, setProgress] = useState(0);
   const abortRef = useRef<AbortController | undefined>(undefined);
+  const hasCompletedUpload = items.some((item) =>
+    ['PENDING_REVIEW', 'APPROVED', 'UPLOADED', 'VALIDATING'].includes(item.status),
+  );
 
   useEffect(
     () => () => {
@@ -81,7 +91,7 @@ export function PhotoUploadCard({
       return;
     }
     if (file.size > MAX_PHOTO_BYTES) {
-      setMessage('حجم فایل از ۲۵ مگابایت بیشتر است. تصویر کوچک‌تری انتخاب کنید.');
+      setMessage('حجم فایل از ۵ مگابایت بیشتر است. تصویر کوچک‌تری انتخاب کنید.');
       return;
     }
 
@@ -106,32 +116,42 @@ export function PhotoUploadCard({
     setProgress(0);
     setMessage(undefined);
     try {
-      const authorization = await authorizePhotoUpload(
-        { studentId, declaredMime: selected.mime, declaredSize: file.size },
-        mode,
-      );
+      const authorizationInput = {
+        studentId,
+        declaredMime: selected.mime,
+        declaredSize: file.size,
+      };
+      const authorization = familyId
+        ? await authorizePhotoUpload(authorizationInput, mode, familyId, controller.signal)
+        : await authorizePhotoUpload(authorizationInput, mode, undefined, controller.signal);
       try {
         await putPhotoObject(authorization.uploadUrl, file, {
           signal: controller.signal,
           onProgress: setProgress,
         });
       } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
+        if (isAbortError(error)) {
           setMessage('بارگذاری لغو شد. می‌توانید همین عکس یا عکس دیگری را انتخاب کنید.');
           return;
         }
-        setMessage('ارسال فایل به ذخیره‌گاه ناموفق بود. اتصال را بررسی و دوباره تلاش کنید.');
+        setMessage(DIRECT_UPLOAD_RETRY_MESSAGE);
         return;
       }
-      const completed = await completePhotoUpload(authorization.uploadId, mode);
+      const completed = familyId
+        ? await completePhotoUpload(authorization.uploadId, mode, familyId, controller.signal)
+        : await completePhotoUpload(authorization.uploadId, mode, undefined, controller.signal);
       onUploadCompleted?.(completed.uploadId);
-      if (mode === 'panel') setItems(await getMyPhotoUploads(studentId));
+      if (mode === 'panel' && studentId) setItems(await getMyPhotoUploads(studentId));
       else setItems([completed]);
       removeSelection();
       setMessage('عکس کارت سرویس بارگذاری شد و در صف بررسی قرار گرفت.');
       router.refresh();
     } catch (error) {
-      setMessage(getApiErrorFeedback(error).message);
+      setMessage(
+        isAbortError(error)
+          ? 'بارگذاری لغو شد. می‌توانید همین عکس یا عکس دیگری را انتخاب کنید.'
+          : getApiErrorFeedback(error).message,
+      );
     } finally {
       setPending(false);
       abortRef.current = undefined;
@@ -167,21 +187,35 @@ export function PhotoUploadCard({
         </Link>
       </div>
 
-      <label className="flex cursor-pointer flex-col items-center gap-2 rounded-[var(--radius-card)] border-2 border-dashed border-border/80 bg-surface-inset px-4 py-8 text-center transition-colors hover:border-primary/60">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png"
-          className="sr-only"
-          disabled={pending}
-          onChange={handleFileChange}
-        />
-        <Camera aria-hidden="true" className="size-8 text-primary" />
-        <span className="text-sm font-black">
-          {pending ? 'در حال بارگذاری و بررسی…' : 'انتخاب عکس'}
-        </span>
-        <span className="text-xs text-muted">فرمت JPG یا PNG، حداکثر ۲۵ مگابایت</span>
-      </label>
+      {!hasCompletedUpload && (
+        <label className="flex cursor-pointer flex-col items-center gap-2 rounded-[var(--radius-card)] border-2 border-dashed border-border/80 bg-surface-inset px-4 py-8 text-center transition-colors hover:border-primary/60">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png"
+            className="sr-only"
+            disabled={pending}
+            onChange={handleFileChange}
+          />
+          <Camera aria-hidden="true" className="size-8 text-primary" />
+          <span className="text-sm font-black">
+            {pending ? 'در حال بارگذاری و بررسی…' : 'انتخاب عکس'}
+          </span>
+          <span className="text-xs text-muted">فرمت JPG یا PNG، حداکثر ۵ مگابایت</span>
+        </label>
+      )}
+
+      <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-slate-700">
+        <p className="font-black text-sky-900">شرایط قابل قبول عکس دانش‌آموز</p>
+        <ul className="mt-2 grid list-inside list-disc gap-1.5 leading-6 sm:grid-cols-2">
+          <li>عکس رنگی، جدید و تک‌نفره</li>
+          <li>نمای روبه‌رو و چهره کاملاً مشخص</li>
+          <li>نور یکنواخت و پس‌زمینه ساده</li>
+          <li>بدون فیلتر یا عینک آفتابی</li>
+          <li>فرمت JPEG یا PNG</li>
+          <li>حداکثر حجم فایل ۵ مگابایت</li>
+        </ul>
+      </div>
 
       {selected && (
         <div className="grid gap-4 rounded-[var(--radius-card)] border border-border p-4 sm:grid-cols-[120px_1fr]">
@@ -204,11 +238,17 @@ export function PhotoUploadCard({
                   aria-valuenow={progress}
                 >
                   <div
-                    className="h-full bg-primary transition-[width]"
-                    style={{ width: `${progress}%` }}
+                    className={
+                      progress === 0
+                        ? 'h-full w-1/3 animate-pulse bg-primary'
+                        : 'h-full bg-primary transition-[width]'
+                    }
+                    style={progress === 0 ? undefined : { width: `${progress}%` }}
                   />
                 </div>
-                <p className="mt-1 text-xs text-muted">{progress}٪</p>
+                <p className="mt-1 text-xs text-muted">
+                  {progress === 0 ? 'در حال برقراری ارتباط امن با ذخیره‌گاه…' : `${progress}٪`}
+                </p>
               </div>
             )}
             <div className="flex flex-wrap gap-2">
@@ -216,7 +256,15 @@ export function PhotoUploadCard({
                 بارگذاری و ارسال برای بررسی
               </Button>
               {pending ? (
-                <Button size="sm" variant="danger" onClick={() => abortRef.current?.abort()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="danger"
+                  onClick={() => {
+                    abortRef.current?.abort();
+                    setMessage('در حال لغو بارگذاری…');
+                  }}
+                >
                   <X aria-hidden="true" className="size-4" />
                   لغو
                 </Button>
@@ -232,7 +280,10 @@ export function PhotoUploadCard({
       )}
 
       {message && (
-        <p role="status" className="text-sm text-muted">
+        <p
+          role="status"
+          className="rounded-xl border border-success/25 bg-success-soft p-4 text-sm font-bold text-success"
+        >
           {message}
         </p>
       )}

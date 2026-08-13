@@ -137,6 +137,9 @@ describe('OTP concurrency', () => {
       auth.sendOtp('09120000000', 'AUTH_PARENT'),
     ]);
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.find((result) => result.status === 'rejected')).toMatchObject({
+      reason: { code: 'OTP_RESEND_COOLDOWN' },
+    });
     expect(database.rows).toHaveLength(1);
     expect(database.rows[0].codeHash).not.toBe(delivery.send.mock.calls[0][0].code);
     expect(
@@ -175,15 +178,33 @@ describe('OTP concurrency', () => {
     const expiredDb = otpDatabase([row(await argon2.hash('123456'), new Date(0))]);
     await expect(
       createService(expiredDb.service).auth.verifyOtp('09120000000', 'AUTH_PARENT', '123456'),
-    ).rejects.toThrow('expired');
+    ).rejects.toMatchObject({ code: 'OTP_EXPIRED' });
     expect(expiredDb.rows[0].invalidatedAt).toBeInstanceOf(Date);
 
     const bruteDb = otpDatabase([row(await argon2.hash('123456'))]);
     const auth = createService(bruteDb.service).auth;
-    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toThrow('Invalid');
-    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toThrow('Invalid');
+    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toMatchObject({
+      code: 'OTP_INVALID',
+    });
+    await expect(auth.verifyOtp('09120000000', 'AUTH_PARENT', '000000')).rejects.toMatchObject({
+      code: 'OTP_INVALID',
+    });
     expect(bruteDb.rows[0].attemptCount).toBe(2);
     expect(bruteDb.rows[0].invalidatedAt).toBeInstanceOf(Date);
+  });
+
+  it('distinguishes a missing request from exhausted attempts without account disclosure', async () => {
+    const missing = otpDatabase();
+    await expect(
+      createService(missing.service).auth.verifyOtp('09120000000', 'AUTH_PARENT', '123456'),
+    ).rejects.toMatchObject({ code: 'OTP_REQUEST_MISSING' });
+
+    const exhaustedRow = row(await argon2.hash('123456'));
+    exhaustedRow.attemptCount = exhaustedRow.maxAttempts;
+    const exhausted = otpDatabase([exhaustedRow]);
+    await expect(
+      createService(exhausted.service).auth.verifyOtp('09120000000', 'AUTH_PARENT', '123456'),
+    ).rejects.toMatchObject({ code: 'OTP_ATTEMPTS_EXCEEDED' });
   });
 });
 
@@ -209,7 +230,7 @@ describe('OTP expiry window', () => {
     if (shouldSucceed) {
       await expect(promise).resolves.toBeDefined();
     } else {
-      await expect(promise).rejects.toThrow('expired');
+      await expect(promise).rejects.toMatchObject({ code: 'OTP_EXPIRED' });
     }
     vi.useRealTimers();
   });
@@ -452,9 +473,9 @@ describe('admin two-factor challenge', () => {
     });
     const { auth } = createTwoFactorService(database.service);
 
-    await expect(auth.verifyAdminOtp('challenge-token', '000000')).rejects.toThrow(
-      'username or password',
-    );
+    await expect(auth.verifyAdminOtp('challenge-token', '000000')).rejects.toMatchObject({
+      code: 'OTP_INVALID',
+    });
     expect(database.rows.challenges[0].attemptCount).toBe(1);
     expect(database.rows.otps[0].attemptCount).toBe(1);
   });

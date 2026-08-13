@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { ButtonLink } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
@@ -11,11 +11,12 @@ import { BrandMark } from '@/components/brand/brand-mark';
 import { SITE_NAME } from '@/lib/route-metadata';
 import { cn } from '@/lib/cn';
 import { layoutSpring } from '@/components/motion/motion-config';
+import { apiRequest } from '@/lib/api-client';
 
 const links = [
   ['خدمات', '/services'],
   ['مراحل ثبت‌نام', '/registration-guide'],
-  ['مدارس', '/schools'],
+  ['مدارس ما', '/schools'],
   ['قیمت‌گذاری', '/pricing'],
   ['ایمنی', '/safety'],
   ['درباره ما', '/about'],
@@ -80,6 +81,25 @@ function PublicNavLinks({
 
 export function PublicHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [role, setRole] = useState<'PARENT' | 'ADMIN'>();
+  useEffect(() => {
+    let active = true;
+    apiRequest<{ user: { role: 'PARENT' | 'ADMIN' } }>('/auth/me', {
+      cache: 'no-store',
+      redirectOnAuthFailure: false,
+    })
+      .then(({ data }) => {
+        if (active) setRole(data.user.role);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+  const accountHref =
+    role === 'ADMIN' ? '/admin/dashboard' : role === 'PARENT' ? '/student/dashboard' : '/login';
+  const accountLabel =
+    role === 'ADMIN' ? 'پنل مدیریت' : role === 'PARENT' ? 'پنل خانواده' : 'ثبت‌نام و ورود';
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 pt-3 transition-all duration-[var(--duration-ui)] sm:pt-4">
@@ -102,11 +122,11 @@ export function PublicHeader() {
 
           <div className="hidden items-center gap-2 sm:flex">
             <ButtonLink
-              href="/login"
+              href={accountHref}
               size="sm"
               className="min-w-32 bg-sun text-navy hover:bg-sun/90 shadow-lg shadow-sun/20"
             >
-              ثبت‌نام و ورود
+              {accountLabel}
             </ButtonLink>
           </div>
 
@@ -131,11 +151,11 @@ export function PublicHeader() {
               </nav>
               <div className="mt-3 border-t border-border/60 pt-3">
                 <ButtonLink
-                  href="/login"
+                  href={accountHref}
                   size="sm"
                   className="w-full whitespace-normal bg-navy text-center leading-6 text-white hover:bg-navy/90"
                 >
-                  ثبت‌نام و ورود
+                  {accountLabel}
                 </ButtonLink>
               </div>
             </DrawerContent>

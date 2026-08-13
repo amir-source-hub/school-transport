@@ -305,7 +305,7 @@ const server = createServer((request, response) => {
         uploadUrl: `http://127.0.0.1:${port}/uploads/photo`,
         expiresInSeconds: 300,
         acceptedFormats: ['image/jpeg', 'image/png'],
-        maxBytes: 26214400,
+        maxBytes: 5242880,
         status: 'AUTHORIZED',
       },
     });

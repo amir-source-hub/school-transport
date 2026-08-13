@@ -22,6 +22,7 @@ import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/
 import { BrandMark } from '@/components/brand/brand-mark';
 import { LogoutMenuItem } from '@/features/auth/logout-menu-item';
 import { cn } from '@/lib/cn';
+import { getUnreadNotificationCount } from '@/features/notifications/notifications-api';
 
 const navGroups = [
   {
@@ -135,14 +136,7 @@ function StudentNavigation({ mobile = false }: { mobile?: boolean }) {
   return (
     <div className="flex min-h-full flex-col">
       <div className="space-y-6">{content}</div>
-      <div className="mt-6 space-y-2 border-t pt-4">
-        <Link
-          href="/"
-          className="flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 text-sm font-bold text-white/60 transition-colors hover:bg-white/5 hover:text-white"
-        >
-          <Home aria-hidden="true" className="size-5" />
-          صفحه اصلی سایت
-        </Link>
+      <div className="mt-auto space-y-2 border-t border-white/10 pt-4">
         <LogoutMenuItem mobile={mobile} />
       </div>
     </div>
@@ -152,6 +146,17 @@ function StudentNavigation({ mobile = false }: { mobile?: boolean }) {
 export function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const keyboardOpen = useVirtualKeyboardOpen();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    getUnreadNotificationCount()
+      .then((count) => active && setUnreadCount(count))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [pathname]);
 
   return (
     <div className="min-h-screen overflow-x-clip bg-[var(--paper)] [--parent-mobile-dock-height:4rem]">
@@ -183,6 +188,10 @@ export function StudentShell({ children }: { children: ReactNode }) {
           </Link>
 
           <div className="ms-auto flex items-center gap-2">
+            <ButtonLink href="/" variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <Home aria-hidden="true" className="size-4" />
+              صفحه اصلی
+            </ButtonLink>
             <ButtonLink
               href="/student/enrollments"
               size="sm"
@@ -193,17 +202,26 @@ export function StudentShell({ children }: { children: ReactNode }) {
             </ButtonLink>
             <Link
               href="/student/notifications"
-              className="grid size-11 place-items-center rounded-[var(--radius-control)] text-muted hover:bg-surface-inset hover:text-foreground transition-colors"
-              aria-label="مشاهده اعلان‌ها"
+              className="relative grid size-11 place-items-center rounded-[var(--radius-control)] text-muted hover:bg-surface-inset hover:text-foreground transition-colors"
+              aria-label={
+                unreadCount > 0
+                  ? `${unreadCount.toLocaleString('fa-IR')} اعلان خوانده‌نشده`
+                  : 'مشاهده اعلان‌ها'
+              }
             >
               <Bell aria-hidden="true" className="size-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -left-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-danger px-1 text-[10px] font-black text-white ring-2 ring-white">
+                  {Math.min(unreadCount, 99).toLocaleString('fa-IR')}
+                </span>
+              )}
             </Link>
           </div>
         </div>
       </header>
 
       <div className="mx-auto flex max-w-[var(--width-portal)]">
-        <aside className="hidden min-h-[calc(100vh-4rem)] w-[16rem] shrink-0 border-l border-white/10 bg-navy p-5 lg:block">
+        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[16rem] shrink-0 self-start overflow-y-auto border-l border-white/10 bg-navy p-5 lg:block">
           <div className="mb-8 flex items-center gap-3 px-3">
             <BrandMark size={24} className="text-sun" />
             <div>
@@ -211,16 +229,8 @@ export function StudentShell({ children }: { children: ReactNode }) {
               <p className="text-[10px] text-white/50">پنل دانش‌آموز</p>
             </div>
           </div>
-          <StudentNavigation />
-          <div className="mt-8 border-t border-white/10 pt-6">
-            <ButtonLink
-              href="/student/enrollments"
-              size="sm"
-              className="w-full bg-sun text-navy hover:bg-sun/90"
-            >
-              <Plus aria-hidden="true" className="size-4" />
-              ثبت‌نام دانش‌آموز
-            </ButtonLink>
+          <div className="h-[calc(100%-4.5rem)]">
+            <StudentNavigation />
           </div>
         </aside>
         <main className="portal-main min-w-0 flex-1 scroll-pb-[calc(var(--parent-mobile-dock-height)+env(safe-area-inset-bottom)+1rem)] p-4 pb-[calc(var(--parent-mobile-dock-height)+env(safe-area-inset-bottom)+1rem)] sm:p-6 sm:pb-[calc(var(--parent-mobile-dock-height)+env(safe-area-inset-bottom)+1.5rem)] lg:p-8 lg:pb-8 xl:p-10 xl:pb-10 [&_:focus]:scroll-mb-[calc(var(--parent-mobile-dock-height)+env(safe-area-inset-bottom)+1rem)]">

@@ -42,8 +42,7 @@ export function AdminLimitRequestSection({
   const [rejectReason, setRejectReason] = useState('');
   const [pendingId, setPendingId] = useState<string>();
   const [error, setError] = useState<string>();
-
-  const requests = initialRequests;
+  const [requests, setRequests] = useState(initialRequests);
   const pendingCount = requests.filter((request) => request.status === 'PENDING').length;
 
   async function approve(requestId: string) {
@@ -52,6 +51,13 @@ export function AdminLimitRequestSection({
     setError(undefined);
     try {
       await approveAdminLimitRequest(requestId);
+      setRequests((current) =>
+        current.map((request) =>
+          request.id === requestId
+            ? { ...request, status: 'APPROVED', reviewedAt: new Date().toISOString() }
+            : request,
+        ),
+      );
       setRejectingId(undefined);
       router.refresh();
     } catch (caught) {
@@ -71,6 +77,18 @@ export function AdminLimitRequestSection({
     setError(undefined);
     try {
       await rejectAdminLimitRequest(requestId, rejectReason.trim());
+      setRequests((current) =>
+        current.map((request) =>
+          request.id === requestId
+            ? {
+                ...request,
+                status: 'REJECTED',
+                rejectionReason: rejectReason.trim(),
+                reviewedAt: new Date().toISOString(),
+              }
+            : request,
+        ),
+      );
       setRejectingId(undefined);
       setRejectReason('');
       router.refresh();

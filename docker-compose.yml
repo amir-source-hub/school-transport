@@ -207,12 +207,14 @@ services:
       target: web
       args:
         NEXT_PUBLIC_API_BASE_URL: https://samingasht.ir/api/v1
+        NEXT_PUBLIC_ASSET_BASE_URL: ${NEXT_PUBLIC_ASSET_BASE_URL:?Set NEXT_PUBLIC_ASSET_BASE_URL to the immutable public asset release URL}
         NEXT_DEPLOYMENT_ID: ${NEXT_DEPLOYMENT_ID:?Set NEXT_DEPLOYMENT_ID to the immutable release or commit identifier}
       secrets:
         - next_server_actions_encryption_key
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE_URL: https://samingasht.ir/api/v1
+      NEXT_PUBLIC_ASSET_BASE_URL: ${NEXT_PUBLIC_ASSET_BASE_URL:?Set NEXT_PUBLIC_ASSET_BASE_URL to the immutable public asset release URL}
       API_INTERNAL_BASE_URL: http://api:5000/api/v1
     depends_on:
       api:

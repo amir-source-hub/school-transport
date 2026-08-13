@@ -24,7 +24,6 @@ import { generateContractNumber, generateId } from '../../common/utils';
 import { assertRegistrationTransition } from './registration-lifecycle';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import {
-  guidedContractText,
   normalizeAndValidateGuidedEnrollment,
   type GuidedEnrollmentData,
 } from './guided-enrollment';
@@ -36,6 +35,8 @@ import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import type { AdminEnrollmentListQueryDto } from './registration.dto';
 import { expandRegistrationStatusGroup } from './registration-status-groups';
 import type { DatabaseTransaction } from '../../database/payment-plan';
+import { OFFLINE_PREPAYMENT_AMOUNT_IRR } from '../../common/offline-contract-template';
+import { buildOfflineContractSnapshot } from '../../common/offline-contract-snapshot';
 
 export const ADMIN_ENROLLMENT_MATERIALIZATION_LIMIT = 5_000;
 export const FAMILY_ENROLLMENT_HISTORY_LIMIT = 100;
@@ -59,9 +60,33 @@ export class RegistrationsService {
   ) {
     const data = normalizeAndValidateGuidedEnrollment(input);
     const actions = normalizeAndValidateAdminEnrollmentActions(adminActions);
+    if (!adminAudit && !data.student.id && !data.studentPhotoUploadId) {
+      throw new ValidationError('ارسال عکس دانش‌آموز برای ثبت‌نام الزامی است.');
+    }
+    if (!adminAudit) {
+      const [account] = await this.db.db
+        .select({
+          username: users.username,
+          status: users.accountStatus,
+          phoneNumber: users.phoneNumber,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      if (account?.status === 'PENDING') {
+        const expectedUsername = `${account.phoneNumber}:${data.guardian.nationalId}`;
+        if (account.username !== expectedUsername) {
+          throw new ConflictError(
+            'GUARDIAN_CREDENTIAL_MISMATCH',
+            'Guardian identity must match the fixed registration credentials.',
+          );
+        }
+      }
+    }
     const [school] = await this.db.db
       .select({
         id: schools.id,
+        name: schools.name,
         educationOptions: schools.educationOptions,
       })
       .from(schools)
@@ -215,14 +240,25 @@ export class RegistrationsService {
               existing.lastName === section.lastName &&
               existing.nationalId === section.nationalId &&
               existing.phoneNumber === section.phoneNumber &&
-              (existing.homePhone ?? null) === (section.homePhone ?? null) &&
-              (!existing.relationshipType ||
-                existing.relationshipType === section.relationshipType);
+              (existing.homePhone ?? null) === (section.homePhone ?? null);
             if (!unchanged) {
               throw new ConflictError(
                 'PARENT_PROFILE_CHANGED',
                 'Saved parent information must be changed from the family profile.',
               );
+            }
+            if (parentType === 'GUARDIAN') {
+              await txn
+                .update(parents)
+                .set({
+                  relationshipType: section.relationshipType,
+                  relationshipDescription:
+                    section.relationshipType === 'OTHER'
+                      ? (section.relationshipDescription ?? null)
+                      : null,
+                  updatedAt: new Date(),
+                })
+                .where(eq(parents.id, existing.id));
             }
           } else {
             await txn.insert(parents).values({
@@ -329,7 +365,7 @@ export class RegistrationsService {
           submittedAt: new Date(),
         });
         const priceId = generateId();
-        const prepaymentAmount = 40_000_000;
+        const prepaymentAmount = OFFLINE_PREPAYMENT_AMOUNT_IRR;
         await txn.insert(registrationPrices).values({
           id: priceId,
           registrationId,
@@ -362,19 +398,15 @@ export class RegistrationsService {
           dueDate: new Date(),
         });
         const contractId = generateId();
-        const snapshot = {
-          student: data.student,
-          guardian: { ...data.guardian, phoneNumber: guardianPhone },
-          homePhone: data.homePhone,
-          father: data.father ?? null,
-          mother: data.mother ?? null,
-          emergencyContact: data.emergencyContact ?? null,
-          address: data.address,
-          school: data.school,
-          service: data.service,
-          prepaymentAmount,
-          contractText: guidedContractText(data.student.firstName, data.student.lastName),
-        };
+        const generatedAt = new Date();
+        const snapshot = buildOfflineContractSnapshot(
+          data,
+          guardianPhone,
+          school.name,
+          generatedAt,
+          studentId,
+          '1405-1406',
+        );
         await txn.insert(contracts).values({
           id: contractId,
           registrationId,
@@ -384,7 +416,7 @@ export class RegistrationsService {
           contractStatus: 'GENERATED',
           selectedAddressId: addressId,
           contractDataSnapshot: JSON.stringify(snapshot),
-          generatedAt: new Date(),
+          generatedAt,
         });
         let finalStatus = 'CONTRACT_READY';
         if (adminAudit && actions) {
@@ -399,6 +431,22 @@ export class RegistrationsService {
                 signerRole: 'ADMIN',
                 signerReason: actions.signContractOnBehalf.reason ?? null,
                 signerSource: actions.signContractOnBehalf.source ?? 'admin_console',
+                contractDataSnapshot: JSON.stringify({
+                  ...snapshot,
+                  acceptance: {
+                    acceptedAt: signedAt.toISOString(),
+                    actorType: 'ADMIN',
+                    actorId: adminAudit.adminId,
+                    accountId: userId,
+                    studentId,
+                    reviewedPages: [1, 2, 3],
+                    templateHash: snapshot.templateHash,
+                    ipAddress: adminAudit.ipAddress ?? null,
+                    userAgent: null,
+                    signerReason: actions.signContractOnBehalf.reason ?? null,
+                    signerSource: actions.signContractOnBehalf.source ?? 'admin_console',
+                  },
+                }),
                 updatedAt: signedAt,
               })
               .where(and(eq(contracts.id, contractId), eq(contracts.contractStatus, 'GENERATED')));
@@ -555,7 +603,9 @@ export class RegistrationsService {
           contractId,
           scheduleItemId,
           prepaymentAmount,
-          contractText: guidedContractText(data.student.firstName, data.student.lastName),
+          contractText: snapshot.contractText,
+          contractTemplateHash: snapshot.templateHash,
+          contractPages: snapshot.pages,
           status: finalStatus,
         };
       }),

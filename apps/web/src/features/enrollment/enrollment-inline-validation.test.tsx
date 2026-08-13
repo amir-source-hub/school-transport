@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('CreateEnrollmentForm inline validation', () => {
-  it('shows and clears a mobile-number error directly below the edited field without submitting', async () => {
+  it('shows only the opposite parent section and validates its mobile number', async () => {
     const user = userEvent.setup();
     render(
       <CreateEnrollmentForm
@@ -23,17 +23,25 @@ describe('CreateEnrollmentForm inline validation', () => {
         ]}
         savedParents={{ father: null, mother: null }}
         existingStudents={[]}
-        defaults={{}}
+        defaults={{
+          guardian: {
+            firstName: 'علی',
+            lastName: 'احمدی',
+            nationalId: '0023518805',
+            relationshipType: 'FATHER',
+          },
+        }}
       />,
     );
 
-    const fatherSection = screen.getByRole('heading', { name: 'اطلاعات پدر' }).closest('section');
-    expect(fatherSection).not.toBeNull();
-    const phone = within(fatherSection!).getByLabelText('شماره همراه');
+    expect(screen.queryByRole('heading', { name: 'اطلاعات پدر' })).not.toBeInTheDocument();
+    const motherSection = screen.getByRole('heading', { name: 'اطلاعات مادر' }).closest('section');
+    expect(motherSection).not.toBeNull();
+    const phone = within(motherSection!).getByLabelText('شماره همراه');
 
     await user.type(phone, '0912');
 
-    const error = within(fatherSection!).getByText(
+    const error = within(motherSection!).getByText(
       'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.',
     );
     expect(phone).toHaveAttribute('aria-invalid', 'true');
@@ -45,7 +53,7 @@ describe('CreateEnrollmentForm inline validation', () => {
 
     expect(phone).toHaveAttribute('aria-invalid', 'false');
     expect(
-      within(fatherSection!).queryByText('شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.'),
+      within(motherSection!).queryByText('شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.'),
     ).not.toBeInTheDocument();
   });
 

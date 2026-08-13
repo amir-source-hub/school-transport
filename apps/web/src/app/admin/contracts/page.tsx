@@ -12,6 +12,7 @@ import { ButtonLink } from '@/components/ui/button';
 import { formatJalaliDate, formatJalaliDateTime } from '@/lib/formatters';
 
 const detailLabels: Record<string, string> = {
+  bindings: 'اطلاعات ثبت‌شده قرارداد',
   price: 'اطلاعات مالی قرارداد',
   totalAmount: 'مبلغ کل',
   prepaymentAmount: 'مبلغ پیش‌پرداخت',
@@ -24,7 +25,41 @@ const detailLabels: Record<string, string> = {
   registrationId: 'شناسه ثبت‌نام',
   setAt: 'زمان ثبت قیمت',
   parentConfirmedAt: 'زمان تأیید خانواده',
+  studentFullName: 'نام و نام خانوادگی دانش‌آموز',
+  guardianFullName: 'نام و نام خانوادگی سرپرست',
+  guardianRole: 'نسبت سرپرست',
+  studentNationalId: 'کد ملی دانش‌آموز',
+  educationLevel: 'مقطع تحصیلی',
+  grade: 'پایه تحصیلی',
+  fieldOfStudy: 'رشته تحصیلی',
+  academicYear: 'سال تحصیلی',
+  serviceAmountRial: 'هزینه سرویس به ریال',
+  serviceAmountToman: 'هزینه سرویس به تومان',
+  serviceAmountTomanWords: 'هزینه سرویس به حروف',
+  paymentState: 'وضعیت پرداخت',
+  homePhone: 'تلفن منزل',
+  postalCode: 'کد پستی',
+  homeAddress: 'نشانی منزل',
+  emergencyPhone: 'شماره تماس اضطراری',
+  motherMobile: 'شماره همراه مادر',
+  fatherMobile: 'شماره همراه پدر',
+  contractStartDate: 'تاریخ شروع قرارداد',
+  serviceType: 'نوع سرویس',
+  schoolName: 'نام مدرسه',
+  generatedDate: 'تاریخ صدور قرارداد',
+  decisionDeadline: 'مهلت تصمیم‌گیری',
 };
+
+const hiddenSnapshotFields = new Set([
+  'schemaVersion',
+  'templateVersion',
+  'generatedAt',
+  'acceptance',
+  'enrollment',
+  'contractText',
+  'pages',
+  'templateHash',
+]);
 
 const statusLabels: Record<string, string> = {
   PENDING: 'پرداخت نشده',
@@ -36,12 +71,25 @@ const statusLabels: Record<string, string> = {
   COMPLETED: 'تکمیل شده',
   ACCEPTED: 'پذیرفته شده',
   DRAFT: 'پیش‌نویس',
+  GENERATED: 'صادر شده',
+  REJECTED: 'رد شده',
+  CANCELLED: 'لغو شده',
+  AWAITING_PREPAYMENT: 'در انتظار پرداخت پیش‌پرداخت',
+  BUS: 'اتوبوس',
+  VAN: 'ون',
+  SEDAN: 'سواری',
+  FATHER: 'پدر',
+  MOTHER: 'مادر',
+  OTHER: 'سایر بستگان',
 };
 
 function formatDetailValue(key: string, value: unknown) {
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'بله' : 'خیر';
   if (typeof value === 'number' && key.toLowerCase().includes('amount')) return formatIrr(value);
+  if (typeof value === 'string' && /^\d{4}\/\d{2}\/\d{2}/.test(value)) {
+    return value.replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
+  }
   if (typeof value === 'string' && /(At|Date)$/i.test(key)) return formatJalaliDateTime(value);
   return statusLabels[String(value)] ?? String(value);
 }
@@ -84,7 +132,9 @@ export default async function ContractsPage({
             <Card key={record.id}>
               <div className="flex items-start justify-between gap-3">
                 <p className="font-black">{record.studentName}</p>
-                <Badge tone={getContractTone(record.status)}>{record.status}</Badge>
+                <Badge tone={getContractTone(record.status)}>
+                  {statusLabels[record.status] ?? record.status}
+                </Badge>
               </div>
               {record.price !== null && (
                 <p className="mt-3 text-sm text-muted">{formatIrr(record.price)}</p>
@@ -137,13 +187,15 @@ export default async function ContractsPage({
             </div>
             <div>
               <dt className="text-muted">وضعیت</dt>
-              <dd className="mt-1 font-bold">{selectedContract.status}</dd>
+              <dd className="mt-1 font-bold">
+                {statusLabels[selectedContract.status] ?? selectedContract.status}
+              </dd>
             </div>
           </dl>
           {selectedSnapshot && (
             <div className="mt-6 space-y-4">
               {Object.entries(selectedSnapshot)
-                .filter(([key]) => key !== 'contractText')
+                .filter(([key]) => !hiddenSnapshotFields.has(key))
                 .map(([key, value]) => (
                   <section
                     key={key}

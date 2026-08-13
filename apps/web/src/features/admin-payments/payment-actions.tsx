@@ -1,8 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import Image from 'next/image';
+import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -10,12 +9,127 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { ApiClientError } from '@/lib/api-client';
 import {
   configureInstallments,
   approvePayment,
   rejectPayment,
   getReceiptView,
+  recordPaymentOnBehalf,
 } from '@/features/admin-payments/admin-payments-api';
+
+export function RecordPaymentOnBehalfDialog({
+  scheduleItemId,
+  label,
+  onCompleted,
+}: {
+  scheduleItemId: string;
+  label: string;
+  onCompleted?: () => void;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [paidAt, setPaidAt] = useState('');
+  const [referenceNumber, setReferenceNumber] = useState('');
+  const [description, setDescription] = useState('');
+  const [receipt, setReceipt] = useState<File>();
+  const [error, setError] = useState<string>();
+  const idempotencyKey = useRef(crypto.randomUUID());
+
+  const submit = async () => {
+    if (!paidAt || !referenceNumber.trim() || !receipt) {
+      setError('تاریخ پرداخت، شماره مرجع و تصویر رسید همگی الزامی هستند.');
+      return;
+    }
+    if (!['image/jpeg', 'image/png'].includes(receipt.type)) {
+      setError('تصویر رسید باید با فرمت JPEG یا PNG باشد.');
+      return;
+    }
+    setLoading(true);
+    setError(undefined);
+    try {
+      await recordPaymentOnBehalf(
+        scheduleItemId,
+        {
+          paidAt,
+          referenceNumber: referenceNumber.trim(),
+          description: description.trim() || undefined,
+        },
+        receipt,
+        idempotencyKey.current,
+      );
+      idempotencyKey.current = crypto.randomUUID();
+      setOpen(false);
+      onCompleted?.();
+      router.refresh();
+    } catch (caught) {
+      setError(getApiErrorFeedback(caught).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="secondary">ثبت پرداخت به نمایندگی خانواده</Button>
+      </DialogTrigger>
+      <DialogContent
+        title={`ثبت پرداخت ${label}`}
+        description="پرداخت فقط همراه با تصویر رسید معتبر ثبت و قطعی می‌شود."
+      >
+        <div className="space-y-4">
+          <label className="block text-sm font-bold">
+            تاریخ پرداخت (شمسی) *
+            <div className="mt-2">
+              <JalaliDateInput required value={paidAt} onChange={setPaidAt} />
+            </div>
+          </label>
+          <label className="block text-sm font-bold">
+            شماره رسید / مرجع پرداخت *
+            <Input
+              className="mt-2"
+              dir="ltr"
+              value={referenceNumber}
+              onChange={(event) => setReferenceNumber(event.target.value)}
+            />
+          </label>
+          <label className="block text-sm font-bold">
+            تصویر رسید (JPEG یا PNG) *
+            <Input
+              className="mt-2"
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={(event) => setReceipt(event.target.files?.[0])}
+            />
+          </label>
+          <label className="block text-sm font-bold">
+            توضیحات پرداخت
+            <Textarea
+              className="mt-2"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </label>
+          {error && (
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          )}
+          <div className="flex gap-3">
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              انصراف
+            </Button>
+            <Button loading={loading} onClick={submit}>
+              ثبت پرداخت و رسید
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function ReceiptPreviewDialog({ submissionId }: { submissionId: string }) {
   const [open, setOpen] = useState(false);
@@ -42,14 +156,15 @@ export function ReceiptPreviewDialog({ submissionId }: { submissionId: string })
         description="این پیوند کوتاه‌عمر و فقط برای بررسی مجاز است."
       >
         {viewUrl ? (
-          <Image
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
             src={viewUrl}
             alt="رسید پرداخت ارسالی"
-            width={1200}
-            height={1200}
-            sizes="(max-width: 640px) 100vw, 640px"
-            unoptimized
-            className="max-h-[65vh] w-full object-contain"
+            className="max-h-[65vh] w-full rounded-xl bg-surface-muted object-contain"
+            onError={() => {
+              setViewUrl(undefined);
+              setError('نمایش رسید ناموفق بود. پنجره را ببندید و دوباره تلاش کنید.');
+            }}
           />
         ) : (
           <p role="status" className="text-sm text-muted">
@@ -69,9 +184,11 @@ export function ReceiptPreviewDialog({ submissionId }: { submissionId: string })
 export function ApprovePaymentDialog({
   paymentId,
   version,
+  onApproved,
 }: {
   paymentId: string;
   version: number;
+  onApproved?: () => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -83,10 +200,14 @@ export function ApprovePaymentDialog({
     setError(null);
     try {
       await approvePayment(paymentId, version);
+      onApproved?.();
       setOpen(false);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'خطا در تأیید پرداخت');
+      setError(getApiErrorFeedback(e).message);
+      if (e instanceof ApiClientError && e.code === 'OFFLINE_PAYMENT_NOT_PENDING') {
+        router.refresh();
+      }
     } finally {
       setLoading(false);
     }
@@ -130,10 +251,18 @@ export function ConfigureInstallmentsDialog({
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>();
   const [items, setItems] = useState([{ amount: '', dueDate: '' }]);
+  const [configured, setConfigured] = useState(false);
   const update = (index: number, key: 'amount' | 'dueDate', value: string) =>
     setItems((current) =>
       current.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: value } : item)),
     );
+  if (configured) {
+    return (
+      <p role="status" className="rounded-xl bg-success-soft p-3 text-sm font-bold text-success">
+        {fullPayment ? 'پرداخت یکجای باقی‌مانده ثبت شد.' : 'برنامه اقساط ثبت شد.'}
+      </p>
+    );
+  }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -144,7 +273,7 @@ export function ConfigureInstallmentsDialog({
         description={
           fullPayment
             ? 'مبلغ باقی‌مانده و تاریخ پرداخت را تعیین کنید. پیش‌پرداخت ثابت می‌ماند.'
-            : 'تعداد، مبلغ و تاریخ هر قسط را تعیین کنید. پیش‌پرداخت ۴ میلیون تومان ثابت می‌ماند.'
+            : 'تعداد، مبلغ و تاریخ هر قسط را تعیین کنید. پیش‌پرداخت ۴٬۹۹۷٬۸۰۰ تومان ثابت می‌ماند.'
         }
       >
         <div className="max-h-[65vh] space-y-4 overflow-y-auto">
@@ -153,8 +282,8 @@ export function ConfigureInstallmentsDialog({
             const dueDateErrors = fieldErrors?.[`items.${index}.dueDate`] ?? [];
             return (
               <div key={index} className="space-y-2">
-                <div className="grid grid-cols-[auto_1fr_1fr] items-end gap-3 rounded-xl bg-surface-muted p-3">
-                  <span className="pb-3 text-sm font-black">
+                <div className="grid grid-cols-1 items-end gap-3 rounded-xl bg-surface-muted p-3 md:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)]">
+                  <span className="text-sm font-black md:pb-3">
                     {fullPayment ? 'باقی‌مانده' : `قسط ${(index + 1).toLocaleString('fa-IR')}`}
                   </span>
                   <label className="text-xs font-bold">
@@ -219,6 +348,7 @@ export function ConfigureInstallmentsDialog({
                   items.map((item) => ({ amount: Number(item.amount), dueDate: item.dueDate })),
                 );
                 setOpen(false);
+                setConfigured(true);
                 router.refresh();
               } catch (caught) {
                 const feedback = getApiErrorFeedback(caught);
@@ -240,9 +370,11 @@ export function ConfigureInstallmentsDialog({
 export function RejectPaymentDialog({
   paymentId,
   version,
+  onRejected,
 }: {
   paymentId: string;
   version: number;
+  onRejected?: (reason: string) => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -256,6 +388,7 @@ export function RejectPaymentDialog({
     setError(null);
     try {
       await rejectPayment(paymentId, version, reason.trim());
+      onRejected?.(reason.trim());
       setOpen(false);
       setReason('');
       router.refresh();

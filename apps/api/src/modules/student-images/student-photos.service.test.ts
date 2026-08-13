@@ -12,7 +12,7 @@ function config(overrides: Partial<Record<keyof ConfigService, unknown>> = {}): 
   return {
     studentPhotoUploadUrlTtlSeconds: 300,
     studentPhotoViewUrlTtlSeconds: 300,
-    studentPhotoMaxBytes: 2 * 1024 * 1024,
+    studentPhotoMaxBytes: 5 * 1024 * 1024,
     studentPhotoMaxPixels: 12_500_000,
     studentPhotoMaxAxis: 8000,
     studentPhotoOutputWidth: 600,
@@ -106,6 +106,7 @@ function storage(overrides: Partial<Record<keyof S3Storage, unknown>> = {}): S3S
 
 function notifications() {
   return {
+    create: vi.fn(async () => undefined),
     enqueueInTransaction: vi.fn(async () => undefined),
   } as unknown as InAppNotificationService;
 }
@@ -121,6 +122,7 @@ describe('StudentPhotosService authorizeUpload', () => {
   it('throws ConflictError when the active-upload cap is reached', async () => {
     const db = {
       db: {
+        update: vi.fn(() => updateReturning([])),
         select: vi.fn(() => selectWhere([{ count: '3' }])),
         insert: vi.fn(),
       },
@@ -136,6 +138,7 @@ describe('StudentPhotosService authorizeUpload', () => {
   it('rejects a declared size above the byte cap', async () => {
     const db = {
       db: {
+        update: vi.fn(() => updateReturning([])),
         select: vi.fn(() => selectWhere([{ count: '0' }])),
         insert: vi.fn(),
       },
@@ -145,7 +148,7 @@ describe('StudentPhotosService authorizeUpload', () => {
     await expect(
       service.authorizeUpload('user-1', {
         declaredMime: 'image/png',
-        declaredSize: 25 * 1024 * 1024,
+        declaredSize: 5 * 1024 * 1024 + 1,
       }),
     ).rejects.toBeInstanceOf(ValidationError);
   });
@@ -154,6 +157,7 @@ describe('StudentPhotosService authorizeUpload', () => {
     const saved = baseRow({ id: 'upload-9', status: 'AUTHORIZED' });
     const db = {
       db: {
+        update: vi.fn(() => updateReturning([])),
         select: vi.fn(() => selectWhere([{ count: '0' }])),
         insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn(async () => [saved]) })) })),
       },
@@ -163,7 +167,7 @@ describe('StudentPhotosService authorizeUpload', () => {
 
     const result = await service.authorizeUpload('user-1', {
       declaredMime: 'image/jpeg',
-      declaredSize: 100_000,
+      declaredSize: 5 * 1024 * 1024,
     });
     expect(result.uploadId).toBe('upload-9');
     expect(result.uploadUrl).toBe('https://s3.example/presigned-put');
@@ -427,24 +431,24 @@ describe('StudentPhotosService approve', () => {
     });
   });
 
-  it('rejects stale approval when a newer pending photo exists', async () => {
+  it('approves the exact pending photo selected by the admin', async () => {
     const pending = baseRow({ status: 'PENDING_REVIEW', canonicalKey: 'canonical/old.jpg' });
+    const approved = { ...pending, status: 'APPROVED' };
     const txn = {
-      select: vi
+      select: vi.fn(() => selectLimit([pending])),
+      update: vi
         .fn()
-        .mockReturnValueOnce(selectLimit([pending]))
-        .mockReturnValueOnce(selectLimit([{ id: 'newer-upload' }])),
-      update: vi.fn(),
+        .mockReturnValueOnce(updateSimple())
+        .mockReturnValueOnce(updateReturning([approved])),
     };
     const db = {
       db: { transaction: vi.fn(async (cb: (t: unknown) => unknown) => cb(txn)) },
     } as unknown as DatabaseService;
     const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
 
-    await expect(service.approve('admin-1', 'upload-1', 1)).rejects.toMatchObject({
-      code: 'PHOTO_SUPERSEDED',
+    await expect(service.approve('admin-1', 'upload-1', 1)).resolves.toMatchObject({
+      status: 'APPROVED',
     });
-    expect(txn.update).not.toHaveBeenCalled();
   });
 
   it('rejects approving a photo that is not pending review', async () => {

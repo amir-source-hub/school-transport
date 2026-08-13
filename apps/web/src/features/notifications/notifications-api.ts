@@ -49,6 +49,12 @@ export async function markNotificationRead(id: string) {
 export async function markAllNotificationsRead() {
   await apiRequest('/notifications/read-all', { method: 'POST' });
 }
+export async function getUnreadNotificationCount() {
+  const response = await apiRequest<{ unreadCount: number }>('/notifications/unread-count', {
+    cache: 'no-store',
+  });
+  return response.data.unreadCount;
+}
 
 const settingsSchema = z.object({
   textVersion: z.string(),

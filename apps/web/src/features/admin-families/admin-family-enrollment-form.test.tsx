@@ -1,14 +1,11 @@
-﻿import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminFamilyEnrollmentForm } from './admin-family-enrollment-form';
 
-const createAdminFamilyEnrollment = vi.hoisted(() => vi.fn());
-vi.mock('./admin-families-api', async (importOriginal) => {
-  const original = await importOriginal<typeof import('./admin-families-api')>();
-  return { ...original, createAdminFamilyEnrollment };
-});
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const createEnrollmentForm = vi.hoisted(() => vi.fn(() => <div>فرم مشترک ثبت‌نام</div>));
+vi.mock('@/features/enrollment/enrollment-actions', () => ({
+  CreateEnrollmentForm: createEnrollmentForm,
+}));
 
 const family = {
   id: 'family-1',
@@ -18,7 +15,7 @@ const family = {
   status: 'فعال',
   parents: [
     {
-      id: 'f',
+      id: 'father-1',
       parentType: 'FATHER',
       firstName: 'رضا',
       lastName: 'احمدی',
@@ -27,7 +24,7 @@ const family = {
       isPrimaryContact: true,
     },
     {
-      id: 'm',
+      id: 'mother-1',
       parentType: 'MOTHER',
       firstName: 'سارا',
       lastName: 'احمدی',
@@ -38,7 +35,7 @@ const family = {
   ],
   addresses: [
     {
-      id: 'a',
+      id: 'address-1',
       title: 'منزل',
       province: 'تهران',
       city: 'تهران',
@@ -50,128 +47,40 @@ const family = {
       isActive: true,
     },
   ],
-  emergencyContacts: [
-    {
-      id: 'e',
-      firstName: 'مریم',
-      lastName: 'احمدی',
-      relationship: 'خاله',
-      phoneNumber: '09123333333',
-      isActive: true,
-    },
-  ],
+  emergencyContacts: [],
   students: [],
 };
 
 const schools = [
   {
-    id: '00000000-0000-4000-8000-000000000001',
+    id: 'school-1',
     name: 'مدرسه نمونه',
+    city: 'تهران',
     educationOptions: [{ level: 'ابتدایی', grades: ['اول'] }],
   },
 ];
 
-async function fillStudentForm(user: ReturnType<typeof userEvent.setup>) {
-  const studentFieldset = screen.getByText('مشخصات دانش‌آموز').closest('fieldset') as HTMLElement;
-  await user.type(within(studentFieldset).getByLabelText('نام', { selector: 'input' }), 'علی');
-  await user.type(
-    within(studentFieldset).getAllByLabelText('نام خانوادگی', { selector: 'input' })[0],
-    'احمدی',
-  );
-  await user.type(
-    within(studentFieldset).getByLabelText('کد ملی', { selector: 'input' }),
-    '1234567891',
-  );
-  await user.type(
-    within(studentFieldset).getByLabelText('تلفن منزل (۰۲۱)', { selector: 'input' }),
-    '22113333',
-  );
-  await user.type(screen.getByPlaceholderText('۱۴۰۵/۰۱/۰۱'), '13980101');
-}
-
 describe('AdminFamilyEnrollmentForm', () => {
-  it('submits the complete guided payload and leaves contract/payment action to the parent', async () => {
-    createAdminFamilyEnrollment.mockResolvedValue({
-      data: { status: 'CONTRACT_READY', parentActionRequired: true },
-    });
-    const user = userEvent.setup();
+  it('uses the exact shared parent enrollment form with family-scoped defaults', () => {
     render(<AdminFamilyEnrollmentForm family={family} schools={schools} />);
 
-    await fillStudentForm(user);
-    await user.click(screen.getByRole('button', { name: 'ایجاد ثبت‌نام و ارسال برای اقدام والد' }));
-
-    expect(createAdminFamilyEnrollment).toHaveBeenCalledWith(
-      'family-1',
+    expect(screen.getByText('فرم مشترک ثبت‌نام')).toBeInTheDocument();
+    expect(createEnrollmentForm).toHaveBeenCalledWith(
       expect.objectContaining({
-        student: expect.objectContaining({ firstName: 'علی', nationalId: '1234567891' }),
-        homePhone: '02122113333',
-        guardian: expect.objectContaining({
-          firstName: 'رضا',
-          relationshipType: 'FATHER',
+        adminFamilyId: 'family-1',
+        schools,
+        guardianPhone: '09121111111',
+        existingStudents: [],
+        savedParents: expect.objectContaining({
+          father: expect.objectContaining({ firstName: 'رضا' }),
+          mother: expect.objectContaining({ firstName: 'سارا' }),
         }),
-        father: expect.objectContaining({ phoneNumber: '09121111111' }),
-        emergencyContact: expect.objectContaining({ relationship: 'خاله' }),
-        address: expect.objectContaining({ postalCode: '1234567890', latitude: 35.7 }),
-        school: {
-          schoolId: '00000000-0000-4000-8000-000000000001',
-          educationLevel: 'ابتدایی',
-          grade: 'اول',
-        },
+        defaults: expect.objectContaining({
+          guardian: expect.objectContaining({ relationshipType: 'FATHER' }),
+          address: expect.objectContaining({ streetAddress: 'خیابان نمونه' }),
+        }),
       }),
       undefined,
     );
-    expect(
-      await screen.findByText(/قرارداد و پیش‌پرداخت اکنون برای بررسی و اقدام والد/),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /پذیرش قرارداد|پرداخت/ })).not.toBeInTheDocument();
-  }, 30_000);
-
-  it('signs the contract on behalf and records a cash prepayment with the required receipt reference', async () => {
-    createAdminFamilyEnrollment.mockResolvedValue({
-      data: { status: 'ENROLLED', parentActionRequired: false },
-    });
-    const user = userEvent.setup();
-    render(<AdminFamilyEnrollmentForm family={family} schools={schools} />);
-
-    await fillStudentForm(user);
-    await user.click(screen.getByRole('checkbox', { name: /پذیرش قرارداد به نمایندگی از والد/ }));
-    await user.click(screen.getByRole('checkbox', { name: /ثبت پیش‌پرداخت نقدی/ }));
-    expect(screen.getByText('هشدار پیش‌پرداخت نقدی')).toBeInTheDocument();
-    await user.type(screen.getByLabelText('شماره رسید / مرجع پرداخت'), 'receipt-001');
-    await user.click(
-      screen.getByRole('button', { name: 'ایجاد ثبت‌نام و تکمیل به نمایندگی والد' }),
-    );
-
-    expect(createAdminFamilyEnrollment).toHaveBeenCalledWith(
-      'family-1',
-      expect.objectContaining({ student: expect.objectContaining({ firstName: 'علی' }) }),
-      {
-        signContractOnBehalf: { reason: undefined, source: 'admin_console' },
-        cashPrepayment: {
-          referenceNumber: 'receipt-001',
-          paidAt: undefined,
-          description: undefined,
-        },
-      },
-    );
-    expect(
-      await screen.findByText(/قرارداد به نمایندگی از والد پذیرفته شد و پیش‌پرداخت نقدی ثبت گردید/),
-    ).toBeInTheDocument();
-  }, 30_000);
-
-  it('blocks a cash prepayment without a receipt reference', async () => {
-    createAdminFamilyEnrollment.mockResolvedValue({ data: { status: 'ENROLLED' } });
-    const user = userEvent.setup();
-    render(<AdminFamilyEnrollmentForm family={family} schools={schools} />);
-
-    await fillStudentForm(user);
-    await user.click(screen.getByRole('checkbox', { name: /پذیرش قرارداد به نمایندگی از والد/ }));
-    await user.click(screen.getByRole('checkbox', { name: /ثبت پیش‌پرداخت نقدی/ }));
-    await user.click(
-      screen.getByRole('button', { name: 'ایجاد ثبت‌نام و تکمیل به نمایندگی والد' }),
-    );
-
-    expect(createAdminFamilyEnrollment).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent('شماره رسید یا مرجع پرداخت');
-  }, 30_000);
+  });
 });

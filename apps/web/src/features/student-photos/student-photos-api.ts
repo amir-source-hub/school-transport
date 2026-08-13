@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiRequest } from '@/lib/api-client';
+import { putFileDirectly } from '@/lib/direct-object-upload';
 
 export const ACCEPTED_PHOTO_MIMES = ['image/jpeg', 'image/png'] as const;
 
@@ -49,9 +50,13 @@ export const photoViewUrlSchema = z.object({
 
 export type PhotoViewUrl = z.infer<typeof photoViewUrlSchema>;
 
-export type PhotoUploadMode = 'panel' | 'onboarding';
-const photoBase = (mode: PhotoUploadMode) =>
-  mode === 'onboarding' ? '/onboarding/student-photos' : '/student-photos';
+export type PhotoUploadMode = 'panel' | 'onboarding' | 'admin';
+const photoBase = (mode: PhotoUploadMode, familyId?: string) =>
+  mode === 'onboarding'
+    ? '/onboarding/student-photos'
+    : mode === 'admin'
+      ? `/admin/student-photos/families/${familyId}`
+      : '/student-photos';
 
 export async function authorizePhotoUpload(
   input: {
@@ -60,10 +65,14 @@ export async function authorizePhotoUpload(
     declaredSize: number;
   },
   mode: PhotoUploadMode = 'panel',
+  familyId?: string,
+  signal?: AbortSignal,
 ) {
-  const response = await apiRequest<unknown>(`${photoBase(mode)}/uploads`, {
+  const response = await apiRequest<unknown>(`${photoBase(mode, familyId)}/uploads`, {
     method: 'POST',
     body: input,
+    signal,
+    timeoutMs: 20_000,
   });
   return authorizePhotoUploadSchema.parse(response.data);
 }
@@ -73,34 +82,26 @@ export async function putPhotoObject(
   file: File,
   options: { signal?: AbortSignal; onProgress?: (percent: number) => void } = {},
 ) {
-  await new Promise<void>((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    const abort = () => request.abort();
-    request.open('PUT', uploadUrl);
-    request.setRequestHeader('Content-Type', file.type);
-    request.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable)
-        options.onProgress?.(Math.round((event.loaded / event.total) * 100));
-    });
-    request.addEventListener('load', () => {
-      options.signal?.removeEventListener('abort', abort);
-      if (request.status >= 200 && request.status < 300) resolve();
-      else reject(new Error(`PHOTO_UPLOAD_HTTP_${request.status}`));
-    });
-    request.addEventListener('error', () => reject(new Error('PHOTO_UPLOAD_NETWORK')));
-    request.addEventListener('abort', () =>
-      reject(new DOMException('Upload cancelled', 'AbortError')),
-    );
-    options.signal?.addEventListener('abort', abort, { once: true });
-    if (options.signal?.aborted) abort();
-    else request.send(file);
+  await putFileDirectly(uploadUrl, file, {
+    signal: options.signal,
+    onProgress: (percent) => options.onProgress?.(percent ?? 0),
   });
 }
 
-export async function completePhotoUpload(uploadId: string, mode: PhotoUploadMode = 'panel') {
-  const response = await apiRequest<unknown>(`${photoBase(mode)}/uploads/${uploadId}/complete`, {
-    method: 'POST',
-  });
+export async function completePhotoUpload(
+  uploadId: string,
+  mode: PhotoUploadMode = 'panel',
+  familyId?: string,
+  signal?: AbortSignal,
+) {
+  const response = await apiRequest<unknown>(
+    `${photoBase(mode, familyId)}/uploads/${uploadId}/complete`,
+    {
+      method: 'POST',
+      signal,
+      timeoutMs: 20_000,
+    },
+  );
   return photoUploadViewSchema.parse(response.data);
 }
 

@@ -41,7 +41,7 @@ describe('OfflinePaymentForm', () => {
       bankName: 'بانک',
       cardNumber: '6037991234567890',
       iban: null,
-      accountNumber: null,
+      accountNumber: '123456789001',
       instructions: 'رسید را ثبت کنید.',
     });
     api.submitOfflinePayment.mockResolvedValue('submission-1');
@@ -58,12 +58,13 @@ describe('OfflinePaymentForm', () => {
   it('shows the central destination and uploads required receipt evidence before completion', async () => {
     const user = userEvent.setup();
     render(
-      <OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت — ۴٬۰۰۰٬۰۰۰ تومان' }]} />,
+      <OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت — ۴٬۹۹۷٬۸۰۰ تومان' }]} />,
     );
     expect(await screen.findByText('6037991234567890')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('تاریخ پرداخت (شمسی)'), {
-      target: { value: '1405/05/18' },
-    });
+    expect(screen.getByText('123456789001')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('سال'), { target: { value: '1405' } });
+    fireEvent.change(screen.getByLabelText('ماه'), { target: { value: '05' } });
+    fireEvent.change(screen.getByLabelText('روز'), { target: { value: '18' } });
     await user.type(screen.getByLabelText('شماره پیگیری بانکی'), '123456');
     const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'receipt.jpg', {
       type: 'image/jpeg',

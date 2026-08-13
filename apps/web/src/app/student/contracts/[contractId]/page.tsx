@@ -2,6 +2,7 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ContractActions } from '@/features/finance/contract-actions';
+import { ContractReview } from '@/features/finance/contract-review';
 import { getContract, getPaymentPlan } from '@/features/finance/contracts-api';
 import { formatIrr } from '@/lib/formatters';
 import { metadataFor } from '@/lib/route-metadata';
@@ -31,10 +32,25 @@ const contractLabels: Record<string, string> = {
   schoolId: 'شناسه مدرسه',
   educationLevel: 'مقطع',
   grade: 'پایه',
+  relationshipType: 'نسبت سرپرست',
+  relationshipDescription: 'شرح نسبت',
+  relationship: 'نسبت',
+  homePhone: 'تلفن منزل',
+  schoolName: 'نام مدرسه',
+  schoolType: 'نوع مدرسه',
+  genderType: 'نوع مدرسه از نظر جنسیت',
+  paymentPlanType: 'روش پرداخت',
+  requestedStartDate: 'تاریخ شروع درخواستی',
+  parentNotes: 'توضیحات خانواده',
+  vehicleType: 'نوع خودرو',
+  installmentAllowed: 'امکان پرداخت اقساطی',
+  itemType: 'نوع پرداخت',
+  itemStatus: 'وضعیت پرداخت',
 };
 
 const groupLabels: Record<string, string> = {
   student: 'دانش‌آموز',
+  guardian: 'سرپرست',
   father: 'پدر',
   mother: 'مادر',
   emergencyContact: 'تماس اضطراری',
@@ -44,12 +60,59 @@ const groupLabels: Record<string, string> = {
   price: 'شرایط مالی',
 };
 
+const contractValueLabels: Record<string, string> = {
+  GENERATED: 'صادرشده و در انتظار پذیرش',
+  ACCEPTED: 'پذیرفته‌شده',
+  REJECTED: 'ردشده',
+  CANCELLED: 'لغوشده',
+  BUS: 'اتوبوس',
+  MINIBUS: 'مینی‌بوس',
+  VAN: 'ون',
+  CAR: 'خودرو سواری',
+  MALE: 'پسر',
+  FEMALE: 'دختر',
+  MIXED: 'مختلط',
+  FATHER: 'پدر',
+  MOTHER: 'مادر',
+  OTHER: 'سایر',
+  FULL: 'پرداخت کامل',
+  INSTALLMENTS: 'پیش‌پرداخت و اقساط',
+  PREPAYMENT_PLUS_FOUR_INSTALLMENTS: 'پیش‌پرداخت و چهار قسط',
+  ADMIN_CONFIGURED: 'برنامه اقساط تنظیم‌شده توسط مدیریت',
+  PUBLIC: 'دولتی',
+  PRIVATE: 'خصوصی',
+  NEMOONE_DOLATI: 'نمونه دولتی',
+  GIFTED: 'تیزهوشان',
+  SHAHED: 'شاهد',
+  BOARDING: 'شبانه‌روزی',
+  SPECIAL: 'استثنائی',
+  INTERNATIONAL: 'بین‌المللی',
+  PREPAYMENT: 'پیش‌پرداخت',
+  INSTALLMENT: 'قسط',
+  PAID: 'پرداخت‌شده',
+  UNPAID: 'پرداخت‌نشده',
+  PENDING: 'در انتظار',
+};
+
 function parseContractSnapshot(snapshot: string | null) {
   if (!snapshot) return [];
   try {
     const parsed = JSON.parse(snapshot) as Record<string, unknown>;
     return Object.entries(parsed)
-      .filter(([group]) => group !== 'contractText')
+      .filter(
+        ([group]) =>
+          ![
+            'contractText',
+            'pages',
+            'bindings',
+            'templateHash',
+            'enrollment',
+            'schemaVersion',
+            'templateVersion',
+            'generatedAt',
+            'acceptance',
+          ].includes(group),
+      )
       .map(([group, value]) => ({
         title: groupLabels[group] ?? contractLabels[group] ?? group,
         fields:
@@ -60,6 +123,26 @@ function parseContractSnapshot(snapshot: string | null) {
   } catch {
     return [{ title: 'متن قرارداد', fields: [['text', snapshot] as [string, unknown]] }];
   }
+}
+
+function getVersionedContract(snapshot: string | null) {
+  if (!snapshot) return null;
+  try {
+    const parsed = JSON.parse(snapshot) as Record<string, unknown>;
+    if (
+      typeof parsed.templateHash === 'string' &&
+      Array.isArray(parsed.pages) &&
+      parsed.pages.length === 3 &&
+      parsed.pages.every(
+        (page) => Array.isArray(page) && page.every((item) => typeof item === 'string'),
+      )
+    ) {
+      return { templateHash: parsed.templateHash, pages: parsed.pages as string[][] };
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 function getContractText(snapshot: string | null, studentName: string) {
@@ -81,6 +164,8 @@ function getContractText(snapshot: string | null, studentName: string) {
 
 خانواده مسئول صحت اطلاعات دانش‌آموز، والدین، تماس اضطراری، نشانی و موقعیت ثبت‌شده است و متعهد می‌شود تغییرات را به‌موقع اعلام کند. آغاز نهایی سرویس منوط به تأیید ظرفیت و برنامه مسیر است.
 
+اینجانب به عنوان سرپرست دانش آموز رضایت کامل خود را نسبت به استفاده از دوربین ثبت وقایع در داخل خودرو سرویس مدرسه اعلام می نمایم.
+
 با پذیرش این قرارداد، خانواده اعلام می‌کند تمام بندها را مطالعه کرده و با شرایط فوق موافق است.`;
 }
 
@@ -88,6 +173,7 @@ function formatContractValue(key: string, value: unknown) {
   if (value === null || value === undefined || value === '') return '—';
   if (key.toLowerCase().includes('amount') && typeof value === 'number') return formatIrr(value);
   if (typeof value === 'boolean') return value ? 'بله' : 'خیر';
+  if (typeof value === 'string' && contractValueLabels[value]) return contractValueLabels[value];
   return String(value);
 }
 
@@ -104,6 +190,7 @@ export default async function ContractPage({
     contract.contractDataSnapshot,
     `${contract.studentName} ${contract.studentLastName}`,
   );
+  const versionedContract = getVersionedContract(contract.contractDataSnapshot);
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -130,7 +217,7 @@ export default async function ContractPage({
                 : 'warning'
           }
         >
-          {contract.contractStatus}
+          {contractValueLabels[contract.contractStatus] ?? contract.contractStatus}
         </Badge>
       </div>
       <section className="grid gap-4 md:grid-cols-3">
@@ -140,7 +227,9 @@ export default async function ContractPage({
         </Card>
         <Card>
           <p className="text-sm text-muted">نوع سرویس</p>
-          <p className="mt-2 font-black">{contract.serviceType}</p>
+          <p className="mt-2 font-black">
+            {contractValueLabels[contract.serviceType] ?? contract.serviceType}
+          </p>
         </Card>
         <Card>
           <p className="text-sm text-muted">مبلغ</p>
@@ -166,7 +255,7 @@ export default async function ContractPage({
                   {group.fields.map(([key, value]) => (
                     <div key={key} className="grid grid-cols-[8rem_1fr] gap-3 py-2">
                       <dt className="text-muted">
-                        {contractLabels[key] ?? (key === 'text' ? 'متن' : key)}
+                        {contractLabels[key] ?? (key === 'text' ? 'متن' : 'اطلاعات تکمیلی')}
                       </dt>
                       <dd
                         className="break-words font-bold"
@@ -186,12 +275,24 @@ export default async function ContractPage({
           </div>
         )}
       </Card>
-      <Card>
-        <h2 className="text-lg font-black">متن قرارداد</h2>
-        <div className="mt-4 whitespace-pre-line rounded-xl border border-border bg-surface-muted/40 p-5 text-sm leading-8">
-          {contractText}
-        </div>
-      </Card>
+      {versionedContract ? (
+        <Card>
+          <ContractReview
+            contractId={contract.id}
+            version={contract.versionNumber}
+            templateHash={versionedContract.templateHash}
+            pages={versionedContract.pages}
+            canAct={contract.contractStatus === 'GENERATED'}
+          />
+        </Card>
+      ) : (
+        <Card>
+          <h2 className="text-lg font-black">متن قرارداد قدیمی</h2>
+          <div className="mt-4 whitespace-pre-line rounded-xl border border-border bg-surface-muted/40 p-5 text-sm leading-8">
+            {contractText}
+          </div>
+        </Card>
+      )}
       {payment && (
         <Card>
           <h2 className="text-lg font-black">برنامه پرداخت</h2>
@@ -206,14 +307,16 @@ export default async function ContractPage({
                 </span>
                 <strong>{formatIrr(item.amount)}</strong>
                 <Badge tone={item.itemStatus === 'PAID' ? 'success' : 'warning'}>
-                  {item.itemStatus}
+                  {contractValueLabels[item.itemStatus] ?? item.itemStatus}
                 </Badge>
               </div>
             ))}
           </div>
         </Card>
       )}
-      {contract.contractStatus === 'GENERATED' && <ContractActions id={contract.id} />}
+      {contract.contractStatus === 'GENERATED' && !versionedContract && (
+        <ContractActions id={contract.id} />
+      )}
     </div>
   );
 }

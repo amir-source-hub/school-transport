@@ -84,13 +84,13 @@ describe('PhotoUploadCard', () => {
     expect(authorizePhotoUpload).not.toHaveBeenCalled();
   });
 
-  it('rejects a file larger than 25 MB without calling the API', async () => {
+  it('rejects a file larger than 5 MiB without calling the API', async () => {
     const user = userEvent.setup();
     render(<PhotoUploadCard studentId="student-1" initialItems={[]} />);
 
-    await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile(26 * 1024 * 1024));
+    await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile(5 * 1024 * 1024 + 1));
 
-    expect(await screen.findByText(/۲۵ مگابایت بیشتر/)).toBeInTheDocument();
+    expect(await screen.findByText(/۵ مگابایت بیشتر/)).toBeInTheDocument();
     expect(authorizePhotoUpload).not.toHaveBeenCalled();
   });
 
@@ -101,7 +101,7 @@ describe('PhotoUploadCard', () => {
       uploadUrl: 'https://s3.example/put-url',
       expiresInSeconds: 300,
       acceptedFormats: ['image/jpeg', 'image/png'],
-      maxBytes: 25 * 1024 * 1024,
+      maxBytes: 5 * 1024 * 1024,
       status: 'AUTHORIZED',
     });
     putPhotoObject.mockResolvedValue(undefined);
@@ -128,6 +128,8 @@ describe('PhotoUploadCard', () => {
           declaredSize: 10_000,
         },
         'panel',
+        undefined,
+        expect.any(AbortSignal),
       ),
     );
     await waitFor(() =>
@@ -140,7 +142,14 @@ describe('PhotoUploadCard', () => {
         }),
       ),
     );
-    await waitFor(() => expect(completePhotoUpload).toHaveBeenCalledWith('upload-9', 'panel'));
+    await waitFor(() =>
+      expect(completePhotoUpload).toHaveBeenCalledWith(
+        'upload-9',
+        'panel',
+        undefined,
+        expect.any(AbortSignal),
+      ),
+    );
     expect(await screen.findByText(/در صف بررسی قرار گرفت/)).toBeInTheDocument();
     expect(screen.getByText('در انتظار تایید')).toBeInTheDocument();
   });
@@ -152,7 +161,7 @@ describe('PhotoUploadCard', () => {
       uploadUrl: 'https://s3.example/put-url',
       expiresInSeconds: 300,
       acceptedFormats: ['image/jpeg', 'image/png'],
-      maxBytes: 25 * 1024 * 1024,
+      maxBytes: 5 * 1024 * 1024,
       status: 'AUTHORIZED',
     });
     putPhotoObject.mockRejectedValue(new Error('PHOTO_UPLOAD_HTTP_500'));
@@ -163,9 +172,7 @@ describe('PhotoUploadCard', () => {
     await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile());
     await user.click(screen.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      /ارسال فایل به ذخیره‌گاه ناموفق بود/,
-    );
+    expect(await screen.findByRole('status')).toHaveTextContent(/از پایداری اینترنت مطمئن شوید/);
     expect(completePhotoUpload).not.toHaveBeenCalled();
   });
 
@@ -185,7 +192,7 @@ describe('PhotoUploadCard', () => {
       uploadUrl: 'https://s3.example/put-url',
       expiresInSeconds: 300,
       acceptedFormats: ['image/png'],
-      maxBytes: 25 * 1024 * 1024,
+      maxBytes: 5 * 1024 * 1024,
       status: 'AUTHORIZED',
     });
     putPhotoObject.mockImplementation(
@@ -209,5 +216,25 @@ describe('PhotoUploadCard', () => {
     await user.click(screen.getByRole('button', { name: /لغو/ }));
     expect(await screen.findByRole('status')).toHaveTextContent('بارگذاری لغو شد');
     expect(completePhotoUpload).not.toHaveBeenCalled();
+  });
+
+  it('can cancel while the authorization request is still pending at zero percent', async () => {
+    authorizePhotoUpload.mockImplementation(
+      (_input: unknown, _mode: unknown, _familyId: unknown, signal: AbortSignal) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener('abort', () =>
+            reject(new DOMException('cancelled', 'AbortError')),
+          );
+        }),
+    );
+
+    const user = userEvent.setup();
+    render(<PhotoUploadCard studentId="student-1" initialItems={[]} />);
+    await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile());
+    await user.click(screen.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }));
+    expect(await screen.findByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+    await user.click(screen.getByRole('button', { name: /لغو/ }));
+    expect(await screen.findByRole('status')).toHaveTextContent('بارگذاری لغو شد');
+    expect(putPhotoObject).not.toHaveBeenCalled();
   });
 });

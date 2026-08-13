@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   composeMobileNumber,
   mobileToNineDigits,
+  normalizeMobileInput,
   normalizeNationalId,
   normalizePersianDigits,
   normalizePhoneNumber,
@@ -28,6 +29,14 @@ describe('input normalizers', () => {
   it('strips the leading 09 prefix into the nine editable digits', () => {
     expect(mobileToNineDigits('09123456789')).toBe('123456789');
     expect(mobileToNineDigits('9123456789')).toBe('');
+  });
+
+  it('keeps one editable 09 prefix across paste/autofill and Persian digits', () => {
+    expect(normalizeMobileInput('')).toBe('09');
+    expect(normalizeMobileInput('09123456789')).toBe('09123456789');
+    expect(normalizeMobileInput('0909123456789')).toBe('09123456789');
+    expect(normalizeMobileInput('090909123456789')).toBe('09123456789');
+    expect(normalizeMobileInput('۰۹۱۲۳۴۵۶۷۸۹')).toBe('09123456789');
   });
 
   it('normalizes and trims national IDs without guessing length', () => {

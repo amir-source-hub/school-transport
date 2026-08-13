@@ -54,7 +54,8 @@ export default async function EnrollmentsPage() {
   const activeAddress = family.addresses.find((address) => address.isActive);
   const activeEmergency = family.emergencyContacts.find((contact) => contact.isActive);
   const primaryParent =
-    [family.father, family.mother].find((parent) => parent?.isPrimaryContact) ??
+    [family.guardian, family.father, family.mother].find((parent) => parent?.isPrimaryContact) ??
+    family.guardian ??
     family.father ??
     family.mother;
   return (
@@ -96,7 +97,14 @@ export default async function EnrollmentsPage() {
                   firstName: primaryParent.firstName,
                   lastName: primaryParent.lastName,
                   nationalId: primaryParent.nationalId,
-                  relationshipType: primaryParent.parentType === 'MOTHER' ? 'MOTHER' : 'FATHER',
+                  relationshipType:
+                    (family.guardian?.relationshipType as 'FATHER' | 'MOTHER' | 'OTHER') ??
+                    (primaryParent.parentType === 'MOTHER'
+                      ? 'MOTHER'
+                      : primaryParent.parentType === 'FATHER'
+                        ? 'FATHER'
+                        : 'OTHER'),
+                  relationshipDescription: family.guardian?.relationshipDescription,
                 }
               : undefined,
           }}

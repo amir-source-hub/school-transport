@@ -220,6 +220,41 @@ export class AdminPaymentsController {
     return successResponse(await this.paymentsService.listOfflineSubmissionsForAdmin(query));
   }
 
+  @Post(':scheduleItemId/offline-submissions')
+  async createOfflineSubmission(
+    @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: OfflinePaymentDto,
+    @IdempotencyKey() idempotencyKey: string,
+  ) {
+    return successResponse(
+      await this.paymentsService.createOfflineSubmissionForAdmin(scheduleItemId, req.user.id, {
+        ...dto,
+        idempotencyKey,
+      }),
+    );
+  }
+
+  @Post('offline-submissions/:submissionId/receipt/authorize')
+  async authorizeReceipt(
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+    @Body() dto: AuthorizeReceiptUploadDto,
+  ) {
+    return successResponse(
+      await this.paymentsService.authorizeReceiptUploadForAdmin(submissionId, dto),
+    );
+  }
+
+  @Post('offline-submissions/:submissionId/receipt/complete-and-approve')
+  async completeAndApproveReceipt(
+    @Req() req: AuthenticatedRequest,
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+  ) {
+    return successResponse(
+      await this.paymentsService.completeAndApproveReceiptForAdmin(submissionId, req.user.id),
+    );
+  }
+
   @Get('offline-submissions/:submissionId/receipt')
   async receipt(
     @Req() req: AuthenticatedRequest,

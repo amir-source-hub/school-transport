@@ -620,14 +620,14 @@ export class StudentsService {
     );
     const newValues: Record<string, unknown> = { ...editable };
 
-    await this.db.db.transaction(async (txn) => {
+    const saved = await this.db.db.transaction(async (txn) => {
       const conditions = [eq(students.id, studentId)];
       if (expectedUpdatedAt) conditions.push(eq(students.updatedAt, expectedUpdatedAt));
       const updated = await txn
         .update(students)
         .set({ ...editable, updatedAt: new Date() })
         .where(and(...conditions))
-        .returning({ id: students.id });
+        .returning({ id: students.id, updatedAt: students.updatedAt });
       if (updated.length === 0) {
         throw new ConflictError(
           'STUDENT_CONCURRENT_MODIFIED',
@@ -644,9 +644,9 @@ export class StudentsService {
         newValues,
         ipAddress: context.ipAddress,
       });
+      return updated[0];
     });
-
-    return this.getById(studentId);
+    return saved;
   }
 
   private async assertValidSchoolProgram(

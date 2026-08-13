@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
+import { Body, Controller, Get, Post, Param, UseGuards, Req, ParseUUIDPipe } from '@nestjs/common';
 import { ContractsService } from './contracts.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
@@ -25,8 +25,16 @@ export class ContractsController {
   }
 
   @Post(':id/accept')
-  async accept(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
-    const contract = await this.contractsService.accept(id, req.user.id);
+  async accept(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: { reviewedPages?: number[]; templateHash?: string },
+  ) {
+    const contract = await this.contractsService.accept(id, req.user.id, {
+      ...body,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
     return successResponse(contract);
   }
 
@@ -43,8 +51,16 @@ export class OnboardingContractsController {
   constructor(private readonly contractsService: ContractsService) {}
 
   @Post(':id/accept')
-  async accept(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
-    const contract = await this.contractsService.accept(id, req.user.id);
+  async accept(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: { reviewedPages?: number[]; templateHash?: string },
+  ) {
+    const contract = await this.contractsService.accept(id, req.user.id, {
+      ...body,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
     return successResponse(contract);
   }
 }
@@ -68,5 +84,30 @@ export class AdminContractsController {
   async getAll() {
     const list = await this.contractsService.getAll();
     return successResponse(list);
+  }
+
+  @Post('contracts/:id/accept')
+  async acceptOnBehalf(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body()
+    body: {
+      reviewedPages?: number[];
+      templateHash?: string;
+      reason?: string;
+      source?: string;
+    },
+  ) {
+    return successResponse(
+      await this.contractsService.accept(id, req.user.id, {
+        reviewedPages: body.reviewedPages,
+        templateHash: body.templateHash,
+        signerReason: body.reason,
+        signerSource: body.source,
+        adminId: req.user.id,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      }),
+    );
   }
 }

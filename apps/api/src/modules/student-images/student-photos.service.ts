@@ -1,5 +1,5 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, gt, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { ConfigService } from '../../config/config.service';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -51,6 +51,23 @@ export class StudentPhotosService {
 
   async authorizeUpload(userId: string, input: AuthorizePhotoUploadDto, ip?: string) {
     if (input.studentId) await this.assertOwnedStudent(userId, input.studentId);
+    const now = new Date();
+    const abandoned = await this.db.db
+      .update(studentPhotoUploads)
+      .set({ status: 'EXPIRED', updatedAt: now })
+      .where(
+        and(
+          eq(studentPhotoUploads.accountUserId, userId),
+          eq(studentPhotoUploads.status, 'AUTHORIZED'),
+          input.studentId
+            ? eq(studentPhotoUploads.studentId, input.studentId)
+            : isNull(studentPhotoUploads.studentId),
+        ),
+      )
+      .returning({ rawKey: studentPhotoUploads.rawKey });
+    await Promise.all(
+      abandoned.map(({ rawKey }) => this.storage.deleteObject(rawKey).catch(() => undefined)),
+    );
     const active = await this.db.db
       .select({ count: count() })
       .from(studentPhotoUploads)
@@ -63,6 +80,10 @@ export class StudentPhotosService {
             'VALIDATING',
             'PENDING_REVIEW',
           ]),
+          or(
+            ne(studentPhotoUploads.status, 'AUTHORIZED'),
+            gt(studentPhotoUploads.uploadAuthorizationExpiry, now),
+          ),
         ),
       );
     if (Number(active[0].count) >= this.config.studentPhotoMaxActiveUploads) {
@@ -72,13 +93,12 @@ export class StudentPhotosService {
       );
     }
     if (input.declaredSize > this.config.studentPhotoMaxBytes) {
-      throw new ValidationError('حجم فایل از حد مجاز بیشتر است. حداکثر ۲۵ مگابایت.', {
-        declaredSize: ['حداکثر ۲۵ مگابایت مجاز است.'],
+      throw new ValidationError('حجم فایل از حد مجاز بیشتر است. حداکثر ۵ مگابایت.', {
+        declaredSize: ['حداکثر ۵ مگابایت مجاز است.'],
       });
     }
     const extension = input.declaredMime === 'image/png' ? '.png' : '.jpg';
     const rawKey = keyOfPrefix(RAW_PREFIX, extension);
-    const now = new Date();
     const ttl = this.config.studentPhotoUploadUrlTtlSeconds;
     const expiry = new Date(now.getTime() + ttl * 1_000);
     const uploadUrl = this.storage.presignPut(rawKey, input.declaredMime, ttl);
@@ -143,7 +163,7 @@ export class StudentPhotosService {
     }
     if (head.size > this.config.studentPhotoMaxBytes) {
       await this.markFailed(upload.id, 'TOO_LARGE', ip);
-      throw new ValidationError('فایل بارگذاری‌شده از حد مجاز ۲۵ مگابایت بزرگ‌تر است.');
+      throw new ValidationError('فایل بارگذاری‌شده از حد مجاز ۵ مگابایت بزرگ‌تر است.');
     }
     if (head.size !== upload.declaredSize) {
       await this.markFailed(upload.id, 'SIZE_MISMATCH', ip);
@@ -246,6 +266,15 @@ export class StudentPhotosService {
       newValues: { status: 'PENDING_REVIEW', actualSize: processed.actualSize },
       ipAddress: ip,
     });
+    await this.notifications.create({
+      eventId: `STUDENT_PHOTO_SUBMITTED:${upload.id}`,
+      userId,
+      notificationType: 'STUDENT_PHOTO_SUBMITTED',
+      title: 'عکس کارت سرویس ارسال شد',
+      message: 'عکس دانش‌آموز برای بررسی مدیریت ثبت شد.',
+      relatedEntityType: 'STUDENT_PHOTO',
+      relatedEntityId: upload.id,
+    });
     return this.toOwnerView(updated);
   }
 
@@ -311,6 +340,9 @@ export class StudentPhotosService {
   async listForAdmin(query: AdminPhotoListQueryDto) {
     const filters = [sql`true`];
     if (query.status) filters.push(eq(studentPhotoUploads.status, query.status));
+    if (query.status === 'PENDING_REVIEW') {
+      filters.push(isNotNull(studentPhotoUploads.studentId));
+    }
     const where = and(...filters);
     const rows = await this.db.db
       .select({
@@ -378,23 +410,12 @@ export class StudentPhotosService {
         .where(eq(studentPhotoUploads.id, uploadId))
         .limit(1);
       if (!upload) throw new NotFoundError('Student photo upload');
+      if (upload.status === 'APPROVED') return upload;
       assertStudentPhotoTransition(upload.status as StudentPhotoStatus, 'APPROVED');
       if (!upload.canonicalKey) throw new ValidationError('The photo has no canonical image.');
       if (!upload.studentId) {
         throw new ConflictError('PHOTO_NOT_LINKED', 'عکس هنوز به دانش‌آموز متصل نشده است.');
       }
-      const [newer] = await txn
-        .select({ id: studentPhotoUploads.id })
-        .from(studentPhotoUploads)
-        .where(
-          and(
-            eq(studentPhotoUploads.studentId, upload.studentId),
-            eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
-            gt(studentPhotoUploads.createdAt, upload.createdAt),
-          ),
-        )
-        .limit(1);
-      if (newer) throw new ConflictError('PHOTO_SUPERSEDED', 'عکس جدیدتری برای بررسی ثبت شده است.');
       if (upload.studentId) {
         await txn
           .update(studentPhotoUploads)
@@ -411,7 +432,7 @@ export class StudentPhotosService {
         .update(studentPhotoUploads)
         .set({
           status: 'APPROVED',
-          version: version + 1,
+          version: upload.version + 1,
           reviewerAdminId: adminId,
           reviewedAt: now,
           approvedAt: now,
@@ -421,7 +442,7 @@ export class StudentPhotosService {
           and(
             eq(studentPhotoUploads.id, upload.id),
             eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
-            eq(studentPhotoUploads.version, version),
+            eq(studentPhotoUploads.version, upload.version),
           ),
         )
         .returning();

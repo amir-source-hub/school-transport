@@ -25,6 +25,11 @@ import {
 } from '@/features/admin-families/admin-families-api';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { formatIrr, formatJalaliDate, formatPersianNumber } from '@/lib/formatters';
+import {
+  normalizeMobileInput,
+  placeCaretAfterPrefix,
+} from '@/features/enrollment/input-normalizers';
+import { normalizeDigits } from '@/features/enrollment/national-id';
 
 const LocationPicker = dynamic(
   () => import('@/components/common/location-picker').then((m) => ({ default: m.LocationPicker })),
@@ -438,7 +443,7 @@ function ParentFields({
     firstName: parent?.firstName ?? '',
     lastName: parent?.lastName ?? '',
     nationalId: parent?.nationalId ?? '',
-    phoneNumber: parent?.phoneNumber ?? '',
+    phoneNumber: parent?.phoneNumber ?? '09',
   });
   const set = (key: keyof ParentFormValue, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -502,8 +507,11 @@ function ParentFields({
             required
             dir="ltr"
             inputMode="numeric"
+            className="text-left tabular-nums"
             value={form.nationalId}
-            onChange={(event) => set('nationalId', event.target.value)}
+            onChange={(event) =>
+              set('nationalId', normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, 10))
+            }
           />
         </label>
         <label className="text-sm font-bold">
@@ -512,8 +520,10 @@ function ParentFields({
             required
             dir="ltr"
             inputMode="tel"
+            className="text-left tabular-nums"
             value={form.phoneNumber}
-            onChange={(event) => set('phoneNumber', event.target.value)}
+            onFocus={(event) => placeCaretAfterPrefix(event.currentTarget, 2)}
+            onChange={(event) => set('phoneNumber', normalizeMobileInput(event.target.value))}
           />
         </label>
       </div>
@@ -558,7 +568,7 @@ function EmergencyFields({
     firstName: contact?.firstName ?? '',
     lastName: contact?.lastName ?? '',
     relationship: contact?.relationship ?? '',
-    phoneNumber: contact?.phoneNumber ?? '',
+    phoneNumber: contact?.phoneNumber ?? '09',
   });
   const set = (key: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -615,8 +625,10 @@ function EmergencyFields({
             required
             dir="ltr"
             inputMode="tel"
+            className="text-left tabular-nums"
             value={form.phoneNumber}
-            onChange={(event) => set('phoneNumber', event.target.value)}
+            onFocus={(event) => placeCaretAfterPrefix(event.currentTarget, 2)}
+            onChange={(event) => set('phoneNumber', normalizeMobileInput(event.target.value))}
           />
         </label>
       </div>

@@ -15,7 +15,6 @@ const notificationsApi = vi.hoisted(() => ({ updateNotificationConsent: vi.fn() 
 const paymentsApi = vi.hoisted(() => ({
   getOfflineDestination: vi.fn(),
   submitOfflinePayment: vi.fn(),
-  getOfflineSubmissions: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -24,6 +23,13 @@ vi.mock('next/navigation', () => ({
 vi.mock('./enrollments-api', () => enrollmentApi);
 vi.mock('@/features/finance/payments-api', () => paymentsApi);
 vi.mock('@/features/notifications/notifications-api', () => notificationsApi);
+vi.mock('@/features/student-photos/photo-upload-card', () => ({
+  PhotoUploadCard: ({ onUploadCompleted }: { onUploadCompleted?: (id: string) => void }) => (
+    <button type="button" onClick={() => onUploadCompleted?.('photo-upload-1')}>
+      ثبت عکس آزمایشی
+    </button>
+  ),
+}));
 vi.mock('leaflet', () => ({}));
 
 const schools = [
@@ -102,6 +108,7 @@ const fillIn = (
 describe('onboarding guided enrollment funnel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    enrollmentApi.finalizeOnboarding.mockRejectedValue(new Error('ثبت‌نام هنوز آماده پنل نیست'));
     enrollmentApi.createGuidedEnrollment.mockResolvedValue({
       registrationId: 'reg-1',
       studentId: 'std-1',
@@ -109,6 +116,8 @@ describe('onboarding guided enrollment funnel', () => {
       scheduleItemId: 'sch-1',
       prepaymentAmount: 4_000_000,
       contractText: 'متن قرارداد سرویس مدرسه.\nبندهای کافی برای اسکرول.'.repeat(5),
+      contractTemplateHash: 'template-hash-1',
+      contractPages: [['صفحه اول'], ['صفحه دوم'], ['صفحه سوم']],
     });
     paymentsApi.getOfflineDestination.mockResolvedValue({
       id: 'destination-1',
@@ -120,15 +129,6 @@ describe('onboarding guided enrollment funnel', () => {
       accountNumber: null,
       instructions: 'پس از واریز، رسید را ثبت کنید.',
     });
-    paymentsApi.getOfflineSubmissions.mockResolvedValue([
-      {
-        id: 'sub-1',
-        paymentScheduleItemId: 'sch-1',
-        status: 'PENDING_REVIEW',
-        rejectionReason: null,
-        submittedAt: new Date(),
-      },
-    ]);
   });
 
   it('drives a new account through enrollment and contract to the offline receipt step', async () => {
@@ -144,14 +144,11 @@ describe('onboarding guided enrollment funnel', () => {
     await fillIn(user, 'سرپرست', 'کد ملی', '1234567891');
     await user.click(within(section('سرپرست')).getByRole('combobox', { name: 'نسبت' }));
     await user.click(await screen.findByRole('option', { name: 'پدر' }));
-    await fillIn(user, 'اطلاعات پدر', 'نام', 'حسین');
-    await fillIn(user, 'اطلاعات پدر', 'نام خانوادگی', 'احمدی');
-    await fillIn(user, 'اطلاعات پدر', 'کد ملی', '1234567891');
-    await fillIn(user, 'اطلاعات پدر', 'شماره همراه', '09123456789');
     await fillIn(user, 'اطلاعات مادر', 'نام', 'مریم');
     await fillIn(user, 'اطلاعات مادر', 'نام خانوادگی', 'رضایی');
     await fillIn(user, 'اطلاعات مادر', 'کد ملی', '1234567891');
     await fillIn(user, 'اطلاعات مادر', 'شماره همراه', '09129998877');
+    await user.click(screen.getByRole('button', { name: 'ثبت عکس آزمایشی' }));
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
 
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
@@ -168,31 +165,38 @@ describe('onboarding guided enrollment funnel', () => {
       ),
     );
 
-    const contract = document.querySelector('[class*="overflow-y-auto"]') as HTMLElement;
-    fireEvent.scroll(contract);
-    await user.click(screen.getByLabelText(/تمام بندهای قرارداد را مطالعه/));
+    await user.click(screen.getByRole('button', { name: 'صفحه بعد' }));
+    await user.click(screen.getByRole('button', { name: 'صفحه بعد' }));
     await user.click(screen.getByRole('button', { name: /پذیرش قرارداد و ادامه/ }));
 
-    expect(enrollmentApi.acceptGuidedContract).toHaveBeenCalledWith('contract-1', 'onboarding');
-    expect(screen.getByRole('button', { name: 'پرداخت آنلاین' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' })).toBeEnabled();
-    expect(screen.getByText(/ثبت‌نام فقط پس از تأیید مدیریت فعال می‌شود/)).toBeInTheDocument();
+    expect(enrollmentApi.acceptGuidedContract).toHaveBeenCalledWith(
+      'contract-1',
+      'template-hash-1',
+      [1, 2, 3],
+      'onboarding',
+    );
+    expect(screen.getByText('۴٬۹۹۷٬۸۰۰')).toBeInTheDocument();
+    expect(await screen.findByText('6037991234567890')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ارسال رسید برای بررسی مدیر' })).toBeNull();
+    const enterPanel = screen.getByRole('button', {
+      name: 'تأیید اطلاعات پرداخت و ورود به پنل خانواده',
+    });
+    expect(enterPanel).toBeDisabled();
     expect(navigation.replace).not.toHaveBeenCalledWith('/student/dashboard');
-    await user.click(screen.getByRole('button', { name: 'بررسی تأیید رسید و فعال‌سازی پنل' }));
-    expect(enrollmentApi.finalizeOnboarding).not.toHaveBeenCalled();
-    paymentsApi.getOfflineSubmissions.mockResolvedValue([
-      {
-        id: 'sub-1',
-        paymentScheduleItemId: 'sch-1',
-        status: 'APPROVED',
-        rejectionReason: null,
-        submittedAt: new Date(),
-      },
-    ]);
-    await user.click(screen.getByRole('button', { name: 'بررسی تأیید رسید و فعال‌سازی پنل' }));
-    await waitFor(() => expect(enrollmentApi.finalizeOnboarding).toHaveBeenCalledOnce());
+    await user.click(
+      screen.getByRole('checkbox', { name: /مبلغ، اطلاعات حساب و لزوم نگهداری تصویر رسید را دیدم/ }),
+    );
+    enrollmentApi.finalizeOnboarding.mockResolvedValue(undefined);
+    await user.click(enterPanel);
+    await waitFor(() => expect(enrollmentApi.finalizeOnboarding).toHaveBeenCalled());
     expect(navigation.replace).toHaveBeenCalledWith('/student/dashboard');
   }, 30_000);
+
+  it('routes a returning accepted enrollment directly to the saved family panel', async () => {
+    enrollmentApi.finalizeOnboarding.mockResolvedValue(undefined);
+    renderOnboarding();
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith('/student/dashboard'));
+  });
 
   it('rejects pasted extra digits in prefix fields instead of truncating them', async () => {
     const user = userEvent.setup();
@@ -226,6 +230,11 @@ describe('onboarding guided enrollment funnel', () => {
     await fillIn(user, 'سرپرست', 'کد ملی', '1234567891');
     await user.click(within(section('سرپرست')).getByRole('combobox', { name: 'نسبت' }));
     await user.click(await screen.findByRole('option', { name: 'پدر' }));
+    await fillIn(user, 'اطلاعات مادر', 'نام', 'مریم');
+    await fillIn(user, 'اطلاعات مادر', 'نام خانوادگی', 'رضایی');
+    await fillIn(user, 'اطلاعات مادر', 'کد ملی', '1234567891');
+    await fillIn(user, 'اطلاعات مادر', 'شماره همراه', '09129998877');
+    await user.click(screen.getByRole('button', { name: 'ثبت عکس آزمایشی' }));
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
 
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));

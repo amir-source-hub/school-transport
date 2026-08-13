@@ -95,12 +95,20 @@ export function normalizeAndValidateGuidedEnrollment(
     data.father = {
       ...input.father,
       nationalId: normalizeIranianDigits(input.father.nationalId).trim(),
+      phoneNumber: normalizeIranianDigits(input.father.phoneNumber).replace(/\D/g, ''),
     };
   }
   if (input.mother) {
     data.mother = {
       ...input.mother,
       nationalId: normalizeIranianDigits(input.mother.nationalId).trim(),
+      phoneNumber: normalizeIranianDigits(input.mother.phoneNumber).replace(/\D/g, ''),
+    };
+  }
+  if (input.emergencyContact) {
+    data.emergencyContact = {
+      ...input.emergencyContact,
+      phoneNumber: normalizeIranianDigits(input.emergencyContact.phoneNumber).replace(/\D/g, ''),
     };
   }
 
@@ -136,6 +144,24 @@ export function normalizeAndValidateGuidedEnrollment(
       'A valid Iranian mobile number is required for the student.',
     );
   }
+  if (data.student.birthDate) {
+    const today = new Date().toISOString().slice(0, 10);
+    const parsedBirthDate = new Date(`${data.student.birthDate}T00:00:00.000Z`);
+    const canonicalBirthDate = Number.isNaN(parsedBirthDate.getTime())
+      ? ''
+      : parsedBirthDate.toISOString().slice(0, 10);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(data.student.birthDate) ||
+      canonicalBirthDate !== data.student.birthDate ||
+      data.student.birthDate < '1900-01-01' ||
+      data.student.birthDate > today
+    ) {
+      throw new ConflictError(
+        'INVALID_BIRTH_DATE',
+        'Birth date must be a real date between 1900-01-01 and today.',
+      );
+    }
+  }
   if (!relationshipTypes.has(data.guardian.relationshipType)) {
     throw new ConflictError(
       'INVALID_RELATIONSHIP',
@@ -151,10 +177,45 @@ export function normalizeAndValidateGuidedEnrollment(
       'A relationship description is required when the guardian relationship is other.',
     );
   }
+  if (data.guardian.relationshipType === 'FATHER') data.father = null;
+  if (data.guardian.relationshipType === 'MOTHER') data.mother = null;
+  if (data.guardian.relationshipType === 'OTHER') {
+    data.father = null;
+    data.mother = null;
+  }
+  const otherParent =
+    data.guardian.relationshipType === 'FATHER'
+      ? data.mother
+      : data.guardian.relationshipType === 'MOTHER'
+        ? data.father
+        : null;
+  if (
+    data.guardian.relationshipType !== 'OTHER' &&
+    (!otherParent ||
+      !sectionIsComplete(otherParent, ['firstName', 'lastName', 'nationalId', 'phoneNumber']))
+  ) {
+    throw new ConflictError(
+      'INCOMPLETE_CONTACT',
+      'The non-attendant parent must have a complete parent record.',
+    );
+  }
   if (![data.student.nationalId, data.guardian.nationalId].every(isIranianNationalId)) {
     throw new ConflictError(
       'INVALID_NATIONAL_ID',
       'A valid national ID is required for the student and the guardian.',
+    );
+  }
+
+  const distinctPeopleNationalIds = [
+    data.student.nationalId,
+    data.guardian.nationalId,
+    data.father?.nationalId,
+    data.mother?.nationalId,
+  ].filter((value): value is string => Boolean(value));
+  if (new Set(distinctPeopleNationalIds).size !== distinctPeopleNationalIds.length) {
+    throw new ConflictError(
+      'DUPLICATE_NATIONAL_ID',
+      'کد ملی هر دانش‌آموز و هر یک از والدین باید منحصربه‌فرد باشد.',
     );
   }
 
@@ -208,18 +269,4 @@ export function normalizeAndValidateGuidedEnrollment(
   }
 
   return data;
-}
-
-export function guidedContractText(firstName: string, lastName: string): string {
-  return `قرارداد ارائه خدمات حمل‌ونقل دانش‌آموزی
-
-این قرارداد میان ثمین گشت مهر ایران و خانواده دانش‌آموز ${firstName} ${lastName} منعقد می‌شود. سامانه متعهد است با رعایت الزامات ایمنی، برنامه‌ریزی مسیر و هماهنگی با مدرسه، بیشترین تلاش خود را برای ارائه نوع سرویس درخواستی انجام دهد.
-
-نوع خودرو، ساعت حرکت، مسیر و حتی نوع سرویس ممکن است بر اساس ظرفیت، شرایط ترافیکی، محدوده پوشش، تصمیم مدرسه و الزامات ایمنی تغییر کند. هر تغییر مؤثر پیش از شروع خدمت به خانواده اطلاع داده خواهد شد.
-
-مبلغ ۴٬۰۰۰٬۰۰۰ تومان به‌عنوان پیش‌پرداخت ثابت ثبت‌نام دریافت می‌شود. مبلغ باقی‌مانده، تعداد اقساط و تاریخ سررسید هر قسط پس از برنامه‌ریزی نهایی توسط مدیریت تعیین و در حساب خانواده نمایش داده خواهد شد.
-
-خانواده مسئول صحت اطلاعات دانش‌آموز، والدین، تماس اضطراری، نشانی و موقعیت ثبت‌شده است و متعهد می‌شود تغییرات را به‌موقع اعلام کند. آغاز نهایی سرویس منوط به تأیید ظرفیت و برنامه مسیر است.
-
-با پذیرش این قرارداد، خانواده اعلام می‌کند تمام بندها را مطالعه کرده و با شرایط فوق موافق است.`;
 }

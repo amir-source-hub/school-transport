@@ -15,7 +15,7 @@ const channels = [
   {
     icon: Phone,
     label: 'تماس تلفنی',
-    value: '۰۲۱-۱۲۳۴۵۶۷۸',
+    value: '۰۹۱۲۳۸۵۹۸۸۳ · ۰۹۱۲۶۸۳۹۴۵۸ · ۰۲۱-۷۷۱۱۶۷۸۲ · ۰۲۱-۷۷۱۱۵۸۳۲ · ۰۲۱-۷۷۱۱۹۰۴۵',
     desc: 'شنبه تا چهارشنبه ۸:۰۰ تا ۱۸:۰۰',
     dir: 'ltr' as const,
   },
@@ -29,9 +29,11 @@ const channels = [
   {
     icon: MapPin,
     label: 'نشانی',
-    value: 'تهران، خیابان ولیعصر، بالاتر از میدان ونک، پلاک ۱۲۳۴',
+    value:
+      'تهران، بزرگراه شهید بابایی، شهرک شهید بهشتی، خیابان سروستان دوم، کوچه نسترن ۲۷ و ۲۸، مجتمع تجاری گلستان، پلاک ۲۲',
     desc: 'ثمین گشت مهر ایران — واحد پشتیبانی',
     dir: 'rtl' as const,
+    href: 'https://maps.app.goo.gl/rGetdanWqsAq6SAcA',
   },
 ];
 
@@ -95,9 +97,21 @@ export default function ContactPage() {
                     <ch.icon aria-hidden="true" className="size-5" />
                   </span>
                   <p className="mt-4 text-sm font-bold text-primary">{ch.label}</p>
-                  <p className="mt-1 font-black" dir={ch.dir}>
-                    {ch.value}
-                  </p>
+                  {'href' in ch ? (
+                    <a
+                      href={ch.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 block font-black text-primary hover:underline"
+                      dir={ch.dir}
+                    >
+                      {ch.value}
+                    </a>
+                  ) : (
+                    <p className="mt-1 font-black" dir={ch.dir}>
+                      {ch.value}
+                    </p>
+                  )}
                   <p className="mt-1 text-xs text-muted">{ch.desc}</p>
                 </div>
               ))}

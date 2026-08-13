@@ -1,4 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { and, eq, isNull } from 'drizzle-orm';
+import * as argon2 from 'argon2';
 import { Pool } from 'pg';
 import {
   adminUsers,
@@ -6,6 +8,7 @@ import {
   emergencyContacts,
   familyAddresses,
   notifications,
+  offlinePaymentDestinations,
   parents,
   paymentPlans,
   paymentScheduleItems,
@@ -19,7 +22,11 @@ import {
 
 export const SEED_CREDENTIALS = {
   parent: { username: 'demo-parent', phoneNumber: '09121111111' },
-  admin: { username: 'demo-admin', phoneNumber: '09120000000' },
+  admin: {
+    username: 'demo-admin',
+    phoneNumber: '09120000000',
+    password: process.env.SEED_ADMIN_PASSWORD ?? 'demo-admin-password',
+  },
 } as const;
 
 const ids = {
@@ -48,14 +55,19 @@ const ids = {
   contract: '00000000-0000-4000-8000-000000000023',
   notification1: '00000000-0000-4000-8000-000000000024',
   notification2: '00000000-0000-4000-8000-000000000025',
+  offlineDestination: '00000000-0000-4000-8000-000000000026',
 } as const;
 
 export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Promise<void> {
   if (!databaseUrl) throw new Error('DATABASE_URL is required for seeding.');
+  if (SEED_CREDENTIALS.admin.password.length < 8) {
+    throw new Error('SEED_ADMIN_PASSWORD must contain at least 8 characters.');
+  }
   const pool = new Pool({ connectionString: databaseUrl });
   const db = drizzle(pool);
 
   try {
+    const adminPasswordHash = await argon2.hash(SEED_CREDENTIALS.admin.password);
     await db
       .insert(users)
       .values({
@@ -72,6 +84,25 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         firstName: 'Demo',
         lastName: 'Admin',
         phoneNumber: SEED_CREDENTIALS.admin.phoneNumber,
+        passwordHash: adminPasswordHash,
+      })
+      .onConflictDoNothing();
+    await db
+      .update(adminUsers)
+      .set({ passwordHash: adminPasswordHash })
+      .where(and(eq(adminUsers.id, ids.admin), isNull(adminUsers.passwordHash)));
+    await db
+      .insert(offlinePaymentDestinations)
+      .values({
+        id: ids.offlineDestination,
+        version: 1,
+        accountOwner: 'شرکت ثمین گشت مهر ایرانیان',
+        bankName: 'بانک سپه',
+        cardNumber: '5892107050025868',
+        iban: 'IR250150000000848301707305',
+        accountNumber: '848301707305',
+        instructions: 'پس از واریز، تصویر رسید و شماره پیگیری بانکی را در پنل ثبت کنید.',
+        createdByAdminId: ids.admin,
       })
       .onConflictDoNothing();
     await db
@@ -236,7 +267,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         registrationId: ids.registration,
         totalAmount: 120_000_000,
         currency: 'IRR',
-        prepaymentAmount: 40_000_000,
+        prepaymentAmount: 49_978_000,
         installmentCount: 4,
         priceStatus: 'ACCEPTED',
         setByAdminId: ids.admin,
@@ -250,7 +281,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         registrationPriceId: ids.price,
         planType: 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
         totalAmount: 120_000_000,
-        prepaymentAmount: 40_000_000,
+        prepaymentAmount: 49_978_000,
         remainingInstallmentAmount: 80_000_000,
         installmentCount: 4,
         planStatus: 'ACTIVE',
@@ -265,10 +296,10 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           paymentPlanId: ids.plan,
           itemType: 'PREPAYMENT',
           sequenceNumber: 0,
-          amount: 40_000_000,
+          amount: 49_978_000,
           dueDate: new Date('2026-07-10T08:00:00Z'),
           itemStatus: 'PAID',
-          paidAmount: 40_000_000,
+          paidAmount: 49_978_000,
           paidAt: new Date('2026-07-08T08:00:00Z'),
         },
         {
@@ -312,7 +343,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         paymentPlanId: ids.plan,
         paymentScheduleItemId: ids.prepayment,
         userId: ids.user,
-        amount: 40_000_000,
+        amount: 49_978_000,
         paymentMethod: 'ONLINE',
         gatewayName: 'SEED_GATEWAY',
         gatewayTransactionId: 'seed-transaction-0001',

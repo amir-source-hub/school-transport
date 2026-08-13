@@ -11,7 +11,7 @@ describe('admin guided enrollment handoff', () => {
       studentId: 'student-1',
       contractId: 'contract-1',
       scheduleItemId: 'schedule-1',
-      prepaymentAmount: 40_000_000,
+      prepaymentAmount: 49_978_000,
       contractText: 'contract',
       status: 'CONTRACT_READY',
     });
@@ -40,7 +40,10 @@ describe('admin guided enrollment handoff', () => {
       studentId: 'student-1',
       contractId: 'contract-1',
       scheduleItemId: 'schedule-1',
-      prepaymentAmount: 40_000_000,
+      prepaymentAmount: 49_978_000,
+      contractText: 'contract',
+      contractTemplateHash: undefined,
+      contractPages: undefined,
       status: 'CONTRACT_READY',
       parentActionRequired: true,
     });
@@ -53,7 +56,7 @@ describe('admin guided enrollment handoff', () => {
       studentId: 'student-1',
       contractId: 'contract-1',
       scheduleItemId: 'schedule-1',
-      prepaymentAmount: 40_000_000,
+      prepaymentAmount: 49_978_000,
       contractText: 'contract',
       status: 'ENROLLED',
     });
@@ -83,7 +86,10 @@ describe('admin guided enrollment handoff', () => {
       studentId: 'student-1',
       contractId: 'contract-1',
       scheduleItemId: 'schedule-1',
-      prepaymentAmount: 40_000_000,
+      prepaymentAmount: 49_978_000,
+      contractText: 'contract',
+      contractTemplateHash: undefined,
+      contractPages: undefined,
       status: 'ENROLLED',
       parentActionRequired: false,
     });

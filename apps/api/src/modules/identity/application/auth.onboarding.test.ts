@@ -10,8 +10,7 @@ import {
   otpRequests,
   authSessions,
   onboardingSessions,
-  paymentScheduleItems,
-  paymentTransactions,
+  contracts,
 } from '../../../database/schemas';
 
 function memoryDatabase() {
@@ -195,7 +194,7 @@ describe('first-time onboarding after OTP', () => {
     expect(memory.rows(onboardingSessions)[0].onboardingTokenHash).not.toBe('old-hash');
   });
 
-  it('issues a full session only after a paid prepayment on finalization', async () => {
+  it('issues a full panel session after the enrollment contract is accepted', async () => {
     const memory = memoryDatabase();
     memory.rows(otpRequests).push(verifiedOtpRow(await argon2.hash('123456')));
     const service = buildAuth(memory.db);
@@ -203,30 +202,9 @@ describe('first-time onboarding after OTP', () => {
     const verified = await service.verifyAuthOtp('09123456789', '123456');
     if (verified.user !== null) throw new Error('expected onboarding result');
     const token = verified.onboarding.token;
-    const userId = memory.rows(users)[0].id;
-
-    memory.rows(paymentScheduleItems).push({
-      id: 'item-1',
-      paymentPlanId: 'plan-1',
-      itemType: 'PREPAYMENT',
-      sequenceNumber: 0,
-      amount: 40000000,
-      dueDate: null,
-      itemStatus: 'PAID',
-      paidAmount: 40000000,
-      paidAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    memory.rows(paymentTransactions).push({
-      id: 'tx-1',
-      paymentPlanId: 'plan-1',
-      paymentScheduleItemId: 'item-1',
-      userId,
-      amount: 40000000,
-      paymentMethod: 'MOCK_ONLINE',
-      transactionStatus: 'SUCCEEDED',
-      requestedAt: new Date(),
+    memory.rows(contracts).push({
+      id: 'contract-1',
+      contractStatus: 'ACCEPTED',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -243,7 +221,7 @@ describe('first-time onboarding after OTP', () => {
     );
   });
 
-  it('rejects finalization before the prepayment is verified', async () => {
+  it('rejects finalization before an enrollment contract is accepted', async () => {
     const memory = memoryDatabase();
     memory.rows(otpRequests).push(verifiedOtpRow(await argon2.hash('123456')));
     const service = buildAuth(memory.db);
@@ -252,7 +230,7 @@ describe('first-time onboarding after OTP', () => {
     if (verified.user !== null) throw new Error('expected onboarding result');
 
     await expect(service.finalizeOnboarding(verified.onboarding.token)).rejects.toThrow(
-      'prepayment',
+      'contract',
     );
   });
 

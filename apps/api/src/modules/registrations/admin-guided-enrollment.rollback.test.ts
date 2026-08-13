@@ -106,7 +106,11 @@ const baseInput: GuidedEnrollmentData = {
 };
 
 const schoolResult = [
-  { id: 'school-1', educationOptions: [{ level: 'Primary', grades: ['First'] }] },
+  {
+    id: 'school-1',
+    name: 'مدرسه نمونه',
+    educationOptions: [{ level: 'Primary', grades: ['First'] }],
+  },
 ];
 const capacityResults = [[{ studentLimit: 2 }], [{ count: 0 }]];
 const standardSelectResults = [
@@ -206,7 +210,7 @@ describe('admin guided enrollment transaction', () => {
 
     const prepaymentItems = mock.updated.filter(({ set }) => set.itemStatus === 'PAID');
     expect(prepaymentItems).toHaveLength(1);
-    expect(prepaymentItems[0].set).toEqual(expect.objectContaining({ paidAmount: 40_000_000 }));
+    expect(prepaymentItems[0].set).toEqual(expect.objectContaining({ paidAmount: 49_978_000 }));
 
     expect(mock.updated.some(({ set }) => set.planStatus === 'COMPLETED')).toBe(true);
 
@@ -220,7 +224,7 @@ describe('admin guided enrollment transaction', () => {
         transactionStatus: 'SUCCEEDED',
         gatewayTransactionId: 'receipt-001',
         recordedByAdminId: 'admin-1',
-        amount: 40_000_000,
+        amount: 49_978_000,
       }),
     );
 

@@ -122,15 +122,28 @@ describe('guided enrollment schema', () => {
     }
   });
 
-  it('rejects an invalid national ID with the exact Persian message', () => {
+  it('rejects an over-length national ID with the exact Persian message', () => {
     const result = guidedEnrollmentSchema.safeParse({
       ...validInput,
-      mother: { ...validInput.mother, nationalId: '0012345678' },
+      mother: { ...validInput.mother, nationalId: '001234567891' },
     });
     expect(result.success).toBe(false);
     if (!result.success) {
       const issues = result.error.issues.map((issue) => issue.message);
-      expect(issues).toContain('کد ملی نامعتبر است.');
+      expect(issues).toContain('کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.');
+    }
+  });
+
+  it('accepts national IDs with leading zeros and short values', () => {
+    const result = guidedEnrollmentSchema.safeParse({
+      ...validInput,
+      student: { ...validInput.student, nationalId: '0023518805' },
+      guardian: { ...validInput.guardian, nationalId: '123' },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.student.nationalId).toBe('0023518805');
+      expect(result.data.guardian.nationalId).toBe('123');
     }
   });
 });

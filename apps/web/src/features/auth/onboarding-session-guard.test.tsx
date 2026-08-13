@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientError } from '@/lib/api-client';
 import { OnboardingSessionGuard } from './onboarding-session-guard';
+import { clearOnboardingState, getOnboardingState } from './onboarding-session';
 
 const navigation = vi.hoisted(() => ({
   replace: vi.fn(),
@@ -31,10 +32,20 @@ describe('OnboardingSessionGuard', () => {
     apiRequest.mockReset();
     navigation.replace.mockReset();
     navigation.refresh.mockReset();
+    clearOnboardingState();
   });
 
   it('shows the restricted enrollment steps once the onboarding session is verified', async () => {
-    apiRequest.mockResolvedValue({ success: true, data: { status: 'PENDING' } });
+    apiRequest.mockResolvedValue({
+      success: true,
+      data: {
+        status: 'PENDING',
+        phoneNumber: '09121112222',
+        nationalId: '0084575948',
+        expiresAt: '2026-08-18T12:00:00.000Z',
+        currentStep: null,
+      },
+    });
     render(
       <OnboardingSessionGuard>
         <p>guided enrollment steps</p>
@@ -46,6 +57,8 @@ describe('OnboardingSessionGuard', () => {
       cache: 'no-store',
       redirectOnAuthFailure: false,
     });
+    expect(getOnboardingState().phoneNumber).toBe('09121112222');
+    expect(getOnboardingState().nationalId).toBe('0084575948');
   });
 
   it('redirects an invalid or expired onboarding token to login', async () => {
@@ -65,7 +78,16 @@ describe('OnboardingSessionGuard', () => {
   it('keeps dependency outages distinct from invalid credentials and allows retry', async () => {
     apiRequest
       .mockRejectedValueOnce(new ApiClientError(503, 'SERVICE_UNAVAILABLE', 'offline'))
-      .mockResolvedValueOnce({ success: true, data: { status: 'PENDING' } });
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'PENDING',
+          phoneNumber: '09121112222',
+          nationalId: '0084575948',
+          expiresAt: '2026-08-18T12:00:00.000Z',
+          currentStep: null,
+        },
+      });
     const user = userEvent.setup();
     render(
       <OnboardingSessionGuard>

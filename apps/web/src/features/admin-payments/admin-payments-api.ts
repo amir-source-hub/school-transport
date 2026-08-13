@@ -187,6 +187,46 @@ export async function configureInstallments(
   });
 }
 
+export async function recordPaymentOnBehalf(
+  scheduleItemId: string,
+  input: {
+    paidAt: string;
+    referenceNumber: string;
+    description?: string;
+    payerName?: string;
+    sourceCardLastFour?: string;
+  },
+  receipt: File,
+  idempotencyKey = crypto.randomUUID(),
+) {
+  const response = await apiRequest<{ submissionId: string }>(
+    `/admin/payments/${scheduleItemId}/offline-submissions`,
+    {
+      method: 'POST',
+      body: input,
+      headers: { 'Idempotency-Key': idempotencyKey },
+    },
+  );
+  const submissionId = response.data.submissionId;
+  const authorization = await apiRequest<{ uploadUrl: string }>(
+    `/admin/payments/offline-submissions/${submissionId}/receipt/authorize`,
+    {
+      method: 'POST',
+      body: { declaredMime: receipt.type, declaredSize: receipt.size },
+    },
+  );
+  const upload = await fetch(authorization.data.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': receipt.type },
+    body: receipt,
+  });
+  if (!upload.ok) throw new Error('بارگذاری تصویر رسید ناموفق بود.');
+  await apiRequest(
+    `/admin/payments/offline-submissions/${submissionId}/receipt/complete-and-approve`,
+    { method: 'POST' },
+  );
+}
+
 export function getPaymentTone(status: string) {
   if (status === 'تأییدشده') return 'success' as const;
   if (status === 'ردشده') return 'danger' as const;

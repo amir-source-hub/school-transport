@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.29.2",
   "scripts": {
+    "assets:upload": "node --env-file=.env infrastructure/object-storage/upload-public-assets.mjs",
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",

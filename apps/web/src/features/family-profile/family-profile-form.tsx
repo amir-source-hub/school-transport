@@ -23,6 +23,12 @@ type ParentForm = {
 };
 
 export function FamilyProfileForm({ profile }: { profile: FamilyProfile }) {
+  const guardianAsMother =
+    profile.guardian?.relationshipType === 'MOTHER' ? profile.guardian : null;
+  const guardianAsFather =
+    profile.guardian?.relationshipType === 'FATHER' ? profile.guardian : null;
+  const displayedMother = profile.mother ?? guardianAsMother;
+  const displayedFather = profile.father ?? guardianAsFather;
   const router = useRouter();
   const address = profile.addresses.find(({ isActive }) => isActive) ?? profile.addresses[0];
   const emergency =
@@ -32,16 +38,16 @@ export function FamilyProfileForm({ profile }: { profile: FamilyProfile }) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string>();
   const [mother, setMother] = useState<ParentForm>({
-    firstName: profile.mother?.firstName ?? '',
-    lastName: profile.mother?.lastName ?? '',
-    nationalId: profile.mother?.nationalId ?? '',
-    phoneNumber: profile.mother?.phoneNumber ?? '',
+    firstName: displayedMother?.firstName ?? '',
+    lastName: displayedMother?.lastName ?? '',
+    nationalId: displayedMother?.nationalId ?? '',
+    phoneNumber: displayedMother?.phoneNumber ?? '',
   });
   const [father, setFather] = useState<ParentForm>({
-    firstName: profile.father?.firstName ?? '',
-    lastName: profile.father?.lastName ?? '',
-    nationalId: profile.father?.nationalId ?? '',
-    phoneNumber: profile.father?.phoneNumber ?? '',
+    firstName: displayedFather?.firstName ?? '',
+    lastName: displayedFather?.lastName ?? '',
+    nationalId: displayedFather?.nationalId ?? '',
+    phoneNumber: displayedFather?.phoneNumber ?? '',
   });
   const [addressForm, setAddressForm] = useState({
     title: address?.title ?? '',
@@ -101,16 +107,16 @@ export function FamilyProfileForm({ profile }: { profile: FamilyProfile }) {
           </Button>
         </div>
         <div className="grid gap-5 lg:grid-cols-2">
-          <ProfileSection icon={UsersRound} title="اطلاعات والدین">
-            <ParentDetails label="مادر" parent={profile.mother} />
-            <ParentDetails label="پدر" parent={profile.father} />
+          <ProfileSection icon={UsersRound} title="اطلاعات سرپرست و والدین">
+            <ParentDetails label="سرپرست" parent={profile.guardian} />
+            <ParentDetails label="مادر" parent={displayedMother} />
+            <ParentDetails label="پدر" parent={displayedFather} />
           </ProfileSection>
           <ProfileSection icon={Home} title="نشانی فعال">
             {address ? (
               <dl className="grid gap-3 text-sm sm:grid-cols-2">
                 <Detail label="عنوان" value={address.title} />
                 <Detail label="استان و شهر" value={`${address.province}، ${address.city}`} />
-                <Detail label="منطقه" value={address.district ?? '—'} />
                 <Detail label="کد پستی" value={address.postalCode ?? '—'} ltr />
                 <div className="sm:col-span-2">
                   <Detail label="نشانی کامل" value={address.streetAddress} />

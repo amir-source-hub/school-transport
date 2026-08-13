@@ -210,16 +210,16 @@ describe('remaining API transport contracts', () => {
 
 function guided() {
   const parent = {
-    firstName: 'A',
-    lastName: 'B',
+    firstName: 'علی',
+    lastName: 'احمدی',
     nationalId: '۱۲۳۴۵۶۷۸۹۰',
     phoneNumber: '۰۹۱۲۰۰۰۰۰۰۰',
   };
   return {
-    student: { firstName: 'S', lastName: 'T', nationalId: '1234567891' },
+    student: { firstName: 'سارا', lastName: 'احمدی', nationalId: '1234567891' },
     guardian: {
-      firstName: 'G',
-      lastName: 'H',
+      firstName: 'مریم',
+      lastName: 'احمدی',
       nationalId: '0499370899',
       relationshipType: 'MOTHER',
     },
@@ -227,16 +227,16 @@ function guided() {
     father: parent,
     mother: { ...parent, phoneNumber: '09120000001' },
     emergencyContact: {
-      firstName: 'E',
-      lastName: 'C',
-      relationship: 'UNCLE',
+      firstName: 'رضا',
+      lastName: 'احمدی',
+      relationship: 'دایی',
       phoneNumber: '09120000002',
     },
     address: {
-      title: 'Home',
-      province: 'Tehran',
-      city: 'Tehran',
-      streetAddress: 'Street',
+      title: 'منزل',
+      province: 'تهران',
+      city: 'تهران',
+      streetAddress: 'خیابان نمونه',
       postalCode: '1234567890',
       latitude: '35.7',
       longitude: '51.4',

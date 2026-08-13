@@ -23,10 +23,19 @@ export type OnboardingResponse = {
     sessionId: string;
     expiresAt: string;
     currentStep: string | null;
+    nationalId: string;
   };
 };
 
 export type VerifyParentOtpResponse = LoginResponse | OnboardingResponse;
+
+export function loginOrRegisterParent(phoneNumber: string, nationalId: string, rememberMe = false) {
+  return apiRequest<VerifyParentOtpResponse>('/auth/parent/credentials', {
+    method: 'POST',
+    body: { phoneNumber, nationalId, rememberMe },
+    timeoutMs: 10_000,
+  });
+}
 
 export function requestParentOtp(phoneNumber: string) {
   return apiRequest<{
@@ -68,6 +77,14 @@ export function verifyAdminOtp(challengeId: string, code: string, rememberMe = f
   return apiRequest<LoginResponse>('/auth/admin/verify-otp', {
     method: 'POST',
     body: { challengeId, code, rememberMe },
+    timeoutMs: 10_000,
+  });
+}
+
+export function loginAdmin(username: string, password: string, rememberMe = false) {
+  return apiRequest<LoginResponse>('/auth/admin/login', {
+    method: 'POST',
+    body: { username, password, rememberMe },
     timeoutMs: 10_000,
   });
 }

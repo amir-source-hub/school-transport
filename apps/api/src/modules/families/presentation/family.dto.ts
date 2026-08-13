@@ -17,7 +17,7 @@ const digits = ({ value }: { value: unknown }) =>
 export class ParentInputDto {
   @IsString() @Length(1, 100) firstName!: string;
   @IsString() @Length(1, 100) lastName!: string;
-  @Transform(digits) @Matches(/^\d{10}$/) nationalId!: string;
+  @Transform(digits) @Matches(/^\d{1,10}$/) nationalId!: string;
   @Transform(digits) @Matches(/^09\d{9}$/) phoneNumber!: string;
 }
 class AddressInputDto {
@@ -44,7 +44,7 @@ export class CompleteFamilyDto {
 export class UpdateProfileDto {
   @IsOptional() @IsString() @Length(1, 100) firstName?: string;
   @IsOptional() @IsString() @Length(1, 100) lastName?: string;
-  @IsOptional() @Transform(digits) @Matches(/^\d{10}$/) nationalId?: string;
+  @IsOptional() @Transform(digits) @Matches(/^\d{1,10}$/) nationalId?: string;
   @IsOptional() @Transform(digits) @Matches(/^09\d{9}$/) phoneNumber?: string;
   @IsOptional() @IsIn(['MOTHER', 'FATHER']) parentType?: string;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,12 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
-import {
-  approveAdminPhoto,
-  getAdminPhotoViewUrl,
-  rejectAdminPhoto,
-  type AdminPhoto,
-} from './admin-student-photos-api';
+import { approveAdminPhoto, rejectAdminPhoto, type AdminPhoto } from './admin-student-photos-api';
 
 const rejectionOptions = [
   ['BLURRED', 'تار یا خارج از فوکوس'],
@@ -35,17 +30,24 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
   const [detail, setDetail] = useState<Record<string, string>>({});
   const [pending, setPending] = useState<string>();
   const [message, setMessage] = useState<string>();
+  const [visibleItems, setVisibleItems] = useState(items);
+  const actionLock = useRef(false);
 
   async function act(item: AdminPhoto, action: 'preview' | 'approve' | 'reject') {
-    if (pending) return;
+    if (actionLock.current) return;
+    actionLock.current = true;
     setPending(`${item.uploadId}:${action}`);
     setMessage(undefined);
     try {
       if (action === 'preview') {
-        const result = await getAdminPhotoViewUrl(item.uploadId);
-        setPreview((current) => ({ ...current, [item.uploadId]: result.viewUrl }));
+        setPreview((current) => ({
+          ...current,
+          [item.uploadId]: `/api/admin/student-photos/${item.uploadId}/image?version=${item.version}`,
+        }));
       } else if (action === 'approve') {
         await approveAdminPhoto(item.uploadId, item.version);
+        setVisibleItems((current) => current.filter(({ uploadId }) => uploadId !== item.uploadId));
+        setMessage('عکس تأیید شد و از صف انتظار بررسی خارج شد.');
         router.refresh();
       } else {
         await rejectAdminPhoto(
@@ -54,12 +56,21 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
           reason[item.uploadId],
           detail[item.uploadId],
         );
+        setVisibleItems((current) => current.filter(({ uploadId }) => uploadId !== item.uploadId));
+        setMessage('عکس رد شد و نتیجه برای خانواده ثبت شد.');
         router.refresh();
       }
     } catch (error) {
-      setMessage(getApiErrorFeedback(error).message);
+      const feedback = getApiErrorFeedback(error);
+      setMessage(
+        feedback.canRetry
+          ? `${feedback.message} فهرست تازه شد؛ دوباره اقدام کنید.`
+          : feedback.message,
+      );
+      router.refresh();
     } finally {
       setPending(undefined);
+      actionLock.current = false;
     }
   }
 
@@ -76,7 +87,7 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
           {message}
         </p>
       )}
-      {items.map((item) => (
+      {visibleItems.map((item) => (
         <Card key={item.uploadId} variant="outlined">
           <div className="grid gap-5 lg:grid-cols-[minmax(220px,320px)_1fr]">
             <div className="aspect-[3/4] overflow-hidden rounded-xl border border-border bg-surface-muted">
@@ -86,6 +97,14 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
                   src={preview[item.uploadId]}
                   alt="پیش‌نمایش عکس کارت سرویس"
                   className="size-full object-cover"
+                  onError={() => {
+                    setPreview((current) => {
+                      const next = { ...current };
+                      delete next[item.uploadId];
+                      return next;
+                    });
+                    setMessage('نمایش عکس منقضی یا قطع شد. «نمایش ایمن عکس» را دوباره بزنید.');
+                  }}
                 />
               ) : (
                 <div className="flex size-full items-center justify-center p-5 text-center text-sm text-muted">

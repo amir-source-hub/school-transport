@@ -114,6 +114,35 @@ describe('offline payment payer submission', () => {
   });
 });
 
+describe('admin payment on behalf', () => {
+  it('creates a family-owned draft for either prepayment or installment', async () => {
+    const service = new PaymentsService({ db: {} } as DatabaseService, {} as never, {} as never);
+    vi.spyOn(service as never, 'getScheduleItemOwner' as never).mockResolvedValue('family-1' as never);
+    const create = vi
+      .spyOn(service, 'createOfflineSubmission')
+      .mockResolvedValue('submission-1');
+
+    await expect(
+      service.createOfflineSubmissionForAdmin('item-1', 'admin-1', valid),
+    ).resolves.toEqual({ submissionId: 'submission-1' });
+    expect(create).toHaveBeenCalledWith('item-1', 'family-1', valid);
+  });
+
+  it('does not approve an admin payment until its receipt completes validation', async () => {
+    const service = new PaymentsService({ db: {} } as DatabaseService, {} as never, {} as never);
+    vi.spyOn(service as never, 'getSubmissionOwner' as never).mockResolvedValue('family-1' as never);
+    const complete = vi
+      .spyOn(service, 'completeReceiptUpload')
+      .mockResolvedValue({ version: 3 } as never);
+    const approve = vi.spyOn(service, 'approveOfflinePayment').mockResolvedValue({} as never);
+
+    await service.completeAndApproveReceiptForAdmin('submission-1', 'admin-1');
+
+    expect(complete).toHaveBeenCalledWith('submission-1', 'family-1');
+    expect(approve).toHaveBeenCalledWith('submission-1', 'admin-1', 3);
+  });
+});
+
 describe('offline receipt privacy and tamper checks', () => {
   it('returns the same not-found result for a foreign or nonexistent submission', async () => {
     const storage = { presignGet: vi.fn() } as unknown as S3Storage;

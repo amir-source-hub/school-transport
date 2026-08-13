@@ -38,6 +38,8 @@ const guidedResultSchema = z.object({
   scheduleItemId: z.string(),
   prepaymentAmount: z.number(),
   contractText: z.string(),
+  contractTemplateHash: z.string(),
+  contractPages: z.array(z.array(z.string())).length(3),
 });
 
 export type GuidedEnrollmentResult = z.infer<typeof guidedResultSchema>;
@@ -61,8 +63,16 @@ export async function createGuidedEnrollment(
   return guidedResultSchema.parse(response.data);
 }
 
-export async function acceptGuidedContract(contractId: string, mode: EnrollmentMode = 'panel') {
-  await apiRequest(contractBase(mode, `/${contractId}/accept`), { method: 'POST' });
+export async function acceptGuidedContract(
+  contractId: string,
+  templateHash: string,
+  reviewedPages: number[],
+  mode: EnrollmentMode = 'panel',
+) {
+  await apiRequest(contractBase(mode, `/${contractId}/accept`), {
+    method: 'POST',
+    body: { templateHash, reviewedPages },
+  });
 }
 
 export async function finalizeOnboarding() {

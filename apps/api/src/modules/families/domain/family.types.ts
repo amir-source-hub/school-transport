@@ -33,6 +33,7 @@ export interface FamilyProfile {
   username: string;
   mother: ParentProfile | null;
   father: ParentProfile | null;
+  guardian: ParentProfile | null;
   addresses: AddressProfile[];
   emergencyContacts: EmergencyContactProfile[];
 }
@@ -44,6 +45,8 @@ export interface ParentProfile {
   lastName: string;
   nationalId: string;
   phoneNumber: string;
+  relationshipType?: string;
+  relationshipDescription?: string;
   isPrimaryContact: boolean;
   phoneVerified: boolean;
 }

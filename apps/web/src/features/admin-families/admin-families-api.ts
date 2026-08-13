@@ -137,6 +137,9 @@ export type AdminFamilyEnrollmentResult = {
   prepaymentAmount: number;
   status: 'CONTRACT_READY' | 'CONTRACT_ACCEPTED' | 'ENROLLED';
   parentActionRequired: boolean;
+  contractText: string;
+  contractTemplateHash: string;
+  contractPages: string[][];
 };
 
 export async function createAdminFamilyEnrollment(
@@ -147,6 +150,22 @@ export async function createAdminFamilyEnrollment(
   return apiRequest<AdminFamilyEnrollmentResult>(`/admin/enrollments/families/${familyId}/guided`, {
     method: 'POST',
     body: actions ? { ...input, adminActions: actions } : input,
+  });
+}
+
+export async function acceptAdminFamilyContract(
+  contractId: string,
+  templateHash: string,
+  reviewedPages: number[],
+) {
+  await apiRequest(`/admin/contracts/${contractId}/accept`, {
+    method: 'POST',
+    body: {
+      templateHash,
+      reviewedPages,
+      source: 'admin_console',
+      reason: 'پذیرش پس از بررسی کامل قرارداد در پنل مدیریت',
+    },
   });
 }
 

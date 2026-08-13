@@ -119,6 +119,9 @@ export class AdminRegistrationsController {
       contractId: result.contractId,
       scheduleItemId: result.scheduleItemId,
       prepaymentAmount: result.prepaymentAmount,
+      contractText: result.contractText,
+      contractTemplateHash: result.contractTemplateHash,
+      contractPages: result.contractPages,
       status: result.status,
       parentActionRequired: result.status === 'CONTRACT_READY',
     });

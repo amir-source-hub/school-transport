@@ -14,7 +14,7 @@ import {
   parents,
   authSessions,
 } from '../../../database/schemas';
-import { AuthenticationError, ValidationError } from '../../../common/errors';
+import { AppError, AuthenticationError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
 import { AuthTokens, LoginResult, OtpResult, VerifyAuthOtpResult } from '../domain/auth.types';
@@ -31,6 +31,13 @@ export interface AdminChallengeResult {
   cooldownSeconds: number;
   developmentCode?: string;
 }
+
+export type ParentCredentialResult =
+  | LoginResult
+  | {
+      user: null;
+      onboarding: Awaited<ReturnType<OnboardingService['beginOrResume']>> & { nationalId: string };
+    };
 
 export const ADMIN_IDENTITY_LIST_LIMIT = 500;
 
@@ -269,6 +276,74 @@ export class AuthService {
     return this.sendOtp(phoneNumber, 'AUTH_PARENT', requestIp);
   }
 
+  async authenticateParent(
+    phoneNumber: string,
+    nationalId: string,
+    context?: SessionContext,
+    rememberMe = false,
+  ): Promise<ParentCredentialResult> {
+    const genericError = () => new AuthenticationError('شماره همراه سرپرست یا کد ملی صحیح نیست.');
+    const account = await this.findAccountByPhone(phoneNumber, 'PARENT');
+    const needsOnboarding =
+      !account || account.status === 'PENDING' || account.status === 'EXPIRED';
+
+    if (needsOnboarding) {
+      if (this.config.featureOnboarding === false) throw genericError();
+      let userId = account?.id;
+      const pendingUsername = `${phoneNumber}:${nationalId}`;
+      if (!userId) {
+        userId = generateId();
+        await this.db.db.insert(users).values({
+          id: userId,
+          username: pendingUsername,
+          phoneNumber,
+          accountStatus: 'PENDING',
+        });
+      } else {
+        if (account?.username !== pendingUsername) throw genericError();
+        await this.db.db
+          .update(users)
+          .set({ accountStatus: 'PENDING', phoneNumber, updatedAt: new Date() })
+          .where(eq(users.id, userId));
+      }
+      if (!this.onboarding) throw new AuthenticationError('Onboarding is not configured.');
+      const onboarding = await this.onboarding.beginOrResume(userId, phoneNumber);
+      this.logger.log('Parent onboarding session issued with fixed credentials.');
+      return { user: null, onboarding: { ...onboarding, nationalId } };
+    }
+
+    if (account.status !== 'ACTIVE') throw genericError();
+    const familyParents = await this.db.db
+      .select({ id: parents.id, phoneNumber: parents.phoneNumber, nationalId: parents.nationalId })
+      .from(parents)
+      .where(eq(parents.userId, account.id));
+    const matchingParent = familyParents.find(
+      (parent) => parent.phoneNumber === phoneNumber && parent.nationalId === nationalId,
+    );
+    if (!matchingParent) throw genericError();
+
+    await this.db.db.transaction(async (txn) => {
+      await txn
+        .update(parents)
+        .set({ isPrimaryContact: false, updatedAt: new Date() })
+        .where(eq(parents.userId, account.id));
+      await txn
+        .update(parents)
+        .set({ isPrimaryContact: true, updatedAt: new Date() })
+        .where(eq(parents.id, matchingParent.id));
+      await txn
+        .update(users)
+        .set({ phoneNumber, lastLoginAt: new Date(), updatedAt: new Date() })
+        .where(eq(users.id, account.id));
+    });
+    const tokens = await this.generateTokens(account.id, 'PARENT', context, undefined, rememberMe);
+    this.logger.log('PARENT logged in with fixed credentials.');
+    return {
+      user: { id: account.id, username: account.username, phoneNumber, role: 'PARENT' },
+      ...tokens,
+    };
+  }
+
   async verifyAuthOtp(
     phoneNumber: string,
     code: string,
@@ -366,12 +441,16 @@ export class AuthService {
     if (!session) {
       throw new AuthenticationError('Invalid or expired onboarding session.');
     }
-    if (!(await this.onboarding.hasPaidPrepayment(session.userId))) {
+    if (!(await this.onboarding.isPanelReady(session.userId))) {
       throw new ValidationError(
-        'Onboarding cannot be completed until the enrollment prepayment is verified.',
+        'Onboarding cannot be completed until an enrollment contract is accepted.',
       );
     }
     await this.onboarding.completeOnboarding(session.id, session.userId);
+    await this.db.db
+      .update(users)
+      .set({ username: session.phoneNumber, updatedAt: new Date() })
+      .where(eq(users.id, session.userId));
     const tokens = await this.generateTokens(
       session.userId,
       'PARENT',
@@ -389,6 +468,20 @@ export class AuthService {
       },
       ...tokens,
     };
+  }
+
+  async getPendingNationalId(userId: string): Promise<string> {
+    const [account] = await this.db.db
+      .select({ username: users.username, status: users.accountStatus })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!account || account.status !== 'PENDING') {
+      throw new AuthenticationError('Invalid onboarding identity.');
+    }
+    const separator = account.username.indexOf(':');
+    if (separator < 0) throw new AuthenticationError('Invalid onboarding identity.');
+    return account.username.slice(separator + 1);
   }
 
   async createAdminChallenge(
@@ -435,6 +528,43 @@ export class AuthService {
     };
   }
 
+  async loginAdmin(
+    username: string,
+    password: string,
+    context?: SessionContext,
+    rememberMe = false,
+  ): Promise<LoginResult> {
+    const genericError = () => new AuthenticationError('The username or password is incorrect.');
+    const [record] = await this.db.db
+      .select({
+        id: adminUsers.id,
+        username: adminUsers.username,
+        phoneNumber: adminUsers.phoneNumber,
+        status: adminUsers.status,
+        passwordHash: adminUsers.passwordHash,
+      })
+      .from(adminUsers)
+      .where(eq(adminUsers.username, username))
+      .limit(1);
+    if (!record || record.status !== 'ACTIVE' || !record.passwordHash) throw genericError();
+    if (!(await argon2.verify(record.passwordHash, password))) throw genericError();
+    await this.db.db
+      .update(adminUsers)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(adminUsers.id, record.id));
+    const tokens = await this.generateTokens(record.id, 'ADMIN', context, undefined, rememberMe);
+    this.logger.log('Admin logged in with username and password.');
+    return {
+      user: {
+        id: record.id,
+        username: record.username,
+        phoneNumber: record.phoneNumber,
+        role: 'ADMIN',
+      },
+      ...tokens,
+    };
+  }
+
   async verifyAdminOtp(
     challengeId: string,
     code: string,
@@ -444,8 +574,7 @@ export class AuthService {
     const genericError = () => new AuthenticationError('The username or password is incorrect.');
     const challengeHash = this.hashToken(challengeId);
 
-    let admin: { id: string; username: string; phoneNumber: string } | undefined;
-    await this.db.db.transaction(async (txn) => {
+    const result = await this.db.db.transaction(async (txn) => {
       await txn.execute(
         sql`select pg_advisory_xact_lock(hashtext(${`admin-challenge:${challengeHash}`}))`,
       );
@@ -455,17 +584,17 @@ export class AuthService {
         .where(eq(adminAuthChallenges.challengeHash, challengeHash))
         .limit(1);
       if (!challenge || challenge.usedAt || challenge.invalidatedAt) {
-        throw genericError();
+        return { outcome: 'NOT_FOUND' as const };
       }
       if (isPast(new Date(challenge.expiresAt))) {
         await txn
           .update(adminAuthChallenges)
           .set({ invalidatedAt: new Date() })
           .where(eq(adminAuthChallenges.id, challenge.id));
-        throw genericError();
+        return { outcome: 'EXPIRED' as const };
       }
       if (challenge.attemptCount >= challenge.maxAttempts) {
-        throw genericError();
+        return { outcome: 'TOO_MANY_ATTEMPTS' as const };
       }
 
       const admins = await txn
@@ -498,21 +627,49 @@ export class AuthService {
             invalidatedAt: attempts >= challenge.maxAttempts ? new Date() : null,
           })
           .where(eq(adminAuthChallenges.id, challenge.id));
-        throw genericError();
+        return { outcome: otpOutcome };
       }
 
       await txn
         .update(adminAuthChallenges)
         .set({ usedAt: new Date() })
         .where(eq(adminAuthChallenges.id, challenge.id));
-      admin = {
-        id: adminRecord.id,
-        username: adminRecord.username,
-        phoneNumber: adminRecord.phoneNumber,
+      return {
+        outcome: 'VERIFIED' as const,
+        admin: {
+          id: adminRecord.id,
+          username: adminRecord.username,
+          phoneNumber: adminRecord.phoneNumber,
+        },
       };
     });
 
-    if (!admin) throw genericError();
+    if (result.outcome === 'NOT_FOUND') {
+      throw new AppError(
+        'OTP_REQUEST_MISSING',
+        'درخواست کد تأیید معتبر نیست یا با کد جدید جایگزین شده است. دوباره کد بگیرید.',
+        400,
+      );
+    }
+    if (result.outcome === 'EXPIRED') {
+      throw new AppError(
+        'OTP_EXPIRED',
+        'زمان اعتبار کد تأیید به پایان رسیده است. کد جدید بگیرید.',
+        400,
+      );
+    }
+    if (result.outcome === 'TOO_MANY_ATTEMPTS') {
+      throw new AppError(
+        'OTP_ATTEMPTS_EXCEEDED',
+        'تعداد تلاش‌های ناموفق بیش از حد مجاز است. کد جدید دریافت کنید.',
+        429,
+      );
+    }
+    if (result.outcome === 'INVALID') {
+      throw new AppError('OTP_INVALID', 'کد تأیید واردشده صحیح نیست.', 400);
+    }
+    if (!result.admin) throw genericError();
+    const admin = result.admin;
     await this.db.db
       .update(adminUsers)
       .set({ lastLoginAt: new Date() })
@@ -607,7 +764,11 @@ export class AuthService {
           );
         if (recentFromIp.length >= 10) {
           this.metrics?.recordMessage('otp', 'rate_limited');
-          throw new ValidationError('Too many verification codes requested. Please try later.');
+          throw new AppError(
+            'OTP_RATE_LIMIT',
+            'تعداد درخواست‌های کد تأیید بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.',
+            429,
+          );
         }
       }
       const recent = await txn
@@ -627,8 +788,10 @@ export class AuthService {
         const elapsed = (Date.now() - new Date(recent[0].createdAt).getTime()) / 1000;
         if (elapsed < this.config.otpResendCooldownSeconds) {
           this.metrics?.recordMessage('otp', 'rate_limited');
-          throw new ValidationError(
-            `Please wait ${Math.ceil(this.config.otpResendCooldownSeconds - elapsed)} seconds before requesting a new code.`,
+          throw new AppError(
+            'OTP_RESEND_COOLDOWN',
+            `برای دریافت کد جدید ${Math.ceil(this.config.otpResendCooldownSeconds - elapsed)} ثانیه صبر کنید.`,
+            429,
           );
         }
       }
@@ -705,16 +868,30 @@ export class AuthService {
       return this.consumeOtpInTransaction(txn, phoneNumber, purpose, code);
     });
     if (outcome === 'NOT_FOUND') {
-      throw new ValidationError('No valid OTP request found. Please request a new code.');
+      throw new AppError(
+        'OTP_REQUEST_MISSING',
+        'درخواست کد تأیید معتبر نیست یا با کد جدید جایگزین شده است. دوباره کد بگیرید.',
+        400,
+      );
     }
     if (outcome === 'TOO_MANY_ATTEMPTS') {
       this.metrics?.recordMessage('otp', 'rate_limited');
-      throw new ValidationError('Too many failed attempts. Please request a new code.');
+      throw new AppError(
+        'OTP_ATTEMPTS_EXCEEDED',
+        'تعداد تلاش‌های ناموفق بیش از حد مجاز است. کد جدید دریافت کنید.',
+        429,
+      );
     }
     if (outcome === 'EXPIRED') {
-      throw new ValidationError('OTP code has expired. Please request a new code.');
+      throw new AppError(
+        'OTP_EXPIRED',
+        'زمان اعتبار کد تأیید به پایان رسیده است. کد جدید بگیرید.',
+        400,
+      );
     }
-    if (outcome === 'INVALID') throw new ValidationError('Invalid verification code.');
+    if (outcome === 'INVALID') {
+      throw new AppError('OTP_INVALID', 'کد تأیید واردشده صحیح نیست.', 400);
+    }
 
     this.logger.log(`OTP verified for ${purpose}.`);
     return {};

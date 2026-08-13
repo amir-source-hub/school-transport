@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { RouteLoading } from '@/components/feedback/route-loading';
 import { ApiClientError, apiRequest } from '@/lib/api-client';
+import { setOnboardingState } from './onboarding-session';
 
 type GuardStatus = 'checking' | 'authorized' | 'unavailable';
 
@@ -18,12 +19,24 @@ export function OnboardingSessionGuard({ children }: { children: ReactNode }) {
   const verify = useCallback(() => {
     const requestId = ++verificationId.current;
     const isCurrent = () => requestId === verificationId.current;
-    apiRequest<{ status: string }>('/auth/onboarding/me', {
+    apiRequest<{
+      phoneNumber: string;
+      expiresAt: string;
+      currentStep: string | null;
+      nationalId: string;
+    }>('/auth/onboarding/me', {
       cache: 'no-store',
       redirectOnAuthFailure: false,
     })
-      .then(() => {
+      .then((response) => {
         if (!isCurrent()) return;
+        setOnboardingState({
+          sessionId: null,
+          phoneNumber: response.data.phoneNumber,
+          nationalId: response.data.nationalId,
+          expiresAt: response.data.expiresAt,
+          currentStep: response.data.currentStep,
+        });
         setStatus('authorized');
       })
       .catch((caught) => {

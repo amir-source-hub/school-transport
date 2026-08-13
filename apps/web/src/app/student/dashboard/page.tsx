@@ -1,5 +1,5 @@
 import { getContracts } from '@/features/finance/contracts-api';
-import { getPayments } from '@/features/finance/payments-api';
+import { getOfflineSubmissions, getPayments } from '@/features/finance/payments-api';
 import { getEnrollments } from '@/features/enrollment/enrollments-api';
 import { getNotifications } from '@/features/notifications/notifications-api';
 import {
@@ -27,17 +27,25 @@ const statusLabel: Record<string, string> = {
 };
 
 export default async function StudentDashboardPage() {
-  const [students, enrollments, contracts, payments, notifications] = await Promise.all([
+  const [students, enrollments, contracts, payments, notifications, offlineSubmissions] =
+    await Promise.all([
     getStudents(),
     getEnrollments(),
     getContracts(),
     getPayments(),
     getNotifications(),
+    getOfflineSubmissions(),
   ]);
   const dashboards: StudentDashboardModel[] = students.map((student) => {
     const enrollment = enrollments.find((item) => item.studentId === student.id);
     const contract = enrollment && contracts.find((item) => item.registrationId === enrollment.id);
     const payment = payments.find((item) => item.studentId === student.id);
+    const prepayment = payment?.items.find((item) => item.itemType === 'PREPAYMENT');
+    const prepaymentSubmission = prepayment
+      ? offlineSubmissions.find(
+          (submission) => submission.paymentScheduleItemId === prepayment.id,
+        )
+      : undefined;
     const nextItem = payment?.items.find((item) => item.itemStatus !== 'PAID');
     const status = enrollment?.registrationStatus ?? 'DRAFT';
     const lifecycleEvents = [
@@ -67,16 +75,35 @@ export default async function StudentDashboardPage() {
       schoolAndGrade: `${student.schoolName}، پایه ${student.grade ?? '—'}`,
       academicYear: enrollment?.academicYear ?? 'درخواستی ثبت نشده',
       enrollmentCode: status,
-      enrollmentStatus: statusLabel[status] ?? status,
-      enrollmentTone: status === 'REJECTED' || status === 'NEEDS_CORRECTION' ? 'danger' : 'info',
+      enrollmentStatus:
+        prepaymentSubmission?.status === 'PENDING_REVIEW'
+          ? 'رسید پیش‌پرداخت در انتظار بررسی'
+          : prepaymentSubmission?.status === 'REJECTED'
+            ? 'رسید پیش‌پرداخت نیازمند اصلاح'
+            : status === 'CONTRACT_ACCEPTED' && prepayment?.itemStatus !== 'PAID'
+              ? 'در انتظار پرداخت پیش‌پرداخت'
+              : statusLabel[status] ?? status,
+      enrollmentTone:
+        status === 'REJECTED' ||
+        status === 'NEEDS_CORRECTION' ||
+        prepaymentSubmission?.status === 'REJECTED'
+          ? 'danger'
+          : 'info',
       nextAction: !enrollment
         ? 'برای این دانش‌آموز درخواست سرویس ثبت کنید.'
         : status === 'APPROVED'
           ? 'منتظر اعلام قیمت مدیریت باشید.'
           : status === 'CONTRACT_READY'
             ? 'قرارداد را بررسی و تعیین تکلیف کنید.'
-            : 'وضعیت درخواست را در بخش ثبت‌نام دنبال کنید.',
+            : prepaymentSubmission?.status === 'PENDING_REVIEW'
+              ? 'رسید شما ثبت شده و در انتظار بررسی مدیریت است.'
+              : prepaymentSubmission?.status === 'REJECTED'
+                ? 'رسید نیازمند اصلاح است؛ دلیل را ببینید و رسید تازه ارسال کنید.'
+                : status === 'CONTRACT_ACCEPTED' && prepayment?.itemStatus !== 'PAID'
+                  ? 'پیش‌پرداخت را از بخش پرداخت‌ها واریز و تصویر رسید را ارسال کنید.'
+                  : 'وضعیت درخواست را در بخش ثبت‌نام دنبال کنید.',
       warning:
+        prepaymentSubmission?.rejectionReason ??
         enrollment?.rejectionReason ??
         (status === 'NEEDS_CORRECTION' ? 'اطلاعات درخواست نیازمند اصلاح است.' : null),
       contractStatus: contract?.contractStatus ?? 'هنوز صادر نشده',

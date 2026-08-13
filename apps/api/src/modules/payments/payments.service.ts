@@ -425,11 +425,12 @@ export class PaymentsService {
     }
     const destination = await this.getActiveOfflineDestination();
     const paidAt = new Date(data.paidAt);
-    if (Number.isNaN(paidAt.getTime()) || paidAt > new Date() || !data.referenceNumber.trim()) {
-      throw new ValidationError('A valid payment date and reference number are required.');
-    }
+    if (Number.isNaN(paidAt.getTime())) throw new ValidationError('تاریخ پرداخت معتبر نیست.');
+    if (paidAt > new Date()) throw new ValidationError('تاریخ پرداخت نمی‌تواند در آینده باشد.');
+    if (!data.referenceNumber.trim())
+      throw new ValidationError('شماره پیگیری یا مرجع پرداخت الزامی است.');
     if (data.sourceCardLastFour && !/^\d{4}$/.test(data.sourceCardLastFour)) {
-      throw new ValidationError('Source card suffix must contain exactly four digits.');
+      throw new ValidationError('چهار رقم آخر کارت مبدأ باید دقیقاً چهار رقم باشد.');
     }
     const id = generateId();
     const [created] = await this.db.db
@@ -480,6 +481,77 @@ export class PaymentsService {
       );
     }
     return id;
+  }
+
+  private async getScheduleItemOwner(scheduleItemId: string) {
+    const [owner] = await this.db.db
+      .select({ userId: students.userId })
+      .from(paymentScheduleItems)
+      .innerJoin(paymentPlans, eq(paymentPlans.id, paymentScheduleItems.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .where(eq(paymentScheduleItems.id, scheduleItemId))
+      .limit(1);
+    if (!owner) throw new NotFoundError('Schedule item');
+    return owner.userId;
+  }
+
+  async createOfflineSubmissionForAdmin(
+    scheduleItemId: string,
+    adminId: string,
+    data: {
+      paidAt: string;
+      referenceNumber: string;
+      description?: string;
+      payerName?: string;
+      sourceCardLastFour?: string;
+      idempotencyKey: string;
+    },
+  ) {
+    const userId = await this.getScheduleItemOwner(scheduleItemId);
+    const submissionId = await this.createOfflineSubmission(scheduleItemId, userId, data);
+    await this.audit?.record({
+      actorType: 'ADMIN',
+      actorId: adminId,
+      action: 'ADMIN_OFFLINE_PAYMENT_DRAFT_CREATED',
+      entityType: 'OFFLINE_PAYMENT_SUBMISSION',
+      entityId: submissionId,
+      newValues: { scheduleItemId, payerUserId: userId },
+    });
+    return { submissionId };
+  }
+
+  private async getSubmissionOwner(submissionId: string) {
+    const [submission] = await this.db.db
+      .select({ payerUserId: offlinePaymentSubmissions.payerUserId })
+      .from(offlinePaymentSubmissions)
+      .where(eq(offlinePaymentSubmissions.id, submissionId))
+      .limit(1);
+    if (!submission) throw new NotFoundError('Offline payment submission');
+    return submission.payerUserId;
+  }
+
+  async authorizeReceiptUploadForAdmin(
+    submissionId: string,
+    input: { declaredMime: 'image/jpeg' | 'image/png'; declaredSize: number },
+  ) {
+    return this.authorizeReceiptUpload(
+      submissionId,
+      await this.getSubmissionOwner(submissionId),
+      input,
+    );
+  }
+
+  async completeAndApproveReceiptForAdmin(submissionId: string, adminId: string) {
+    const completed = await this.completeReceiptUpload(
+      submissionId,
+      await this.getSubmissionOwner(submissionId),
+    );
+    return this.approveOfflinePayment(submissionId, adminId, completed.version);
   }
 
   async authorizeReceiptUpload(
@@ -651,7 +723,7 @@ export class PaymentsService {
       if (submission.status !== 'PENDING_REVIEW' || submission.version !== version) {
         throw new ConflictError(
           'OFFLINE_PAYMENT_NOT_PENDING',
-          'This receipt is no longer pending at the reviewed version.',
+          'این رسید قبلاً بررسی شده یا وضعیت آن تغییر کرده است. صفحه را تازه کنید.',
         );
       }
       const [item] = await txn
@@ -710,7 +782,7 @@ export class PaymentsService {
       if (!approved)
         throw new ConflictError(
           'OFFLINE_PAYMENT_NOT_PENDING',
-          'Receipt review changed concurrently.',
+          'وضعیت رسید هم‌زمان تغییر کرده است. صفحه را تازه کنید.',
         );
       await txn
         .update(paymentScheduleItems)
@@ -1112,7 +1184,7 @@ export class PaymentsService {
           planId: plan.id,
           planType: plan.planType,
           planStatus: plan.planStatus,
-          planConfigured: plan.planType === 'ADMIN_CONFIGURED',
+          planConfigured: planItems.some((item) => item.itemType === 'INSTALLMENT'),
           studentName: `${studentFirstName} ${studentLastName}`,
           familyName: parent ? `${parent.firstName} ${parent.lastName}` : '—',
           totalAmount: plan.totalAmount,

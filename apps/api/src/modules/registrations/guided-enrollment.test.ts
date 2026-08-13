@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  guidedContractText,
   normalizeAndValidateGuidedEnrollment,
   type GuidedEnrollmentData,
 } from './guided-enrollment';
@@ -69,6 +68,21 @@ describe('guided enrollment policy', () => {
     expect(input.student.nationalId).toBe('۰۰۱۳۵۴۰۳۹۴');
   });
 
+  it('accepts leading-zero and short national IDs preserving the normalized value', () => {
+    const input = validEnrollment();
+    input.student.nationalId = '0023518805';
+    input.guardian.nationalId = '123';
+    input.father = { ...input.father!, nationalId: '0023518805' };
+    input.mother = { ...input.mother!, nationalId: '4567' };
+
+    const result = normalizeAndValidateGuidedEnrollment(input);
+
+    expect(result.student.nationalId).toBe('0023518805');
+    expect(result.guardian.nationalId).toBe('123');
+    expect(result.father).toBeNull();
+    expect(result.mother?.nationalId).toBe('4567');
+  });
+
   it('rejects unsupported service types', () => {
     const input = validEnrollment();
     input.service.serviceType = 'MOTORCYCLE';
@@ -97,12 +111,35 @@ describe('guided enrollment policy', () => {
     );
   });
 
-  it('rejects partially completed optional parent sections', () => {
+  it('does not require or retain a duplicate record for the selected father', () => {
     const input = validEnrollment();
     input.father = { ...input.father!, phoneNumber: '' };
 
+    const result = normalizeAndValidateGuidedEnrollment(input);
+
+    expect(result.father).toBeNull();
+    expect(result.mother).toEqual(input.mother);
+  });
+
+  it('keeps only the father record when the selected attendant is the mother', () => {
+    const input = validEnrollment();
+    input.guardian.relationshipType = 'MOTHER';
+    input.guardian.firstName = input.mother!.firstName;
+    input.guardian.lastName = input.mother!.lastName;
+    input.guardian.nationalId = input.mother!.nationalId;
+
+    const result = normalizeAndValidateGuidedEnrollment(input);
+
+    expect(result.father).toEqual(input.father);
+    expect(result.mother).toBeNull();
+  });
+
+  it('requires the non-attendant parent record', () => {
+    const input = validEnrollment();
+    input.mother = null;
+
     expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow(
-      'Partially completed parent information must include all fields.',
+      'The non-attendant parent must have a complete parent record.',
     );
   });
 
@@ -111,8 +148,13 @@ describe('guided enrollment policy', () => {
     input.father = null;
     input.mother = null;
     input.emergencyContact = null;
+    input.guardian.relationshipType = 'OTHER';
+    input.guardian.relationshipDescription = 'Aunt';
 
     expect(() => normalizeAndValidateGuidedEnrollment(input)).not.toThrow();
+    const result = normalizeAndValidateGuidedEnrollment(input);
+    expect(result.father).toBeNull();
+    expect(result.mother).toBeNull();
   });
 
   it('requires a 021 Tehran home phone', () => {
@@ -142,7 +184,21 @@ describe('guided enrollment policy', () => {
     );
   });
 
-  it('keeps contract generation independent from persistence', () => {
-    expect(guidedContractText('Ali', 'Ahmadi')).toContain('Ali Ahmadi');
+  it('accepts a canonical birth date and rejects future or out-of-policy values', () => {
+    const valid = validEnrollment();
+    valid.student.birthDate = '2020-03-20';
+    expect(normalizeAndValidateGuidedEnrollment(valid).student.birthDate).toBe('2020-03-20');
+
+    const future = validEnrollment();
+    future.student.birthDate = '2999-01-01';
+    expect(() => normalizeAndValidateGuidedEnrollment(future)).toThrow(
+      'Birth date must be a real date between 1900-01-01 and today.',
+    );
+
+    const old = validEnrollment();
+    old.student.birthDate = '1899-12-31';
+    expect(() => normalizeAndValidateGuidedEnrollment(old)).toThrow(
+      'Birth date must be a real date between 1900-01-01 and today.',
+    );
   });
 });

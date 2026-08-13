@@ -93,6 +93,25 @@ export class OnboardingStudentPhotosController {
 export class AdminStudentPhotosController {
   constructor(private readonly service: StudentPhotosService) {}
 
+  @Post('families/:familyId/uploads')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  async authorizeForFamily(
+    @Req() req: AuthenticatedRequest,
+    @Param('familyId', new ParseUUIDPipe()) familyId: string,
+    @Body() body: AuthorizePhotoUploadDto,
+  ) {
+    return successResponse(await this.service.authorizeUpload(familyId, body, req.ip));
+  }
+
+  @Post('families/:familyId/uploads/:id/complete')
+  async completeForFamily(
+    @Req() req: AuthenticatedRequest,
+    @Param('familyId', new ParseUUIDPipe()) familyId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return successResponse(await this.service.completeUpload(familyId, id, req.ip));
+  }
+
   @Get()
   async list(@Req() req: AuthenticatedRequest, @Query() query: AdminPhotoListQueryDto) {
     const result = await this.service.listForAdmin(query);

@@ -7,16 +7,14 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { notificationConsents, notifications } from '../../database/schemas';
-import { and, count, desc, eq, inArray, lt, lte, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, lt, lte, or, sql } from 'drizzle-orm';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { UpdateNotificationConsentDto } from './notification-consent.dto';
 import { NOTIFICATION_CONSENT_TEXT_VERSION } from '../../database/schemas/notifications.schema';
 import {
   adminOperationalRoute,
-  notificationCatalog,
   notificationRoute,
   type NotificationContext,
-  type NotificationType,
 } from '../../infrastructure/notifications/notification.catalog';
 
 export interface NotificationListQuery {
@@ -214,12 +212,8 @@ export class NotificationsService {
   async getSharedAdminEvents(query: AdminNotificationListQuery = {}) {
     const { pageSize } = boundedPagination(query);
     const snapshotAt = query.snapshotAt ? new Date(query.snapshotAt) : new Date();
-    const adminTypes = Object.entries(notificationCatalog)
-      .filter(([, entry]) => entry.adminOperational)
-      .map(([type]) => type as NotificationType);
     const filters = [
       eq(notifications.channel, 'IN_APP'),
-      inArray(notifications.notificationType, adminTypes),
       sql`${notifications.createdAt} <= ${snapshotAt}`,
     ];
     if (query.type) filters.push(eq(notifications.notificationType, query.type));

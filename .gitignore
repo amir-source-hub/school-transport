@@ -31,6 +31,8 @@ blob-report/
 *.dump
 uploads/
 storage/
+apps/web/public/images/
+apps/web/public/images.zip
 
 # Editor and operating-system files
 .DS_Store

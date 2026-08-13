@@ -34,7 +34,7 @@ const navigation = [
   { href: '/admin/registrations', label: 'ثبت‌نام‌ها', icon: ClipboardCheck },
   { href: '/admin/students', label: 'دانش‌آموزان', icon: GraduationCap },
   { href: '/admin/student-photos', label: 'بررسی عکس‌ها', icon: Images },
-  { href: '/admin/schools', label: 'مدارس', icon: Building2 },
+  { href: '/admin/schools', label: 'مدارس ما', icon: Building2 },
   { href: '/admin/contracts', label: 'قراردادها', icon: FileText },
   { href: '/admin/payments', label: 'پرداخت‌ها', icon: WalletCards },
   { href: '/admin/reports', label: 'گزارش‌ها', icon: FileSpreadsheet },

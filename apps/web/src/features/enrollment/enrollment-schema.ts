@@ -5,7 +5,7 @@ import {
   normalizePhoneNumber,
 } from './input-normalizers';
 import { isAllowedPersianText, persianTextMessage } from './persian-text';
-import { isValidIranianNationalId } from './national-id';
+import { isValidIranianNationalId, nationalIdError } from './national-id';
 
 const required = 'پر کردن این فیلد اجباری است';
 
@@ -22,10 +22,7 @@ const name = z
 const nationalId = z
   .string()
   .transform(normalizeNationalId)
-  .refine((value) => /^\d{10}$/.test(value), {
-    message: 'کد ملی باید ۱۰ رقم باشد.',
-  })
-  .refine(isValidIranianNationalId, { message: 'کد ملی نامعتبر است.' });
+  .refine(isValidIranianNationalId, { message: nationalIdError });
 
 const mobile = z
   .string()
@@ -46,7 +43,16 @@ export const studentSchema = z.object({
   firstName: name,
   lastName: name,
   nationalId,
-  birthDate: z.string().optional(),
+  birthDate: z
+    .string()
+    .date('تاریخ تولد معتبر نیست.')
+    .refine((value) => value <= new Date().toISOString().slice(0, 10), {
+      message: 'تاریخ تولد نمی‌تواند در آینده باشد.',
+    })
+    .refine((value) => value >= '1900-01-01', {
+      message: 'تاریخ تولد از بازه مجاز قدیمی‌تر است.',
+    })
+    .optional(),
   gender: z.enum(['MALE', 'FEMALE']).optional(),
   phoneNumber: mobile.optional(),
 });

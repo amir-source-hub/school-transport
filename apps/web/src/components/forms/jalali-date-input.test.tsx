@@ -5,44 +5,97 @@ import { describe, expect, it, vi } from 'vitest';
 import { JalaliDateInput } from './jalali-date-input';
 
 describe('JalaliDateInput', () => {
-  it('adds date separators while accepting Persian digits from a numeric keyboard', async () => {
+  it('uses constrained LTR year/month/day segments and auto-advances', async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
+    render(<JalaliDateInput label="تاریخ تولد" value="" onChange={onChange} />);
 
-    render(<JalaliDateInput id="birth-date" value="" onChange={onChange} />);
-    const input = screen.getByRole('textbox');
-    expect(input).toHaveAttribute('inputmode', 'numeric');
+    const year = screen.getByLabelText('سال');
+    const month = screen.getByLabelText('ماه');
+    const day = screen.getByLabelText('روز');
+    expect(screen.getByRole('group', { name: 'تاریخ تولد' })).toHaveAttribute('dir', 'ltr');
+    expect(year).toHaveAttribute('inputmode', 'numeric');
 
-    await user.type(input, '۱۴۰۳۰۷۱۵');
+    await user.type(year, '۱۴۰۳');
+    expect(month).toHaveFocus();
+    await user.type(month, '۰۷');
+    expect(day).toHaveFocus();
+    await user.type(day, '۱۵');
 
-    expect(input).toHaveValue('1403/07/15');
+    expect(year).toHaveValue('1403');
+    expect(month).toHaveValue('07');
+    expect(day).toHaveValue('15');
     expect(onChange).toHaveBeenLastCalledWith('2024-10-06');
+    expect(screen.getByText(/تاریخ انتخاب‌شده/)).toHaveTextContent('1403/07/15');
   });
 
-  it('shows an inline error until a complete valid date has been entered', async () => {
+  it('distributes a pasted complete date and normalizes Arabic digits', async () => {
+    const onChange = vi.fn();
     const user = userEvent.setup();
-    render(<JalaliDateInput value="" onChange={vi.fn()} />);
+    render(<JalaliDateInput value="" onChange={onChange} />);
 
-    await user.type(screen.getByRole('textbox'), '140313');
+    await user.click(screen.getByLabelText('سال'));
+    await user.paste('١٤٠٥/٠١/٠١');
 
-    expect(screen.getByText('تاریخ شمسی را به شکل ۱۴۰۵/۰۱/۰۱ وارد کنید.')).toBeInTheDocument();
+    expect(screen.getByLabelText('سال')).toHaveValue('1405');
+    expect(screen.getByLabelText('ماه')).toHaveValue('01');
+    expect(screen.getByLabelText('روز')).toHaveValue('01');
+    expect(onChange).toHaveBeenLastCalledWith('2026-03-21');
   });
 
-  it('marks the input invalid and links the inline error through aria-describedby', async () => {
+  it('rejects impossible, future, and out-of-policy dates with specific messages', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <JalaliDateInput value="" onChange={vi.fn()} maxDate="2026-08-11" minDate="1900-01-01" />,
+    );
+
+    await user.type(screen.getByLabelText('سال'), '1405');
+    await user.type(screen.getByLabelText('ماه'), '13');
+    await user.type(screen.getByLabelText('روز'), '01');
+    expect(screen.getByText(/تاریخ شمسی معتبر/)).toBeInTheDocument();
+
+    rerender(
+      <JalaliDateInput
+        value="2027-03-21"
+        onChange={vi.fn()}
+        maxDate="2026-08-11"
+        minDate="1900-01-01"
+      />,
+    );
+    expect(await screen.findByText('تاریخ نمی‌تواند در آینده باشد.')).toBeInTheDocument();
+  });
+
+  it('moves backward on backspace without trapping keyboard focus', async () => {
     const user = userEvent.setup();
     render(<JalaliDateInput value="" onChange={vi.fn()} />);
-    const input = screen.getByRole('textbox');
+    const month = screen.getByLabelText('ماه');
+    month.focus();
+    await user.keyboard('{Backspace}');
+    expect(screen.getByLabelText('سال')).toHaveFocus();
+  });
 
-    await user.type(input, '140313');
-    const error = screen.getByText('تاریخ شمسی را به شکل ۱۴۰۵/۰۱/۰۱ وارد کنید.');
+  it('selects a valid Persian date from the calendar', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <JalaliDateInput
+        value=""
+        onChange={onChange}
+        minDate="2024-03-20"
+        maxDate="2025-03-20"
+      />,
+    );
 
-    expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(input.getAttribute('aria-describedby')).toBe(error.id);
+    await user.click(screen.getByText('انتخاب از تقویم شمسی'));
+    expect(screen.getByRole('group', { name: 'تاریخ شمسی' }).parentElement).toHaveClass(
+      'min-h-[22rem]',
+    );
+    await user.selectOptions(screen.getByLabelText('ماه تقویم'), '7');
+    await user.click(screen.getByRole('button', { name: '۱۵' }));
 
-    await user.clear(input);
-    await user.type(input, '14030715');
-
-    expect(input).toHaveAttribute('aria-invalid', 'false');
-    expect(input).not.toHaveAttribute('aria-describedby');
+    expect(onChange).toHaveBeenLastCalledWith('2024-10-06');
+    expect(screen.getByLabelText('سال')).toHaveValue('1403');
+    expect(screen.getByLabelText('ماه')).toHaveValue('07');
+    expect(screen.getByLabelText('روز')).toHaveValue('15');
   });
 });

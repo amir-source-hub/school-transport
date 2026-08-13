@@ -63,4 +63,26 @@ describe('admin operational notification cursor paging', () => {
     render(await NotificationsPage({ searchParams: Promise.resolve({}) }));
     expect(screen.queryByRole('navigation', { name: 'صفحه‌بندی رویدادها' })).toBeNull();
   });
+
+  it('renders Persian date controls while preserving ISO filter values', async () => {
+    vi.mocked(getAdminNotifications).mockResolvedValue({
+      items: [],
+      total: 0,
+      pageSize: 20,
+      snapshotAt: '2026-08-09T12:00:00.000Z',
+      nextCursor: null,
+    });
+
+    const view = render(
+      await NotificationsPage({
+        searchParams: Promise.resolve({ dateFrom: '2026-08-01', dateTo: '2026-08-11' }),
+      }),
+    );
+
+    expect(screen.getByRole('group', { name: 'از تاریخ' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'تا تاریخ' })).toBeInTheDocument();
+    expect(view.container.querySelector('input[name="dateFrom"]')).toHaveValue('2026-08-01');
+    expect(view.container.querySelector('input[name="dateTo"]')).toHaveValue('2026-08-11');
+    expect(view.container.querySelector('input[type="date"]')).toBeNull();
+  });
 });

@@ -150,6 +150,7 @@ export class FamiliesService {
 
     const mother = parentRecords.find((p) => p.parentType === 'MOTHER') || null;
     const father = parentRecords.find((p) => p.parentType === 'FATHER') || null;
+    const guardian = parentRecords.find((p) => p.parentType === 'GUARDIAN') || null;
 
     const mapParent = (p: (typeof parentRecords)[0]): ParentProfile => ({
       id: p.id,
@@ -158,6 +159,8 @@ export class FamiliesService {
       lastName: p.lastName,
       nationalId: p.nationalId,
       phoneNumber: p.phoneNumber,
+      relationshipType: p.relationshipType ?? undefined,
+      relationshipDescription: p.relationshipDescription ?? undefined,
       isPrimaryContact: p.isPrimaryContact,
       phoneVerified: !!p.phoneVerifiedAt,
     });
@@ -167,6 +170,7 @@ export class FamiliesService {
       username: user[0].username,
       mother: mother ? mapParent(mother) : null,
       father: father ? mapParent(father) : null,
+      guardian: guardian ? mapParent(guardian) : null,
       addresses: addressRecords.map((a) => ({
         id: a.id,
         title: a.title,
@@ -215,8 +219,8 @@ export class FamiliesService {
       const phoneNumber = data.phoneNumber
         ? normalizeIranianDigits(data.phoneNumber).trim()
         : existing[0].phoneNumber;
-      if (!/^\d{1,20}$/.test(nationalId)) {
-        throw new ValidationError('National ID must contain between 1 and 20 digits.');
+      if (!/^\d{1,10}$/.test(nationalId)) {
+        throw new ValidationError('National ID must contain between 1 and 10 digits.');
       }
       if (!/^09\d{9}$/.test(phoneNumber)) {
         throw new ValidationError('Phone number must contain 11 digits and start with 09.');
@@ -526,7 +530,7 @@ export class FamiliesService {
     }
     const nationalId = normalizeIranianDigits(data.nationalId).trim();
     const phoneNumber = normalizeIranianDigits(data.phoneNumber).trim();
-    if (!/^\d{1,20}$/.test(nationalId) || !/^09\d{9}$/.test(phoneNumber)) {
+    if (!/^\d{1,10}$/.test(nationalId) || !/^09\d{9}$/.test(phoneNumber)) {
       throw new ValidationError('A valid national ID and Iranian mobile number are required.');
     }
     const [duplicate] = await this.db.db
@@ -588,7 +592,7 @@ export class FamiliesService {
     const phoneNumber = data.phoneNumber
       ? normalizeIranianDigits(data.phoneNumber).trim()
       : existing.phoneNumber;
-    if (!/^\d{1,20}$/.test(nationalId) || !/^09\d{9}$/.test(phoneNumber)) {
+    if (!/^\d{1,10}$/.test(nationalId) || !/^09\d{9}$/.test(phoneNumber)) {
       throw new ValidationError('A valid national ID and Iranian mobile number are required.');
     }
     await withParentNationalIdConflict(() =>

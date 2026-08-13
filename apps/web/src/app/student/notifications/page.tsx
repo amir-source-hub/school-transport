@@ -9,6 +9,19 @@ import { formatJalaliDateTime } from '@/lib/formatters';
 import { NotificationSettingsForm } from '@/features/notifications/notification-settings-form';
 import { getNotificationSettings } from '@/features/notifications/notifications-api';
 import { Suspense } from 'react';
+import { getStudents } from '@/features/students/students-api';
+import { getEnrollments } from '@/features/enrollment/enrollments-api';
+
+const activityStatus: Record<string, string> = {
+  DRAFT: 'پیش‌نویس ثبت‌نام',
+  SUBMITTED: 'در انتظار بررسی ثبت‌نام',
+  UNDER_REVIEW: 'ثبت‌نام در حال بررسی',
+  NEEDS_CORRECTION: 'ثبت‌نام نیازمند اصلاح',
+  APPROVED: 'ثبت‌نام تأیید و در انتظار قیمت',
+  CONTRACT_READY: 'قرارداد آماده بررسی',
+  CONTRACT_ACCEPTED: 'قرارداد پذیرفته‌شده',
+  ENROLLED: 'سرویس فعال',
+};
 
 export const metadata = { title: 'اعلان‌ها' };
 export const dynamic = 'force-dynamic';
@@ -36,12 +49,23 @@ export default async function NotificationsPage({
 }) {
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1);
-  const [list, settings] = await Promise.all([
+  const [list, settings, activityResult] = await Promise.all([
     getNotifications(page, 20, params.snapshotAt),
     getNotificationSettings(),
+    Promise.all([getStudents(), getEnrollments()]).catch(() => null),
   ]);
   const { items, total, pageSize } = list;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const accountActivity = activityResult
+    ? activityResult[1].map((enrollment) => {
+        const student = activityResult[0].find((item) => item.id === enrollment.studentId);
+        return {
+          id: enrollment.id,
+          title: student ? `${student.firstName} ${student.lastName}` : 'دانش‌آموز',
+          message: activityStatus[enrollment.registrationStatus] ?? enrollment.registrationStatus,
+        };
+      })
+    : [];
 
   return (
     <div className="space-y-6">
@@ -58,13 +82,13 @@ export default async function NotificationsPage({
       </div>
       <NotificationSettingsForm initial={settings} />
       <Suspense fallback={<NotificationsSkeleton />}>
-        {items.length === 0 ? (
+        {items.length === 0 && accountActivity.length === 0 ? (
           <Card padding="md">
             <p className="text-center text-sm text-muted">
               اعلانی برای حساب شما ثبت نشده است. پیام‌های جدید در این بخش نمایش داده می‌شوند.
             </p>
           </Card>
-        ) : (
+        ) : items.length > 0 ? (
           <>
             {items.map((item) => {
               const unread = item.readAt === null;
@@ -127,8 +151,27 @@ export default async function NotificationsPage({
               </nav>
             )}
           </>
-        )}
+        ) : null}
       </Suspense>
+      {accountActivity.length > 0 && (
+        <section aria-labelledby="account-activity-heading" className="space-y-3">
+          <div>
+            <h2 id="account-activity-heading" className="text-lg font-black">
+              فعالیت‌های حساب
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              همان وضعیت‌های فرایندی که در داشبورد می‌بینید، برای هر دانش‌آموز جداگانه نمایش داده
+              شده‌اند.
+            </p>
+          </div>
+          {accountActivity.map((activity) => (
+            <Card key={activity.id} variant="outlined" padding="md">
+              <h3 className="font-black">{activity.title}</h3>
+              <p className="mt-2 text-sm text-muted">{activity.message}</p>
+            </Card>
+          ))}
+        </section>
+      )}
     </div>
   );
 }

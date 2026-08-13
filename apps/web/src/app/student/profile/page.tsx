@@ -24,7 +24,7 @@ export default async function ProfilePage() {
           ابتدا اطلاعات ثبت‌شده را بررسی کنید؛ برای تغییر هر بخش از دکمه ویرایش استفاده کنید.
         </p>
       </div>
-      {profile.mother && profile.father && profile.addresses.length > 0 ? (
+      {(profile.guardian || profile.mother || profile.father) && profile.addresses.length > 0 ? (
         <FamilyProfileForm profile={profile} />
       ) : (
         <FamilyOnboardingForm />

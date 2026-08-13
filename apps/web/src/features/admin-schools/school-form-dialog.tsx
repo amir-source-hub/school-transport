@@ -8,12 +8,20 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { createSchool, updateSchool } from '@/features/admin-schools/admin-schools-api';
+import {
+  createSchool,
+  createSchoolSchema,
+  updateSchool,
+} from '@/features/admin-schools/admin-schools-api';
 import type { AdminSchool, CreateSchoolInput } from '@/features/admin-schools/admin-schools-api';
 
 const schoolTypes = [
   { value: 'PUBLIC', label: 'دولتی' },
   { value: 'PRIVATE', label: 'خصوصی' },
+  { value: 'NEMOONE_DOLATI', label: 'نمونه دولتی' },
+  { value: 'GIFTED', label: 'تیزهوشان' },
+  { value: 'SHAHED', label: 'شاهد' },
+  { value: 'BOARDING', label: 'شبانه‌روزی' },
   { value: 'SPECIAL', label: 'استثنائی' },
   { value: 'INTERNATIONAL', label: 'بین‌المللی' },
 ];
@@ -60,6 +68,8 @@ export function SchoolFormDialog(props: Props) {
     phoneNumber: initial?.phoneNumber ?? '',
     managerName: initial?.managerName ?? '',
     managerPhone: initial?.managerPhone ?? '',
+    openingTime: initial?.openingTime ?? '',
+    closingTime: initial?.closingTime ?? '',
     educationOptions: initial?.educationOptions ?? [],
   });
   const [loading, setLoading] = useState(false);
@@ -70,27 +80,26 @@ export function SchoolFormDialog(props: Props) {
   };
 
   const handle = async () => {
-    if (
-      !form.name ||
-      !form.schoolType ||
-      !form.genderType ||
-      !form.province ||
-      !form.city ||
-      !form.address
-    ) {
-      setError('لطفاً همه فیلدهای ضروری را پر کنید');
+    const normalized = {
+      ...form,
+      name: form.name.trim(),
+      province: form.province.trim(),
+      city: form.city.trim(),
+      address: form.address.trim(),
+      phoneNumber: normalizeDigits(form.phoneNumber ?? '').replace(/\D/g, ''),
+      managerName: form.managerName?.trim() ?? '',
+      managerPhone: normalizeDigits(form.managerPhone ?? '').replace(/\D/g, ''),
+      district: undefined,
+    };
+    const checked = createSchoolSchema.safeParse(normalized);
+    if (!checked.success) {
+      setError(checked.error.issues[0]?.message ?? 'اطلاعات مدرسه را کامل و صحیح وارد کنید');
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const payload = {
-        ...form,
-        district: form.district || undefined,
-        phoneNumber: form.phoneNumber ? normalizeDigits(form.phoneNumber) : undefined,
-        managerPhone: form.managerPhone ? normalizeDigits(form.managerPhone) : undefined,
-        managerName: form.managerName || undefined,
-      };
+      const payload = checked.data;
       if (isEdit) {
         await updateSchool(props.school.id, payload);
       } else {
@@ -98,6 +107,7 @@ export function SchoolFormDialog(props: Props) {
       }
       setOpen(false);
       router.refresh();
+      if (!isEdit) window.location.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'خطا در ذخیره مدرسه');
     } finally {
@@ -172,13 +182,20 @@ export function SchoolFormDialog(props: Props) {
             </div>
             <div>
               <label htmlFor="school-phone" className="text-sm font-bold">
-                تلفن
+                تلفن مدرسه *
               </label>
               <Input
                 id="school-phone"
                 dir="ltr"
                 value={form.phoneNumber ?? ''}
-                onChange={(e) => update('phoneNumber', e.target.value)}
+                inputMode="numeric"
+                placeholder="۰۲۱۱۲۳۴۵۶۷۸"
+                onChange={(e) =>
+                  update(
+                    'phoneNumber',
+                    normalizeDigits(e.target.value).replace(/\D/g, '').slice(0, 11),
+                  )
+                }
                 className="mt-1"
               />
             </div>
@@ -205,19 +222,8 @@ export function SchoolFormDialog(props: Props) {
               />
             </div>
             <div>
-              <label htmlFor="school-district" className="text-sm font-bold">
-                منطقه
-              </label>
-              <Input
-                id="school-district"
-                value={form.district ?? ''}
-                onChange={(e) => update('district', e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
               <label htmlFor="school-manager-name" className="text-sm font-bold">
-                نام مدیر
+                نام مدیر *
               </label>
               <Input
                 id="school-manager-name"
@@ -228,14 +234,49 @@ export function SchoolFormDialog(props: Props) {
             </div>
             <div>
               <label htmlFor="school-manager-phone" className="text-sm font-bold">
-                تلفن مدیر
+                شماره همراه مدیر *
               </label>
               <Input
                 id="school-manager-phone"
                 dir="ltr"
                 value={form.managerPhone ?? ''}
-                onChange={(e) => update('managerPhone', e.target.value)}
+                inputMode="numeric"
+                placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                onChange={(e) =>
+                  update(
+                    'managerPhone',
+                    normalizeDigits(e.target.value).replace(/\D/g, '').slice(0, 11),
+                  )
+                }
                 className="mt-1"
+              />
+            </div>
+            <div>
+              <label htmlFor="school-opening-time" className="text-sm font-bold">
+                ساعت شروع مدرسه *
+              </label>
+              <Input
+                id="school-opening-time"
+                type="time"
+                required
+                dir="ltr"
+                value={form.openingTime}
+                onChange={(event) => update('openingTime', event.target.value)}
+                className="mt-1 text-left"
+              />
+            </div>
+            <div>
+              <label htmlFor="school-closing-time" className="text-sm font-bold">
+                ساعت پایان مدرسه *
+              </label>
+              <Input
+                id="school-closing-time"
+                type="time"
+                required
+                dir="ltr"
+                value={form.closingTime}
+                onChange={(event) => update('closingTime', event.target.value)}
+                className="mt-1 text-left"
               />
             </div>
           </div>
