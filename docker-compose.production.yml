@@ -118,9 +118,11 @@ services:
     cpus: 1.0
     stop_grace_period: 30s
     networks:
-      - backend
-      - application
-      - proxy_api
+      backend: {}
+      application: {}
+      proxy_api:
+        # Keep the API away from Caddy's trusted, reserved proxy address.
+        ipv4_address: 172.30.20.3
 
   worker:
     image: school-transport-api:server
