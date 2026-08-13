@@ -1,7 +1,7 @@
 import { readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const file = resolve(process.argv[2] ?? '.env.production');
+const file = resolve(process.argv[2] ?? '.env');
 const values = new Map();
 for (const [index, raw] of readFileSync(file, 'utf8').split(/\r?\n/).entries()) {
   const line = raw.trim();
@@ -17,6 +17,7 @@ for (const [index, raw] of readFileSync(file, 'utf8').split(/\r?\n/).entries()) 
 
 const required = [
   'NODE_ENV',
+  'DEPLOYMENT_PROFILE',
   'APP_DOMAIN',
   'ACME_EMAIL',
   'POSTGRES_DB',
@@ -28,8 +29,6 @@ const required = [
   'JWT_SECRET',
   'METRICS_BEARER_TOKEN',
   'OTP_PROVIDER',
-  'KAVEHNEGAR_API_KEY',
-  'KAVEHNEGAR_OTP_TEMPLATE',
   'ARVAN_S3_ENDPOINT',
   'ARVAN_S3_REGION',
   'ARVAN_S3_BUCKET',
@@ -56,9 +55,31 @@ for (const name of ['POSTGRES_PASSWORD', 'REDIS_PASSWORD', 'JWT_SECRET', 'METRIC
     errors.push(`${name} must contain at least 32 characters`);
 }
 if (values.get('NODE_ENV') !== 'production') errors.push('NODE_ENV must be production');
-if (values.get('OTP_PROVIDER') !== 'kavenegar')
-  errors.push('OTP_PROVIDER must be kavenegar for production API startup');
-if (values.get('SEED_DEMO_DATA') !== 'false') errors.push('SEED_DEMO_DATA must be false');
+const profile = values.get('DEPLOYMENT_PROFILE');
+if (!['preview', 'production'].includes(profile ?? '')) {
+  errors.push('DEPLOYMENT_PROFILE must be preview or production');
+}
+if (profile === 'production' && values.get('OTP_PROVIDER') !== 'kavenegar') {
+  errors.push('production profile requires OTP_PROVIDER=kavenegar');
+}
+if (
+  profile === 'production' &&
+  (!(values.get('KAVEHNEGAR_API_KEY') ?? '') || !(values.get('KAVEHNEGAR_OTP_TEMPLATE') ?? ''))
+) {
+  errors.push('production profile requires Kavenegar API key and approved OTP template');
+}
+if (profile === 'production' && values.get('SEED_DEMO_DATA') !== 'false') {
+  errors.push('production profile requires SEED_DEMO_DATA=false');
+}
+if (profile === 'preview' && values.get('OTP_PROVIDER') !== 'none') {
+  errors.push('preview without provider must use OTP_PROVIDER=none, never console');
+}
+if (profile === 'preview' && values.get('SEED_DEMO_DATA') !== 'true') {
+  errors.push('preview profile requires explicit SEED_DEMO_DATA=true');
+}
+if (profile === 'preview' && (values.get('SEED_ADMIN_PASSWORD') ?? '').length < 12) {
+  errors.push('preview SEED_ADMIN_PASSWORD must contain at least 12 characters');
+}
 if (values.get('API_DOCS_ENABLED') !== 'false') errors.push('API_DOCS_ENABLED must be false');
 if (values.get('LOG_LEVEL') === 'debug') errors.push('LOG_LEVEL must not be debug');
 for (const name of [
@@ -84,7 +105,7 @@ const decodedKey = Buffer.from(values.get('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY') 
 if (decodedKey.length !== 32)
   errors.push('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY must decode to exactly 32 bytes');
 if (process.platform !== 'win32' && (statSync(file).mode & 0o077) !== 0)
-  errors.push('.env.production permissions must be 0600');
+  errors.push('production server .env permissions must be 0600');
 if (errors.length) {
   for (const error of errors) console.error(`error: ${error}`);
   process.exit(1);

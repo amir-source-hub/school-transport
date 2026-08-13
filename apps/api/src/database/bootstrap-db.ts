@@ -8,12 +8,16 @@ export async function bootstrapDatabase(
 ) {
   await migrate(environment.DATABASE_URL);
   const seedRequested = environment.SEED_DEMO_DATA === 'true';
-  if (seedRequested && environment.NODE_ENV === 'production') {
+  if (
+    seedRequested &&
+    environment.NODE_ENV === 'production' &&
+    environment.DEPLOYMENT_PROFILE !== 'preview'
+  ) {
     throw new Error('Demo seeding is forbidden in production.');
   }
   if (seedRequested) {
     await seed(environment.DATABASE_URL);
-    console.log('Database migrated and development demo data seeded.');
+    console.log('Database migrated and explicitly requested demo data seeded.');
   } else {
     console.log('Database migrations applied; demo seeding disabled.');
   }

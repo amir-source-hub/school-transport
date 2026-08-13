@@ -8,7 +8,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "env:check": "node infrastructure/config/assert-environment-inventory.mjs",
-    "env:check:production": "node infrastructure/config/validate-production-env.mjs .env.production",
+    "env:check:production": "node infrastructure/config/validate-production-env.mjs .env",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "turbo typecheck",

@@ -159,7 +159,7 @@ for ownership and [`docs/PRODUCTION_DEPLOYMENT.md`](docs/PRODUCTION_DEPLOYMENT.m
 clean-checkout and production release procedure.
 
 Production uses Caddy for automatic HTTPS and reverse proxying on `samingasht.ir`. After validating
-the ignored `.env.production`, use `docker compose --env-file .env.production -f docker-compose.production.yml up -d --build --wait --wait-timeout 300`.
+the ignored root `.env`, use `docker compose --env-file .env -f docker-compose.production.yml up -d --build --wait --wait-timeout 300`.
 
 Never commit `.env` files or real credentials.
 

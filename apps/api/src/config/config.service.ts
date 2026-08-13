@@ -24,6 +24,7 @@ export function parseTrustedProxyCidrs(value = ''): string[] {
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    DEPLOYMENT_PROFILE: z.enum(['development', 'preview', 'production']).default('development'),
     PORT: z.coerce.number().default(5000),
     HOST: z.string().default('0.0.0.0'),
     DATABASE_URL: z.string(),
@@ -128,6 +129,9 @@ const envSchema = z
     if (env.NODE_ENV !== 'production') return;
     const issue = (path: string, message: string) =>
       context.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+    if (env.DEPLOYMENT_PROFILE === 'development') {
+      issue('DEPLOYMENT_PROFILE', 'Production runtime requires preview or production profile.');
+    }
     if (/demo|development|replace|change/i.test(env.JWT_SECRET) || env.JWT_SECRET.length < 32) {
       issue('JWT_SECRET', 'Production requires a strong externally supplied JWT secret.');
     }
@@ -190,14 +194,20 @@ const envSchema = z
         issue('ARVAN_S3_ENDPOINT', 'ARVAN_S3_ENDPOINT must be a valid HTTPS endpoint.');
       }
     }
-    if (env.SERVICE_ROLE === 'api' && env.OTP_PROVIDER === 'none') {
+    if (
+      env.DEPLOYMENT_PROFILE === 'production' &&
+      env.SERVICE_ROLE === 'api' &&
+      env.OTP_PROVIDER === 'none'
+    ) {
       issue('OTP_PROVIDER', 'Production API startup requires an integrated OTP provider.');
     }
     if (env.LOG_LEVEL === 'debug')
       issue('LOG_LEVEL', 'Debug logging is not permitted in production.');
     if (!env.METRICS_BEARER_TOKEN)
       issue('METRICS_BEARER_TOKEN', 'Production requires a metrics scrape token.');
-    if (env.SEED_DEMO_DATA) issue('SEED_DEMO_DATA', 'Demo seeding is not permitted in production.');
+    if (env.DEPLOYMENT_PROFILE === 'production' && env.SEED_DEMO_DATA) {
+      issue('SEED_DEMO_DATA', 'Demo seeding is not permitted in production profile.');
+    }
   });
 
 export function validateEnvironment(environment: NodeJS.ProcessEnv) {

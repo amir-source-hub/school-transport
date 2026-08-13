@@ -30,4 +30,19 @@ describe('bootstrapDatabase', () => {
       ),
     ).rejects.toThrow('forbidden');
   });
+
+  it('allows explicit idempotent demo seeding in preview profile', async () => {
+    const seed = vi.fn().mockResolvedValue(undefined);
+    await bootstrapDatabase(
+      {
+        NODE_ENV: 'production',
+        DEPLOYMENT_PROFILE: 'preview',
+        DATABASE_URL: 'db',
+        SEED_DEMO_DATA: 'true',
+      },
+      vi.fn(),
+      seed,
+    );
+    expect(seed).toHaveBeenCalledWith('db');
+  });
 });

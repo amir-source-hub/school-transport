@@ -59,8 +59,10 @@ variables require a rebuild; runtime variables require a process restart.
 
 Compose additionally consumes `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and
 `REDIS_PASSWORD` from its production environment file.
-`PRODUCTION_ENV_FILE` is a Compose/CI-only path override; production operators should leave it
-unset so the required ignored root `.env.production` is used.
+`DEPLOYMENT_PROFILE` distinguishes local development, the temporary internet-facing preview, and
+the provider-backed production profile. `PRODUCTION_ENV_FILE` is a Compose/CI-only path override;
+server operators should leave it unset so the required ignored root `.env` is used.
+`APP_DOMAIN` and `ACME_EMAIL` configure Caddy's public hostname and ACME certificate account.
 `NEXT_PUBLIC_PRIVATE_UPLOAD_ORIGIN` is a public browser build input containing only the
 credential-free HTTPS origin used for direct private uploads; it must never contain a bucket
 credential, signed query, internal hostname, or path. `PUBLIC_ASSET_BUCKET`, `ASSET_RELEASE_ID`,

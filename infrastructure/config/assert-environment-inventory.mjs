@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 const roots = [
   'apps',
   'infrastructure/object-storage/upload-public-assets.mjs',
+  'infrastructure/caddy/Caddyfile',
   'Dockerfile',
   'docker-compose.local.yml',
   'docker-compose.production.yml',
@@ -27,6 +28,7 @@ const consumed = new Set();
 for (const file of sourceFiles) {
   const content = readFileSync(file, 'utf8');
   for (const match of content.matchAll(/process\.env\.([A-Z][A-Z0-9_]*)/g)) consumed.add(match[1]);
+  for (const match of content.matchAll(/\{\$([A-Z][A-Z0-9_]*)\}/g)) consumed.add(match[1]);
   if (file.startsWith('docker-compose')) {
     for (const match of content.matchAll(/\$\{([A-Z][A-Z0-9_]*)(?=[:}])/g)) consumed.add(match[1]);
   }

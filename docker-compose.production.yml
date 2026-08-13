@@ -4,8 +4,8 @@ services:
   postgres:
     image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env.production}
-      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in the server .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in the server .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD through the deployment secret store}
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=scram-sha-256 --data-checksums
@@ -86,7 +86,7 @@ services:
       dockerfile: Dockerfile
       target: api
     env_file: &production-environment
-      - path: ${PRODUCTION_ENV_FILE:-.env.production}
+      - path: ${PRODUCTION_ENV_FILE:-.env}
         required: true
     environment: &api-environment
       SERVICE_ROLE: api

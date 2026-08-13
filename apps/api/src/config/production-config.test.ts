@@ -3,6 +3,7 @@ import { validateEnvironment } from './config.service';
 
 const production = {
   NODE_ENV: 'production',
+  DEPLOYMENT_PROFILE: 'production',
   DATABASE_URL: 'postgresql://app:strong-password@db:5432/app',
   REDIS_URL: 'redis://:strong-password@redis:6379',
   JWT_SECRET: 'a-production-secret-with-more-than-32-characters',
@@ -24,6 +25,18 @@ describe('production configuration', () => {
 
   it('allows a production worker to disable request-time providers', () => {
     expect(validateEnvironment({ ...production, SERVICE_ROLE: 'worker' }).success).toBe(true);
+  });
+
+  it('allows an explicit preview profile with demo seed and no OTP provider', () => {
+    expect(
+      validateEnvironment({
+        ...production,
+        DEPLOYMENT_PROFILE: 'preview',
+        SERVICE_ROLE: 'api',
+        OTP_PROVIDER: 'none',
+        SEED_DEMO_DATA: 'true',
+      }).success,
+    ).toBe(true);
   });
 
   it.each([

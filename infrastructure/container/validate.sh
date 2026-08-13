@@ -23,7 +23,7 @@ export DATABASE_URL="${DATABASE_URL:-postgresql://validation:validation@postgres
 export REDIS_URL="${REDIS_URL:-redis://:validation@redis:6379}"
 export JWT_SECRET="${JWT_SECRET:-validation-only-secret-with-at-least-32-characters}"
 
-production_env="${PRODUCTION_ENV_FILE:-.env.production}"
+production_env="${PRODUCTION_ENV_FILE:-.env}"
 node infrastructure/config/validate-production-env.mjs "$production_env"
 docker compose --env-file "$production_env" -f docker-compose.production.yml config --format json >"$compose_model"
 node infrastructure/container/assert-compose.mjs "$compose_model"
