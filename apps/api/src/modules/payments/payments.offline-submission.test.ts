@@ -117,10 +117,10 @@ describe('offline payment payer submission', () => {
 describe('admin payment on behalf', () => {
   it('creates a family-owned draft for either prepayment or installment', async () => {
     const service = new PaymentsService({ db: {} } as DatabaseService, {} as never, {} as never);
-    vi.spyOn(service as never, 'getScheduleItemOwner' as never).mockResolvedValue('family-1' as never);
-    const create = vi
-      .spyOn(service, 'createOfflineSubmission')
-      .mockResolvedValue('submission-1');
+    vi.spyOn(service as never, 'getScheduleItemOwner' as never).mockResolvedValue(
+      'family-1' as never,
+    );
+    const create = vi.spyOn(service, 'createOfflineSubmission').mockResolvedValue('submission-1');
 
     await expect(
       service.createOfflineSubmissionForAdmin('item-1', 'admin-1', valid),
@@ -130,7 +130,9 @@ describe('admin payment on behalf', () => {
 
   it('does not approve an admin payment until its receipt completes validation', async () => {
     const service = new PaymentsService({ db: {} } as DatabaseService, {} as never, {} as never);
-    vi.spyOn(service as never, 'getSubmissionOwner' as never).mockResolvedValue('family-1' as never);
+    vi.spyOn(service as never, 'getSubmissionOwner' as never).mockResolvedValue(
+      'family-1' as never,
+    );
     const complete = vi
       .spyOn(service, 'completeReceiptUpload')
       .mockResolvedValue({ version: 3 } as never);

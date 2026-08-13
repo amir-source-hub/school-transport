@@ -229,9 +229,7 @@ describe('first-time onboarding after OTP', () => {
     const verified = await service.verifyAuthOtp('09123456789', '123456');
     if (verified.user !== null) throw new Error('expected onboarding result');
 
-    await expect(service.finalizeOnboarding(verified.onboarding.token)).rejects.toThrow(
-      'contract',
-    );
+    await expect(service.finalizeOnboarding(verified.onboarding.token)).rejects.toThrow('contract');
   });
 
   it('rejects finalization with an unknown or expired token', async () => {

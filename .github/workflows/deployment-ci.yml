@@ -5,7 +5,8 @@ on:
     paths:
       - 'Dockerfile'
       - '.dockerignore'
-      - 'docker-compose.yml'
+      - 'docker-compose.local.yml'
+      - 'docker-compose.production.yml'
       - 'infrastructure/**'
       - '.env.example'
       - 'apps/api/**'
@@ -47,7 +48,7 @@ jobs:
       - name: Check environment inventory and examples
         run: node infrastructure/config/assert-environment-inventory.mjs
       - name: Validate Compose interpolation and schema
-        run: docker compose config --quiet
+        run: docker compose --env-file .env.example -f docker-compose.production.yml config --quiet
       - name: Validate Caddy configuration
         run: >-
           docker run --rm
@@ -55,16 +56,16 @@ jobs:
           caddy:2-alpine
           caddy validate --config /etc/caddy/Caddyfile
       - name: Build and start the production web dependency chain
-        run: docker compose up --build --wait --wait-timeout 240 web
+        run: docker compose --env-file .env.example -f docker-compose.production.yml up --build --wait --wait-timeout 240 web
       - name: Smoke-test API and web health endpoints inside containers
         run: |
-          docker compose exec -T api node -e "fetch('http://127.0.0.1:5000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)})"
-          docker compose exec -T web node -e "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)})"
+          docker compose --env-file .env.example -f docker-compose.production.yml exec -T api node -e "fetch('http://127.0.0.1:5000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)})"
+          docker compose --env-file .env.example -f docker-compose.production.yml exec -T web node -e "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)})"
       - name: Capture container state and logs after failure
         if: failure()
         run: |
-          docker compose ps --all
-          docker compose logs --no-color --timestamps
+          docker compose --env-file .env.example -f docker-compose.production.yml ps --all
+          docker compose --env-file .env.example -f docker-compose.production.yml logs --no-color --timestamps
       - name: Stop smoke-test services
         if: always()
-        run: docker compose down --volumes --remove-orphans
+        run: docker compose --env-file .env.example -f docker-compose.production.yml down --volumes --remove-orphans

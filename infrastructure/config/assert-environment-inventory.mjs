@@ -1,7 +1,13 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const roots = ['apps', 'Dockerfile', 'docker-compose.yml', 'docker-compose.development.yml'];
+const roots = [
+  'apps',
+  'infrastructure/object-storage/upload-public-assets.mjs',
+  'Dockerfile',
+  'docker-compose.local.yml',
+  'docker-compose.production.yml',
+];
 const sourceFiles = [];
 const visit = (path) => {
   const absolute = resolve(path);
@@ -36,12 +42,7 @@ const inventory = readFileSync('docs/ENVIRONMENT.md', 'utf8');
 const documented = new Set(
   [...inventory.matchAll(/`([A-Z][A-Z0-9_]*)`/g)].map((match) => match[1]),
 );
-const examples = [
-  '.env.example',
-  '.env.development.example',
-  'apps/api/.env.example',
-  'apps/web/.env.example',
-];
+const examples = ['.env.example'];
 const exampleVariables = new Set(
   examples.flatMap((file) =>
     [...readFileSync(file, 'utf8').matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((match) => match[1]),

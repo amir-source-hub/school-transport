@@ -56,7 +56,8 @@ that supports them.
 ├── infrastructure/      # PostgreSQL initialization and infrastructure support
 ├── packages/            # Shared TypeScript and ESLint configuration
 ├── Dockerfile           # Production-style API and web image targets
-├── docker-compose.yml       # Hardened production-oriented stack
+├── docker-compose.local.yml       # Complete local stack
+├── docker-compose.production.yml  # Explicit hardened production stack
 ├── docker-compose.local.yml # Complete standalone local stack
 └── package.json
 ```
@@ -96,10 +97,10 @@ When the services are ready:
 
 Seeded development accounts:
 
-| Role   | Username      | Phone number  | Password                    |
-| ------ | ------------- | ------------- | --------------------------- |
-| Parent | `demo-parent` | `09121111111` | —                           |
-| Admin  | `demo-admin`  | `09120000000` | `demo-admin-password`       |
+| Role   | Username      | Phone number  | Password              |
+| ------ | ------------- | ------------- | --------------------- |
+| Parent | `demo-parent` | `09121111111` | —                     |
+| Admin  | `demo-admin`  | `09120000000` | `demo-admin-password` |
 
 Set `SEED_ADMIN_PASSWORD` before seeding to use a different local admin password. Re-running the
 seed fills a missing demo-admin password but does not overwrite a password that was already set.
@@ -152,11 +153,10 @@ Starting Redis prevents repeated `ECONNREFUSED 127.0.0.1:6379` messages from the
 
 ### 3. Configure environment variables
 
-Direct API development always loads the safe defaults in `apps/api/.env.example` and optionally
-overlays `apps/api/.env` when it exists. Copy `apps/api/.env.example` to `apps/api/.env` only when
-you need local overrides or provider credentials. Copy `apps/web/.env.example` to
-`apps/web/.env.local` when web overrides are needed. See
-[`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) for ownership, validation, and rebuild behavior.
+Copy the tracked root `.env.example` to the ignored root `.env`. Both applications, Docker Compose,
+scripts, and tests use this single variable contract. See [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)
+for ownership and [`docs/PRODUCTION_DEPLOYMENT.md`](docs/PRODUCTION_DEPLOYMENT.md) for the complete
+clean-checkout and production release procedure.
 
 Never commit `.env` files or real credentials.
 

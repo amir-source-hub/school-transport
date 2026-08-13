@@ -10,18 +10,39 @@ export type OfflineContractEnrollmentData = {
   homePhone: string;
   father?: Person | null;
   mother?: Person | null;
-  emergencyContact?: { firstName: string; lastName: string; relationship: string; phoneNumber: string } | null;
-  address: { title: string; province: string; city: string; streetAddress: string; postalCode: string; latitude: number; longitude: number };
+  emergencyContact?: {
+    firstName: string;
+    lastName: string;
+    relationship: string;
+    phoneNumber: string;
+  } | null;
+  address: {
+    title: string;
+    province: string;
+    city: string;
+    streetAddress: string;
+    postalCode: string;
+    latitude: number;
+    longitude: number;
+  };
   school: { schoolId: string; educationLevel: string; grade: string };
   service: { serviceType: string; paymentPlanType: 'FULL' | 'INSTALLMENTS'; parentNotes?: string };
 };
 
 const relationshipLabels = { FATHER: 'پدر', MOTHER: 'مادر', OTHER: 'سایر اولیاء' } as const;
-const serviceLabels: Record<string, string> = { BUS: 'اتوبوس', MINIBUS: 'مینی‌بوس', CAR: 'خودروی سواری', VAN: 'ون' };
+const serviceLabels: Record<string, string> = {
+  BUS: 'اتوبوس',
+  MINIBUS: 'مینی‌بوس',
+  CAR: 'خودروی سواری',
+  VAN: 'ون',
+};
 
 function jalaliDate(value: Date) {
   return new Intl.DateTimeFormat('fa-IR-u-ca-persian-nu-latn', {
-    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Tehran',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Asia/Tehran',
   }).format(value);
 }
 
@@ -33,9 +54,10 @@ export function buildOfflineContractSnapshot(
   studentId?: string,
   academicYear = '1405-1406',
 ) {
-  const guardianRole = data.guardian.relationshipType === 'OTHER'
-    ? data.guardian.relationshipDescription || relationshipLabels.OTHER
-    : relationshipLabels[data.guardian.relationshipType];
+  const guardianRole =
+    data.guardian.relationshipType === 'OTHER'
+      ? data.guardian.relationshipDescription || relationshipLabels.OTHER
+      : relationshipLabels[data.guardian.relationshipType];
   const rendered = renderOfflineContract({
     guardianFullName: `${data.guardian.firstName} ${data.guardian.lastName}`,
     guardianRole,
@@ -52,8 +74,14 @@ export function buildOfflineContractSnapshot(
     homeAddress: `${data.address.province}، ${data.address.city}، ${data.address.streetAddress}`,
     postalCode: data.address.postalCode,
     homePhone: data.homePhone,
-    fatherMobile: data.guardian.relationshipType === 'FATHER' ? guardianPhone : data.father?.phoneNumber || 'ثبت نشده',
-    motherMobile: data.guardian.relationshipType === 'MOTHER' ? guardianPhone : data.mother?.phoneNumber || 'ثبت نشده',
+    fatherMobile:
+      data.guardian.relationshipType === 'FATHER'
+        ? guardianPhone
+        : data.father?.phoneNumber || 'ثبت نشده',
+    motherMobile:
+      data.guardian.relationshipType === 'MOTHER'
+        ? guardianPhone
+        : data.mother?.phoneNumber || 'ثبت نشده',
     emergencyPhone: data.emergencyContact?.phoneNumber || 'ثبت نشده',
     schoolName,
     serviceType: serviceLabels[data.service.serviceType] || data.service.serviceType,

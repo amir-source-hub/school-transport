@@ -23,13 +23,7 @@ export function BrandMark({
       aria-hidden="true"
       {...props}
     >
-      <Image
-        src="/samin-gasht-logo.png"
-        alt=""
-        fill
-        sizes={`${size}px`}
-        className="object-cover"
-      />
+      <Image src="/samin-gasht-logo.png" alt="" fill sizes={`${size}px`} className="object-cover" />
     </span>
   );
 }

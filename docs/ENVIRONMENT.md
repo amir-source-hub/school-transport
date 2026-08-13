@@ -58,6 +58,10 @@ variables require a rebuild; runtime variables require a process restart.
 | `PERFORMANCE_BASE_URL`, `PERFORMANCE_BROWSER_CHANNEL`, `PERFORMANCE_BROWSER_EXECUTABLE_PATH`           | browser performance     | optional             | no                 | audited URL and installed Chrome/Chromium selection                                  |
 
 Compose additionally consumes `POSTGRES_PASSWORD` and `REDIS_PASSWORD` from its secret source.
+`NEXT_PUBLIC_PRIVATE_UPLOAD_ORIGIN` is a public browser build input containing only the
+credential-free HTTPS origin used for direct private uploads; it must never contain a bucket
+credential, signed query, internal hostname, or path. `PUBLIC_ASSET_BUCKET`, `ASSET_RELEASE_ID`,
+and the Arvan credentials are consumed only by the operator-run public asset uploader.
 Changing any API variable requires restarting API and worker. Changing public web or deployment
 variables requires rebuilding the single promoted web image. Database tooling fails before making
 changes when `DATABASE_URL` is absent.

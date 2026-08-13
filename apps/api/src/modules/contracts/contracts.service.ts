@@ -487,8 +487,8 @@ export class ContractsService {
           paymentPlanId: plan[0].id,
           acceptedByAdminId: context.adminId ?? null,
           signerRole: context.adminId ? 'ADMIN' : 'PARENT',
-          signerReason: context.adminId ? context.signerReason ?? null : null,
-          signerSource: context.adminId ? context.signerSource ?? 'admin_console' : null,
+          signerReason: context.adminId ? (context.signerReason ?? null) : null,
+          signerSource: context.adminId ? (context.signerSource ?? 'admin_console') : null,
           contractDataSnapshot: immutableSnapshot
             ? JSON.stringify({
                 ...immutableSnapshot,

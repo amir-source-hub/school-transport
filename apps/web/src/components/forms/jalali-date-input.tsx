@@ -119,8 +119,9 @@ export function JalaliDateInput({
 
   const minYear = Number(splitJalali(minDate ?? '1921-03-21').year) || 1300;
   const maxYear = Number(splitJalali(maxDate ?? '2122-03-20').year) || 1500;
-  const years = Array.from({ length: Math.max(1, maxYear - minYear + 1) }, (_, index) =>
-    maxYear - index,
+  const years = Array.from(
+    { length: Math.max(1, maxYear - minYear + 1) },
+    (_, index) => maxYear - index,
   );
   const monthNames = [
     'فروردین',
@@ -219,7 +220,9 @@ export function JalaliDateInput({
                 onChange={(event) => setCalendarYear(Number(event.target.value))}
               >
                 {years.map((year) => (
-                  <option key={year} value={year}>{year.toLocaleString('fa-IR', { useGrouping: false })}</option>
+                  <option key={year} value={year}>
+                    {year.toLocaleString('fa-IR', { useGrouping: false })}
+                  </option>
                 ))}
               </select>
             </label>
@@ -231,15 +234,23 @@ export function JalaliDateInput({
                 value={calendarMonth}
                 onChange={(event) => setCalendarMonth(Number(event.target.value))}
               >
-                {monthNames.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
+                {monthNames.map((name, index) => (
+                  <option key={name} value={index + 1}>
+                    {name}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
           <div className="mt-3 grid grid-cols-7 gap-1" aria-label="روزهای ماه">
             {calendarDays.map((day) => {
               const iso = jalaliToIsoDate(`${calendarYear}/${calendarMonth}/${day}`);
-              const unavailable = !iso || Boolean((minDate && iso < minDate) || (maxDate && iso > maxDate));
-              const selected = segments.year === String(calendarYear) && Number(segments.month) === calendarMonth && Number(segments.day) === day;
+              const unavailable =
+                !iso || Boolean((minDate && iso < minDate) || (maxDate && iso > maxDate));
+              const selected =
+                segments.year === String(calendarYear) &&
+                Number(segments.month) === calendarMonth &&
+                Number(segments.day) === day;
               return (
                 <button
                   key={day}

@@ -15,8 +15,7 @@ export function JalaliDateTimeInput({
   required?: boolean;
 }) {
   const [date = '', time = ''] = value.split('T');
-  const update = (nextDate: string, nextTime: string) =>
-    onChange(`${nextDate}T${nextTime}`);
+  const update = (nextDate: string, nextTime: string) => onChange(`${nextDate}T${nextTime}`);
 
   return (
     <div className="space-y-2">

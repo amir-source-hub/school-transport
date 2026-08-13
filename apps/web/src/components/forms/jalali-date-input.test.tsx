@@ -78,12 +78,7 @@ describe('JalaliDateInput', () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
     render(
-      <JalaliDateInput
-        value=""
-        onChange={onChange}
-        minDate="2024-03-20"
-        maxDate="2025-03-20"
-      />,
+      <JalaliDateInput value="" onChange={onChange} minDate="2024-03-20" maxDate="2025-03-20" />,
     );
 
     await user.click(screen.getByText('انتخاب از تقویم شمسی'));

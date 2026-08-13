@@ -29,22 +29,20 @@ const statusLabel: Record<string, string> = {
 export default async function StudentDashboardPage() {
   const [students, enrollments, contracts, payments, notifications, offlineSubmissions] =
     await Promise.all([
-    getStudents(),
-    getEnrollments(),
-    getContracts(),
-    getPayments(),
-    getNotifications(),
-    getOfflineSubmissions(),
-  ]);
+      getStudents(),
+      getEnrollments(),
+      getContracts(),
+      getPayments(),
+      getNotifications(),
+      getOfflineSubmissions(),
+    ]);
   const dashboards: StudentDashboardModel[] = students.map((student) => {
     const enrollment = enrollments.find((item) => item.studentId === student.id);
     const contract = enrollment && contracts.find((item) => item.registrationId === enrollment.id);
     const payment = payments.find((item) => item.studentId === student.id);
     const prepayment = payment?.items.find((item) => item.itemType === 'PREPAYMENT');
     const prepaymentSubmission = prepayment
-      ? offlineSubmissions.find(
-          (submission) => submission.paymentScheduleItemId === prepayment.id,
-        )
+      ? offlineSubmissions.find((submission) => submission.paymentScheduleItemId === prepayment.id)
       : undefined;
     const nextItem = payment?.items.find((item) => item.itemStatus !== 'PAID');
     const status = enrollment?.registrationStatus ?? 'DRAFT';
@@ -82,7 +80,7 @@ export default async function StudentDashboardPage() {
             ? 'رسید پیش‌پرداخت نیازمند اصلاح'
             : status === 'CONTRACT_ACCEPTED' && prepayment?.itemStatus !== 'PAID'
               ? 'در انتظار پرداخت پیش‌پرداخت'
-              : statusLabel[status] ?? status,
+              : (statusLabel[status] ?? status),
       enrollmentTone:
         status === 'REJECTED' ||
         status === 'NEEDS_CORRECTION' ||

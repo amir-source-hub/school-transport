@@ -111,10 +111,7 @@ export class OnboardingService {
     const [row] = await this.db.db
       .select({ id: contracts.id })
       .from(contracts)
-      .innerJoin(
-        serviceRegistrations,
-        eq(serviceRegistrations.id, contracts.registrationId),
-      )
+      .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, contracts.registrationId))
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
       .where(
         and(

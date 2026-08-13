@@ -184,7 +184,9 @@ describe('onboarding guided enrollment funnel', () => {
     expect(enterPanel).toBeDisabled();
     expect(navigation.replace).not.toHaveBeenCalledWith('/student/dashboard');
     await user.click(
-      screen.getByRole('checkbox', { name: /مبلغ، اطلاعات حساب و لزوم نگهداری تصویر رسید را دیدم/ }),
+      screen.getByRole('checkbox', {
+        name: /مبلغ، اطلاعات حساب و لزوم نگهداری تصویر رسید را دیدم/,
+      }),
     );
     enrollmentApi.finalizeOnboarding.mockResolvedValue(undefined);
     await user.click(enterPanel);
