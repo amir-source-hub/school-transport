@@ -155,7 +155,7 @@ Starting Redis prevents repeated `ECONNREFUSED 127.0.0.1:6379` messages from the
 
 Copy the tracked root `.env.example` to the ignored root `.env`. Both applications, Docker Compose,
 scripts, and tests use this single variable contract. See [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)
-for ownership and [`docs/PRODUCTION_DEPLOYMENT.md`](docs/PRODUCTION_DEPLOYMENT.md) for the complete
+for ownership and [`PRODUCTION_DEPLOYMENT.md`](PRODUCTION_DEPLOYMENT.md) for the complete
 clean-checkout and production release procedure.
 
 Production uses Caddy for automatic HTTPS and reverse proxying on `samingasht.ir`. After validating
