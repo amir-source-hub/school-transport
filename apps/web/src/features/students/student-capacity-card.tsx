@@ -120,6 +120,10 @@ export function StudentCapacityCard() {
       {!hasPending && capacity.remaining === 0 && (
         <form onSubmit={submit} className="mt-5 space-y-3 border-t border-border pt-5">
           <p className="font-bold">درخواست افزایش ظرفیت</p>
+          <p className="rounded-xl border border-danger/25 bg-danger/5 p-3 text-sm leading-7 text-muted">
+            با درخواست ثبت دانش‌آموز بعدی، مسئولیت کامل پرداخت‌ها، مدارک، قرارداد و رعایت همه تعهدات
+            سرویس او نیز بر عهده شما خواهد بود.
+          </p>
           <label className="text-sm font-bold">
             دلیل نیاز به دانش‌آموز بیشتر
             <Textarea

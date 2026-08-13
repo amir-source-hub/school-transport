@@ -18,6 +18,10 @@ import {
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { ApiClientError } from '@/lib/api-client';
+import { DIRECT_UPLOAD_RETRY_MESSAGE, putFileDirectly } from '@/lib/direct-object-upload';
+
+const receiptDraftKey = (mode: string, scheduleItemId: string) =>
+  `offline-receipt-draft:${mode}:${scheduleItemId}`;
 
 export function OfflinePaymentForm({
   items = [],
@@ -37,7 +41,7 @@ export function OfflinePaymentForm({
   const [receipt, setReceipt] = useState<File>();
   const [previewUrl, setPreviewUrl] = useState<string>();
   const [progress, setProgress] = useState(0);
-  const [uploadRequest, setUploadRequest] = useState<XMLHttpRequest>();
+  const uploadAbort = useRef<AbortController | undefined>(undefined);
   const idempotencyKey = useRef(crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -61,6 +65,7 @@ export function OfflinePaymentForm({
   const disabled = items.length === 0 || !destination;
   return (
     <form
+      noValidate
       className="space-y-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_18px_50px_-36px_rgba(15,23,42,.45)] sm:p-6"
       onSubmit={async (event) => {
         event.preventDefault();
@@ -92,35 +97,32 @@ export function OfflinePaymentForm({
         }
         setPending(true);
         try {
-          const submissionId = await submitOfflinePayment(
-            scheduleItemId,
-            {
-              paidAt,
-              referenceNumber: referenceNumber.trim(),
-              description: description || undefined,
-              payerName: payerName || undefined,
-              sourceCardLastFour: sourceCardLastFour || undefined,
-            },
-            mode,
-            idempotencyKey.current,
-          );
+          const storageKey = receiptDraftKey(mode, scheduleItemId);
+          const savedSubmissionId = window.sessionStorage.getItem(storageKey);
+          const submissionId =
+            savedSubmissionId ??
+            (await submitOfflinePayment(
+              scheduleItemId,
+              {
+                paidAt,
+                referenceNumber: referenceNumber.trim(),
+                description: description || undefined,
+                payerName: payerName || undefined,
+                sourceCardLastFour: sourceCardLastFour || undefined,
+              },
+              mode,
+              idempotencyKey.current,
+            ));
+          window.sessionStorage.setItem(storageKey, submissionId);
           const uploadUrl = await authorizeReceiptUpload(submissionId, receipt, mode);
-          await new Promise<void>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            setUploadRequest(xhr);
-            xhr.open('PUT', uploadUrl);
-            xhr.setRequestHeader('Content-Type', receipt.type);
-            xhr.upload.onprogress = (event) =>
-              event.lengthComputable && setProgress(Math.round((event.loaded / event.total) * 100));
-            xhr.onload = () =>
-              xhr.status >= 200 && xhr.status < 300
-                ? resolve()
-                : reject(new Error('بارگذاری رسید ناموفق بود.'));
-            xhr.onerror = () => reject(new Error('ارتباط با ذخیره‌گاه رسید قطع شد.'));
-            xhr.onabort = () => reject(new Error('بارگذاری رسید لغو شد.'));
-            xhr.send(receipt);
+          const controller = new AbortController();
+          uploadAbort.current = controller;
+          await putFileDirectly(uploadUrl, receipt, {
+            signal: controller.signal,
+            onProgress: (percent) => setProgress(percent ?? 0),
           });
           await completeReceiptUpload(submissionId, mode);
+          window.sessionStorage.removeItem(storageKey);
           setSubmitted(true);
           setScheduleItemId('');
           setPaidAt('');
@@ -131,7 +133,7 @@ export function OfflinePaymentForm({
           setReceipt(undefined);
           setPreviewUrl(undefined);
           setProgress(0);
-          setUploadRequest(undefined);
+          uploadAbort.current = undefined;
           idempotencyKey.current = crypto.randomUUID();
           setFormVersion((current) => current + 1);
           router.refresh();
@@ -144,7 +146,8 @@ export function OfflinePaymentForm({
             router.refresh();
             return;
           }
-          setError(getApiErrorFeedback(caught).message);
+          const feedback = getApiErrorFeedback(caught);
+          setError(feedback.canRetry ? DIRECT_UPLOAD_RETRY_MESSAGE : feedback.message);
         } finally {
           setPending(false);
         }
@@ -203,7 +206,10 @@ export function OfflinePaymentForm({
         <Select
           className="mt-2 bg-white"
           value={scheduleItemId}
-          onValueChange={setScheduleItemId}
+          onValueChange={(value) => {
+            setScheduleItemId(value);
+            setSubmitted(false);
+          }}
           options={items.map((item) => ({ value: item.id, label: item.label }))}
           placeholder="قسط را انتخاب کنید"
           disabled={disabled}
@@ -281,26 +287,28 @@ export function OfflinePaymentForm({
           />
         </label>
       </div>
-      <label className="block rounded-2xl border-2 border-dashed border-primary/25 bg-primary/[0.025] p-4 text-sm font-bold">
-        تصویر رسید (JPEG یا PNG)
-        <Input
-          type="file"
-          accept="image/jpeg,image/png"
-          required
-          disabled={disabled}
-          className="mt-2"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (!file) return;
-            if (previewUrl) URL.revokeObjectURL(previewUrl);
-            setReceipt(file);
-            setPreviewUrl(URL.createObjectURL(file));
-            setProgress(0);
-            setError(undefined);
-          }}
-        />
-      </label>
-      {previewUrl && (
+      {!submitted && (
+        <label className="block rounded-2xl border-2 border-dashed border-primary/25 bg-primary/[0.025] p-4 text-sm font-bold">
+          تصویر رسید (JPEG یا PNG)
+          <Input
+            type="file"
+            accept="image/jpeg,image/png"
+            required
+            disabled={disabled}
+            className="mt-2"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              if (previewUrl) URL.revokeObjectURL(previewUrl);
+              setReceipt(file);
+              setPreviewUrl(URL.createObjectURL(file));
+              setProgress(0);
+              setError(undefined);
+            }}
+          />
+        </label>
+      )}
+      {!submitted && previewUrl && (
         <div className="rounded-xl border border-border p-3">
           <Image
             src={previewUrl}
@@ -335,28 +343,34 @@ export function OfflinePaymentForm({
           <p className="mt-1 text-xs text-muted">
             بارگذاری رسید: {progress.toLocaleString('fa-IR')}٪
           </p>
-          {uploadRequest && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => uploadRequest.abort()}>
-              لغو بارگذاری
-            </Button>
-          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => uploadAbort.current?.abort()}
+          >
+            لغو بارگذاری
+          </Button>
         </div>
       )}
       {submitted && (
-        <Alert title="پرداخت برای بررسی مدیریت ارسال شد">
-          پس از تأیید مدیر، وضعیت قسط به‌روزرسانی می‌شود.
+        <Alert title="رسید با موفقیت ارسال شد">
+          تصویر رسید در صف بررسی مدیریت است. می‌توانید از فهرست بالا پرداخت دیگری را انتخاب و ثبت
+          کنید؛ نتیجه این رسید در اعلان‌ها و سوابق پرداخت نمایش داده می‌شود.
         </Alert>
       )}
       {error && <p className="text-sm text-danger">{error}</p>}
-      <Button
-        className="w-full sm:w-auto"
-        size="lg"
-        type="submit"
-        loading={pending}
-        disabled={disabled || pending}
-      >
-        ارسال رسید برای بررسی مدیر
-      </Button>
+      {!submitted && (
+        <Button
+          className="w-full sm:w-auto"
+          size="lg"
+          type="submit"
+          loading={pending}
+          disabled={disabled || pending}
+        >
+          ارسال رسید برای بررسی مدیر
+        </Button>
+      )}
     </form>
   );
 }

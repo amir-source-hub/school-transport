@@ -149,19 +149,19 @@ function JourneyStatusCanvas({
         aria-valuemin={0}
         aria-valuemax={journeySteps.length - 1}
       >
-        {!prefersReduced && (
-          <div
-            className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-border/50"
-            aria-hidden="true"
-          >
-            <motion.div
-              className="h-full bg-gradient-to-l from-primary via-sun to-primary"
-              initial={{ width: '0%' }}
-              animate={{ width: `${(current / (journeySteps.length - 1)) * 100}%` }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            />
-          </div>
-        )}
+        <div
+          className="absolute left-4 right-4 top-4 h-0.5 -translate-y-1/2 bg-border/70"
+          aria-hidden="true"
+        >
+          <motion.div
+            className="absolute right-0 h-full bg-primary"
+            initial={prefersReduced ? false : { width: '0%' }}
+            animate={{ width: `${(current / (journeySteps.length - 1)) * 100}%` }}
+            transition={
+              prefersReduced ? { duration: 0 } : { duration: 0.6, ease: [0.16, 1, 0.3, 1] }
+            }
+          />
+        </div>
         {journeySteps.map((step, index) => {
           const isCompleted = index < current;
           const isCurrent = index === current;

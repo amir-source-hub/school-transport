@@ -68,6 +68,8 @@ export function SchoolFormDialog(props: Props) {
     phoneNumber: initial?.phoneNumber ?? '',
     managerName: initial?.managerName ?? '',
     managerPhone: initial?.managerPhone ?? '',
+    openingTime: initial?.openingTime ?? '',
+    closingTime: initial?.closingTime ?? '',
     educationOptions: initial?.educationOptions ?? [],
   });
   const [loading, setLoading] = useState(false);
@@ -189,7 +191,10 @@ export function SchoolFormDialog(props: Props) {
                 inputMode="numeric"
                 placeholder="۰۲۱۱۲۳۴۵۶۷۸"
                 onChange={(e) =>
-                  update('phoneNumber', normalizeDigits(e.target.value).replace(/\D/g, '').slice(0, 11))
+                  update(
+                    'phoneNumber',
+                    normalizeDigits(e.target.value).replace(/\D/g, '').slice(0, 11),
+                  )
                 }
                 className="mt-1"
               />
@@ -238,9 +243,40 @@ export function SchoolFormDialog(props: Props) {
                 inputMode="numeric"
                 placeholder="۰۹۱۲۳۴۵۶۷۸۹"
                 onChange={(e) =>
-                  update('managerPhone', normalizeDigits(e.target.value).replace(/\D/g, '').slice(0, 11))
+                  update(
+                    'managerPhone',
+                    normalizeDigits(e.target.value).replace(/\D/g, '').slice(0, 11),
+                  )
                 }
                 className="mt-1"
+              />
+            </div>
+            <div>
+              <label htmlFor="school-opening-time" className="text-sm font-bold">
+                ساعت شروع مدرسه *
+              </label>
+              <Input
+                id="school-opening-time"
+                type="time"
+                required
+                dir="ltr"
+                value={form.openingTime}
+                onChange={(event) => update('openingTime', event.target.value)}
+                className="mt-1 text-left"
+              />
+            </div>
+            <div>
+              <label htmlFor="school-closing-time" className="text-sm font-bold">
+                ساعت پایان مدرسه *
+              </label>
+              <Input
+                id="school-closing-time"
+                type="time"
+                required
+                dir="ltr"
+                value={form.closingTime}
+                onChange={(event) => update('closingTime', event.target.value)}
+                className="mt-1 text-left"
               />
             </div>
           </div>

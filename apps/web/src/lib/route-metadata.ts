@@ -59,7 +59,7 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
   {
     path: '/schools',
     audience: 'public',
-    title: 'مدارس',
+    title: 'مدارس ما',
     description: 'مشاهده و جست‌وجوی مدارس تأییدشده در ثمین گشت مهر ایران.',
     primaryHeading: 'مدرسه نزدیک شما،',
     canonical: '/schools',
@@ -314,9 +314,9 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
   {
     path: '/admin/schools',
     audience: 'admin',
-    title: 'مدارس',
+    title: 'مدارس ما',
     description: 'مدیریت مدارس قابل انتخاب در سامانه.',
-    primaryHeading: 'مدارس',
+    primaryHeading: 'مدارس ما',
   },
   {
     path: '/admin/settings',

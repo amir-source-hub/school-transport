@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { Eye, EyeOff } from 'lucide-react';
 
 import { Alert } from '@/components/feedback/alert';
 import { Field } from '@/components/forms/field';
@@ -149,6 +150,7 @@ function AdminLoginFormInner() {
   const router = useRouter();
   const [error, setError] = useState<unknown>();
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const form = useForm<AdminCredentials>({ resolver: zodResolver(adminCredentialsSchema) });
   const submit = form.handleSubmit(async ({ username, password }) => {
     setError(undefined);
@@ -183,13 +185,25 @@ function AdminLoginFormInner() {
         required
         error={form.formState.errors.password?.message}
       >
-        <Input
-          id="admin-password"
-          type="password"
-          dir="ltr"
-          autoComplete="current-password"
-          {...form.register('password')}
-        />
+        <div className="relative">
+          <Input
+            id="admin-password"
+            type={showPassword ? 'text' : 'password'}
+            dir="ltr"
+            className="pl-11"
+            autoComplete="current-password"
+            {...form.register('password')}
+          />
+          <button
+            type="button"
+            className="absolute left-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-muted hover:bg-surface-muted hover:text-foreground"
+            aria-label={showPassword ? 'پنهان‌کردن رمز عبور' : 'نمایش رمز عبور'}
+            aria-pressed={showPassword}
+            onClick={() => setShowPassword((current) => !current)}
+          >
+            {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+          </button>
+        </div>
       </Field>
       <Checkbox
         checked={rememberMe}

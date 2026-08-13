@@ -1,5 +1,5 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, gt, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { ConfigService } from '../../config/config.service';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -266,6 +266,15 @@ export class StudentPhotosService {
       newValues: { status: 'PENDING_REVIEW', actualSize: processed.actualSize },
       ipAddress: ip,
     });
+    await this.notifications.create({
+      eventId: `STUDENT_PHOTO_SUBMITTED:${upload.id}`,
+      userId,
+      notificationType: 'STUDENT_PHOTO_SUBMITTED',
+      title: 'عکس کارت سرویس ارسال شد',
+      message: 'عکس دانش‌آموز برای بررسی مدیریت ثبت شد.',
+      relatedEntityType: 'STUDENT_PHOTO',
+      relatedEntityId: upload.id,
+    });
     return this.toOwnerView(updated);
   }
 
@@ -331,6 +340,9 @@ export class StudentPhotosService {
   async listForAdmin(query: AdminPhotoListQueryDto) {
     const filters = [sql`true`];
     if (query.status) filters.push(eq(studentPhotoUploads.status, query.status));
+    if (query.status === 'PENDING_REVIEW') {
+      filters.push(isNotNull(studentPhotoUploads.studentId));
+    }
     const where = and(...filters);
     const rows = await this.db.db
       .select({
@@ -404,18 +416,6 @@ export class StudentPhotosService {
       if (!upload.studentId) {
         throw new ConflictError('PHOTO_NOT_LINKED', 'عکس هنوز به دانش‌آموز متصل نشده است.');
       }
-      const [newer] = await txn
-        .select({ id: studentPhotoUploads.id })
-        .from(studentPhotoUploads)
-        .where(
-          and(
-            eq(studentPhotoUploads.studentId, upload.studentId),
-            eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
-            gt(studentPhotoUploads.createdAt, upload.createdAt),
-          ),
-        )
-        .limit(1);
-      if (newer) throw new ConflictError('PHOTO_SUPERSEDED', 'عکس جدیدتری برای بررسی ثبت شده است.');
       if (upload.studentId) {
         await txn
           .update(studentPhotoUploads)

@@ -12,6 +12,7 @@ export function AdminFeedbackList({ items }: { items: Feedback[] }) {
   const [msg, setMsg] = useState<string>();
   const [failed, setFailed] = useState(false);
   const [pendingId, setPendingId] = useState<string>();
+  const [visibleItems, setVisibleItems] = useState(items);
   const pendingRef = useRef(false);
   async function act(x: Feedback, a: 'read' | 'close' | 'respond') {
     if (pendingRef.current) return;
@@ -21,6 +22,20 @@ export function AdminFeedbackList({ items }: { items: Feedback[] }) {
     setMsg(undefined);
     try {
       await feedbackAction(x, a, responses[x.id]);
+      const now = new Date();
+      setVisibleItems((current) =>
+        current.map((item) =>
+          item.id === x.id
+            ? {
+                ...item,
+                status: a === 'respond' ? 'ANSWERED' : a === 'close' ? 'CLOSED' : 'READ',
+                response: a === 'respond' ? responses[x.id] : item.response,
+                respondedAt: a === 'respond' ? now : item.respondedAt,
+                version: item.version + 1,
+              }
+            : item,
+        ),
+      );
       setMsg('عملیات انجام شد.');
       router.refresh();
     } catch (e) {
@@ -33,7 +48,7 @@ export function AdminFeedbackList({ items }: { items: Feedback[] }) {
   }
   return (
     <div className="space-y-4">
-      {items.map((x) => (
+      {visibleItems.map((x) => (
         <Card key={x.id}>
           <div className="flex flex-wrap justify-between gap-2">
             <h3 className="min-w-0 break-words font-black">{x.subject}</h3>
@@ -43,6 +58,12 @@ export function AdminFeedbackList({ items }: { items: Feedback[] }) {
             </span>
           </div>
           <p className="mt-2 break-words whitespace-pre-wrap text-sm leading-7">{x.message}</p>
+          {x.response && (
+            <div className="mt-4 rounded-xl border border-success/20 bg-success-soft p-4">
+              <p className="text-xs font-black text-success">پاسخ مدیریت</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-7">{x.response}</p>
+            </div>
+          )}
           {!['ANSWERED', 'CLOSED'].includes(x.status) && (
             <div className="mt-4 space-y-2">
               <Textarea

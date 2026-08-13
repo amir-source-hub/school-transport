@@ -9,7 +9,7 @@ import {
 import { ArchiveSchoolDialog } from '@/features/admin-schools/archive-action';
 import { SchoolFormDialog } from '@/features/admin-schools/school-form-dialog';
 
-export const metadata = { title: 'مدارس' };
+export const metadata = { title: 'مدارس ما' };
 export const dynamic = 'force-dynamic';
 
 export default async function SchoolsPage() {
@@ -20,12 +20,12 @@ export default async function SchoolsPage() {
   return (
     <div className="space-y-6">
       <Breadcrumbs
-        items={[{ label: 'پنل مدیریت', href: '/admin/dashboard' }, { label: 'مدارس' }]}
+        items={[{ label: 'پنل مدیریت', href: '/admin/dashboard' }, { label: 'مدارس ما' }]}
       />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-bold text-primary">مدیریت مدارس</p>
-          <h1 className="mt-1 text-2xl font-black sm:text-3xl">مدارس</h1>
+          <h1 className="mt-1 text-2xl font-black sm:text-3xl">مدارس ما</h1>
         </div>
         <SchoolFormDialog mode="create" />
       </div>

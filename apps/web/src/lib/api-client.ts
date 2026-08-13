@@ -85,6 +85,7 @@ async function performApiRequest<T>(
 
   const signal = createRequestSignal(requestedSignal, timeoutMs);
   const response = await fetchWithStartupRetry(url, {
+    cache: 'no-store',
     ...requestInit,
     body: serializeBody(body),
     credentials: 'include',

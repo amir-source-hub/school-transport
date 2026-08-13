@@ -1184,7 +1184,7 @@ export class PaymentsService {
           planId: plan.id,
           planType: plan.planType,
           planStatus: plan.planStatus,
-          planConfigured: plan.planType === 'ADMIN_CONFIGURED',
+          planConfigured: planItems.some((item) => item.itemType === 'INSTALLMENT'),
           studentName: `${studentFirstName} ${studentLastName}`,
           familyName: parent ? `${parent.firstName} ${parent.lastName}` : '—',
           totalAmount: plan.totalAmount,

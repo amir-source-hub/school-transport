@@ -204,6 +204,20 @@
       "when": 1786586400000,
       "tag": "0028_offline_payment_workflow",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1786672800000,
+      "tag": "0029_polymorphic_auth_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1786723200000,
+      "tag": "0030_school_hours_company_payment",
+      "breakpoints": true
     }
   ]
 }

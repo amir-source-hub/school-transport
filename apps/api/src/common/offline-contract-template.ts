@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { ConflictError } from './errors';
 
-export const OFFLINE_CONTRACT_TEMPLATE_VERSION = 'offline-fa-1405-v1';
+export const OFFLINE_CONTRACT_TEMPLATE_VERSION = 'offline-fa-1405-v2';
 export const OFFLINE_PREPAYMENT_AMOUNT_IRR = 49_978_000;
 
 export type OfflineContractBindings = {
@@ -94,6 +94,7 @@ const pages = [
     'راننده متعهد است که هر روز کارت سرویس دانش آموزان خودرو را رویت و کنترل نماید.',
     'راننده به هیچ عنوان حق توقف کردن جهت خرید برای خود و دانش آموزان و غیره را نداشته و در صورت عدم رعایت این موضوع بلافاصله با راننده طبق قرارداد برخورد خواهد شد.',
     'راننده به جز رادیو، حق استفاده از هیچ گونه موسیقی (موزیک بی کلام، مجاز و غیره) را ندارد.',
+    'اینجانب به عنوان سرپرست دانش آموز رضایت کامل خود را نسبت به استفاده از دوربین ثبت وقایع در داخل خودرو سرویس مدرسه اعلام می نمایم.',
   ],
 ] as const;
 

@@ -27,12 +27,33 @@ export default async function PaymentsPage() {
       .filter((submission) => submission.status === 'PENDING_REVIEW')
       .map((submission) => submission.paymentScheduleItemId),
   );
-  const unpaid = overviews.flatMap(({ items, studentFirstName, studentLastName }) =>
+  const itemContext = new Map(
+    overviews.flatMap((overview) =>
+      overview.items.map(
+        (item) =>
+          [
+            item.id,
+            {
+              student: `${overview.studentFirstName} ${overview.studentLastName}`,
+              installment:
+                item.itemType === 'PREPAYMENT'
+                  ? 'پیش‌پرداخت'
+                  : overview.plan.planType === 'FULL'
+                    ? 'پرداخت یکجای باقی‌مانده'
+                    : `قسط ${item.sequenceNumber}`,
+              amount: formatIrr(item.amount),
+              dueDate: item.dueDate ? formatJalaliDate(item.dueDate) : 'تعیین نشده',
+            },
+          ] as const,
+      ),
+    ),
+  );
+  const unpaid = overviews.flatMap(({ plan, items, studentFirstName, studentLastName }) =>
     items
       .filter(({ id, itemStatus }) => itemStatus !== 'PAID' && !pendingOfflineItemIds.has(id))
       .map((item) => ({
         id: item.id,
-        label: `${studentFirstName} ${studentLastName} — ${item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : `قسط ${item.sequenceNumber}`} — ${formatIrr(item.amount)}`,
+        label: `${studentFirstName} ${studentLastName} — ${item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : plan.planType === 'FULL' ? 'پرداخت یکجای باقی‌مانده' : `قسط ${item.sequenceNumber}`} — ${formatIrr(item.amount)}`,
       })),
   );
   return (
@@ -74,7 +95,11 @@ export default async function PaymentsPage() {
                 >
                   <div>
                     <p className="font-bold">
-                      {item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : `قسط ${item.sequenceNumber}`}
+                      {item.itemType === 'PREPAYMENT'
+                        ? 'پیش‌پرداخت'
+                        : overview.plan.planType === 'FULL'
+                          ? 'پرداخت یکجای باقی‌مانده'
+                          : `قسط ${item.sequenceNumber}`}
                     </p>
                     <p className="mt-1 text-xs text-muted">
                       سررسید: {item.dueDate ? formatJalaliDate(item.dueDate) : 'تعیین نشده'}
@@ -116,6 +141,16 @@ export default async function PaymentsPage() {
           <div className="space-y-3">
             {offlineSubmissions.map((submission) => (
               <div key={submission.id} className="rounded-xl border border-border p-4 text-sm">
+                {itemContext.get(submission.paymentScheduleItemId) && (
+                  <div className="mb-3 grid gap-2 rounded-xl bg-surface-inset p-3 sm:grid-cols-4">
+                    <strong>{itemContext.get(submission.paymentScheduleItemId)?.student}</strong>
+                    <span>{itemContext.get(submission.paymentScheduleItemId)?.installment}</span>
+                    <span>{itemContext.get(submission.paymentScheduleItemId)?.amount}</span>
+                    <span>
+                      سررسید: {itemContext.get(submission.paymentScheduleItemId)?.dueDate}
+                    </span>
+                  </div>
+                )}
                 <p className="font-bold">
                   {submission.status === 'PENDING_REVIEW'
                     ? 'در انتظار بررسی'

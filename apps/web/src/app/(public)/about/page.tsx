@@ -112,6 +112,18 @@ export default function AboutPage() {
                 دنبال کنند و مدیریت نیز ابزارهای لازم برای بررسی، قیمت‌گذاری و پیگیری را در اختیار
                 دارد.
               </p>
+              <a
+                href="https://maps.app.goo.gl/rGetdanWqsAq6SAcA"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 block text-sm font-bold leading-7 text-primary hover:underline"
+              >
+                تهران، بزرگراه شهید بابایی، شهرک شهید بهشتی، خیابان سروستان دوم، کوچه نسترن ۲۷ و ۲۸،
+                مجتمع تجاری گلستان، پلاک ۲۲
+              </a>
+              <p className="mt-2 text-sm text-muted" dir="ltr">
+                09123859883 · 09126839458 · 021-77116782 · 021-77115832 · 021-77119045
+              </p>
               <div className="mt-6">
                 <ButtonLink href="/contact" variant="secondary">
                   ارتباط با ما

@@ -50,7 +50,8 @@ Then run:
 pnpm assets:upload
 ```
 
-The command never deletes or overwrites another release. It uploads WebP files beneath
+The command never deletes or overwrites another release. It uploads the WebP site artwork and the
+PNG company logo beneath
 `public/site/<release-id>/images/`, applies immutable one-year browser caching, and writes a local
 SHA-256 migration manifest beneath `.runtime/`.
 

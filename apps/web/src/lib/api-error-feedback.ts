@@ -189,6 +189,9 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
       PAYMENT_ALREADY_COMPLETED: 'این پرداخت قبلاً انجام شده است.',
       OFFLINE_PAYMENT_PENDING:
         'یک رسید آفلاین برای این قسط در انتظار بررسی مدیریت است. پس از رد آن می‌توانید رسید دیگری ارسال کنید.',
+      PHOTO_CHANGED:
+        'این عکس قبلاً بررسی شده یا نسخه آن تغییر کرده است. فهرست تازه شد؛ دوباره بررسی کنید.',
+      PHOTO_SUPERSEDED: 'عکس جدیدتری برای این دانش‌آموز ثبت شده است؛ همان عکس جدید را بررسی کنید.',
     };
     const specificMessage = error.code ? conflictMessages[error.code] : undefined;
     return {

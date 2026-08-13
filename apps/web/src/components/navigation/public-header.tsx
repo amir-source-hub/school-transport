@@ -16,7 +16,7 @@ import { apiRequest } from '@/lib/api-client';
 const links = [
   ['خدمات', '/services'],
   ['مراحل ثبت‌نام', '/registration-guide'],
-  ['مدارس', '/schools'],
+  ['مدارس ما', '/schools'],
   ['قیمت‌گذاری', '/pricing'],
   ['ایمنی', '/safety'],
   ['درباره ما', '/about'],

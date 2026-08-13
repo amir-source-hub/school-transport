@@ -57,6 +57,12 @@ export class CreateSchoolDto {
   @Matches(/^09\d{9}$/, { message: 'شماره همراه مدیر باید ۱۱ رقم و با ۰۹ شروع شود.' })
   managerPhone!: string;
   @IsString() @Length(1, 100) managerName!: string;
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'ساعت شروع باید با قالب ساعت:دقیقه باشد.' })
+  openingTime!: string;
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'ساعت پایان باید با قالب ساعت:دقیقه باشد.' })
+  closingTime!: string;
   @IsArray()
   @ArrayNotEmpty()
   @ArrayMaxSize(20)
@@ -88,6 +94,8 @@ export class UpdateSchoolDto {
   @Matches(/^09\d{9}$/, { message: 'شماره همراه مدیر باید ۱۱ رقم و با ۰۹ شروع شود.' })
   managerPhone?: string;
   @IsOptional() @IsString() @Length(1, 100) managerName?: string;
+  @IsOptional() @IsString() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) openingTime?: string;
+  @IsOptional() @IsString() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) closingTime?: string;
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(20)

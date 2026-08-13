@@ -96,10 +96,13 @@ When the services are ready:
 
 Seeded development accounts:
 
-| Role   | Username      | Phone number  |
-| ------ | ------------- | ------------- |
-| Parent | `demo-parent` | `09121111111` |
-| Admin  | `demo-admin`  | `09120000000` |
+| Role   | Username      | Phone number  | Password                    |
+| ------ | ------------- | ------------- | --------------------------- |
+| Parent | `demo-parent` | `09121111111` | —                           |
+| Admin  | `demo-admin`  | `09120000000` | `demo-admin-password`       |
+
+Set `SEED_ADMIN_PASSWORD` before seeding to use a different local admin password. Re-running the
+seed fills a missing demo-admin password but does not overwrite a password that was already set.
 
 The local stack uses the console OTP provider. To see generated OTP codes and follow startup:
 

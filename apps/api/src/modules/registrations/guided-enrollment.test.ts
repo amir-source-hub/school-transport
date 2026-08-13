@@ -124,6 +124,9 @@ describe('guided enrollment policy', () => {
   it('keeps only the father record when the selected attendant is the mother', () => {
     const input = validEnrollment();
     input.guardian.relationshipType = 'MOTHER';
+    input.guardian.firstName = input.mother!.firstName;
+    input.guardian.lastName = input.mother!.lastName;
+    input.guardian.nationalId = input.mother!.nationalId;
 
     const result = normalizeAndValidateGuidedEnrollment(input);
 
@@ -198,5 +201,4 @@ describe('guided enrollment policy', () => {
       'Birth date must be a real date between 1900-01-01 and today.',
     );
   });
-
 });

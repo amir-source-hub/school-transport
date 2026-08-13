@@ -184,9 +184,11 @@ export function ReceiptPreviewDialog({ submissionId }: { submissionId: string })
 export function ApprovePaymentDialog({
   paymentId,
   version,
+  onApproved,
 }: {
   paymentId: string;
   version: number;
+  onApproved?: () => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -198,6 +200,7 @@ export function ApprovePaymentDialog({
     setError(null);
     try {
       await approvePayment(paymentId, version);
+      onApproved?.();
       setOpen(false);
       router.refresh();
     } catch (e) {
@@ -248,10 +251,18 @@ export function ConfigureInstallmentsDialog({
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>();
   const [items, setItems] = useState([{ amount: '', dueDate: '' }]);
+  const [configured, setConfigured] = useState(false);
   const update = (index: number, key: 'amount' | 'dueDate', value: string) =>
     setItems((current) =>
       current.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: value } : item)),
     );
+  if (configured) {
+    return (
+      <p role="status" className="rounded-xl bg-success-soft p-3 text-sm font-bold text-success">
+        {fullPayment ? 'پرداخت یکجای باقی‌مانده ثبت شد.' : 'برنامه اقساط ثبت شد.'}
+      </p>
+    );
+  }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -337,6 +348,7 @@ export function ConfigureInstallmentsDialog({
                   items.map((item) => ({ amount: Number(item.amount), dueDate: item.dueDate })),
                 );
                 setOpen(false);
+                setConfigured(true);
                 router.refresh();
               } catch (caught) {
                 const feedback = getApiErrorFeedback(caught);
@@ -358,9 +370,11 @@ export function ConfigureInstallmentsDialog({
 export function RejectPaymentDialog({
   paymentId,
   version,
+  onRejected,
 }: {
   paymentId: string;
   version: number;
+  onRejected?: (reason: string) => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -374,6 +388,7 @@ export function RejectPaymentDialog({
     setError(null);
     try {
       await rejectPayment(paymentId, version, reason.trim());
+      onRejected?.(reason.trim());
       setOpen(false);
       setReason('');
       router.refresh();

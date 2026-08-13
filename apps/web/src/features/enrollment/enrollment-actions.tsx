@@ -52,7 +52,6 @@ import {
 } from './enrollment-form-model';
 import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-schema';
 import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
-import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
 import { OfflinePaymentDestinationCard } from '@/features/finance/offline-payment-destination-card';
 import { ContractReview } from '@/features/finance/contract-review';
 import { updateNotificationConsent } from '@/features/notifications/notifications-api';
@@ -136,7 +135,6 @@ export function CreateEnrollmentForm({
   const [accepted, setAccepted] = useState(false);
   const [paid, setPaid] = useState(false);
   const [optionalInAppConsent, setOptionalInAppConsent] = useState(false);
-  const [optionalSmsConsent, setOptionalSmsConsent] = useState(false);
   const [paymentInstructionsAccepted, setPaymentInstructionsAccepted] = useState(false);
   const [photoUploadId, setPhotoUploadId] = useState<string>();
   const [pending, setPending] = useState(false);
@@ -1363,14 +1361,12 @@ export function CreateEnrollmentForm({
                   />
                   <span className="text-sm font-bold">داخل سامانه</span>
                 </label>
-                <label className="flex min-h-11 items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={optionalSmsConsent}
-                    onChange={(event) => setOptionalSmsConsent(event.target.checked)}
-                  />
+                <div className="flex min-h-11 items-center justify-between gap-3 text-muted">
                   <span className="text-sm font-bold">پیامک</span>
-                </label>
+                  <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold">
+                    فعلاً غیرفعال
+                  </span>
+                </div>
               </fieldset>
             )}
             {adminFamilyId ? (
@@ -1407,13 +1403,15 @@ export function CreateEnrollmentForm({
                 </label>
               </div>
             ) : (
-              <div className="mt-5 text-right">
-                <OfflinePaymentForm
-                  items={[
-                    { id: result.scheduleItemId, label: 'پیش‌پرداخت ثبت‌نام — ۴٬۹۹۷٬۸۰۰ تومان' },
-                  ]}
-                  mode={mode}
-                />
+              <div className="mt-6 space-y-5 text-right">
+                <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
+                  قرارداد پذیرفته شد. برای جلوگیری از ثبت تکراری یا گم‌شدن وضعیت پرداخت، پرداخت و
+                  ارسال رسید فقط از بخش «پرداخت‌ها» انجام می‌شود.
+                </div>
+                <OfflinePaymentDestinationCard />
+                <Button className="w-full" onClick={() => router.push('/student/payments')}>
+                  رفتن به بخش پرداخت‌ها
+                </Button>
               </div>
             )}
             {mode === 'onboarding' && (
@@ -1431,7 +1429,7 @@ export function CreateEnrollmentForm({
                     await finalizeOnboarding();
                     await Promise.all([
                       updateNotificationConsent('IN_APP', optionalInAppConsent, 'ONBOARDING'),
-                      updateNotificationConsent('SMS', optionalSmsConsent, 'ONBOARDING'),
+                      updateNotificationConsent('SMS', false, 'ONBOARDING'),
                     ]);
                     router.replace('/student/dashboard');
                   } catch (caught) {

@@ -172,9 +172,7 @@ describe('PhotoUploadCard', () => {
     await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile());
     await user.click(screen.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      /ارسال فایل به ذخیره‌گاه ناموفق بود/,
-    );
+    expect(await screen.findByRole('status')).toHaveTextContent(/از پایداری اینترنت مطمئن شوید/);
     expect(completePhotoUpload).not.toHaveBeenCalled();
   });
 
@@ -222,12 +220,7 @@ describe('PhotoUploadCard', () => {
 
   it('can cancel while the authorization request is still pending at zero percent', async () => {
     authorizePhotoUpload.mockImplementation(
-      (
-        _input: unknown,
-        _mode: unknown,
-        _familyId: unknown,
-        signal: AbortSignal,
-      ) =>
+      (_input: unknown, _mode: unknown, _familyId: unknown, signal: AbortSignal) =>
         new Promise((_resolve, reject) => {
           signal.addEventListener('abort', () =>
             reject(new DOMException('cancelled', 'AbortError')),

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiRequest } from '@/lib/api-client';
+import { putFileDirectly } from '@/lib/direct-object-upload';
 
 export const ACCEPTED_PHOTO_MIMES = ['image/jpeg', 'image/png'] as const;
 
@@ -81,37 +82,9 @@ export async function putPhotoObject(
   file: File,
   options: { signal?: AbortSignal; onProgress?: (percent: number) => void } = {},
 ) {
-  await new Promise<void>((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    const abort = () => request.abort();
-    const cleanup = () => options.signal?.removeEventListener('abort', abort);
-    request.open('PUT', uploadUrl);
-    request.timeout = 60_000;
-    request.setRequestHeader('Content-Type', file.type);
-    request.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable)
-        options.onProgress?.(Math.round((event.loaded / event.total) * 100));
-    });
-    request.addEventListener('load', () => {
-      cleanup();
-      if (request.status >= 200 && request.status < 300) resolve();
-      else reject(new Error(`PHOTO_UPLOAD_HTTP_${request.status}`));
-    });
-    request.addEventListener('error', () => {
-      cleanup();
-      reject(new Error('PHOTO_UPLOAD_NETWORK'));
-    });
-    request.addEventListener('timeout', () => {
-      cleanup();
-      reject(new Error('PHOTO_UPLOAD_TIMEOUT'));
-    });
-    request.addEventListener('abort', () => {
-      cleanup();
-      reject(new DOMException('Upload cancelled', 'AbortError'));
-    });
-    options.signal?.addEventListener('abort', abort, { once: true });
-    if (options.signal?.aborted) abort();
-    else request.send(file);
+  await putFileDirectly(uploadUrl, file, {
+    signal: options.signal,
+    onProgress: (percent) => options.onProgress?.(percent ?? 0),
   });
 }
 
@@ -121,11 +94,14 @@ export async function completePhotoUpload(
   familyId?: string,
   signal?: AbortSignal,
 ) {
-  const response = await apiRequest<unknown>(`${photoBase(mode, familyId)}/uploads/${uploadId}/complete`, {
-    method: 'POST',
-    signal,
-    timeoutMs: 20_000,
-  });
+  const response = await apiRequest<unknown>(
+    `${photoBase(mode, familyId)}/uploads/${uploadId}/complete`,
+    {
+      method: 'POST',
+      signal,
+      timeoutMs: 20_000,
+    },
+  );
   return photoUploadViewSchema.parse(response.data);
 }
 

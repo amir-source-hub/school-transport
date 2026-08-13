@@ -4,6 +4,7 @@ import { basename, join, resolve } from 'node:path';
 
 const workspace = resolve(import.meta.dirname, '../..');
 const sourceDirectory = join(workspace, 'apps/web/public/images');
+const brandLogoPath = join(workspace, 'apps/web/public/samin-gasht-logo.png');
 const releaseId = process.env.ASSET_RELEASE_ID?.trim();
 const bucket = process.env.PUBLIC_ASSET_BUCKET?.trim();
 const endpoint = process.env.ARVAN_S3_ENDPOINT?.trim();
@@ -79,34 +80,46 @@ const files = (await readdir(sourceDirectory, { withFileTypes: true }))
   .filter((entry) => entry.isFile() && entry.name.endsWith('.webp'))
   .sort((left, right) => left.name.localeCompare(right.name));
 
-if (files.length === 0) throw new Error(`No WebP assets found in ${sourceDirectory}.`);
+const assets = [
+  ...files.map((file) => ({
+    localPath: join(sourceDirectory, file.name),
+    source: `apps/web/public/images/${file.name}`,
+    name: file.name,
+    contentType: 'image/webp',
+  })),
+  {
+    localPath: brandLogoPath,
+    source: 'apps/web/public/samin-gasht-logo.png',
+    name: 'samin-gasht-logo.png',
+    contentType: 'image/png',
+  },
+];
 
 const objects = [];
-for (const file of files) {
-  const localPath = join(sourceDirectory, file.name);
-  const bytes = await readFile(localPath);
-  const key = `public/site/${releaseId}/images/${basename(file.name)}`;
-  const response = await fetch(presignPut(key, 'image/webp'), {
+for (const asset of assets) {
+  const bytes = await readFile(asset.localPath);
+  const key = `public/site/${releaseId}/images/${basename(asset.name)}`;
+  const response = await fetch(presignPut(key, asset.contentType), {
     method: 'PUT',
     body: bytes,
     headers: {
-      'Content-Type': 'image/webp',
+      'Content-Type': asset.contentType,
       'Cache-Control': 'public, max-age=31536000, immutable',
       'x-amz-acl': 'public-read',
     },
   });
   if (!response.ok) {
     const details = (await response.text()).slice(0, 500);
-    throw new Error(`Upload failed for ${file.name}: HTTP ${response.status} ${details}`);
+    throw new Error(`Upload failed for ${asset.name}: HTTP ${response.status} ${details}`);
   }
-  console.log(`Uploaded ${file.name}`);
+  console.log(`Uploaded ${asset.name}`);
 
   objects.push({
-    source: `apps/web/public/images/${file.name}`,
+    source: asset.source,
     key,
     bytes: bytes.length,
     sha256: createHash('sha256').update(bytes).digest('hex'),
-    contentType: 'image/webp',
+    contentType: asset.contentType,
     cacheControl: 'public, max-age=31536000, immutable',
   });
 }

@@ -1,4 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { and, eq, isNull } from 'drizzle-orm';
+import * as argon2 from 'argon2';
 import { Pool } from 'pg';
 import {
   adminUsers,
@@ -20,7 +22,11 @@ import {
 
 export const SEED_CREDENTIALS = {
   parent: { username: 'demo-parent', phoneNumber: '09121111111' },
-  admin: { username: 'demo-admin', phoneNumber: '09120000000' },
+  admin: {
+    username: 'demo-admin',
+    phoneNumber: '09120000000',
+    password: process.env.SEED_ADMIN_PASSWORD ?? 'demo-admin-password',
+  },
 } as const;
 
 const ids = {
@@ -54,10 +60,14 @@ const ids = {
 
 export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Promise<void> {
   if (!databaseUrl) throw new Error('DATABASE_URL is required for seeding.');
+  if (SEED_CREDENTIALS.admin.password.length < 8) {
+    throw new Error('SEED_ADMIN_PASSWORD must contain at least 8 characters.');
+  }
   const pool = new Pool({ connectionString: databaseUrl });
   const db = drizzle(pool);
 
   try {
+    const adminPasswordHash = await argon2.hash(SEED_CREDENTIALS.admin.password);
     await db
       .insert(users)
       .values({
@@ -74,20 +84,24 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         firstName: 'Demo',
         lastName: 'Admin',
         phoneNumber: SEED_CREDENTIALS.admin.phoneNumber,
+        passwordHash: adminPasswordHash,
       })
       .onConflictDoNothing();
+    await db
+      .update(adminUsers)
+      .set({ passwordHash: adminPasswordHash })
+      .where(and(eq(adminUsers.id, ids.admin), isNull(adminUsers.passwordHash)));
     await db
       .insert(offlinePaymentDestinations)
       .values({
         id: ids.offlineDestination,
         version: 1,
-        accountOwner: 'شرکت سرویس مدرسه — حساب آزمایشی',
-        bankName: 'بانک آزمایشی',
-        cardNumber: '6037991234567890',
-        iban: 'IR120170000000123456789001',
-        accountNumber: '123456789001',
-        instructions:
-          'این مقصد فقط برای محیط محلی آزمایشی است. در محیط واقعی، مدیر باید مقصد مصوب را ثبت کند.',
+        accountOwner: 'شرکت ثمین گشت مهر ایرانیان',
+        bankName: 'بانک سپه',
+        cardNumber: '5892107050025868',
+        iban: 'IR250150000000848301707305',
+        accountNumber: '848301707305',
+        instructions: 'پس از واریز، تصویر رسید و شماره پیگیری بانکی را در پنل ثبت کنید.',
         createdByAdminId: ids.admin,
       })
       .onConflictDoNothing();

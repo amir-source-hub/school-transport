@@ -206,6 +206,19 @@ export function normalizeAndValidateGuidedEnrollment(
     );
   }
 
+  const distinctPeopleNationalIds = [
+    data.student.nationalId,
+    data.guardian.nationalId,
+    data.father?.nationalId,
+    data.mother?.nationalId,
+  ].filter((value): value is string => Boolean(value));
+  if (new Set(distinctPeopleNationalIds).size !== distinctPeopleNationalIds.length) {
+    throw new ConflictError(
+      'DUPLICATE_NATIONAL_ID',
+      'کد ملی هر دانش‌آموز و هر یک از والدین باید منحصربه‌فرد باشد.',
+    );
+  }
+
   const phoneNumbers: string[] = [];
   for (const parent of [data.father, data.mother]) {
     if (!parent || !sectionIsPresent(parent)) continue;

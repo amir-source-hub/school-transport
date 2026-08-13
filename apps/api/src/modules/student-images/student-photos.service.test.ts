@@ -106,6 +106,7 @@ function storage(overrides: Partial<Record<keyof S3Storage, unknown>> = {}): S3S
 
 function notifications() {
   return {
+    create: vi.fn(async () => undefined),
     enqueueInTransaction: vi.fn(async () => undefined),
   } as unknown as InAppNotificationService;
 }
@@ -430,24 +431,24 @@ describe('StudentPhotosService approve', () => {
     });
   });
 
-  it('rejects stale approval when a newer pending photo exists', async () => {
+  it('approves the exact pending photo selected by the admin', async () => {
     const pending = baseRow({ status: 'PENDING_REVIEW', canonicalKey: 'canonical/old.jpg' });
+    const approved = { ...pending, status: 'APPROVED' };
     const txn = {
-      select: vi
+      select: vi.fn(() => selectLimit([pending])),
+      update: vi
         .fn()
-        .mockReturnValueOnce(selectLimit([pending]))
-        .mockReturnValueOnce(selectLimit([{ id: 'newer-upload' }])),
-      update: vi.fn(),
+        .mockReturnValueOnce(updateSimple())
+        .mockReturnValueOnce(updateReturning([approved])),
     };
     const db = {
       db: { transaction: vi.fn(async (cb: (t: unknown) => unknown) => cb(txn)) },
     } as unknown as DatabaseService;
     const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
 
-    await expect(service.approve('admin-1', 'upload-1', 1)).rejects.toMatchObject({
-      code: 'PHOTO_SUPERSEDED',
+    await expect(service.approve('admin-1', 'upload-1', 1)).resolves.toMatchObject({
+      status: 'APPROVED',
     });
-    expect(txn.update).not.toHaveBeenCalled();
   });
 
   it('rejects approving a photo that is not pending review', async () => {

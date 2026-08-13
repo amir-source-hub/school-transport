@@ -11,12 +11,10 @@ import {
 } from '@/features/admin-payments/admin-payments-api';
 import { OfflineDestinationForm } from '@/features/admin-payments/offline-destination-form';
 import {
-  ApprovePaymentDialog,
   ConfigureInstallmentsDialog,
-  RejectPaymentDialog,
-  ReceiptPreviewDialog,
   RecordPaymentOnBehalfDialog,
 } from '@/features/admin-payments/payment-actions';
+import { OfflineSubmissionList } from '@/features/admin-payments/offline-submission-list';
 import { formatIrr, formatJalaliDate, formatJalaliDateTime } from '@/lib/formatters';
 
 export const metadata = { title: 'پرداخت‌ها' };
@@ -139,81 +137,7 @@ export default async function AdminPaymentsPage({
             <p className="text-center text-sm text-muted">رسیدی مطابق این پالایش وجود ندارد.</p>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {submissions.items.map((submission) => (
-              <Card key={submission.id} variant="outlined">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="break-words font-black">{submission.studentName}</p>
-                    <p className="mt-1 text-sm text-muted">خانواده {submission.familyName}</p>
-                  </div>
-                  <Badge
-                    tone={
-                      submission.status === 'APPROVED'
-                        ? 'success'
-                        : submission.status === 'REJECTED'
-                          ? 'danger'
-                          : 'warning'
-                    }
-                  >
-                    {submission.status === 'APPROVED'
-                      ? 'تأییدشده'
-                      : submission.status === 'REJECTED'
-                        ? 'نیازمند اصلاح'
-                        : 'در انتظار بررسی'}
-                  </Badge>
-                </div>
-                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                  <div>
-                    <dt className="text-muted">نوع</dt>
-                    <dd className="mt-1 font-bold">
-                      {submission.itemType === 'PREPAYMENT'
-                        ? 'پیش‌پرداخت'
-                        : `قسط ${submission.sequenceNumber.toLocaleString('fa-IR')}`}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">مبلغ مورد انتظار / ارسالی</dt>
-                    <dd className="mt-1 font-bold">
-                      {formatIrr(submission.expectedAmount)} /{' '}
-                      {formatIrr(submission.submittedAmount)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">تاریخ پرداخت</dt>
-                    <dd className="mt-1 font-bold">{formatJalaliDate(submission.paidAt)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">مرجع</dt>
-                    <dd className="mt-1 break-all font-bold" dir="ltr">
-                      {submission.referenceNumber}
-                    </dd>
-                  </div>
-                </dl>
-                <p className="mt-3 text-sm text-muted">
-                  مقصد نسخه {submission.destinationSnapshot.version.toLocaleString('fa-IR')} —{' '}
-                  {submission.destinationSnapshot.bankName}
-                </p>
-                {submission.rejectionReason && (
-                  <p className="mt-3 rounded-xl bg-danger/5 p-3 text-sm text-danger">
-                    دلیل: {submission.rejectionReason}
-                  </p>
-                )}
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
-                  <ReceiptPreviewDialog submissionId={submission.id} />
-                  {submission.status === 'PENDING_REVIEW' && (
-                    <>
-                      <ApprovePaymentDialog
-                        paymentId={submission.id}
-                        version={submission.version}
-                      />
-                      <RejectPaymentDialog paymentId={submission.id} version={submission.version} />
-                    </>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
+          <OfflineSubmissionList initialItems={submissions.items} />
         )}
         <nav
           aria-label="صفحه‌بندی رسیدهای پرداخت"
@@ -255,8 +179,7 @@ export default async function AdminPaymentsPage({
         <div className="grid gap-4">
           {payments.map((payment) => {
             const prepaymentStatus = payment.prepayment.transaction?.status ?? 'پرداخت نشده';
-            const canConfigure =
-              payment.prepayment.paid && !payment.planConfigured && payment.planType !== 'FULL';
+            const canConfigure = payment.prepayment.paid && !payment.planConfigured;
             return (
               <Card key={payment.planId}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -336,13 +259,18 @@ export default async function AdminPaymentsPage({
                     )}
                   {canConfigure && (
                     <div className="mt-4 border-t border-border pt-4">
-                      <ConfigureInstallmentsDialog planId={payment.planId} fullPayment={false} />
+                      <ConfigureInstallmentsDialog
+                        planId={payment.planId}
+                        fullPayment={payment.planType === 'FULL'}
+                      />
                     </div>
                   )}
                 </section>
                 {payment.planConfigured && (
                   <section className="mt-5 border-t border-border pt-5">
-                    <h3 className="font-black">برنامه اقساط</h3>
+                    <h3 className="font-black">
+                      {payment.planType === 'FULL' ? 'پرداخت یکجای باقی‌مانده' : 'برنامه اقساط'}
+                    </h3>
                     <div className="mt-3 space-y-3">
                       {payment.installments.map((installment) => {
                         const transactionStatus = installment.transaction?.status ?? 'پرداخت نشده';
@@ -351,7 +279,9 @@ export default async function AdminPaymentsPage({
                             <div className="flex flex-wrap items-start justify-between gap-3">
                               <div>
                                 <p className="font-bold">
-                                  قسط {installment.sequenceNumber.toLocaleString('fa-IR')}
+                                  {payment.planType === 'FULL'
+                                    ? 'مانده قابل پرداخت'
+                                    : `قسط ${installment.sequenceNumber.toLocaleString('fa-IR')}`}
                                 </p>
                                 <p className="mt-1 text-sm text-muted">
                                   {formatIrr(installment.amount)} — سررسید{' '}

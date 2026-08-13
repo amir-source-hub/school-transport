@@ -89,9 +89,9 @@ export const authSessions = pgTable(
   'auth_sessions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    subjectId: uuid('subject_id')
-      .notNull()
-      .references(() => users.id),
+    // Polymorphic identity: points to users.id for PARENT sessions and admin_users.id for ADMIN.
+    // PostgreSQL cannot express that relationship with a single foreign key.
+    subjectId: uuid('subject_id').notNull(),
     role: varchar('role', { length: 20 }).notNull(),
     refreshTokenHash: varchar('refresh_token_hash', { length: 64 }).notNull().unique(),
     deviceName: varchar('device_name', { length: 255 }),

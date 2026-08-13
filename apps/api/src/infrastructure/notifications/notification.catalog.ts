@@ -46,6 +46,7 @@ export type NotificationType =
   | 'CONTRACT_ACCEPTED'
   | 'CONTRACT_REJECTED'
   | 'FEEDBACK_RESPONSE'
+  | 'STUDENT_PHOTO_SUBMITTED'
   | 'STUDENT_PHOTO_APPROVED'
   | 'STUDENT_PHOTO_REJECTED'
   | 'ADMIN_BROADCAST';
@@ -360,6 +361,18 @@ export const notificationCatalog: Record<NotificationType, NotificationCatalogEn
     relatedEntityType: 'FEEDBACK',
     route: () => STUDENTS,
     exactlyOnce: true,
+  },
+  STUDENT_PHOTO_SUBMITTED: {
+    audience: 'STUDENT_ACCOUNT',
+    purpose: 'SERVICE_NOTICE',
+    channels: ['IN_APP'],
+    smsMessage: 'ثمین گشت: عکس دانش‌آموز برای بررسی ثبت شد.',
+    inAppTitle: 'عکس کارت سرویس ارسال شد',
+    inAppMessage: 'عکس دانش‌آموز برای بررسی مدیریت ثبت شد.',
+    relatedEntityType: 'STUDENT_PHOTO',
+    route: () => STUDENTS,
+    exactlyOnce: true,
+    adminOperational: { route: () => '/admin/student-photos', hidesWhenResolved: true },
   },
   STUDENT_PHOTO_APPROVED: {
     audience: 'STUDENT_ACCOUNT',
