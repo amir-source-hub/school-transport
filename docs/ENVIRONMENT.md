@@ -57,7 +57,10 @@ variables require a rebuild; runtime variables require a process restart.
 | `CI`                                                                                                   | test runners            | CI only              | no                 | runner-provided truthy flag controlling retries, workers, and strictness             |
 | `PERFORMANCE_BASE_URL`, `PERFORMANCE_BROWSER_CHANNEL`, `PERFORMANCE_BROWSER_EXECUTABLE_PATH`           | browser performance     | optional             | no                 | audited URL and installed Chrome/Chromium selection                                  |
 
-Compose additionally consumes `POSTGRES_PASSWORD` and `REDIS_PASSWORD` from its secret source.
+Compose additionally consumes `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and
+`REDIS_PASSWORD` from its production environment file.
+`PRODUCTION_ENV_FILE` is a Compose/CI-only path override; production operators should leave it
+unset so the required ignored root `.env.production` is used.
 `NEXT_PUBLIC_PRIVATE_UPLOAD_ORIGIN` is a public browser build input containing only the
 credential-free HTTPS origin used for direct private uploads; it must never contain a bucket
 credential, signed query, internal hostname, or path. `PUBLIC_ASSET_BUCKET`, `ASSET_RELEASE_ID`,

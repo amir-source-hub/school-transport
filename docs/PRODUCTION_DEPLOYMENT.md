@@ -38,11 +38,21 @@ docker compose --env-file .env -f docker-compose.local.yml down --volumes
 
 ## Production inputs (never commit values)
 
-Create the production `.env` on the Linux deployment host with mode `0600`. Generate independent
+Create the production `.env.production` on the Linux deployment host with mode `0600`. Generate independent
 random values of at least 32 bytes for PostgreSQL, Redis, JWT, and metrics credentials. Generate
 `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` as a base64-encoded 32-byte AES key. Set exact HTTPS public
 origins, immutable `NEXT_DEPLOYMENT_ID`, public asset release URL, trusted proxy CIDRs, storage
 configuration, and approved provider settings. Never reuse the local fixture or demo credentials.
+
+```bash
+cp infrastructure/config/production.env.template .env.production
+chmod 600 .env.production
+# Replace every CHANGE_ME value, then validate without printing secrets:
+node infrastructure/config/validate-production-env.mjs .env.production
+```
+
+The API requires an approved Kavenegar OTP template and key in production. Offline payment remains
+available while `PAYMENT_GATEWAY_PROVIDER=none`; there is no implemented online gateway yet.
 
 Before enabling traffic, independently supply and approve:
 
@@ -65,7 +75,8 @@ pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
-docker compose --env-file .env -f docker-compose.production.yml config --quiet
+node infrastructure/config/validate-production-env.mjs .env.production
+docker compose --env-file .env.production -f docker-compose.production.yml config --quiet
 bash infrastructure/host/preflight.sh
 bash infrastructure/container/validate.sh
 ```
@@ -83,7 +94,7 @@ rendered. `config --quiet` validates without disclosing them.
 5. Start the explicit production project:
 
    ```bash
-   docker compose --env-file .env -f docker-compose.production.yml up --wait --remove-orphans
+   docker compose --env-file .env.production -f docker-compose.production.yml up -d --build --wait --wait-timeout 300 --remove-orphans
    ```
 
 6. Verify homepage, API readiness, authentication, worker readiness, static/S3 assets, headers,

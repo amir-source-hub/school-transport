@@ -34,6 +34,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      PRODUCTION_ENV_FILE: infrastructure/config/production.env.ci
+      POSTGRES_DB: school_transport
+      POSTGRES_USER: school_transport
       JWT_SECRET: ci-only-deployment-secret-with-at-least-32-characters
       POSTGRES_PASSWORD: ci-only-postgres-password
       REDIS_PASSWORD: ci-only-redis-password
@@ -52,6 +55,8 @@ jobs:
       - name: Validate Caddy configuration
         run: >-
           docker run --rm
+          --env APP_DOMAIN=samingasht.ir
+          --env ACME_EMAIL=ci@example.invalid
           --volume "${{ github.workspace }}/infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
           caddy:2-alpine
           caddy validate --config /etc/caddy/Caddyfile

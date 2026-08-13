@@ -15,10 +15,10 @@
 	}
 }
 
-samingasht.ir {
+{$APP_DOMAIN} {
 	encode zstd gzip
 
-	tls {
+	tls {$ACME_EMAIL} {
 		protocols tls1.2 tls1.3
 		curves x25519 secp256r1
 	}
@@ -73,7 +73,7 @@ samingasht.ir {
 		X-Frame-Options "DENY"
 	}
 
-	@sensitive path /api/* /admin* /parent* /login /register /forgot-password
+	@sensitive path /api/* /admin* /student* /login /register /forgot-password
 	header @sensitive {
 		Cache-Control "no-store, max-age=0"
 		Pragma "no-cache"
