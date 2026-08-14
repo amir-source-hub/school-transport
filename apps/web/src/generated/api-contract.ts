@@ -20,6 +20,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/auth/parent/credentials': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AuthController_parentCredentials'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/admin/login': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AuthController_adminLogin'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/auth/request-otp': {
     parameters: {
       query?: never;
@@ -30,6 +62,22 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['AuthController_requestOtp'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/manager/login': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AuthController_managerLogin'];
     delete?: never;
     options?: never;
     head?: never;
@@ -196,6 +244,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/admin/admins/school-managers': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AdminIdentityController_provisionSchoolManager'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/admin/admins/{adminId}': {
     parameters: {
       query?: never;
@@ -242,6 +306,22 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  '/api/v1/manager/settings/credentials': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations['ManagerSettingsController_changeCredentials'];
     trace?: never;
   };
   '/api/v1/families/complete-registration': {
@@ -1124,6 +1204,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/admin/contracts/{id}/accept': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AdminContractsController_acceptOnBehalf'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/onboarding/contracts/{id}/accept': {
     parameters: {
       query?: never;
@@ -1342,6 +1438,54 @@ export interface paths {
     get: operations['AdminPaymentsController_offlineSubmissions'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/payments/{scheduleItemId}/offline-submissions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AdminPaymentsController_createOfflineSubmission'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/payments/offline-submissions/{submissionId}/receipt/authorize': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AdminPaymentsController_authorizeReceipt'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/payments/offline-submissions/{submissionId}/receipt/complete-and-approve': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AdminPaymentsController_completeAndApproveReceipt'];
     delete?: never;
     options?: never;
     head?: never;
@@ -1844,6 +1988,86 @@ export interface paths {
     patch: operations['AdminFeedbackController_close'];
     trace?: never;
   };
+  '/api/v1/manager/feedback': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['ManagerFeedbackController_mine'];
+    put?: never;
+    post: operations['ManagerFeedbackController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/manager/dashboard': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['SchoolManagersController_dashboard'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/manager/students': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['SchoolManagersController_students'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/manager/students/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['SchoolManagersController_studentDetail'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/manager/settings': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['SchoolManagersController_settings'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/student-photos/uploads': {
     parameters: {
       query?: never;
@@ -1966,6 +2190,38 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['OnboardingStudentPhotosController_link'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/student-photos/families/{familyId}/uploads': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AdminStudentPhotosController_authorizeForFamily'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/student-photos/families/{familyId}/uploads/{id}/complete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AdminStudentPhotosController_completeForFamily'];
     delete?: never;
     options?: never;
     head?: never;
@@ -2120,13 +2376,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    ParentCredentialsDto: Record<string, never>;
+    AdminLoginDto: Record<string, never>;
     RequestOtpDto: Record<string, never>;
+    ManagerLoginDto: Record<string, never>;
     AdminPasswordChallengeDto: Record<string, never>;
     AdminOtpVerificationDto: Record<string, never>;
     VerifyAuthOtpDto: Record<string, never>;
     FinalizeOnboardingDto: Record<string, never>;
     CreateAdminDto: Record<string, never>;
+    ProvisionSchoolManagerDto: Record<string, never>;
     UpdateAdminDto: Record<string, never>;
+    ManagerCredentialsDto: Record<string, never>;
     CompleteFamilyDto: Record<string, never>;
     UpdateProfileDto: Record<string, never>;
     AddAddressDto: Record<string, never>;
@@ -2194,6 +2455,48 @@ export interface operations {
       };
     };
   };
+  AuthController_parentCredentials: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ParentCredentialsDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AuthController_adminLogin: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AdminLoginDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   AuthController_requestOtp: {
     parameters: {
       query?: never;
@@ -2204,6 +2507,27 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['RequestOtpDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AuthController_managerLogin: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ManagerLoginDto'];
       };
     };
     responses: {
@@ -2422,6 +2746,27 @@ export interface operations {
       };
     };
   };
+  AdminIdentityController_provisionSchoolManager: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ProvisionSchoolManagerDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   AdminIdentityController_update: {
     parameters: {
       query?: never;
@@ -2476,6 +2821,27 @@ export interface operations {
     requestBody?: never;
     responses: {
       201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ManagerSettingsController_changeCredentials: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ManagerCredentialsDto'];
+      };
+    };
+    responses: {
+      200: {
         headers: {
           [name: string]: unknown;
         };
@@ -3809,6 +4175,25 @@ export interface operations {
       };
     };
   };
+  AdminContractsController_acceptOnBehalf: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   OnboardingContractsController_accept: {
     parameters: {
       query?: never;
@@ -4089,6 +4474,71 @@ export interface operations {
     requestBody?: never;
     responses: {
       200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminPaymentsController_createOfflineSubmission: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        scheduleItemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['OfflinePaymentDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminPaymentsController_authorizeReceipt: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        submissionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AuthorizeReceiptUploadDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminPaymentsController_completeAndApproveReceipt: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        submissionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
         headers: {
           [name: string]: unknown;
         };
@@ -4775,6 +5225,114 @@ export interface operations {
       };
     };
   };
+  ManagerFeedbackController_mine: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ManagerFeedbackController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateFeedbackDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SchoolManagersController_dashboard: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SchoolManagersController_students: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SchoolManagersController_studentDetail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SchoolManagersController_settings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   StudentPhotosController_authorize: {
     parameters: {
       query?: never;
@@ -4930,6 +5488,49 @@ export interface operations {
         'application/json': components['schemas']['LinkPhotoUploadDto'];
       };
     };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminStudentPhotosController_authorizeForFamily: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        familyId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AuthorizePhotoUploadDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminStudentPhotosController_completeForFamily: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        familyId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       201: {
         headers: {

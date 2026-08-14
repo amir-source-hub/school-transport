@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
-import { createFeedback } from './feedback-api';
+import { createFeedback, createManagerFeedback } from './feedback-api';
 const categories = [
   ['SUGGESTION', 'پیشنهاد'],
   ['SERVICE', 'خدمات'],
@@ -15,7 +15,7 @@ const categories = [
   ['APP', 'سامانه'],
   ['SAFETY', 'ایمنی فوری'],
 ] as const;
-export function FeedbackForm() {
+export function FeedbackForm({ audience = 'parent' }: { audience?: 'parent' | 'manager' }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [msg, setMsg] = useState<string>();
@@ -31,7 +31,8 @@ export function FeedbackForm() {
     const form = e.currentTarget;
     const f = new FormData(form);
     try {
-      await createFeedback({
+      const create = audience === 'manager' ? createManagerFeedback : createFeedback;
+      await create({
         category: String(f.get('category')),
         subject: String(f.get('subject')),
         message: String(f.get('message')),
