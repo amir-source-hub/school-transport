@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import {
   AdminStudentPhotosController,
+  ManagerStudentPhotosController,
   OnboardingStudentPhotosController,
   StudentPhotosController,
 } from './student-photos.controller';
@@ -12,6 +13,7 @@ import { OnboardingGuard } from '../access-control/onboarding.guard';
     StudentPhotosController,
     OnboardingStudentPhotosController,
     AdminStudentPhotosController,
+    ManagerStudentPhotosController,
   ],
   providers: [StudentPhotosService, OnboardingGuard],
   exports: [StudentPhotosService],

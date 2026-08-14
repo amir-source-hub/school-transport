@@ -10,6 +10,20 @@ const authApi = vi.hoisted(() => ({ loginOrRegisterParent: vi.fn(), loginAdmin: 
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
 vi.mock('./auth-api', () => authApi);
 
+function usernameField() {
+  return screen.getByLabelText((label, element) => {
+    const el = element as HTMLElement;
+    return el.tagName === 'INPUT' && label.trim().startsWith('نام کاربری');
+  });
+}
+
+function passwordField() {
+  return screen.getByLabelText((label, element) => {
+    const el = element as HTMLElement;
+    return el.tagName === 'INPUT' && el.getAttribute('type') === 'password';
+  });
+}
+
 beforeEach(() => {
   navigation.replace.mockReset();
   authApi.loginOrRegisterParent.mockReset();
@@ -34,7 +48,7 @@ describe('family fixed-credential authentication', () => {
 
     await user.clear(screen.getByLabelText(/شماره همراه سرپرست/));
     await user.type(screen.getByLabelText(/شماره همراه سرپرست/), '09123456789');
-    await user.type(screen.getByLabelText(/کد ملی سرپرست/), '0084575948');
+    await user.type(screen.getByLabelText(/کد ملی دانش‌آموز/), '0084575948');
     await user.click(screen.getByRole('button', { name: 'ورود یا ثبت‌نام و ادامه' }));
 
     expect(authApi.loginOrRegisterParent).toHaveBeenCalledWith('09123456789', '0084575948', false);
@@ -53,7 +67,7 @@ describe('family fixed-credential authentication', () => {
     render(<LoginForm />);
     await user.clear(screen.getByLabelText(/شماره همراه سرپرست/));
     await user.type(screen.getByLabelText(/شماره همراه سرپرست/), '09123456789');
-    await user.type(screen.getByLabelText(/کد ملی سرپرست/), '0084575948');
+    await user.type(screen.getByLabelText(/کد ملی دانش‌آموز/), '0084575948');
     await user.click(screen.getByRole('button', { name: 'ورود یا ثبت‌نام و ادامه' }));
     expect(navigation.replace).toHaveBeenCalledWith('/student/dashboard');
   });
@@ -69,8 +83,8 @@ describe('admin credential authentication', () => {
     });
     const user = userEvent.setup();
     render(<AdminLoginForm />);
-    await user.type(screen.getByLabelText(/نام کاربری/), 'admin');
-    await user.type(screen.getByLabelText(/رمز عبور/), 'secret');
+    await user.type(usernameField(), 'admin');
+    await user.type(passwordField(), 'secret');
     await user.click(screen.getByRole('button', { name: 'ورود به پنل مدیریت' }));
     expect(authApi.loginAdmin).toHaveBeenCalledWith('admin', 'secret', false);
     expect(navigation.replace).toHaveBeenCalledWith('/admin/dashboard');

@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import type { CookieSerializeOptions } from '@fastify/cookie';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from '../application/auth.service';
 import { Public } from '../../../common/decorators';
 import { AuthGuard } from '../../access-control/auth.guard';
@@ -29,6 +30,7 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Matches,
   MaxLength,
@@ -164,6 +166,49 @@ export class AdminLoginDto extends AdminPasswordChallengeDto {
   rememberMe?: boolean;
 }
 
+export class ManagerLoginDto {
+  @Transform(digits)
+  @IsString()
+  @Length(3, 100)
+  username!: string;
+
+  @IsString()
+  @MaxLength(128)
+  password!: string;
+
+  @IsOptional()
+  @Transform(toBoolean)
+  rememberMe?: boolean;
+}
+
+export class ProvisionSchoolManagerDto {
+  @Transform(trimmed)
+  @IsString()
+  @Length(3, 100)
+  username!: string;
+
+  @IsString()
+  @Length(1, 100)
+  @Transform(trimmed)
+  firstName!: string;
+
+  @IsString()
+  @Length(1, 100)
+  @Transform(trimmed)
+  lastName!: string;
+
+  @Transform(digits)
+  @Matches(/^09\d{9}$/)
+  phoneNumber!: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsUUID()
+  schoolId!: string;
+}
+
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')
 @Controller('admin/admins')
@@ -183,6 +228,26 @@ export class AdminIdentityController {
   @Post()
   async create(@Req() req: AuthenticatedRequest, @Body() dto: CreateAdminDto) {
     return successResponse(await this.authService.createAdmin(dto));
+  }
+
+  @Post('school-managers')
+  async provisionSchoolManager(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ProvisionSchoolManagerDto,
+  ) {
+    return successResponse(
+      await this.authService.provisionSchoolManager(
+        {
+          username: dto.username,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          phoneNumber: dto.phoneNumber,
+          email: dto.email,
+          schoolId: dto.schoolId,
+        },
+        { id: req.user.id, ip: req.ip },
+      ),
+    );
   }
 
   @Patch(':adminId')
@@ -219,6 +284,52 @@ export class AdminIdentityController {
         id: req.user.id,
         ip: req.ip,
       }),
+    );
+  }
+}
+
+export class ManagerCredentialsDto {
+  @IsString()
+  @Length(1, 128)
+  currentPassword!: string;
+
+  @IsString()
+  @Length(3, 100)
+  newUsername!: string;
+
+  @IsString()
+  @Length(8, 128)
+  newPassword!: string;
+
+  @IsString()
+  @Length(8, 128)
+  confirmNewPassword!: string;
+}
+
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('SCHOOL_MANAGER')
+@Controller('manager/settings')
+export class ManagerSettingsController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Patch('credentials')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async changeCredentials(@Req() req: AuthenticatedRequest, @Body() dto: ManagerCredentialsDto) {
+    if (dto.newPassword !== dto.confirmNewPassword) {
+      throw new ValidationError('تکرار رمز عبور با رمز عبور جدید یکسان نیست.', {
+        confirmNewPassword: ['تکرار رمز عبور باید با رمز عبور جدید یکسان باشد.'],
+      });
+    }
+    return successResponse(
+      await this.authService.changeSchoolManagerCredentials(
+        req.user.id,
+        {
+          currentPassword: dto.currentPassword,
+          newUsername: dto.newUsername,
+          newPassword: dto.newPassword,
+        },
+        { id: req.user.id, ip: req.ip },
+      ),
     );
   }
 }
@@ -325,6 +436,33 @@ export class AuthController {
     return successResponse(
       await this.authService.requestAuthOtp(dto.phoneNumber, dto.role ?? 'PARENT', req.ip),
     );
+  }
+
+  @Public()
+  @Post('manager/login')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(TrustedOriginGuard)
+  async managerLogin(
+    @Req() req: FastifyRequest,
+    @Body() dto: ManagerLoginDto,
+    @Res({ passthrough: true }) reply: CookieReply,
+  ) {
+    if (this.config.featureManagerLogin === false) {
+      throw new ValidationError('ورود مدیران مدرسه موقتاً در دسترس نیست.');
+    }
+    const result = await this.authService.loginSchoolManager(
+      dto.username,
+      dto.password,
+      {
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        deviceName: req.headers['user-agent']?.slice(0, 255),
+      },
+      dto.rememberMe ?? false,
+    );
+    this.setRefreshCookie(reply, result.refreshToken, false, dto.rememberMe ?? false);
+    this.setAccessCookie(reply, result.accessToken, false);
+    return successResponse({ user: result.user, accessToken: result.accessToken });
   }
 
   @Public()
@@ -499,7 +637,7 @@ export class AuthController {
   @UseGuards(AuthGuard)
   @Get('me')
   async me(@Req() req: AuthenticatedRequest) {
-    return successResponse({ user: req.user });
+    return successResponse({ user: await this.authService.getPrincipal(req.user) });
   }
 
   private setRefreshCookie(reply: CookieReply, token: string, isAdmin = false, rememberMe = false) {

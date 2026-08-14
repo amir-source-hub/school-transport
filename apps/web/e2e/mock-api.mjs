@@ -29,13 +29,23 @@ const server = createServer((request, response) => {
   if (request.method === 'OPTIONS') return send(response, 204, null);
   if (url.pathname === '/health') return send(response, 200, { ok: true });
   if (url.pathname === '/api/v1/auth/me') {
+    if (request.headers.cookie?.includes('e2e-auth=anon')) {
+      return send(response, 200, {
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'anonymous E2E session' },
+      });
+    }
     if (request.headers.cookie?.includes('e2e-failure=503')) {
       return send(response, 200, {
         success: false,
         error: { code: 'SERVICE_UNAVAILABLE', message: 'seeded dependency failure' },
       });
     }
-    const role = request.headers.cookie?.includes('e2e-role=ADMIN') ? 'ADMIN' : 'PARENT';
+    const role = request.headers.cookie?.includes('e2e-role=SCHOOL_MANAGER')
+      ? 'SCHOOL_MANAGER'
+      : request.headers.cookie?.includes('e2e-role=ADMIN')
+        ? 'ADMIN'
+        : 'PARENT';
     return send(response, 200, { success: true, data: { user: { role } } });
   }
   if (url.pathname === '/api/v1/notifications/settings') {
@@ -48,6 +58,155 @@ const server = createServer((request, response) => {
         optionalUpdates: { inApp: false, sms: false },
       },
     });
+  }
+  if (url.pathname === '/api/v1/manager/dashboard') {
+    return send(response, 200, {
+      success: true,
+      data: {
+        school: {
+          id: 'school-1',
+          name: 'مدرسه آزمایشی مدیران',
+          city: 'تهران',
+          educationLevels: ['ابتدایی'],
+        },
+        manager: {
+          firstName: 'مدیر',
+          lastName: 'آزمایشی',
+          username: 'manager',
+          mustChangeCredentials: true,
+        },
+        counts: {
+          totalStudents: 1,
+          activeStudents: 1,
+          studentsWithApprovedPhoto: 0,
+          studentsWithoutApprovedPhoto: 1,
+        },
+        registrations: { byStatus: { SUBMITTED: 1 } },
+        recentActivity: [
+          {
+            id: 'activity-1',
+            studentName: 'دانش‌آموز با نام طولانی آزمایشی',
+            registrationStatus: 'SUBMITTED',
+            serviceType: 'ROUND_TRIP',
+            createdAt: '2026-08-09T10:00:00.000Z',
+          },
+        ],
+        unansweredFeedback: 0,
+        onlineControlStatus: 'PREPARING',
+        driverPreview: { available: true, experimental: true },
+      },
+    });
+  }
+  if (url.pathname === '/api/v1/manager/students') {
+    return send(response, 200, {
+      success: true,
+      data: [
+        {
+          id: '00000000-0000-4000-8000-000000000401',
+          firstName: 'دانش‌آموز',
+          lastName: 'با نام طولانی آزمایشی',
+          educationLevel: 'ابتدایی',
+          grade: 'پنجم',
+          studentCode: 'S-100',
+          nationalIdMasked: '***5678',
+          guardianName: 'سرپرست آزمایشی',
+          isActive: true,
+          schoolName: 'مدرسه آزمایشی مدیران',
+          hasApprovedPhoto: false,
+          createdAt: '2026-08-09T10:00:00.000Z',
+          registration: {
+            registrationStatus: 'SUBMITTED',
+            serviceType: 'ROUND_TRIP',
+            academicYear: '۱۴۰۵-۱۴۰۶',
+            submittedAt: '2026-08-09T10:00:00.000Z',
+          },
+        },
+      ],
+      pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+    });
+  }
+  if (url.pathname === '/api/v1/manager/students/00000000-0000-4000-8000-000000000401') {
+    return send(response, 200, {
+      success: true,
+      data: {
+        id: '00000000-0000-4000-8000-000000000401',
+        firstName: 'دانش‌آموز',
+        lastName: 'با نام طولانی آزمایشی',
+        educationLevel: 'ابتدایی',
+        grade: 'پنجم',
+        studentCode: 'S-100',
+        nationalIdMasked: '***5678',
+        guardianName: 'سرپرست آزمایشی',
+        isActive: true,
+        schoolName: 'مدرسه آزمایشی مدیران',
+        hasApprovedPhoto: false,
+        createdAt: '2026-08-09T10:00:00.000Z',
+        birthDate: null,
+        gender: 'FEMALE',
+        school: { id: 'school-1', name: 'مدرسه آزمایشی مدیران', schoolType: 'PUBLIC' },
+        guardians: [
+          {
+            id: 'guardian-1',
+            parentType: 'MOTHER',
+            name: 'سرپرست آزمایشی',
+            isPrimaryContact: true,
+          },
+        ],
+        enrollmentSummary: {
+          registrationStatus: 'SUBMITTED',
+          academicYear: '۱۴۰۵-۱۴۰۶',
+          serviceType: 'ROUND_TRIP',
+          requestedStartDate: null,
+          contract: null,
+          price: null,
+        },
+      },
+    });
+  }
+  if (url.pathname === '/api/v1/manager/settings' && request.method === 'GET') {
+    return send(response, 200, {
+      success: true,
+      data: {
+        manager: {
+          firstName: 'مدیر',
+          lastName: 'آزمایشی',
+          username: 'manager',
+          phoneNumber: '09120000000',
+          email: null,
+          mustChangeCredentials: true,
+          credentialsChangedAt: null,
+          lastLoginAt: '2026-08-09T10:00:00.000Z',
+        },
+        schools: [
+          {
+            id: 'school-1',
+            name: 'مدرسه آزمایشی مدیران',
+            schoolType: 'PUBLIC',
+            genderType: 'GIRLS',
+            province: 'تهران',
+            city: 'تهران',
+            district: '۱',
+            address: 'نشانی آزمایشی مدرسه',
+            phoneNumber: '02100000000',
+            openingTime: '07:00',
+            closingTime: '14:00',
+            educationLevels: [{ level: 'ابتدایی', grades: ['پنجم'] }],
+            isActive: true,
+          },
+        ],
+        primarySchoolId: 'school-1',
+      },
+    });
+  }
+  if (url.pathname === '/api/v1/manager/feedback' && request.method === 'GET') {
+    return send(response, 200, {
+      success: true,
+      data: [],
+      pagination: { page: 1, pageSize: 50, totalItems: 0, totalPages: 0 },
+    });
+  }
+  if (url.pathname === '/api/v1/manager/feedback' && request.method === 'POST') {
+    return send(response, 200, { success: true, data: { id: 'feedback-1' } });
   }
   if (url.pathname === '/api/v1/notifications/unread-count') {
     return send(response, 200, { success: true, data: { count: 0 } });

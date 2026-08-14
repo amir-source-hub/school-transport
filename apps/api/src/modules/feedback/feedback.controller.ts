@@ -16,6 +16,7 @@ import type { AuthenticatedRequest } from '../../common/http-request';
 import { paginatedResponse, successResponse } from '../../common/response';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
+import { SchoolManagerScopeService } from '../access-control/school-manager-scope.service';
 import {
   AssignFeedbackDto,
   CreateFeedbackDto,
@@ -80,5 +81,27 @@ export class AdminFeedbackController {
     @Body() b: VersionDto,
   ) {
     return successResponse(await this.service.close(id, r.user.id, b.version, r.ip));
+  }
+}
+
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('SCHOOL_MANAGER')
+@Controller('manager/feedback')
+export class ManagerFeedbackController {
+  constructor(
+    private readonly service: FeedbackService,
+    private readonly scope: SchoolManagerScopeService,
+  ) {}
+  @Post()
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  async create(@Req() req: AuthenticatedRequest, @Body() body: CreateFeedbackDto) {
+    const schoolId = await this.scope.resolvePrimarySchoolId(req.user.id);
+    return successResponse(await this.service.createForManager(req.user.id, schoolId, body));
+  }
+  @Get() async mine(@Req() req: AuthenticatedRequest, @Query() q: FeedbackQueryDto) {
+    const r = await this.service.listMineForManager(req.user.id, q);
+    return paginatedResponse(r.items, q.page, q.pageSize, r.total, {
+      snapshotAt: r.snapshotAt,
+    });
   }
 }

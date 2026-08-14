@@ -87,10 +87,36 @@ describe('AuthGuard', () => {
     expect(request.user).toEqual({ id: 'user-1', role: 'PARENT', sessionId: 'session-1' });
   });
 
+  it('accepts an active school manager identity', async () => {
+    const request = { headers: { authorization: 'Bearer access-token' } } as Record<
+      string,
+      unknown
+    >;
+    const jwt = {
+      verifyAsync: vi.fn().mockResolvedValue({
+        sub: 'manager-1',
+        role: 'SCHOOL_MANAGER',
+        type: 'access',
+        sid: 'session-1',
+      }),
+    } as unknown as JwtService;
+    const database = databaseReturning([{ id: 'session-1' }], [{ status: 'ACTIVE' }]);
+    const guard = new AuthGuard(reflectorReturning(false), jwt, config, database);
+
+    await expect(guard.canActivate(contextWithRequest(request))).resolves.toBe(true);
+    expect(request.user).toEqual({
+      id: 'manager-1',
+      role: 'SCHOOL_MANAGER',
+      sessionId: 'session-1',
+    });
+  });
+
   it.each([
     ['PARENT', [], [{ status: 'ACTIVE' }]],
     ['PARENT', [{ id: 'session-1' }], [{ status: 'INACTIVE' }]],
     ['ADMIN', [{ id: 'session-1' }], [{ status: 'INACTIVE' }]],
+    ['SCHOOL_MANAGER', [], [{ status: 'ACTIVE' }]],
+    ['SCHOOL_MANAGER', [{ id: 'session-1' }], [{ status: 'LOCKED' }]],
   ])(
     'rejects revoked/expired sessions and inactive %s accounts',
     async (role, sessions, accounts) => {

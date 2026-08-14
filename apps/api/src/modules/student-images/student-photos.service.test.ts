@@ -603,3 +603,52 @@ describe('StudentPhotosService cleanupExpired', () => {
     expect(store.deleteObject).toHaveBeenCalledWith('canonical/x.jpg');
   });
 });
+
+describe('StudentPhotosService manager approved-photo access', () => {
+  it('returns only a short-lived URL for an approved photo in an active assigned school', async () => {
+    const db = {
+      db: {
+        select: vi.fn(() =>
+          selectLimit([
+            {
+              id: 'upload-1',
+              canonicalKey: 'student-photos/canonical/private.jpg',
+              status: 'APPROVED',
+            },
+          ]),
+        ),
+      },
+    } as unknown as DatabaseService;
+    const store = storage();
+    const auditLog = audit();
+    const service = new StudentPhotosService(db, config(), notifications(), store, auditLog);
+
+    const result = await service.getManagerApprovedViewUrl('manager-1', 'student-1', '127.0.0.1');
+
+    expect(result).toEqual({
+      status: 'APPROVED',
+      viewUrl: 'https://s3.example/presigned-get',
+      expiresInSeconds: 300,
+    });
+    expect(JSON.stringify(result)).not.toContain('canonical/private.jpg');
+    expect(store.presignGet).toHaveBeenCalledWith('student-photos/canonical/private.jpg', 300);
+    expect(auditLog.record).toHaveBeenCalledWith(
+      expect.objectContaining({ actorType: 'SCHOOL_MANAGER', actorId: 'manager-1' }),
+    );
+  });
+
+  it('returns a generic not-found result for an unassigned-school student', async () => {
+    const db = {
+      db: { select: vi.fn(() => selectLimit([])) },
+    } as unknown as DatabaseService;
+    const store = storage();
+    const auditLog = audit();
+    const service = new StudentPhotosService(db, config(), notifications(), store, auditLog);
+
+    await expect(
+      service.getManagerApprovedViewUrl('manager-1', 'foreign-student'),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(store.presignGet).not.toHaveBeenCalled();
+    expect(auditLog.record).not.toHaveBeenCalled();
+  });
+});

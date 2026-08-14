@@ -13,12 +13,16 @@ import {
   otpRequests,
   parents,
   authSessions,
+  schoolManagerUsers,
+  schoolManagerAssignments,
+  schools,
 } from '../../../database/schemas';
 import { AppError, AuthenticationError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
 import { AppLogger } from '../../../common/logger';
 import { AuthTokens, LoginResult, OtpResult, VerifyAuthOtpResult } from '../domain/auth.types';
-import { JwtPayload } from '../../../common/authentication.types';
+import { JwtPayload, UserRole } from '../../../common/authentication.types';
+import { normalizeIranianDigits } from '../../../common/iranian-national-id';
 import { OTP_DELIVERY, OtpDelivery } from './otp-delivery.port';
 import { AUDIT_PORT, AuditPort } from '../../../common/audit.port';
 import { InAppNotificationService } from '../../../infrastructure/notifications/in-app-notification.service';
@@ -565,6 +569,264 @@ export class AuthService {
     };
   }
 
+  async loginSchoolManager(
+    username: string,
+    password: string,
+    context?: SessionContext,
+    rememberMe = false,
+  ): Promise<LoginResult> {
+    const genericError = () => new AuthenticationError('نام کاربری یا رمز عبور صحیح نیست.');
+    const normalized = this.normalizeManagerUsername(username);
+    const [record] = await this.db.db
+      .select({
+        id: schoolManagerUsers.id,
+        username: schoolManagerUsers.username,
+        phoneNumber: schoolManagerUsers.phoneNumber,
+        status: schoolManagerUsers.status,
+        passwordHash: schoolManagerUsers.passwordHash,
+        mustChangeCredentials: schoolManagerUsers.mustChangeCredentials,
+        failedLoginCount: schoolManagerUsers.failedLoginCount,
+        lockedUntil: schoolManagerUsers.lockedUntil,
+      })
+      .from(schoolManagerUsers)
+      .where(eq(schoolManagerUsers.username, normalized))
+      .limit(1);
+
+    if (!record || record.status !== 'ACTIVE' || !record.passwordHash) throw genericError();
+
+    if (record.lockedUntil && !isPast(new Date(record.lockedUntil))) {
+      throw new AppError(
+        'ACCOUNT_LOCKED',
+        'حساب مدیر مدرسه به دلیل تلاش‌های ناموفق موقتاً قفل شده است. بعداً دوباره تلاش کنید.',
+        423,
+      );
+    }
+
+    const valid = await argon2.verify(record.passwordHash, password);
+    if (!valid) {
+      const attempts = record.failedLoginCount + 1;
+      const lock = attempts >= this.config.managerMaxFailedLoginAttempts;
+      await this.db.db
+        .update(schoolManagerUsers)
+        .set({
+          failedLoginCount: lock ? 0 : attempts,
+          lockedUntil: lock ? addSeconds(new Date(), this.config.managerLockoutSeconds) : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(schoolManagerUsers.id, record.id));
+      await this.audit.record({
+        actorType: 'SCHOOL_MANAGER',
+        actorId: record.id,
+        entityType: 'SCHOOL_MANAGER',
+        entityId: record.id,
+        action: lock ? 'SCHOOL_MANAGER_LOCKED' : 'SCHOOL_MANAGER_LOGIN_FAILED',
+        ipAddress: context?.ipAddress,
+      });
+      throw genericError();
+    }
+
+    await this.db.db
+      .update(schoolManagerUsers)
+      .set({
+        failedLoginCount: 0,
+        lockedUntil: null,
+        lastLoginAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(schoolManagerUsers.id, record.id));
+    const tokens = await this.generateTokens(
+      record.id,
+      'SCHOOL_MANAGER',
+      context,
+      undefined,
+      rememberMe,
+    );
+    this.logger.log('School manager logged in with username and password.');
+    return {
+      user: {
+        id: record.id,
+        username: record.username,
+        phoneNumber: record.phoneNumber,
+        role: 'SCHOOL_MANAGER',
+        mustChangeCredentials: record.mustChangeCredentials,
+      },
+      ...tokens,
+    };
+  }
+
+  async provisionSchoolManager(
+    data: {
+      username: string;
+      firstName: string;
+      lastName: string;
+      phoneNumber: string;
+      email?: string;
+      schoolId: string;
+    },
+    actor?: { id: string; ip?: string },
+  ) {
+    const username = this.normalizeManagerUsername(data.username);
+    await this.ensureSchoolManagerIdentityIsUnique(username, data.phoneNumber);
+    const [school] = await this.db.db
+      .select({ id: schools.id })
+      .from(schools)
+      .where(eq(schools.id, data.schoolId))
+      .limit(1);
+    if (!school) throw new ValidationError('School was not found.');
+
+    const managerId = generateId();
+    await this.db.db.transaction(async (txn) => {
+      await txn.insert(schoolManagerUsers).values({
+        id: managerId,
+        username,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phoneNumber: data.phoneNumber,
+        email: data.email || null,
+        passwordHash: await argon2.hash(data.phoneNumber),
+        status: 'ACTIVE',
+        mustChangeCredentials: true,
+      });
+      await txn.insert(schoolManagerAssignments).values({
+        id: generateId(),
+        managerUserId: managerId,
+        schoolId: data.schoolId,
+        isPrimary: true,
+        status: 'ACTIVE',
+      });
+    });
+    this.logger.log('School manager account provisioned with temporary credentials.');
+    await this.audit.record({
+      actorType: 'ADMIN',
+      actorId: actor?.id ?? 'system',
+      entityType: 'SCHOOL_MANAGER',
+      entityId: managerId,
+      action: 'SCHOOL_MANAGER_PROVISIONED',
+      newValues: { schoolId: data.schoolId, temporaryCredentials: true },
+      ipAddress: actor?.ip,
+    });
+    return { id: managerId };
+  }
+
+  async changeSchoolManagerCredentials(
+    managerId: string,
+    data: { currentPassword: string; newUsername: string; newPassword: string },
+    actor?: { id: string; ip?: string },
+  ) {
+    const [record] = await this.db.db
+      .select({
+        id: schoolManagerUsers.id,
+        username: schoolManagerUsers.username,
+        phoneNumber: schoolManagerUsers.phoneNumber,
+        passwordHash: schoolManagerUsers.passwordHash,
+      })
+      .from(schoolManagerUsers)
+      .where(eq(schoolManagerUsers.id, managerId))
+      .limit(1);
+    if (!record || !record.passwordHash) {
+      throw new AuthenticationError('School manager account was not found.');
+    }
+    if (!(await argon2.verify(record.passwordHash, data.currentPassword))) {
+      throw new ValidationError('رمز عبور فعلی صحیح نیست.');
+    }
+    const normalizedUsername = this.normalizeManagerUsername(data.newUsername);
+    if (normalizedUsername === record.phoneNumber) {
+      throw new ValidationError('نام کاربری نباید با شماره همراه مدیر یکسان باشد.');
+    }
+    if (data.newPassword === record.phoneNumber) {
+      throw new ValidationError('رمز عبور نباید با شماره همراه مدیر یکسان باشد.');
+    }
+    if (data.newPassword.length < 8) {
+      throw new ValidationError('رمز عبور جدید باید حداقل ۸ کاراکتر باشد.');
+    }
+    if (data.newPassword.length > 128) {
+      throw new ValidationError('رمز عبور جدید بیش از حد طولانی است.');
+    }
+    await this.ensureSchoolManagerIdentityIsUnique(normalizedUsername, undefined, managerId);
+
+    const [updated] = await this.db.db
+      .update(schoolManagerUsers)
+      .set({
+        username: normalizedUsername,
+        passwordHash: await argon2.hash(data.newPassword),
+        mustChangeCredentials: false,
+        credentialsChangedAt: new Date(),
+        failedLoginCount: 0,
+        lockedUntil: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(schoolManagerUsers.id, managerId))
+      .returning({ id: schoolManagerUsers.id });
+
+    await this.revokeAllSessions(managerId, 'SCHOOL_MANAGER', 'CREDENTIALS_CHANGED');
+    await this.audit.record({
+      actorType: 'SCHOOL_MANAGER',
+      actorId: managerId,
+      entityType: 'SCHOOL_MANAGER',
+      entityId: managerId,
+      action: 'SCHOOL_MANAGER_CREDENTIALS_CHANGED',
+      ipAddress: actor?.ip,
+    });
+    return updated;
+  }
+
+  async getManagerAccount(managerId: string) {
+    const records = await this.db.db
+      .select({
+        id: schoolManagerUsers.id,
+        username: schoolManagerUsers.username,
+        firstName: schoolManagerUsers.firstName,
+        lastName: schoolManagerUsers.lastName,
+        phoneNumber: schoolManagerUsers.phoneNumber,
+        email: schoolManagerUsers.email,
+        status: schoolManagerUsers.status,
+        mustChangeCredentials: schoolManagerUsers.mustChangeCredentials,
+        credentialsChangedAt: schoolManagerUsers.credentialsChangedAt,
+        lastLoginAt: schoolManagerUsers.lastLoginAt,
+        createdAt: schoolManagerUsers.createdAt,
+      })
+      .from(schoolManagerUsers)
+      .where(eq(schoolManagerUsers.id, managerId))
+      .limit(1);
+    if (!records[0]) throw new ValidationError('School manager was not found.');
+    return records[0];
+  }
+
+  async getPrincipal(reqUser: { id: string; role: UserRole; sessionId: string }) {
+    const principal: Record<string, unknown> = { ...reqUser };
+    if (reqUser.role === 'SCHOOL_MANAGER') {
+      const [record] = await this.db.db
+        .select({ mustChangeCredentials: schoolManagerUsers.mustChangeCredentials })
+        .from(schoolManagerUsers)
+        .where(eq(schoolManagerUsers.id, reqUser.id))
+        .limit(1);
+      principal.mustChangeCredentials = record?.mustChangeCredentials ?? true;
+    }
+    return principal;
+  }
+
+  private normalizeManagerUsername(value: string): string {
+    return normalizeIranianDigits(value.trim());
+  }
+
+  private async ensureSchoolManagerIdentityIsUnique(
+    username: string,
+    phoneNumber?: string,
+    excludedManagerId?: string,
+  ) {
+    const conditions = [eq(schoolManagerUsers.username, username)];
+    if (phoneNumber) conditions.push(eq(schoolManagerUsers.phoneNumber, phoneNumber));
+    const matches = await this.db.db
+      .select({ id: schoolManagerUsers.id })
+      .from(schoolManagerUsers)
+      .where(or(...conditions));
+    if (matches.some(({ id }) => id !== excludedManagerId)) {
+      throw new ValidationError(
+        'A school manager with this username or phone number already exists.',
+      );
+    }
+  }
+
   async verifyAdminOtp(
     challengeId: string,
     code: string,
@@ -681,13 +943,16 @@ export class AuthService {
 
   async refreshTokens(
     refreshToken: string,
-  ): Promise<AuthTokens & { role: 'PARENT' | 'ADMIN'; remembered: boolean }> {
+  ): Promise<AuthTokens & { role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER'; remembered: boolean }> {
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
         secret: this.config.jwtSecret,
       });
 
-      if (payload.type !== 'refresh' || !['PARENT', 'ADMIN'].includes(payload.role)) {
+      if (
+        payload.type !== 'refresh' ||
+        !['PARENT', 'ADMIN', 'SCHOOL_MANAGER'].includes(payload.role)
+      ) {
         throw new AuthenticationError('Invalid refresh token.');
       }
 
@@ -970,13 +1235,22 @@ export class AuthService {
     return legacy[0];
   }
 
-  private async findAccountById(userId: string, role: 'PARENT' | 'ADMIN') {
+  private async findAccountById(userId: string, role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER') {
     if (role === 'ADMIN') {
       return (
         await this.db.db
           .select({ status: adminUsers.status })
           .from(adminUsers)
           .where(eq(adminUsers.id, userId))
+          .limit(1)
+      )[0];
+    }
+    if (role === 'SCHOOL_MANAGER') {
+      return (
+        await this.db.db
+          .select({ status: schoolManagerUsers.status })
+          .from(schoolManagerUsers)
+          .where(eq(schoolManagerUsers.id, userId))
           .limit(1)
       )[0];
     }
@@ -991,18 +1265,19 @@ export class AuthService {
 
   private async generateTokens(
     userId: string,
-    role: 'PARENT' | 'ADMIN',
+    role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER',
     context?: SessionContext,
     replacedSessionId?: string,
     rememberMe = false,
   ): Promise<AuthTokens> {
-    const accessTtl =
-      role === 'ADMIN' ? this.config.adminJwtAccessTokenTtl : this.config.jwtAccessTokenTtl;
+    // SCHOOL_MANAGER intentionally uses the standard (non-platform-admin) TTLs.
+    const isAdmin = role === 'ADMIN';
+    const accessTtl = isAdmin ? this.config.adminJwtAccessTokenTtl : this.config.jwtAccessTokenTtl;
     const refreshTtl = rememberMe
-      ? role === 'ADMIN'
+      ? isAdmin
         ? this.config.adminJwtRememberRefreshTokenTtl
         : this.config.jwtRememberRefreshTokenTtl
-      : role === 'ADMIN'
+      : isAdmin
         ? this.config.adminJwtRefreshTokenTtl
         : this.config.jwtRefreshTokenTtl;
 
@@ -1064,7 +1339,7 @@ export class AuthService {
 
   private async revokeAllSessions(
     subjectId: string,
-    role: 'PARENT' | 'ADMIN',
+    role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER',
     reason: string,
   ): Promise<void> {
     await this.db.db

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { RouteLoading } from '@/components/feedback/route-loading';
 import { ApiClientError, apiRequest } from '@/lib/api-client';
 import { clearAuthSession, setAuthRole } from './auth-session';
+import { PORTAL_PATH_BY_ROLE } from './auth-api';
 
 type GuardStatus = 'checking' | 'authorized' | 'unavailable';
 
@@ -13,7 +14,7 @@ export function PortalSessionGuard({
   role,
   children,
 }: {
-  role: 'PARENT' | 'ADMIN';
+  role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER';
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -25,14 +26,14 @@ export function PortalSessionGuard({
   const verify = useCallback(() => {
     const requestId = ++verificationId.current;
     const isCurrent = () => requestId === verificationId.current;
-    apiRequest<{ user: { role: 'PARENT' | 'ADMIN' } }>('/auth/me', {
+    apiRequest<{ user: { role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER' } }>('/auth/me', {
       cache: 'no-store',
       redirectOnAuthFailure: false,
     })
       .then(({ data }) => {
         if (!isCurrent()) return;
         if (data.user.role !== role) {
-          router.replace(data.user.role === 'ADMIN' ? '/admin/dashboard' : '/student/dashboard');
+          router.replace(PORTAL_PATH_BY_ROLE[data.user.role]);
           return;
         }
         setAuthRole(role);

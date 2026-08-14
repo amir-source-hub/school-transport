@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { ShieldCheck } from 'lucide-react';
-import { LoginForm } from '@/features/auth/auth-forms';
+import { PortalLoginGateway } from '@/features/auth/portal-login-gateway';
 
 export const metadata: Metadata = { title: 'ورود یا ساخت حساب' };
 
@@ -9,19 +7,12 @@ export default function LoginPage() {
   return (
     <>
       <p className="text-xs font-black text-primary">خوش آمدید</p>
-      <h1 className="mt-2 text-3xl font-black tracking-tight">ورود یا ساخت حساب</h1>
-      <p className="mt-3 text-sm leading-7 text-muted">
-        خانواده‌ها با شماره همراه سرپرست و کد ملی دانش‌آموز وارد می‌شوند یا حساب تازه می‌سازند.
+      <h1 className="mt-1 text-3xl font-black tracking-tight">ورود یا ساخت حساب</h1>
+      <p className="mt-2 text-sm leading-7 text-muted">
+        یکی از پنل‌ها را انتخاب کنید و سپس مشخصات ورود خود را وارد کنید.
       </p>
-      <div className="mt-7">
-        <LoginForm />
-      </div>
-      <div className="mt-5 flex items-center justify-center gap-2 border-t border-slate-200/70 pt-5 text-xs text-muted">
-        <ShieldCheck className="size-4 text-primary" />
-        <span>ورود مدیران سامانه از</span>
-        <Link href="/admin/login" className="font-bold text-primary hover:text-primary-hover">
-          صفحه ورود مدیریت
-        </Link>
+      <div className="mt-6">
+        <PortalLoginGateway />
       </div>
     </>
   );

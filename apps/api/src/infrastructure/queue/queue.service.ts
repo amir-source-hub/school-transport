@@ -218,8 +218,20 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       return;
     }
     if (job.name === 'cleanup-student-photos') {
-      await this.studentPhotos.cleanupExpired();
-      this.logger.log('Cleaned up expired and superseded student photos.');
+      try {
+        const cleaned = await this.studentPhotos.cleanupExpired();
+        const stale = await this.studentPhotos.getStaleStateCounts();
+        this.metrics?.recordStudentPhotoCleanup('completed');
+        this.metrics?.setStudentPhotoStaleCounts(stale);
+        this.logger.log(`Cleaned up ${cleaned} expired or stalled student photos.`);
+      } catch (error) {
+        this.metrics?.recordStudentPhotoCleanup('failed');
+        this.logger.error(
+          'Student-photo cleanup failed; BullMQ will apply the configured retry policy.',
+          error instanceof Error ? error.stack : undefined,
+        );
+        throw error;
+      }
       return;
     }
     this.logger.log(`Processed maintenance job ${job.name}.`);

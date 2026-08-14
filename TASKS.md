@@ -19,7 +19,6 @@
 
 - [ ] Supply the Arvan endpoint, region, private bucket, scoped access key/secret, exact CORS origins, lifecycle policy, and versioning choice. **[LATER — USER INPUT]**
 - [ ] Verify presigned PUT/GET expiry and tampering, anonymous denial, key scoping, CORS, TLS, and actual Arvan compatibility in staging for student photos and payment receipts. **[LATER — ARVAN CONFIGURATION]**
-- [ ] Verify and repair scheduled student-photo cleanup. Confirm the worker schedules and executes `cleanupExpired`, records failures without log flooding, transitions expired authorizations to `EXPIRED`, and remains effective after Redis reconnect/restart. Add unit/integration coverage for worker scheduling, Redis interruption/recovery, repeated cleanup, and an authorization request racing cleanup; expose actionable metrics/alerts for stale `AUTHORIZED`, `UPLOADED`, and `VALIDATING` rows. **[READY — WORKER/OBSERVABILITY]**
 - [ ] After the fixes, clear only confirmed expired local authorization rows through the application cleanup path, then run a complete JPEG and PNG acceptance test: authorize, browser `PUT`, complete, server-side metadata/read, isolated validation/crop, canonical 600×800 JPEG write, raw-object deletion, review queue, signed view, approval/rejection, expiry/tampering, and retry. Repeat the equivalent presigned upload/read checks for offline-payment receipts. **[LATER — ARVAN/IMPLEMENTATION VERIFICATION]**
 - [ ] Create a separate public static-asset bucket, public prefix, or CDN origin for website backgrounds, banners, illustrations, and other non-sensitive marketing images. Do not make the private student-photo/payment-receipt bucket public and do not reuse its privileged application credentials in the browser; isolate bucket/prefix policy, credentials, lifecycle, access logs, budgets, and incident impact. **[LATER — PUBLIC ASSET STORAGE DECISION]**
 - [ ] Configure the public delivery boundary with anonymous read access only for the approved static prefix, no anonymous list/write/delete, scoped uploader credentials, TLS, optional CDN/WAF/hotlink controls, controlled CORS for browser `GET`/`HEAD`, compression/content-sniffing protections, access logging, bandwidth/storage alerts, and an explicit domain/certificate/DNS owner. Verify traversal, encoded-key, unauthorized-write, directory-listing, and private-prefix denial. **[LATER — ARVAN/CDN CONFIGURATION]**
@@ -94,6 +93,22 @@ The repository now has the consolidated root environment contract, explicit loca
 - [ ] Freeze the reviewed commit and release ID; record image digests, signatures/SBOM/provenance, environment checksum without values, migration set, backup receipt, approvals, unresolved risks, rollback authority, and exact rollback image. Verify host/DNS/TLS/disk/database/Redis/queue health before migration or traffic changes. **[LATER — GO/NO-GO RECORD]**
 - [ ] Deploy the exact reviewed artifacts using the documented production Compose/runbook. Run the one-shot locked migration, start services, wait for health, and smoke-test homepage, API readiness, authentication, headers, public/private assets, workers/queues, logs/metrics/alerts, and representative student/admin workflows. Do not enable optional providers without their acceptance evidence. **[LATER — PRODUCTION DEPLOYMENT]**
 - [ ] Monitor the agreed stabilization window and prove the rollback/forward-fix procedure is compatible with the deployed schema. Record final status and hand ongoing patching, access reviews, secret rotation, backup/restore drills, vulnerability response, capacity review, retention, certificate monitoring, and disaster-recovery schedules to named primary and backup owners. **[LATER — RELEASE STABILIZATION/OWNERSHIP]**
+
+## 9. School-manager portal acceptance and rollout
+
+The school-manager portal implementation is complete on `feature/school-manager-portal`. These remaining items were moved from the retired implementation plan on 2026-08-14.
+
+### 9.1 Remaining environment verification
+
+- [ ] Apply migration `0032_feedback_polymorphic_senders.sql` to an available local/test database and verify manager provisioning, login, settings, students, dashboard, and feedback end to end. PostgreSQL on `127.0.0.1:5433` was unavailable and Docker Desktop was not running during the 2026-08-14 local acceptance pass. **[LATER — LOCAL DATABASE/DOCKER REQUIRED]**
+
+### 9.2 Product, security, and production decisions
+
+- [ ] Approve final Persian role terminology and manager field-visibility matrix; current implementation uses `پنل دانش‌آموز`, `پنل مدیر مدرسه`, `پنل راننده`, masks student national IDs, and excludes guardian phone/national ID. **[LATER — PRODUCT/LEGAL APPROVAL]**
+- [ ] Confirm multi-school switching UX, whether manager password login requires OTP, whether exports are permitted, feedback categories/response visibility, and the temporary-credential delivery process. **[LATER — PRODUCT/SECURITY DECISION; OTP/SMS PROVIDER BLOCKED]**
+- [ ] Decide whether experimental driver fixtures may appear in production; keep `MANAGER_DRIVER_PREVIEW_ENABLED` off unless explicitly approved and always retain `اطلاعات آزمایشی` labels. **[LATER — PRODUCT APPROVAL]**
+- [ ] Complete a focused threat model and independent security/privacy review for manager authentication, school-scoped child data, credential delivery, session revocation, IDOR, photos, logging, and audit signals. **[LATER — SECURITY/PRIVACY REVIEW]**
+- [ ] Roll out `MANAGER_PORTAL_ENABLED` and `MANAGER_LOGIN_ENABLED` to a pilot school only after migration, account provisioning, acceptance evidence, and approvals; monitor login failures, authorization denials, API errors, and latency without sensitive data. **[LATER — STAGING/PRODUCTION ACCESS]**
 
 ## Cleanup rule
 

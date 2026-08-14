@@ -5,7 +5,7 @@ import { AppError, ConflictError, NotFoundError, ValidationError } from '../../c
 import { generateId } from '../../common/utils';
 import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { DatabaseService } from '../../database/database.service';
-import { students, studentPhotoUploads } from '../../database/schemas';
+import { schoolManagerAssignments, students, studentPhotoUploads } from '../../database/schemas';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import {
   getObjectAfterWrite,
@@ -362,6 +362,52 @@ export class StudentPhotosService {
     };
   }
 
+  async getManagerApprovedViewUrl(managerId: string, studentId: string, ip?: string) {
+    const [upload] = await this.db.db
+      .select({
+        id: studentPhotoUploads.id,
+        canonicalKey: studentPhotoUploads.canonicalKey,
+        status: studentPhotoUploads.status,
+      })
+      .from(studentPhotoUploads)
+      .innerJoin(students, eq(students.id, studentPhotoUploads.studentId))
+      .innerJoin(
+        schoolManagerAssignments,
+        and(
+          eq(schoolManagerAssignments.schoolId, students.schoolId),
+          eq(schoolManagerAssignments.managerUserId, managerId),
+          eq(schoolManagerAssignments.status, 'ACTIVE'),
+        ),
+      )
+      .where(
+        and(
+          eq(students.id, studentId),
+          eq(studentPhotoUploads.status, 'APPROVED'),
+          isNotNull(studentPhotoUploads.canonicalKey),
+        ),
+      )
+      .orderBy(desc(studentPhotoUploads.approvedAt), desc(studentPhotoUploads.id))
+      .limit(1);
+    if (!upload?.canonicalKey) throw new NotFoundError('Student photo');
+    await this.audit.record({
+      actorType: 'SCHOOL_MANAGER',
+      actorId: managerId,
+      action: 'STUDENT_PHOTO_VIEWED',
+      entityType: 'STUDENT_PHOTO_UPLOAD',
+      entityId: upload.id,
+      newValues: { studentId, status: upload.status },
+      ipAddress: ip,
+    });
+    return {
+      status: 'APPROVED' as const,
+      viewUrl: this.storage.presignGet(
+        upload.canonicalKey,
+        this.config.studentPhotoViewUrlTtlSeconds,
+      ),
+      expiresInSeconds: this.config.studentPhotoViewUrlTtlSeconds,
+    };
+  }
+
   async listForAdmin(query: AdminPhotoListQueryDto) {
     const filters = [sql`true`];
     if (query.status) filters.push(eq(studentPhotoUploads.status, query.status));
@@ -664,6 +710,31 @@ export class StudentPhotosService {
       );
     }
     return expirable.length + stalled.length + stalledValidation.length;
+  }
+
+  async getStaleStateCounts(): Promise<Record<'AUTHORIZED' | 'UPLOADED' | 'VALIDATING', number>> {
+    const now = new Date();
+    const rows = await this.db.db
+      .select({ status: studentPhotoUploads.status, value: count() })
+      .from(studentPhotoUploads)
+      .where(
+        or(
+          and(
+            eq(studentPhotoUploads.status, 'AUTHORIZED'),
+            lt(studentPhotoUploads.uploadAuthorizationExpiry, now),
+          ),
+          and(
+            inArray(studentPhotoUploads.status, ['UPLOADED', 'VALIDATING']),
+            lt(studentPhotoUploads.updatedAt, new Date(now.getTime() - UPLOADED_STALL_MS)),
+          ),
+        ),
+      )
+      .groupBy(studentPhotoUploads.status);
+    const counts = { AUTHORIZED: 0, UPLOADED: 0, VALIDATING: 0 };
+    for (const row of rows) {
+      if (row.status in counts) counts[row.status as keyof typeof counts] = Number(row.value);
+    }
+    return counts;
   }
 
   private async assertOwnedStudent(userId: string, studentId: string) {

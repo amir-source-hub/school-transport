@@ -19,12 +19,25 @@ export async function getMyFeedback() {
   const r = await apiRequest<unknown>('/feedback?page=1&pageSize=50', { cache: 'no-store' });
   return z.array(feedbackSchema).parse(r.data);
 }
+export async function getManagerFeedback() {
+  const r = await apiRequest<unknown>('/manager/feedback?page=1&pageSize=50', {
+    cache: 'no-store',
+  });
+  return z.array(feedbackSchema).parse(r.data);
+}
 export async function getAdminFeedback() {
   const r = await apiRequest<unknown>('/admin/feedback?page=1&pageSize=50', { cache: 'no-store' });
   return z.array(feedbackSchema).parse(r.data);
 }
 export async function createFeedback(body: { category: string; subject: string; message: string }) {
   await apiRequest('/feedback', { method: 'POST', body });
+}
+export async function createManagerFeedback(body: {
+  category: string;
+  subject: string;
+  message: string;
+}) {
+  await apiRequest('/manager/feedback', { method: 'POST', body });
 }
 export async function feedbackAction(
   item: Feedback,

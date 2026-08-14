@@ -6,7 +6,7 @@ import { ConfigService } from '../../config/config.service';
 import { PUBLIC_KEY } from '../../common/decorators';
 import { JwtPayload } from '../../common/authentication.types';
 import { DatabaseService } from '../../database/database.service';
-import { adminUsers, authSessions, users } from '../../database/schemas';
+import { adminUsers, authSessions, schoolManagerUsers, users } from '../../database/schemas';
 import { and, eq, isNull, gt } from 'drizzle-orm';
 
 @Injectable()
@@ -42,7 +42,7 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('Invalid token type.');
       }
 
-      if (!payload.sid || !['PARENT', 'ADMIN'].includes(payload.role)) {
+      if (!payload.sid || !['PARENT', 'ADMIN', 'SCHOOL_MANAGER'].includes(payload.role)) {
         throw new UnauthorizedException('Invalid token.');
       }
       const [session] = await this.database.db
@@ -67,11 +67,17 @@ export class AuthGuard implements CanActivate {
               .from(adminUsers)
               .where(eq(adminUsers.id, payload.sub))
               .limit(1)
-          : await this.database.db
-              .select({ status: users.accountStatus })
-              .from(users)
-              .where(eq(users.id, payload.sub))
-              .limit(1);
+          : payload.role === 'SCHOOL_MANAGER'
+            ? await this.database.db
+                .select({ status: schoolManagerUsers.status })
+                .from(schoolManagerUsers)
+                .where(eq(schoolManagerUsers.id, payload.sub))
+                .limit(1)
+            : await this.database.db
+                .select({ status: users.accountStatus })
+                .from(users)
+                .where(eq(users.id, payload.sub))
+                .limit(1);
       if (!account || account.status !== 'ACTIVE') {
         throw new UnauthorizedException('Inactive account.');
       }

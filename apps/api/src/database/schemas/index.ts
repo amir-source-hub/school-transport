@@ -3,6 +3,7 @@ export { parents } from './families.schema';
 export { familyAddresses } from './families.schema';
 export { emergencyContacts } from './families.schema';
 export { adminUsers, adminAuthChallenges } from './auth.schema';
+export { schoolManagerUsers, schoolManagerAssignments } from './school-managers.schema';
 export { schools } from './schools.schema';
 export { students } from './students.schema';
 export { serviceRegistrations } from './registrations.schema';

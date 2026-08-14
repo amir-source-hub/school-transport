@@ -141,3 +141,20 @@ export class AdminStudentPhotosController {
     return successResponse(await this.service.reject(req.user.id, id, body, req.ip));
   }
 }
+
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('SCHOOL_MANAGER')
+@Controller('manager/students')
+export class ManagerStudentPhotosController {
+  constructor(private readonly service: StudentPhotosService) {}
+
+  @Get(':studentId/photo')
+  async approvedPhoto(
+    @Req() req: AuthenticatedRequest,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+  ) {
+    return successResponse(
+      await this.service.getManagerApprovedViewUrl(req.user.id, studentId, req.ip),
+    );
+  }
+}

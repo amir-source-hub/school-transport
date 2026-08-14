@@ -14,6 +14,8 @@ import {
   paymentScheduleItems,
   paymentTransactions,
   registrationPrices,
+  schoolManagerAssignments,
+  schoolManagerUsers,
   schools,
   serviceRegistrations,
   students,
@@ -26,6 +28,11 @@ export const SEED_CREDENTIALS = {
     username: 'demo-admin',
     phoneNumber: '09120000000',
     password: process.env.SEED_ADMIN_PASSWORD ?? 'demo-admin-password',
+  },
+  manager: {
+    username: '09120000001',
+    phoneNumber: '09120000001',
+    password: process.env.SEED_MANAGER_PASSWORD ?? 'demo-manager-password',
   },
 } as const;
 
@@ -56,6 +63,8 @@ const ids = {
   notification1: '00000000-0000-4000-8000-000000000024',
   notification2: '00000000-0000-4000-8000-000000000025',
   offlineDestination: '00000000-0000-4000-8000-000000000026',
+  manager: '00000000-0000-4000-8000-000000000027',
+  managerAssignment: '00000000-0000-4000-8000-000000000028',
 } as const;
 
 export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Promise<void> {
@@ -91,6 +100,29 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
       .update(adminUsers)
       .set({ passwordHash: adminPasswordHash })
       .where(and(eq(adminUsers.id, ids.admin), isNull(adminUsers.passwordHash)));
+    const managerPasswordHash = await argon2.hash(SEED_CREDENTIALS.manager.password);
+    await db
+      .insert(schoolManagerUsers)
+      .values({
+        id: ids.manager,
+        username: SEED_CREDENTIALS.manager.username,
+        firstName: 'Demo',
+        lastName: 'School Manager',
+        phoneNumber: SEED_CREDENTIALS.manager.phoneNumber,
+        passwordHash: managerPasswordHash,
+        mustChangeCredentials: false,
+      })
+      .onConflictDoNothing();
+    await db
+      .insert(schoolManagerAssignments)
+      .values({
+        id: ids.managerAssignment,
+        managerUserId: ids.manager,
+        schoolId: ids.school,
+        isPrimary: true,
+        status: 'ACTIVE',
+      })
+      .onConflictDoNothing();
     await db
       .insert(offlinePaymentDestinations)
       .values({

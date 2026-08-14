@@ -32,7 +32,7 @@ export default function AuthLayout({ children }: Readonly<{ children: React.Reac
         <ArrowRight className="size-4" />
         صفحه اصلی
       </Link>
-      <section className="relative z-10 w-full max-w-[31rem] rounded-[2rem] border border-white/60 bg-white/92 p-6 shadow-[0_30px_90px_-25px_rgba(15,23,42,.65)] backdrop-blur-2xl sm:p-9">
+      <section className="relative z-10 w-full max-w-[38rem] rounded-[2rem] border border-white/60 bg-white/92 p-6 shadow-[0_30px_90px_-25px_rgba(15,23,42,.65)] backdrop-blur-2xl sm:p-9">
         <div className="flex items-center justify-between gap-4 border-b border-slate-200/70 pb-5">
           <Link href="/" className="inline-flex items-center gap-3 font-black text-foreground">
             <span className="grid size-11 place-items-center rounded-2xl bg-navy text-sun shadow-lg">

@@ -29,8 +29,26 @@ export class FeedbackService {
       .insert(feedbackSubmissions)
       .values({
         id: generateId(),
+        senderType: 'PARENT',
         userId,
         studentId: input.studentId ?? null,
+        category: input.category,
+        subject: input.subject.trim(),
+        message: input.message.trim(),
+        status: input.category === 'SAFETY' ? 'ESCALATED' : 'NEW',
+        priority: input.category === 'SAFETY' ? 'URGENT' : 'NORMAL',
+      })
+      .returning();
+    return saved;
+  }
+  async createForManager(managerUserId: string, schoolId: string, input: CreateFeedbackDto) {
+    const [saved] = await this.db.db
+      .insert(feedbackSubmissions)
+      .values({
+        id: generateId(),
+        senderType: 'SCHOOL_MANAGER',
+        managerUserId,
+        schoolId,
         category: input.category,
         subject: input.subject.trim(),
         message: input.message.trim(),
@@ -43,7 +61,28 @@ export class FeedbackService {
   async listMine(userId: string, query: FeedbackQueryDto) {
     const snapshotAt = query.snapshotAt ? new Date(query.snapshotAt) : new Date();
     const where = and(
+      eq(feedbackSubmissions.senderType, 'PARENT'),
       eq(feedbackSubmissions.userId, userId),
+      lte(feedbackSubmissions.createdAt, snapshotAt),
+    );
+    const items = await this.db.db
+      .select()
+      .from(feedbackSubmissions)
+      .where(where)
+      .orderBy(desc(feedbackSubmissions.createdAt), desc(feedbackSubmissions.id))
+      .limit(query.pageSize)
+      .offset((query.page - 1) * query.pageSize);
+    const [{ value }] = await this.db.db
+      .select({ value: count() })
+      .from(feedbackSubmissions)
+      .where(where);
+    return { items, total: Number(value), snapshotAt: snapshotAt.toISOString() };
+  }
+  async listMineForManager(managerUserId: string, query: FeedbackQueryDto) {
+    const snapshotAt = query.snapshotAt ? new Date(query.snapshotAt) : new Date();
+    const where = and(
+      eq(feedbackSubmissions.senderType, 'SCHOOL_MANAGER'),
+      eq(feedbackSubmissions.managerUserId, managerUserId),
       lte(feedbackSubmissions.createdAt, snapshotAt),
     );
     const items = await this.db.db
@@ -65,6 +104,7 @@ export class FeedbackService {
     filters.push(lte(feedbackSubmissions.createdAt, snapshotAt));
     if (query.status) filters.push(eq(feedbackSubmissions.status, query.status));
     if (query.category) filters.push(eq(feedbackSubmissions.category, query.category));
+    if (query.senderType) filters.push(eq(feedbackSubmissions.senderType, query.senderType));
     const where = filters.length ? and(...filters) : sql`true`;
     const items = await this.db.db
       .select()
@@ -120,15 +160,17 @@ export class FeedbackService {
         .where(and(eq(feedbackSubmissions.id, id), eq(feedbackSubmissions.version, version)))
         .returning();
       if (!updated) throw new ConflictError('FEEDBACK_CHANGED', 'این پیام هم‌زمان تغییر کرده است.');
-      await this.notifications.enqueueInTransaction(txn, {
-        eventId: `FEEDBACK_RESPONSE:${id}`,
-        userId: updated.userId,
-        notificationType: 'FEEDBACK_RESPONSE',
-        title: 'پاسخ جدید به پیام شما',
-        message: 'پاسخ مدیریت ثبت شد. برای مشاهده جزئیات وارد پنل امن شوید.',
-        relatedEntityType: 'FEEDBACK',
-        relatedEntityId: id,
-      });
+      if (updated.userId) {
+        await this.notifications.enqueueInTransaction(txn, {
+          eventId: `FEEDBACK_RESPONSE:${id}`,
+          userId: updated.userId,
+          notificationType: 'FEEDBACK_RESPONSE',
+          title: 'پاسخ جدید به پیام شما',
+          message: 'پاسخ مدیریت ثبت شد. برای مشاهده جزئیات وارد پنل امن شوید.',
+          relatedEntityType: 'FEEDBACK',
+          relatedEntityId: id,
+        });
+      }
       await this.audit.recordInTransaction(txn, {
         actorType: 'ADMIN',
         actorId: adminId,

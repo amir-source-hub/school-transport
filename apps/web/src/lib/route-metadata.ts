@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const SITE_NAME = 'ثمین گشت مهر ایران';
 export const SITE_URL = new URL('https://samingasht.ir');
 
-export type RouteAudience = 'public' | 'auth' | 'parent' | 'admin' | 'onboarding';
+export type RouteAudience = 'public' | 'auth' | 'parent' | 'admin' | 'manager' | 'onboarding';
 
 export type RouteDocumentPolicy = {
   path: string;
@@ -338,6 +338,77 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     title: 'بررسی عکس کارت سرویس',
     description: 'بررسی ایمن عکس‌های کارت سرویس دانش‌آموزان.',
     primaryHeading: 'بررسی عکس کارت سرویس',
+  },
+  {
+    path: '/manager',
+    audience: 'manager',
+    title: 'پنل مدیر مدرسه',
+    description: 'ورود به داشبورد مدیر مدرسه.',
+    primaryHeading: 'داشبورد',
+    redirectTo: '/manager/dashboard',
+  },
+  {
+    path: '/manager/dashboard',
+    audience: 'manager',
+    title: 'داشبورد',
+    description: 'نمای عملیاتی مدرسه.',
+    primaryHeading: 'نمای امروز مدرسه',
+  },
+  {
+    path: '/manager/students',
+    audience: 'manager',
+    title: 'دانش‌آموزان',
+    description: 'فهرست دانش‌آموزان مدرسه.',
+    primaryHeading: 'دانش‌آموزان مدرسه',
+  },
+  {
+    path: '/manager/students/[studentId]',
+    audience: 'manager',
+    title: 'جزئیات دانش‌آموز',
+    description: 'نمای امن اطلاعات دانش‌آموز.',
+    primaryHeading: 'دانش‌آموز',
+  },
+  {
+    path: '/manager/drivers',
+    audience: 'manager',
+    title: 'رانندگان',
+    description: 'پیش‌نمایش آزمایشی رانندگان.',
+    primaryHeading: 'رانندگان',
+  },
+  {
+    path: '/manager/drivers/[driverId]',
+    audience: 'manager',
+    title: 'جزئیات راننده',
+    description: 'پرونده آزمایشی راننده.',
+    primaryHeading: 'راننده',
+  },
+  {
+    path: '/manager/online-control',
+    audience: 'manager',
+    title: 'کنترل آنلاین',
+    description: 'پیش‌نمایش غیرفعال کنترل آنلاین.',
+    primaryHeading: 'اتاق کنترل آنلاین',
+  },
+  {
+    path: '/manager/hyperschool',
+    audience: 'manager',
+    title: 'هایپراسکول',
+    description: 'معرفی قابلیت در راه هایپراسکول.',
+    primaryHeading: 'هایپراسکول در حال آماده‌سازی است',
+  },
+  {
+    path: '/manager/feedback',
+    audience: 'manager',
+    title: 'انتقادات و پیشنهادات',
+    description: 'ارسال و پیگیری بازخورد مدیر مدرسه.',
+    primaryHeading: 'انتقادات و پیشنهادات',
+  },
+  {
+    path: '/manager/settings',
+    audience: 'manager',
+    title: 'تنظیمات',
+    description: 'اطلاعات حساب و مدرسه.',
+    primaryHeading: 'تنظیمات حساب و مدرسه',
   },
 ] as const;
 

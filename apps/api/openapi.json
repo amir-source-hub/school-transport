@@ -9,6 +9,38 @@
         "tags": ["Metrics"]
       }
     },
+    "/api/v1/auth/parent/credentials": {
+      "post": {
+        "operationId": "AuthController_parentCredentials",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ParentCredentialsDto" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "" } },
+        "tags": ["Auth"]
+      }
+    },
+    "/api/v1/auth/admin/login": {
+      "post": {
+        "operationId": "AuthController_adminLogin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminLoginDto" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "" } },
+        "tags": ["Auth"]
+      }
+    },
     "/api/v1/auth/request-otp": {
       "post": {
         "operationId": "AuthController_requestOtp",
@@ -18,6 +50,22 @@
           "content": {
             "application/json": {
               "schema": { "$ref": "#/components/schemas/RequestOtpDto" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "" } },
+        "tags": ["Auth"]
+      }
+    },
+    "/api/v1/auth/manager/login": {
+      "post": {
+        "operationId": "AuthController_managerLogin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ManagerLoginDto" }
             }
           }
         },
@@ -155,6 +203,24 @@
         "tags": ["AdminIdentity"]
       }
     },
+    "/api/v1/admin/admins/school-managers": {
+      "post": {
+        "operationId": "AdminIdentityController_provisionSchoolManager",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProvisionSchoolManagerDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminIdentity"]
+      }
+    },
     "/api/v1/admin/admins/{adminId}": {
       "patch": {
         "operationId": "AdminIdentityController_update",
@@ -206,6 +272,22 @@
         ],
         "responses": { "201": { "description": "" } },
         "tags": ["AdminIdentity"]
+      }
+    },
+    "/api/v1/manager/settings/credentials": {
+      "patch": {
+        "operationId": "ManagerSettingsController_changeCredentials",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ManagerCredentialsDto" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "" } },
+        "tags": ["ManagerSettings"]
       }
     },
     "/api/v1/families/complete-registration": {
@@ -1258,6 +1340,21 @@
         "tags": ["AdminContracts"]
       }
     },
+    "/api/v1/admin/contracts/{id}/accept": {
+      "post": {
+        "operationId": "AdminContractsController_acceptOnBehalf",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminContracts"]
+      }
+    },
     "/api/v1/onboarding/contracts/{id}/accept": {
       "post": {
         "operationId": "OnboardingContractsController_accept",
@@ -1467,6 +1564,69 @@
         "operationId": "AdminPaymentsController_offlineSubmissions",
         "parameters": [],
         "responses": { "200": { "description": "" } },
+        "tags": ["AdminPayments"]
+      }
+    },
+    "/api/v1/admin/payments/{scheduleItemId}/offline-submissions": {
+      "post": {
+        "operationId": "AdminPaymentsController_createOfflineSubmission",
+        "parameters": [
+          {
+            "name": "scheduleItemId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OfflinePaymentDto" }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminPayments"]
+      }
+    },
+    "/api/v1/admin/payments/offline-submissions/{submissionId}/receipt/authorize": {
+      "post": {
+        "operationId": "AdminPaymentsController_authorizeReceipt",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizeReceiptUploadDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminPayments"]
+      }
+    },
+    "/api/v1/admin/payments/offline-submissions/{submissionId}/receipt/complete-and-approve": {
+      "post": {
+        "operationId": "AdminPaymentsController_completeAndApproveReceipt",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "201": { "description": "" } },
         "tags": ["AdminPayments"]
       }
     },
@@ -2010,6 +2170,67 @@
         "tags": ["AdminFeedback"]
       }
     },
+    "/api/v1/manager/feedback": {
+      "post": {
+        "operationId": "ManagerFeedbackController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateFeedbackDto" }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["ManagerFeedback"]
+      },
+      "get": {
+        "operationId": "ManagerFeedbackController_mine",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["ManagerFeedback"]
+      }
+    },
+    "/api/v1/manager/dashboard": {
+      "get": {
+        "operationId": "SchoolManagersController_dashboard",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["SchoolManagers"]
+      }
+    },
+    "/api/v1/manager/students": {
+      "get": {
+        "operationId": "SchoolManagersController_students",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["SchoolManagers"]
+      }
+    },
+    "/api/v1/manager/students/{id}": {
+      "get": {
+        "operationId": "SchoolManagersController_studentDetail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["SchoolManagers"]
+      }
+    },
+    "/api/v1/manager/settings": {
+      "get": {
+        "operationId": "SchoolManagersController_settings",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["SchoolManagers"]
+      }
+    },
     "/api/v1/student-photos/uploads": {
       "post": {
         "operationId": "StudentPhotosController_authorize",
@@ -2152,6 +2373,52 @@
         "tags": ["OnboardingStudentPhotos"]
       }
     },
+    "/api/v1/admin/student-photos/families/{familyId}/uploads": {
+      "post": {
+        "operationId": "AdminStudentPhotosController_authorizeForFamily",
+        "parameters": [
+          {
+            "name": "familyId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizePhotoUploadDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminStudentPhotos"]
+      }
+    },
+    "/api/v1/admin/student-photos/families/{familyId}/uploads/{id}/complete": {
+      "post": {
+        "operationId": "AdminStudentPhotosController_completeForFamily",
+        "parameters": [
+          {
+            "name": "familyId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminStudentPhotos"]
+      }
+    },
     "/api/v1/admin/student-photos": {
       "get": {
         "operationId": "AdminStudentPhotosController_list",
@@ -2221,6 +2488,21 @@
         "tags": ["AdminStudentPhotos"]
       }
     },
+    "/api/v1/manager/students/{studentId}/photo": {
+      "get": {
+        "operationId": "ManagerStudentPhotosController_approvedPhoto",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["ManagerStudentPhotos"]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "HealthController_health[0]",
@@ -2276,13 +2558,18 @@
       "cookie": { "type": "apiKey", "in": "cookie", "name": "refresh_token" }
     },
     "schemas": {
+      "ParentCredentialsDto": { "type": "object", "properties": {} },
+      "AdminLoginDto": { "type": "object", "properties": {} },
       "RequestOtpDto": { "type": "object", "properties": {} },
+      "ManagerLoginDto": { "type": "object", "properties": {} },
       "AdminPasswordChallengeDto": { "type": "object", "properties": {} },
       "AdminOtpVerificationDto": { "type": "object", "properties": {} },
       "VerifyAuthOtpDto": { "type": "object", "properties": {} },
       "FinalizeOnboardingDto": { "type": "object", "properties": {} },
       "CreateAdminDto": { "type": "object", "properties": {} },
+      "ProvisionSchoolManagerDto": { "type": "object", "properties": {} },
       "UpdateAdminDto": { "type": "object", "properties": {} },
+      "ManagerCredentialsDto": { "type": "object", "properties": {} },
       "CompleteFamilyDto": { "type": "object", "properties": {} },
       "UpdateProfileDto": { "type": "object", "properties": {} },
       "AddAddressDto": { "type": "object", "properties": {} },

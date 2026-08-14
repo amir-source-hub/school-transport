@@ -35,6 +35,8 @@ export class OperationalMetricsService {
   private readonly httpLatency = new Map<string, number[]>();
   private readonly queueOutcomes = new Map<string, number>();
   private readonly databaseOutcomes = new Map<string, number>();
+  private readonly studentPhotoStale = new Map<string, number>();
+  private readonly studentPhotoCleanupOutcomes = new Map<string, number>();
   private databasePool?: () => { total: number; idle: number; waiting: number };
 
   recordHttp(method: string, route: string, status: number, seconds: number) {
@@ -55,6 +57,18 @@ export class OperationalMetricsService {
 
   recordDatabase(outcome: 'ready' | 'unavailable') {
     this.databaseOutcomes.set(outcome, (this.databaseOutcomes.get(outcome) ?? 0) + 1);
+  }
+
+  recordStudentPhotoCleanup(outcome: 'completed' | 'failed') {
+    this.studentPhotoCleanupOutcomes.set(
+      outcome,
+      (this.studentPhotoCleanupOutcomes.get(outcome) ?? 0) + 1,
+    );
+  }
+
+  setStudentPhotoStaleCounts(counts: Record<'AUTHORIZED' | 'UPLOADED' | 'VALIDATING', number>) {
+    for (const [status, value] of Object.entries(counts))
+      this.studentPhotoStale.set(status, Math.max(0, value));
   }
 
   registerDatabasePool(snapshot: () => { total: number; idle: number; waiting: number }) {
@@ -162,6 +176,18 @@ export class OperationalMetricsService {
     );
     for (const [outcome, count] of [...this.databaseOutcomes].sort())
       lines.push(`school_transport_database_readiness_total{outcome="${outcome}"} ${count}`);
+    lines.push(
+      '# HELP school_transport_student_photo_stale_rows Stale student-photo workflow rows requiring cleanup attention.',
+      '# TYPE school_transport_student_photo_stale_rows gauge',
+    );
+    for (const [status, value] of [...this.studentPhotoStale].sort())
+      lines.push(`school_transport_student_photo_stale_rows{status="${status}"} ${value}`);
+    lines.push(
+      '# HELP school_transport_student_photo_cleanup_total Student-photo cleanup job outcomes.',
+      '# TYPE school_transport_student_photo_cleanup_total counter',
+    );
+    for (const [outcome, value] of [...this.studentPhotoCleanupOutcomes].sort())
+      lines.push(`school_transport_student_photo_cleanup_total{outcome="${outcome}"} ${value}`);
     const pool = this.databasePool?.();
     if (pool)
       lines.push(
