@@ -1,6 +1,10 @@
 import { expect, test } from './fixtures';
 
-test('public navigation and auth entry render without external providers', async ({ page }) => {
+test('public navigation and auth entry render without external providers', async ({
+  page,
+  context,
+  baseURL,
+}) => {
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
@@ -16,10 +20,11 @@ test('public navigation and auth entry render without external providers', async
     page.getByRole('heading', { level: 1, name: 'مراحل ثبت‌نام را قدم به قدم بشناسید' }),
   ).toBeVisible();
 
+  await context.addCookies([{ name: 'e2e-auth', value: 'anon', url: baseURL! }]);
   await page.goto('/login');
   await expect(page.getByRole('heading', { level: 1, name: 'ورود یا ساخت حساب' })).toBeVisible();
-  await page.getByLabel('شماره همراه').fill('0912');
-  await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
+  await page.getByLabel('شماره همراه سرپرست').fill('0912');
+  await page.getByRole('button', { name: 'ورود یا ثبت‌نام و ادامه' }).click();
   await expect(page.getByText('شماره همراه را با قالب 09xxxxxxxxx وارد کنید.')).toBeVisible();
 });
 

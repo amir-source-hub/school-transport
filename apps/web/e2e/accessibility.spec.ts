@@ -11,7 +11,12 @@ async function blockingViolations(page: Page) {
   );
 }
 
-test('public pages expose no serious or critical accessibility violations', async ({ page }) => {
+test('public pages expose no serious or critical accessibility violations', async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await context.addCookies([{ name: 'e2e-auth', value: 'anon', url: baseURL! }]);
   for (const path of ['/', '/registration-guide', '/login']) {
     await page.goto(path);
     await expect(page.locator('html')).toHaveAttribute('lang', 'fa');

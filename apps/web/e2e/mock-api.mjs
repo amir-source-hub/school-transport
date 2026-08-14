@@ -29,13 +29,23 @@ const server = createServer((request, response) => {
   if (request.method === 'OPTIONS') return send(response, 204, null);
   if (url.pathname === '/health') return send(response, 200, { ok: true });
   if (url.pathname === '/api/v1/auth/me') {
+    if (request.headers.cookie?.includes('e2e-auth=anon')) {
+      return send(response, 200, {
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'anonymous E2E session' },
+      });
+    }
     if (request.headers.cookie?.includes('e2e-failure=503')) {
       return send(response, 200, {
         success: false,
         error: { code: 'SERVICE_UNAVAILABLE', message: 'seeded dependency failure' },
       });
     }
-    const role = request.headers.cookie?.includes('e2e-role=ADMIN') ? 'ADMIN' : 'PARENT';
+    const role = request.headers.cookie?.includes('e2e-role=SCHOOL_MANAGER')
+      ? 'SCHOOL_MANAGER'
+      : request.headers.cookie?.includes('e2e-role=ADMIN')
+        ? 'ADMIN'
+        : 'PARENT';
     return send(response, 200, { success: true, data: { user: { role } } });
   }
   if (url.pathname === '/api/v1/notifications/settings') {
