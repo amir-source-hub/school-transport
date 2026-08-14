@@ -630,8 +630,17 @@ export class PaymentsService {
     ) {
       throw new ValidationError('Uploaded receipt size does not match the declared file.');
     }
-    const raw = await this.storage.getObject(rawKey).catch(() => null);
-    if (!raw) throw new AppError('RECEIPT_UPLOAD_MISSING', 'Receipt image could not be read.', 409);
+    let raw = await this.storage.getObject(rawKey).catch(() => null);
+    if (!raw) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      raw = await this.storage.getObject(rawKey).catch(() => null);
+    }
+    if (!raw)
+      throw new AppError(
+        'RECEIPT_STORAGE_NOT_READY',
+        'ذخیره تصویر رسید هنوز نهایی نشده است. چند لحظه بعد دوباره تلاش کنید.',
+        503,
+      );
     let processed;
     try {
       processed = await processReceiptImage(raw, {
@@ -684,6 +693,17 @@ export class PaymentsService {
       });
     } catch (error) {
       await this.storage.deleteObject(canonicalKey).catch(() => undefined);
+      const [current] = await this.db.db
+        .select()
+        .from(offlinePaymentSubmissions)
+        .where(
+          and(
+            eq(offlinePaymentSubmissions.id, submissionId),
+            eq(offlinePaymentSubmissions.payerUserId, userId),
+          ),
+        )
+        .limit(1);
+      if (current?.status === 'PENDING_REVIEW') return current;
       throw error;
     }
     await this.storage.deleteObject(rawKey).catch(() => undefined);

@@ -148,33 +148,42 @@ export class S3Client {
   }
 
   async headObject(key: string): Promise<{ size: number; etag: string }> {
-    const url = this.sign('HEAD', key, 60);
-    const response = await fetch(url, { method: 'HEAD' });
-    if (!response.ok) throw new S3StorageError(`Object ${key} not available.`);
-    const contentLength = response.headers.get('content-length');
-    let size = contentLength === null ? null : Number(contentLength);
-    let etag = response.headers.get('etag') ?? '';
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        const headUrl = this.sign('HEAD', key, 60);
+        const headResponse = await fetch(headUrl, { method: 'HEAD' });
+        const headLength = headResponse.headers.get('content-length');
+        const headSize = headLength === null ? Number.NaN : Number(headLength);
+        if (headResponse.ok && Number.isFinite(headSize)) {
+          return { size: headSize, etag: headResponse.headers.get('etag') ?? '' };
+        }
 
-    // Some S3-compatible providers, including Arvan, omit Content-Length on HEAD.
-    // A one-byte ranged GET exposes the total object size in Content-Range.
-    if (size === null || !Number.isFinite(size)) {
-      const rangeUrl = this.sign('GET', key, 60);
-      const rangeResponse = await fetch(rangeUrl, {
-        headers: { Range: 'bytes=0-0' },
-      });
-      if (!rangeResponse.ok) throw new S3StorageError(`Object ${key} metadata unavailable.`);
-      const contentRange = rangeResponse.headers.get('content-range');
-      const totalMatch = contentRange?.match(/\/(\d+)$/);
-      const fallbackLength = rangeResponse.headers.get('content-length');
-      size = totalMatch ? Number(totalMatch[1]) : Number(fallbackLength ?? Number.NaN);
-      etag ||= rangeResponse.headers.get('etag') ?? '';
-      await rangeResponse.body?.cancel();
+        // Arvan and other S3-compatible providers can reject HEAD or omit its length while
+        // the just-written object is already readable. A ranged GET is the compatible source
+        // of truth and avoids reporting a successful browser PUT as missing.
+        const rangeUrl = this.sign('GET', key, 60);
+        const rangeResponse = await fetch(rangeUrl, { headers: { Range: 'bytes=0-0' } });
+        if (!rangeResponse.ok) {
+          await rangeResponse.body?.cancel();
+          throw new S3StorageError(`Object ${key} metadata unavailable.`);
+        }
+        const contentRange = rangeResponse.headers.get('content-range');
+        const totalMatch = contentRange?.match(/\/(\d+)$/);
+        const fallbackLength = rangeResponse.headers.get('content-length');
+        const size = totalMatch ? Number(totalMatch[1]) : Number(fallbackLength ?? Number.NaN);
+        const etag = rangeResponse.headers.get('etag') ?? headResponse.headers.get('etag') ?? '';
+        await rangeResponse.body?.cancel();
+        if (Number.isFinite(size)) return { size, etag };
+        throw new S3StorageError(`Object ${key} size unavailable.`);
+      } catch (error) {
+        lastError = error;
+        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 150 * 2 ** attempt));
+      }
     }
-
-    if (size === null || !Number.isFinite(size)) {
-      throw new S3StorageError(`Object ${key} size unavailable.`);
-    }
-    return { size, etag };
+    throw lastError instanceof Error
+      ? lastError
+      : new S3StorageError(`Object ${key} not available.`);
   }
 
   async getObject(key: string): Promise<Buffer> {

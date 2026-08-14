@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { presignedUrl } from './s3.client';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { presignedUrl, S3Client } from './s3.client';
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('S3 SigV4 presigned URLs', () => {
   it('matches the AWS documentation presigned GET example', () => {
@@ -55,5 +57,37 @@ describe('S3 SigV4 presigned URLs', () => {
       now: new Date('2026-01-01T00:00:00Z'),
     } as const;
     expect(presignedUrl(base)).toBe(presignedUrl(base));
+  });
+
+  it('falls back to a ranged GET when an S3-compatible provider rejects HEAD', async () => {
+    const cancel = vi.fn(async () => undefined);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        headers: new Headers(),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers({ 'content-range': 'bytes 0-0/12345', etag: 'etag-1' }),
+        body: { cancel },
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new S3Client({
+      endpoint: 'https://s3.example.com',
+      bucket: 'private',
+      region: 'r1',
+      accessKey: 'access',
+      secretKey: 'secret',
+    });
+
+    await expect(client.headObject('raw/photo.jpg')).resolves.toEqual({
+      size: 12345,
+      etag: 'etag-1',
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, expect.stringContaining('raw/photo.jpg'), {
+      headers: { Range: 'bytes=0-0' },
+    });
+    expect(cancel).toHaveBeenCalled();
   });
 });

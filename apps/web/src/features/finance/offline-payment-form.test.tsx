@@ -13,6 +13,7 @@ vi.mock('./payments-api', () => api);
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 class UploadRequest {
+  static statuses: number[] = [];
   upload: {
     onprogress?: (event: { lengthComputable: boolean; loaded: number; total: number }) => void;
   } = {};
@@ -23,6 +24,7 @@ class UploadRequest {
   open() {}
   setRequestHeader() {}
   send() {
+    this.status = UploadRequest.statuses.shift() ?? 200;
     this.upload.onprogress?.({ lengthComputable: true, loaded: 10, total: 10 });
     this.onload?.();
   }
@@ -45,9 +47,13 @@ describe('OfflinePaymentForm', () => {
       instructions: 'رسید را ثبت کنید.',
     });
     api.submitOfflinePayment.mockResolvedValue('submission-1');
-    api.authorizeReceiptUpload.mockResolvedValue('https://storage.example/upload');
+    api.authorizeReceiptUpload.mockResolvedValue({
+      uploadUrl: 'https://storage.example/upload',
+      expiresInSeconds: 300,
+    });
     api.completeReceiptUpload.mockResolvedValue(undefined);
     vi.stubGlobal('XMLHttpRequest', UploadRequest);
+    UploadRequest.statuses = [];
     Object.defineProperty(URL, 'createObjectURL', {
       configurable: true,
       value: vi.fn(() => 'blob:receipt'),
@@ -78,5 +84,27 @@ describe('OfflinePaymentForm', () => {
       expect(api.completeReceiptUpload).toHaveBeenCalledWith('submission-1', 'panel'),
     );
     expect(api.authorizeReceiptUpload).toHaveBeenCalledWith('submission-1', file, 'panel');
+  });
+
+  it('reuses one receipt authorization after an uncertain storage upload', async () => {
+    UploadRequest.statuses = [500, 200];
+    const user = userEvent.setup();
+    render(<OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت' }]} />);
+    await screen.findByText('6037991234567890');
+    fireEvent.change(screen.getByLabelText('سال'), { target: { value: '1405' } });
+    fireEvent.change(screen.getByLabelText('ماه'), { target: { value: '05' } });
+    fireEvent.change(screen.getByLabelText('روز'), { target: { value: '18' } });
+    await user.type(screen.getByLabelText('شماره پیگیری بانکی'), '123456');
+    const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'receipt.jpg', {
+      type: 'image/jpeg',
+    });
+    await user.upload(screen.getByLabelText('تصویر رسید (JPEG یا PNG)'), file);
+
+    await user.click(screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' }));
+    expect(await screen.findByText(/دوباره تلاش کنید/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' }));
+
+    await waitFor(() => expect(api.completeReceiptUpload).toHaveBeenCalled());
+    expect(api.authorizeReceiptUpload).toHaveBeenCalledTimes(1);
   });
 });

@@ -179,11 +179,17 @@ export class StudentPhotosService {
     try {
       raw = await this.storage.getObject(upload.rawKey);
     } catch {
-      throw new AppError(
-        'PHOTO_UPLOAD_MISSING',
-        'عکس قابل خواندن نیست. دوباره بارگذاری کنید.',
-        409,
-      );
+      // A provider may expose metadata just before the object body becomes readable.
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      try {
+        raw = await this.storage.getObject(upload.rawKey);
+      } catch {
+        throw new AppError(
+          'PHOTO_STORAGE_NOT_READY',
+          'ذخیره عکس هنوز نهایی نشده است. چند لحظه بعد دوباره تلاش کنید.',
+          503,
+        );
+      }
     }
     if (raw.length !== head.size) {
       await this.markFailed(upload.id, 'SIZE_MISMATCH', ip);
