@@ -20,6 +20,7 @@ import type {
 const RAW_PREFIX = 'student-photos/raw/';
 const CANONICAL_PREFIX = 'student-photos/canonical/';
 const UPLOADED_STALL_MS = 6 * 60 * 60 * 1_000;
+const VALIDATING_STALL_MS = 15 * 60 * 1_000;
 const RAW_RETENTION_MS = 24 * 60 * 60 * 1_000;
 const CANONICAL_RETENTION_MS = 30 * 24 * 60 * 60 * 1_000;
 
@@ -596,6 +597,37 @@ export class StudentPhotosService {
       );
     }
 
+    const stalledValidation = await this.db.db
+      .select({ id: studentPhotoUploads.id, rawKey: studentPhotoUploads.rawKey })
+      .from(studentPhotoUploads)
+      .where(
+        and(
+          eq(studentPhotoUploads.status, 'VALIDATING'),
+          lt(studentPhotoUploads.updatedAt, new Date(now.getTime() - VALIDATING_STALL_MS)),
+        ),
+      );
+    if (stalledValidation.length > 0) {
+      await this.db.db
+        .update(studentPhotoUploads)
+        .set({
+          status: 'FAILED',
+          rejectionCode: 'PROCESSING_STALLED',
+          failedAt: now,
+          updatedAt: now,
+        })
+        .where(
+          inArray(
+            studentPhotoUploads.id,
+            stalledValidation.map((row) => row.id),
+          ),
+        );
+      await Promise.all(
+        stalledValidation.map((row) =>
+          this.storage.deleteObject(row.rawKey).catch(() => undefined),
+        ),
+      );
+    }
+
     const removable = await this.db.db
       .select({ id: studentPhotoUploads.id, rawKey: studentPhotoUploads.rawKey })
       .from(studentPhotoUploads)
@@ -629,7 +661,7 @@ export class StudentPhotosService {
           ),
       );
     }
-    return expirable.length + stalled.length;
+    return expirable.length + stalled.length + stalledValidation.length;
   }
 
   private async assertOwnedStudent(userId: string, studentId: string) {

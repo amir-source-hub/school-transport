@@ -528,6 +528,7 @@ describe('StudentPhotosService cleanupExpired', () => {
   it('expires stale authorizations and fails stalled uploads', async () => {
     const expirable = baseRow({ id: 'exp-1', status: 'AUTHORIZED' });
     const stalled = baseRow({ id: 'stall-1', status: 'UPLOADED' });
+    const stalledValidation = baseRow({ id: 'validation-stall-1', status: 'VALIDATING' });
     const removable = baseRow({ id: 'old-1', status: 'REJECTED' });
     const canonicalRemovable = baseRow({
       id: 'old-c-1',
@@ -540,6 +541,7 @@ describe('StudentPhotosService cleanupExpired', () => {
           .fn()
           .mockReturnValueOnce(selectWhere([expirable]))
           .mockReturnValueOnce(selectWhere([stalled]))
+          .mockReturnValueOnce(selectWhere([stalledValidation]))
           .mockReturnValueOnce(selectWhere([removable]))
           .mockReturnValueOnce(selectWhere([canonicalRemovable])),
         update: vi.fn(() => updateSimple()),
@@ -548,8 +550,9 @@ describe('StudentPhotosService cleanupExpired', () => {
     const store = storage();
     const service = new StudentPhotosService(db, config(), notifications(), store, audit());
 
-    await expect(service.cleanupExpired()).resolves.toBe(2);
+    await expect(service.cleanupExpired()).resolves.toBe(3);
     expect(store.deleteObject).toHaveBeenCalledWith(expirable.rawKey);
+    expect(store.deleteObject).toHaveBeenCalledWith(stalledValidation.rawKey);
     expect(store.deleteObject).toHaveBeenCalledWith('canonical/x.jpg');
   });
 });
