@@ -107,6 +107,13 @@ export async function getManagerStudents(query: string) {
 export async function getManagerStudent(id: string) {
   return (await apiRequest<ManagerStudentDetail>(`/manager/students/${id}`)).data;
 }
+export async function getManagerStudentPhoto(id: string) {
+  return (
+    await apiRequest<{ status: 'APPROVED'; viewUrl: string; expiresInSeconds: number }>(
+      `/manager/students/${id}/photo`,
+    )
+  ).data;
+}
 export async function getManagerSettings() {
   return (await apiRequest<ManagerSettings>('/manager/settings')).data;
 }

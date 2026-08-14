@@ -95,6 +95,22 @@ The repository now has the consolidated root environment contract, explicit loca
 - [ ] Deploy the exact reviewed artifacts using the documented production Compose/runbook. Run the one-shot locked migration, start services, wait for health, and smoke-test homepage, API readiness, authentication, headers, public/private assets, workers/queues, logs/metrics/alerts, and representative student/admin workflows. Do not enable optional providers without their acceptance evidence. **[LATER — PRODUCTION DEPLOYMENT]**
 - [ ] Monitor the agreed stabilization window and prove the rollback/forward-fix procedure is compatible with the deployed schema. Record final status and hand ongoing patching, access reviews, secret rotation, backup/restore drills, vulnerability response, capacity review, retention, certificate monitoring, and disaster-recovery schedules to named primary and backup owners. **[LATER — RELEASE STABILIZATION/OWNERSHIP]**
 
+## 9. School-manager portal acceptance and rollout
+
+The school-manager portal implementation is complete on `feature/school-manager-portal`. These remaining items were moved from the retired implementation plan on 2026-08-14.
+
+### 9.1 Remaining environment verification
+
+- [ ] Apply migration `0032_feedback_polymorphic_senders.sql` to an available local/test database and verify manager provisioning, login, settings, students, dashboard, and feedback end to end. PostgreSQL on `127.0.0.1:5433` was unavailable and Docker Desktop was not running during the 2026-08-14 local acceptance pass. **[LATER — LOCAL DATABASE/DOCKER REQUIRED]**
+
+### 9.2 Product, security, and production decisions
+
+- [ ] Approve final Persian role terminology and manager field-visibility matrix; current implementation uses `پنل دانش‌آموز`, `پنل مدیر مدرسه`, `پنل راننده`, masks student national IDs, and excludes guardian phone/national ID. **[LATER — PRODUCT/LEGAL APPROVAL]**
+- [ ] Confirm multi-school switching UX, whether manager password login requires OTP, whether exports are permitted, feedback categories/response visibility, and the temporary-credential delivery process. **[LATER — PRODUCT/SECURITY DECISION; OTP/SMS PROVIDER BLOCKED]**
+- [ ] Decide whether experimental driver fixtures may appear in production; keep `MANAGER_DRIVER_PREVIEW_ENABLED` off unless explicitly approved and always retain `اطلاعات آزمایشی` labels. **[LATER — PRODUCT APPROVAL]**
+- [ ] Complete a focused threat model and independent security/privacy review for manager authentication, school-scoped child data, credential delivery, session revocation, IDOR, photos, logging, and audit signals. **[LATER — SECURITY/PRIVACY REVIEW]**
+- [ ] Roll out `MANAGER_PORTAL_ENABLED` and `MANAGER_LOGIN_ENABLED` to a pilot school only after migration, account provisioning, acceptance evidence, and approvals; monitor login failures, authorization denials, API errors, and latency without sensitive data. **[LATER — STAGING/PRODUCTION ACCESS]**
+
 ## Cleanup rule
 
 - Remove an item when its implementation and verification are complete.

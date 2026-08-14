@@ -1,11 +1,12 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { getManagerStudent } from '@/features/manager/manager-api';
+import { getManagerStudent, getManagerStudentPhoto } from '@/features/manager/manager-api';
 export const metadata = { title: 'جزئیات دانش‌آموز' };
 export default async function Page({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
   const s = await getManagerStudent(studentId);
+  const photo = s.hasApprovedPhoto ? await getManagerStudentPhoto(studentId) : null;
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -16,11 +17,26 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
         ]}
       />
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-black">
-            {s.firstName} {s.lastName}
-          </h1>
-          <p className="mt-2 text-sm text-muted">{s.school.name}</p>
+        <div className="flex items-center gap-4">
+          {photo ? (
+            // The URL is a short-lived, manager-scoped private-storage URL returned by the API.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photo.viewUrl} alt="" className="size-20 rounded-2xl object-cover" />
+          ) : (
+            <span
+              className="grid size-20 place-items-center rounded-2xl bg-primary-soft text-xl font-black text-primary"
+              aria-hidden="true"
+            >
+              {s.firstName.slice(0, 1)}
+              {s.lastName.slice(0, 1)}
+            </span>
+          )}
+          <div>
+            <h1 className="text-2xl font-black">
+              {s.firstName} {s.lastName}
+            </h1>
+            <p className="mt-2 text-sm text-muted">{s.school.name}</p>
+          </div>
         </div>
         <Badge tone={s.isActive ? 'success' : 'neutral'}>{s.isActive ? 'فعال' : 'غیرفعال'}</Badge>
       </header>

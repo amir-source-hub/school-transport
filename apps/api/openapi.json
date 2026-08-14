@@ -2488,6 +2488,21 @@
         "tags": ["AdminStudentPhotos"]
       }
     },
+    "/api/v1/manager/students/{studentId}/photo": {
+      "get": {
+        "operationId": "ManagerStudentPhotosController_approvedPhoto",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["ManagerStudentPhotos"]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "HealthController_health[0]",

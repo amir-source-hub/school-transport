@@ -2292,6 +2292,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/manager/students/{studentId}/photo': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['ManagerStudentPhotosController_approvedPhoto'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/health': {
     parameters: {
       query?: never;
@@ -5615,6 +5631,25 @@ export interface operations {
     };
     responses: {
       201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ManagerStudentPhotosController_approvedPhoto: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        studentId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
         headers: {
           [name: string]: unknown;
         };

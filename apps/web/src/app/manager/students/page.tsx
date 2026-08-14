@@ -43,6 +43,7 @@ export default async function Page({
           </label>
           <select
             name="photoStatus"
+            aria-label="وضعیت عکس دانش‌آموز"
             defaultValue={typeof raw.photoStatus === 'string' ? raw.photoStatus : 'all'}
             className="min-h-12 rounded-xl border border-border bg-white px-3"
           >

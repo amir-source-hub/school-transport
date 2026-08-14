@@ -5,7 +5,7 @@ import { AppError, ConflictError, NotFoundError, ValidationError } from '../../c
 import { generateId } from '../../common/utils';
 import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { DatabaseService } from '../../database/database.service';
-import { students, studentPhotoUploads } from '../../database/schemas';
+import { schoolManagerAssignments, students, studentPhotoUploads } from '../../database/schemas';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import { S3_CLIENT, type S3Storage } from '../../infrastructure/s3/s3-storage.port';
 import { assertStudentPhotoTransition, type StudentPhotoStatus } from './student-photo-lifecycle';
@@ -349,6 +349,52 @@ export class StudentPhotosService {
       uploadId: upload.id,
       status: upload.status,
       viewUrl: this.storage.presignGet(key, this.config.studentPhotoViewUrlTtlSeconds),
+      expiresInSeconds: this.config.studentPhotoViewUrlTtlSeconds,
+    };
+  }
+
+  async getManagerApprovedViewUrl(managerId: string, studentId: string, ip?: string) {
+    const [upload] = await this.db.db
+      .select({
+        id: studentPhotoUploads.id,
+        canonicalKey: studentPhotoUploads.canonicalKey,
+        status: studentPhotoUploads.status,
+      })
+      .from(studentPhotoUploads)
+      .innerJoin(students, eq(students.id, studentPhotoUploads.studentId))
+      .innerJoin(
+        schoolManagerAssignments,
+        and(
+          eq(schoolManagerAssignments.schoolId, students.schoolId),
+          eq(schoolManagerAssignments.managerUserId, managerId),
+          eq(schoolManagerAssignments.status, 'ACTIVE'),
+        ),
+      )
+      .where(
+        and(
+          eq(students.id, studentId),
+          eq(studentPhotoUploads.status, 'APPROVED'),
+          isNotNull(studentPhotoUploads.canonicalKey),
+        ),
+      )
+      .orderBy(desc(studentPhotoUploads.approvedAt), desc(studentPhotoUploads.id))
+      .limit(1);
+    if (!upload?.canonicalKey) throw new NotFoundError('Student photo');
+    await this.audit.record({
+      actorType: 'SCHOOL_MANAGER',
+      actorId: managerId,
+      action: 'STUDENT_PHOTO_VIEWED',
+      entityType: 'STUDENT_PHOTO_UPLOAD',
+      entityId: upload.id,
+      newValues: { studentId, status: upload.status },
+      ipAddress: ip,
+    });
+    return {
+      status: 'APPROVED' as const,
+      viewUrl: this.storage.presignGet(
+        upload.canonicalKey,
+        this.config.studentPhotoViewUrlTtlSeconds,
+      ),
       expiresInSeconds: this.config.studentPhotoViewUrlTtlSeconds,
     };
   }
