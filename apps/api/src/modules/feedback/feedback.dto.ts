@@ -34,6 +34,7 @@ export class FeedbackQueryDto {
   @Type(() => Number) @IsInt() @Min(5) @Max(50) pageSize = 10;
   @IsOptional() @IsIn(['NEW', 'READ', 'ESCALATED', 'ANSWERED', 'CLOSED']) status?: string;
   @IsOptional() @IsIn(FEEDBACK_CATEGORIES) category?: string;
+  @IsOptional() @IsIn(['PARENT', 'SCHOOL_MANAGER']) senderType?: string;
   @IsOptional() @IsDateString({ strict: true }) snapshotAt?: string;
 }
 export class AssignFeedbackDto {

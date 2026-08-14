@@ -57,6 +57,10 @@ const envSchema = z
       .enum(['true', 'false'])
       .default('true')
       .transform((value) => value === 'true'),
+    FEATURE_MANAGER_DRIVER_PREVIEW: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
     FEATURE_ADMIN_2FA: z
       .enum(['true', 'false'])
       .default('true')
@@ -296,6 +300,9 @@ export class ConfigService implements OnApplicationShutdown {
   }
   get featureManagerLogin(): boolean {
     return this.env.FEATURE_MANAGER_LOGIN;
+  }
+  get featureManagerDriverPreview(): boolean {
+    return this.env.FEATURE_MANAGER_DRIVER_PREVIEW;
   }
   get onboardingSessionTtlSeconds(): number {
     return this.env.ONBOARDING_SESSION_TTL_SECONDS;

@@ -3,7 +3,11 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '../../config/config.service';
 import { AuthService } from './application/auth.service';
 import { OnboardingService } from './application/onboarding.service';
-import { AdminIdentityController, AuthController } from './presentation/auth.controller';
+import {
+  AdminIdentityController,
+  AuthController,
+  ManagerSettingsController,
+} from './presentation/auth.controller';
 import { TrustedOriginGuard } from '../access-control/trusted-origin.guard';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
 import {
@@ -24,7 +28,7 @@ import { OTP_DELIVERY } from './application/otp-delivery.port';
       }),
     }),
   ],
-  controllers: [AuthController, AdminIdentityController],
+  controllers: [AuthController, AdminIdentityController, ManagerSettingsController],
   providers: [
     AuthService,
     OnboardingService,

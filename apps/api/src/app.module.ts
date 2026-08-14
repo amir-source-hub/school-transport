@@ -25,6 +25,7 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { SmsModule } from './infrastructure/sms/sms.module';
 import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+import { SchoolManagersModule } from './modules/school-managers/school-managers.module';
 import { S3Module } from './infrastructure/s3/s3.module';
 import { StudentPhotosModule } from './modules/student-images/student-photos.module';
 import { MetricsModule } from './infrastructure/metrics/metrics.module';
@@ -54,6 +55,7 @@ import { HttpMetricsInterceptor } from './infrastructure/metrics/http-metrics.in
     AuditModule,
     BroadcastsModule,
     FeedbackModule,
+    SchoolManagersModule,
     StudentPhotosModule,
     HealthModule,
     QueueModule,

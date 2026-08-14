@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import type { CookieSerializeOptions } from '@fastify/cookie';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from '../application/auth.service';
 import { Public } from '../../../common/decorators';
 import { AuthGuard } from '../../access-control/auth.guard';
@@ -283,6 +284,52 @@ export class AdminIdentityController {
         id: req.user.id,
         ip: req.ip,
       }),
+    );
+  }
+}
+
+export class ManagerCredentialsDto {
+  @IsString()
+  @Length(1, 128)
+  currentPassword!: string;
+
+  @IsString()
+  @Length(3, 100)
+  newUsername!: string;
+
+  @IsString()
+  @Length(8, 128)
+  newPassword!: string;
+
+  @IsString()
+  @Length(8, 128)
+  confirmNewPassword!: string;
+}
+
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('SCHOOL_MANAGER')
+@Controller('manager/settings')
+export class ManagerSettingsController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Patch('credentials')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async changeCredentials(@Req() req: AuthenticatedRequest, @Body() dto: ManagerCredentialsDto) {
+    if (dto.newPassword !== dto.confirmNewPassword) {
+      throw new ValidationError('تکرار رمز عبور با رمز عبور جدید یکسان نیست.', {
+        confirmNewPassword: ['تکرار رمز عبور باید با رمز عبور جدید یکسان باشد.'],
+      });
+    }
+    return successResponse(
+      await this.authService.changeSchoolManagerCredentials(
+        req.user.id,
+        {
+          currentPassword: dto.currentPassword,
+          newUsername: dto.newUsername,
+          newPassword: dto.newPassword,
+        },
+        { id: req.user.id, ip: req.ip },
+      ),
     );
   }
 }
