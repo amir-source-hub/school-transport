@@ -7,7 +7,11 @@ import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { DatabaseService } from '../../database/database.service';
 import { students, studentPhotoUploads } from '../../database/schemas';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
-import { S3_CLIENT, type S3Storage } from '../../infrastructure/s3/s3-storage.port';
+import {
+  getObjectAfterWrite,
+  S3_CLIENT,
+  type S3Storage,
+} from '../../infrastructure/s3/s3-storage.port';
 import { assertStudentPhotoTransition, type StudentPhotoStatus } from './student-photo-lifecycle';
 import { PhotoValidationError, type ProcessedPhoto } from './student-photo-processor';
 import { processStudentPhotoIsolated } from './isolated-photo-processor';
@@ -156,43 +160,35 @@ export class StudentPhotosService {
     }
     assertStudentPhotoTransition(upload.status as StudentPhotoStatus, 'UPLOADED');
 
-    let head: { size: number; etag: string };
-    try {
-      head = await this.storage.headObject(upload.rawKey);
-    } catch {
-      throw new AppError(
-        'PHOTO_UPLOAD_MISSING',
-        'عکس به ذخیره‌گاه نرسیده است. دوباره بارگذاری کنید.',
-        409,
-      );
-    }
-    if (head.size > this.config.studentPhotoMaxBytes) {
+    const head = await this.storage.headObject(upload.rawKey).catch(() => null);
+    if (head && head.size > this.config.studentPhotoMaxBytes) {
       await this.markFailed(upload.id, 'TOO_LARGE', ip);
       throw new ValidationError('فایل بارگذاری‌شده از حد مجاز ۵ مگابایت بزرگ‌تر است.');
     }
-    if (head.size !== upload.declaredSize) {
+    if (head && head.size !== upload.declaredSize) {
       await this.markFailed(upload.id, 'SIZE_MISMATCH', ip);
       await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
       throw new ValidationError('اندازه فایل بارگذاری‌شده با اندازه اعلام‌شده مطابقت ندارد.');
     }
 
-    let raw: Buffer;
-    try {
-      raw = await this.storage.getObject(upload.rawKey);
-    } catch {
-      // A provider may expose metadata just before the object body becomes readable.
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      try {
-        raw = await this.storage.getObject(upload.rawKey);
-      } catch {
-        throw new AppError(
-          'PHOTO_STORAGE_NOT_READY',
-          'ذخیره عکس هنوز نهایی نشده است. چند لحظه بعد دوباره تلاش کنید.',
-          503,
-        );
-      }
+    const raw = await getObjectAfterWrite(
+      this.storage,
+      upload.rawKey,
+      this.config.studentPhotoMaxBytes,
+    );
+    if (!raw) {
+      throw new AppError(
+        'PHOTO_STORAGE_NOT_READY',
+        'ذخیره عکس هنوز نهایی نشده است. چند لحظه بعد دوباره تلاش کنید.',
+        503,
+      );
     }
-    if (raw.length !== head.size) {
+    if (raw.length > this.config.studentPhotoMaxBytes) {
+      await this.markFailed(upload.id, 'TOO_LARGE', ip);
+      await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
+      throw new ValidationError('فایل بارگذاری‌شده از حد مجاز ۵ مگابایت بزرگ‌تر است.');
+    }
+    if (raw.length !== upload.declaredSize) {
       await this.markFailed(upload.id, 'SIZE_MISMATCH', ip);
       await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
       throw new ValidationError('اندازه فایل خوانده‌شده از ذخیره‌گاه معتبر نیست.');

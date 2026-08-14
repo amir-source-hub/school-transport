@@ -186,11 +186,44 @@ export class S3Client {
       : new S3StorageError(`Object ${key} not available.`);
   }
 
-  async getObject(key: string): Promise<Buffer> {
+  async getObject(key: string, maxBytes = Number.POSITIVE_INFINITY): Promise<Buffer> {
     const url = this.sign('GET', key, 60);
     const response = await fetch(url);
     if (!response.ok) throw new S3StorageError(`Object ${key} could not be read.`);
-    return Buffer.from(await response.arrayBuffer());
+    const declaredLength = Number(response.headers.get('content-length') ?? Number.NaN);
+    if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+      await response.body?.cancel();
+      throw new S3StorageError(
+        `Object ${key} exceeds the permitted size.`,
+        'S3_OBJECT_TOO_LARGE',
+        413,
+      );
+    }
+    if (!response.body) return Buffer.alloc(0);
+    const reader = response.body.getReader();
+    const chunks: Buffer[] = [];
+    let total = 0;
+    let finished = false;
+    try {
+      while (!finished) {
+        const { done, value } = await reader.read();
+        finished = done;
+        if (done) continue;
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel();
+          throw new S3StorageError(
+            `Object ${key} exceeds the permitted size.`,
+            'S3_OBJECT_TOO_LARGE',
+            413,
+          );
+        }
+        chunks.push(Buffer.from(value));
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    return Buffer.concat(chunks, total);
   }
 
   async putObject(

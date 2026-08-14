@@ -90,4 +90,23 @@ describe('S3 SigV4 presigned URLs', () => {
     });
     expect(cancel).toHaveBeenCalled();
   });
+
+  it('bounds full object reads even when response metadata is absent', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(new Uint8Array([1, 2, 3, 4]))),
+    );
+    const client = new S3Client({
+      endpoint: 'https://s3.example.com',
+      bucket: 'private',
+      region: 'r1',
+      accessKey: 'access',
+      secretKey: 'secret',
+    });
+
+    await expect(client.getObject('raw/photo.jpg', 3)).rejects.toMatchObject({
+      code: 'S3_OBJECT_TOO_LARGE',
+      status: 413,
+    });
+  });
 });

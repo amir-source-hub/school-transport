@@ -231,7 +231,7 @@ describe('StudentPhotosService completeUpload', () => {
     const service = new StudentPhotosService(db, config(), notifications(), store, audit());
 
     await expect(service.completeUpload('user-1', 'upload-1')).rejects.toMatchObject({
-      code: 'PHOTO_UPLOAD_MISSING',
+      code: 'PHOTO_STORAGE_NOT_READY',
     });
   });
 
@@ -324,6 +324,45 @@ describe('StudentPhotosService completeUpload', () => {
       'image/jpeg',
     );
     expect(store.deleteObject).toHaveBeenCalledWith('student-photos/raw/raw-1.jpg');
+  });
+
+  it('processes a readable object when provider metadata probes are unavailable', async () => {
+    const png = await sharp({
+      create: { width: 1200, height: 1600, channels: 3, background: '#336699' },
+    })
+      .png()
+      .toBuffer();
+    const store = storage({
+      headObject: vi.fn(async () => {
+        throw new Error('HEAD unsupported');
+      }),
+      getObject: vi.fn(async () => png),
+    });
+    const updated = baseRow({
+      status: 'PENDING_REVIEW',
+      canonicalKey: 'student-photos/canonical/canon-2.jpg',
+      actualMime: 'image/jpeg',
+      width: 600,
+      height: 800,
+    });
+    const db = {
+      db: {
+        select: vi.fn(() => selectLimit([baseRow({ declaredSize: png.length })])),
+        update: vi
+          .fn()
+          .mockReturnValueOnce(updateSimple())
+          .mockReturnValueOnce(updateReturning([updated])),
+      },
+    } as unknown as DatabaseService;
+    const service = new StudentPhotosService(db, config(), notifications(), store, audit());
+
+    await expect(service.completeUpload('user-1', 'upload-1')).resolves.toMatchObject({
+      status: 'PENDING_REVIEW',
+    });
+    expect(store.getObject).toHaveBeenCalledWith(
+      'student-photos/raw/raw-1.jpg',
+      config().studentPhotoMaxBytes,
+    );
   });
 
   it('returns the authoritative state and preserves raw data when a retry loses the optimistic claim', async () => {

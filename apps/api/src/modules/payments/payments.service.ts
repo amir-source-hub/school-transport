@@ -19,7 +19,7 @@ import { InAppNotificationService } from '../../infrastructure/notifications/in-
 import { createHash } from 'node:crypto';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { ConfigService } from '../../config/config.service';
-import { S3_CLIENT, S3Storage } from '../../infrastructure/s3/s3-storage.port';
+import { getObjectAfterWrite, S3_CLIENT, S3Storage } from '../../infrastructure/s3/s3-storage.port';
 import { processReceiptImage } from './receipt-image-processor';
 
 const onlinePaymentResult = {
@@ -624,23 +624,21 @@ export class PaymentsService {
     const rawKey = submission.receiptObjectKey;
     const head = await this.storage.headObject(rawKey).catch(() => null);
     if (
-      !head ||
-      head.size !== submission.receiptSize ||
-      head.size > this.config.studentPhotoMaxBytes
+      head &&
+      (head.size !== submission.receiptSize || head.size > this.config.studentPhotoMaxBytes)
     ) {
       throw new ValidationError('Uploaded receipt size does not match the declared file.');
     }
-    let raw = await this.storage.getObject(rawKey).catch(() => null);
-    if (!raw) {
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      raw = await this.storage.getObject(rawKey).catch(() => null);
-    }
+    const raw = await getObjectAfterWrite(this.storage, rawKey, this.config.studentPhotoMaxBytes);
     if (!raw)
       throw new AppError(
         'RECEIPT_STORAGE_NOT_READY',
         'ذخیره تصویر رسید هنوز نهایی نشده است. چند لحظه بعد دوباره تلاش کنید.',
         503,
       );
+    if (raw.length !== submission.receiptSize || raw.length > this.config.studentPhotoMaxBytes) {
+      throw new ValidationError('Uploaded receipt size does not match the declared file.');
+    }
     let processed;
     try {
       processed = await processReceiptImage(raw, {
