@@ -23,6 +23,8 @@ import type {
 
 const RAW_PREFIX = 'student-photos/raw/';
 const CANONICAL_PREFIX = 'student-photos/canonical/';
+// audit_logs.actor_id is a UUID. Reserve the nil UUID for automated system actions.
+const SYSTEM_AUDIT_ACTOR_ID = '00000000-0000-0000-0000-000000000000';
 const UPLOADED_STALL_MS = 6 * 60 * 60 * 1_000;
 const VALIDATING_STALL_MS = 15 * 60 * 1_000;
 const RAW_RETENTION_MS = 24 * 60 * 60 * 1_000;
@@ -212,7 +214,11 @@ export class StudentPhotosService {
         error instanceof PhotoValidationError ? error.rejectionCode : 'PROCESSING_FAILED';
       await this.markFailed(upload.id, code, ip);
       await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
-      throw new ValidationError('عکس بارگذاری‌شده معتبر نیست و در صف بررسی قرار نمی‌گیرد.');
+      throw new ValidationError(
+        code === 'EXTREME_ASPECT_RATIO'
+          ? 'نسبت طول به عرض عکس نامعتبر است. لطفاً یک عکس پرسنلی با قاب معمولی بارگذاری کنید.'
+          : 'عکس بارگذاری‌شده معتبر نیست و در صف بررسی قرار نمی‌گیرد.',
+      );
     }
 
     const canonicalKey = keyOfPrefix(CANONICAL_PREFIX, '.jpg');
@@ -681,7 +687,7 @@ export class StudentPhotosService {
       .where(eq(studentPhotoUploads.id, uploadId));
     await this.audit.record({
       actorType: 'SYSTEM',
-      actorId: 'system',
+      actorId: SYSTEM_AUDIT_ACTOR_ID,
       action: 'STUDENT_PHOTO_FAILED',
       entityType: 'STUDENT_PHOTO_UPLOAD',
       entityId: uploadId,

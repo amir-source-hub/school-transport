@@ -423,12 +423,20 @@ describe('StudentPhotosService completeUpload', () => {
         update: vi.fn(() => updateSimple()),
       },
     } as unknown as DatabaseService;
-    const service = new StudentPhotosService(db, config(), notifications(), store, audit());
+    const auditPort = audit();
+    const service = new StudentPhotosService(db, config(), notifications(), store, auditPort);
 
     await expect(service.completeUpload('user-1', 'upload-1')).rejects.toBeInstanceOf(
       ValidationError,
     );
     expect(store.deleteObject).toHaveBeenCalledWith('student-photos/raw/raw-1.jpg');
+    expect(auditPort.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorType: 'SYSTEM',
+        actorId: '00000000-0000-0000-0000-000000000000',
+        action: 'STUDENT_PHOTO_FAILED',
+      }),
+    );
   });
 });
 
