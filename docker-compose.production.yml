@@ -123,6 +123,9 @@ services:
       proxy_api:
         # Keep the API away from Caddy's trusted, reserved proxy address.
         ipv4_address: 172.30.20.3
+      # S3 validation/finalization and optional external providers require outbound
+      # HTTPS. All service-to-service traffic remains on the internal networks.
+      egress: {}
 
   worker:
     image: school-transport-api:server
@@ -258,6 +261,8 @@ networks:
   frontend:
   application:
     internal: true
+  # Deliberately attached only to the API, which validates private S3 uploads.
+  egress:
   # Dedicated Caddy-to-API path. The /29 is deterministic and internal; only Caddy gets
   # the single address trusted by Fastify, so web/worker containers cannot spoof XFF.
   proxy_api:
