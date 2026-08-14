@@ -113,14 +113,14 @@ export async function authorizeReceiptUpload(
   mode: 'panel' | 'onboarding',
 ) {
   const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
-  const response = await apiRequest<{ uploadUrl: string }>(
+  const response = await apiRequest<{ uploadUrl: string; expiresInSeconds: number }>(
     `${prefix}/offline-submissions/${submissionId}/receipt/authorize`,
     {
       method: 'POST',
       body: { declaredMime: file.type, declaredSize: file.size },
     },
   );
-  return response.data.uploadUrl;
+  return response.data;
 }
 
 export async function completeReceiptUpload(submissionId: string, mode: 'panel' | 'onboarding') {

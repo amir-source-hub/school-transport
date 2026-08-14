@@ -192,6 +192,13 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
       PHOTO_CHANGED:
         'این عکس قبلاً بررسی شده یا نسخه آن تغییر کرده است. فهرست تازه شد؛ دوباره بررسی کنید.',
       PHOTO_SUPERSEDED: 'عکس جدیدتری برای این دانش‌آموز ثبت شده است؛ همان عکس جدید را بررسی کنید.',
+      PHOTO_UPLOAD_LIMIT:
+        'یک عکس قبلی هنوز در حال پردازش یا بررسی است. وضعیت عکس را تازه‌سازی کنید و عکس جدید نسازید.',
+      PHOTO_UPLOAD_MISSING: 'فایل عکس در ذخیره‌گاه پیدا نشد. همان عکس را دوباره بارگذاری کنید.',
+      PHOTO_PROCESSING_CONFLICT:
+        'پردازش عکس هم‌زمان انجام شده است. وضعیت عکس به‌طور خودکار تازه می‌شود.',
+      RECEIPT_NOT_AUTHORIZED: 'ابتدا تصویر رسید را بارگذاری کنید و سپس دوباره ارسال کنید.',
+      RECEIPT_NOT_DRAFT: 'این رسید قبلاً ارسال شده یا وضعیت آن تغییر کرده است.',
     };
     const specificMessage = error.code ? conflictMessages[error.code] : undefined;
     return {

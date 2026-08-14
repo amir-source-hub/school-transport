@@ -231,7 +231,7 @@ describe('StudentPhotosService completeUpload', () => {
     const service = new StudentPhotosService(db, config(), notifications(), store, audit());
 
     await expect(service.completeUpload('user-1', 'upload-1')).rejects.toMatchObject({
-      code: 'PHOTO_UPLOAD_MISSING',
+      code: 'PHOTO_STORAGE_NOT_READY',
     });
   });
 
@@ -326,6 +326,45 @@ describe('StudentPhotosService completeUpload', () => {
     expect(store.deleteObject).toHaveBeenCalledWith('student-photos/raw/raw-1.jpg');
   });
 
+  it('processes a readable object when provider metadata probes are unavailable', async () => {
+    const png = await sharp({
+      create: { width: 1200, height: 1600, channels: 3, background: '#336699' },
+    })
+      .png()
+      .toBuffer();
+    const store = storage({
+      headObject: vi.fn(async () => {
+        throw new Error('HEAD unsupported');
+      }),
+      getObject: vi.fn(async () => png),
+    });
+    const updated = baseRow({
+      status: 'PENDING_REVIEW',
+      canonicalKey: 'student-photos/canonical/canon-2.jpg',
+      actualMime: 'image/jpeg',
+      width: 600,
+      height: 800,
+    });
+    const db = {
+      db: {
+        select: vi.fn(() => selectLimit([baseRow({ declaredSize: png.length })])),
+        update: vi
+          .fn()
+          .mockReturnValueOnce(updateSimple())
+          .mockReturnValueOnce(updateReturning([updated])),
+      },
+    } as unknown as DatabaseService;
+    const service = new StudentPhotosService(db, config(), notifications(), store, audit());
+
+    await expect(service.completeUpload('user-1', 'upload-1')).resolves.toMatchObject({
+      status: 'PENDING_REVIEW',
+    });
+    expect(store.getObject).toHaveBeenCalledWith(
+      'student-photos/raw/raw-1.jpg',
+      config().studentPhotoMaxBytes,
+    );
+  });
+
   it('returns the authoritative state and preserves raw data when a retry loses the optimistic claim', async () => {
     const png = await sharp({
       create: { width: 1200, height: 1600, channels: 3, background: '#336699' },
@@ -384,12 +423,20 @@ describe('StudentPhotosService completeUpload', () => {
         update: vi.fn(() => updateSimple()),
       },
     } as unknown as DatabaseService;
-    const service = new StudentPhotosService(db, config(), notifications(), store, audit());
+    const auditPort = audit();
+    const service = new StudentPhotosService(db, config(), notifications(), store, auditPort);
 
     await expect(service.completeUpload('user-1', 'upload-1')).rejects.toBeInstanceOf(
       ValidationError,
     );
     expect(store.deleteObject).toHaveBeenCalledWith('student-photos/raw/raw-1.jpg');
+    expect(auditPort.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorType: 'SYSTEM',
+        actorId: '00000000-0000-0000-0000-000000000000',
+        action: 'STUDENT_PHOTO_FAILED',
+      }),
+    );
   });
 });
 
@@ -528,6 +575,7 @@ describe('StudentPhotosService cleanupExpired', () => {
   it('expires stale authorizations and fails stalled uploads', async () => {
     const expirable = baseRow({ id: 'exp-1', status: 'AUTHORIZED' });
     const stalled = baseRow({ id: 'stall-1', status: 'UPLOADED' });
+    const stalledValidation = baseRow({ id: 'validation-stall-1', status: 'VALIDATING' });
     const removable = baseRow({ id: 'old-1', status: 'REJECTED' });
     const canonicalRemovable = baseRow({
       id: 'old-c-1',
@@ -540,6 +588,7 @@ describe('StudentPhotosService cleanupExpired', () => {
           .fn()
           .mockReturnValueOnce(selectWhere([expirable]))
           .mockReturnValueOnce(selectWhere([stalled]))
+          .mockReturnValueOnce(selectWhere([stalledValidation]))
           .mockReturnValueOnce(selectWhere([removable]))
           .mockReturnValueOnce(selectWhere([canonicalRemovable])),
         update: vi.fn(() => updateSimple()),
@@ -548,8 +597,9 @@ describe('StudentPhotosService cleanupExpired', () => {
     const store = storage();
     const service = new StudentPhotosService(db, config(), notifications(), store, audit());
 
-    await expect(service.cleanupExpired()).resolves.toBe(2);
+    await expect(service.cleanupExpired()).resolves.toBe(3);
     expect(store.deleteObject).toHaveBeenCalledWith(expirable.rawKey);
+    expect(store.deleteObject).toHaveBeenCalledWith(stalledValidation.rawKey);
     expect(store.deleteObject).toHaveBeenCalledWith('canonical/x.jpg');
   });
 });

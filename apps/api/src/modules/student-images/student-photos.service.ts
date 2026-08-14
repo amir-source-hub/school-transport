@@ -7,7 +7,11 @@ import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { DatabaseService } from '../../database/database.service';
 import { schoolManagerAssignments, students, studentPhotoUploads } from '../../database/schemas';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
-import { S3_CLIENT, type S3Storage } from '../../infrastructure/s3/s3-storage.port';
+import {
+  getObjectAfterWrite,
+  S3_CLIENT,
+  type S3Storage,
+} from '../../infrastructure/s3/s3-storage.port';
 import { assertStudentPhotoTransition, type StudentPhotoStatus } from './student-photo-lifecycle';
 import { PhotoValidationError, type ProcessedPhoto } from './student-photo-processor';
 import { processStudentPhotoIsolated } from './isolated-photo-processor';
@@ -19,7 +23,10 @@ import type {
 
 const RAW_PREFIX = 'student-photos/raw/';
 const CANONICAL_PREFIX = 'student-photos/canonical/';
+// audit_logs.actor_id is a UUID. Reserve the nil UUID for automated system actions.
+const SYSTEM_AUDIT_ACTOR_ID = '00000000-0000-0000-0000-000000000000';
 const UPLOADED_STALL_MS = 6 * 60 * 60 * 1_000;
+const VALIDATING_STALL_MS = 15 * 60 * 1_000;
 const RAW_RETENTION_MS = 24 * 60 * 60 * 1_000;
 const CANONICAL_RETENTION_MS = 30 * 24 * 60 * 60 * 1_000;
 
@@ -155,37 +162,35 @@ export class StudentPhotosService {
     }
     assertStudentPhotoTransition(upload.status as StudentPhotoStatus, 'UPLOADED');
 
-    let head: { size: number; etag: string };
-    try {
-      head = await this.storage.headObject(upload.rawKey);
-    } catch {
-      throw new AppError(
-        'PHOTO_UPLOAD_MISSING',
-        'عکس به ذخیره‌گاه نرسیده است. دوباره بارگذاری کنید.',
-        409,
-      );
-    }
-    if (head.size > this.config.studentPhotoMaxBytes) {
+    const head = await this.storage.headObject(upload.rawKey).catch(() => null);
+    if (head && head.size > this.config.studentPhotoMaxBytes) {
       await this.markFailed(upload.id, 'TOO_LARGE', ip);
       throw new ValidationError('فایل بارگذاری‌شده از حد مجاز ۵ مگابایت بزرگ‌تر است.');
     }
-    if (head.size !== upload.declaredSize) {
+    if (head && head.size !== upload.declaredSize) {
       await this.markFailed(upload.id, 'SIZE_MISMATCH', ip);
       await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
       throw new ValidationError('اندازه فایل بارگذاری‌شده با اندازه اعلام‌شده مطابقت ندارد.');
     }
 
-    let raw: Buffer;
-    try {
-      raw = await this.storage.getObject(upload.rawKey);
-    } catch {
+    const raw = await getObjectAfterWrite(
+      this.storage,
+      upload.rawKey,
+      this.config.studentPhotoMaxBytes,
+    );
+    if (!raw) {
       throw new AppError(
-        'PHOTO_UPLOAD_MISSING',
-        'عکس قابل خواندن نیست. دوباره بارگذاری کنید.',
-        409,
+        'PHOTO_STORAGE_NOT_READY',
+        'ذخیره عکس هنوز نهایی نشده است. چند لحظه بعد دوباره تلاش کنید.',
+        503,
       );
     }
-    if (raw.length !== head.size) {
+    if (raw.length > this.config.studentPhotoMaxBytes) {
+      await this.markFailed(upload.id, 'TOO_LARGE', ip);
+      await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
+      throw new ValidationError('فایل بارگذاری‌شده از حد مجاز ۵ مگابایت بزرگ‌تر است.');
+    }
+    if (raw.length !== upload.declaredSize) {
       await this.markFailed(upload.id, 'SIZE_MISMATCH', ip);
       await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
       throw new ValidationError('اندازه فایل خوانده‌شده از ذخیره‌گاه معتبر نیست.');
@@ -209,7 +214,11 @@ export class StudentPhotosService {
         error instanceof PhotoValidationError ? error.rejectionCode : 'PROCESSING_FAILED';
       await this.markFailed(upload.id, code, ip);
       await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
-      throw new ValidationError('عکس بارگذاری‌شده معتبر نیست و در صف بررسی قرار نمی‌گیرد.');
+      throw new ValidationError(
+        code === 'EXTREME_ASPECT_RATIO'
+          ? 'نسبت طول به عرض عکس نامعتبر است. لطفاً یک عکس پرسنلی با قاب معمولی بارگذاری کنید.'
+          : 'عکس بارگذاری‌شده معتبر نیست و در صف بررسی قرار نمی‌گیرد.',
+      );
     }
 
     const canonicalKey = keyOfPrefix(CANONICAL_PREFIX, '.jpg');
@@ -636,6 +645,37 @@ export class StudentPhotosService {
       );
     }
 
+    const stalledValidation = await this.db.db
+      .select({ id: studentPhotoUploads.id, rawKey: studentPhotoUploads.rawKey })
+      .from(studentPhotoUploads)
+      .where(
+        and(
+          eq(studentPhotoUploads.status, 'VALIDATING'),
+          lt(studentPhotoUploads.updatedAt, new Date(now.getTime() - VALIDATING_STALL_MS)),
+        ),
+      );
+    if (stalledValidation.length > 0) {
+      await this.db.db
+        .update(studentPhotoUploads)
+        .set({
+          status: 'FAILED',
+          rejectionCode: 'PROCESSING_STALLED',
+          failedAt: now,
+          updatedAt: now,
+        })
+        .where(
+          inArray(
+            studentPhotoUploads.id,
+            stalledValidation.map((row) => row.id),
+          ),
+        );
+      await Promise.all(
+        stalledValidation.map((row) =>
+          this.storage.deleteObject(row.rawKey).catch(() => undefined),
+        ),
+      );
+    }
+
     const removable = await this.db.db
       .select({ id: studentPhotoUploads.id, rawKey: studentPhotoUploads.rawKey })
       .from(studentPhotoUploads)
@@ -669,7 +709,7 @@ export class StudentPhotosService {
           ),
       );
     }
-    return expirable.length + stalled.length;
+    return expirable.length + stalled.length + stalledValidation.length;
   }
 
   async getStaleStateCounts(): Promise<Record<'AUTHORIZED' | 'UPLOADED' | 'VALIDATING', number>> {
@@ -718,7 +758,7 @@ export class StudentPhotosService {
       .where(eq(studentPhotoUploads.id, uploadId));
     await this.audit.record({
       actorType: 'SYSTEM',
-      actorId: 'system',
+      actorId: SYSTEM_AUDIT_ACTOR_ID,
       action: 'STUDENT_PHOTO_FAILED',
       entityType: 'STUDENT_PHOTO_UPLOAD',
       entityId: uploadId,

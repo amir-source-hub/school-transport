@@ -42,6 +42,15 @@ export function OfflinePaymentForm({
   const [previewUrl, setPreviewUrl] = useState<string>();
   const [progress, setProgress] = useState(0);
   const uploadAbort = useRef<AbortController | undefined>(undefined);
+  const receiptAuthorization = useRef<
+    | {
+        submissionId: string;
+        file: File;
+        uploadUrl: string;
+        expiresAt: number;
+      }
+    | undefined
+  >(undefined);
   const idempotencyKey = useRef(crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -114,15 +123,31 @@ export function OfflinePaymentForm({
               idempotencyKey.current,
             ));
           window.sessionStorage.setItem(storageKey, submissionId);
-          const uploadUrl = await authorizeReceiptUpload(submissionId, receipt, mode);
+          let authorization = receiptAuthorization.current;
+          if (
+            !authorization ||
+            authorization.submissionId !== submissionId ||
+            authorization.file !== receipt ||
+            authorization.expiresAt <= Date.now()
+          ) {
+            const created = await authorizeReceiptUpload(submissionId, receipt, mode);
+            authorization = {
+              submissionId,
+              file: receipt,
+              uploadUrl: created.uploadUrl,
+              expiresAt: Date.now() + created.expiresInSeconds * 1000,
+            };
+            receiptAuthorization.current = authorization;
+          }
           const controller = new AbortController();
           uploadAbort.current = controller;
-          await putFileDirectly(uploadUrl, receipt, {
+          await putFileDirectly(authorization.uploadUrl, receipt, {
             signal: controller.signal,
             onProgress: (percent) => setProgress(percent ?? 0),
           });
           await completeReceiptUpload(submissionId, mode);
           window.sessionStorage.removeItem(storageKey);
+          receiptAuthorization.current = undefined;
           setSubmitted(true);
           setScheduleItemId('');
           setPaidAt('');
@@ -140,6 +165,7 @@ export function OfflinePaymentForm({
         } catch (caught) {
           if (caught instanceof ApiClientError && caught.code === 'RECEIPT_NOT_DRAFT') {
             setSubmitted(true);
+            receiptAuthorization.current = undefined;
             setReceipt(undefined);
             setPreviewUrl(undefined);
             setProgress(0);
@@ -301,6 +327,7 @@ export function OfflinePaymentForm({
               if (!file) return;
               if (previewUrl) URL.revokeObjectURL(previewUrl);
               setReceipt(file);
+              receiptAuthorization.current = undefined;
               setPreviewUrl(URL.createObjectURL(file));
               setProgress(0);
               setError(undefined);
@@ -327,6 +354,7 @@ export function OfflinePaymentForm({
             onClick={() => {
               if (previewUrl) URL.revokeObjectURL(previewUrl);
               setReceipt(undefined);
+              receiptAuthorization.current = undefined;
               setPreviewUrl(undefined);
               setProgress(0);
             }}
