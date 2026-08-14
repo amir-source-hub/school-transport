@@ -672,6 +672,31 @@ export class StudentPhotosService {
     return expirable.length + stalled.length;
   }
 
+  async getStaleStateCounts(): Promise<Record<'AUTHORIZED' | 'UPLOADED' | 'VALIDATING', number>> {
+    const now = new Date();
+    const rows = await this.db.db
+      .select({ status: studentPhotoUploads.status, value: count() })
+      .from(studentPhotoUploads)
+      .where(
+        or(
+          and(
+            eq(studentPhotoUploads.status, 'AUTHORIZED'),
+            lt(studentPhotoUploads.uploadAuthorizationExpiry, now),
+          ),
+          and(
+            inArray(studentPhotoUploads.status, ['UPLOADED', 'VALIDATING']),
+            lt(studentPhotoUploads.updatedAt, new Date(now.getTime() - UPLOADED_STALL_MS)),
+          ),
+        ),
+      )
+      .groupBy(studentPhotoUploads.status);
+    const counts = { AUTHORIZED: 0, UPLOADED: 0, VALIDATING: 0 };
+    for (const row of rows) {
+      if (row.status in counts) counts[row.status as keyof typeof counts] = Number(row.value);
+    }
+    return counts;
+  }
+
   private async assertOwnedStudent(userId: string, studentId: string) {
     const [owned] = await this.db.db
       .select({ id: students.id })

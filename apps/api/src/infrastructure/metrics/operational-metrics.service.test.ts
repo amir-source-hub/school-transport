@@ -12,6 +12,8 @@ describe('OperationalMetricsService', () => {
     metrics.recordHttp('GET', '/api/v1/health', 200, 0.02);
     metrics.recordQueue('maintenance', 'completed');
     metrics.recordDatabase('ready');
+    metrics.recordStudentPhotoCleanup('completed');
+    metrics.setStudentPhotoStaleCounts({ AUTHORIZED: 2, UPLOADED: 1, VALIDATING: 0 });
     metrics.registerDatabasePool(() => ({ total: 4, idle: 3, waiting: 0 }));
 
     const output = metrics.renderPrometheus();
@@ -33,6 +35,8 @@ describe('OperationalMetricsService', () => {
     );
     expect(output).toContain('school_transport_notification_queue_oldest_age_seconds 42');
     expect(output).toContain('school_transport_broadcast_estimated_spend_rial_total 12000');
+    expect(output).toContain('school_transport_student_photo_stale_rows{status="AUTHORIZED"} 2');
+    expect(output).toContain('school_transport_student_photo_cleanup_total{outcome="completed"} 1');
     expect(output).not.toMatch(/phone|user|message_body|api_key|token=/i);
   });
 
