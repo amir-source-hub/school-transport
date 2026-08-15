@@ -18,6 +18,7 @@ import {
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { ApiClientError } from '@/lib/api-client';
+import { createClientId } from '@/lib/client-id';
 import { DIRECT_UPLOAD_RETRY_MESSAGE, putFileDirectly } from '@/lib/direct-object-upload';
 
 const receiptDraftKey = (mode: string, scheduleItemId: string) =>
@@ -51,7 +52,7 @@ export function OfflinePaymentForm({
       }
     | undefined
   >(undefined);
-  const idempotencyKey = useRef(crypto.randomUUID());
+  const idempotencyKey = useRef(createClientId());
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string>();
@@ -159,7 +160,7 @@ export function OfflinePaymentForm({
           setPreviewUrl(undefined);
           setProgress(0);
           uploadAbort.current = undefined;
-          idempotencyKey.current = crypto.randomUUID();
+          idempotencyKey.current = createClientId();
           setFormVersion((current) => current + 1);
           router.refresh();
         } catch (caught) {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiRequest } from '@/lib/api-client';
+import { createClientId } from '@/lib/client-id';
 
 const transactionSchema = z.object({
   id: z.string(),
@@ -197,7 +198,7 @@ export async function recordPaymentOnBehalf(
     sourceCardLastFour?: string;
   },
   receipt: File,
-  idempotencyKey = crypto.randomUUID(),
+  idempotencyKey = createClientId(),
 ) {
   const response = await apiRequest<{ submissionId: string }>(
     `/admin/payments/${scheduleItemId}/offline-submissions`,

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { ApiClientError } from '@/lib/api-client';
+import { createClientId } from '@/lib/client-id';
 import {
   configureInstallments,
   approvePayment,
@@ -35,7 +36,7 @@ export function RecordPaymentOnBehalfDialog({
   const [description, setDescription] = useState('');
   const [receipt, setReceipt] = useState<File>();
   const [error, setError] = useState<string>();
-  const idempotencyKey = useRef(crypto.randomUUID());
+  const idempotencyKey = useRef(createClientId());
 
   const submit = async () => {
     if (!paidAt || !referenceNumber.trim() || !receipt) {
@@ -59,7 +60,7 @@ export function RecordPaymentOnBehalfDialog({
         receipt,
         idempotencyKey.current,
       );
-      idempotencyKey.current = crypto.randomUUID();
+      idempotencyKey.current = createClientId();
       setOpen(false);
       onCompleted?.();
       router.refresh();

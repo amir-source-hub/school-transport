@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiRequest } from '@/lib/api-client';
+import { createClientId } from '@/lib/client-id';
 
 const overviewSchema = z.array(
   z.object({
@@ -97,7 +98,7 @@ export async function submitOfflinePayment(
     sourceCardLastFour?: string;
   },
   mode: 'panel' | 'onboarding' = 'panel',
-  idempotencyKey = crypto.randomUUID(),
+  idempotencyKey = createClientId(),
 ) {
   const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
   const response = await apiRequest<{ submissionId: string }>(
@@ -133,7 +134,7 @@ export async function completeReceiptUpload(submissionId: string, mode: 'panel' 
 export async function startOnlinePayment(scheduleItemId: string) {
   const response = await apiRequest<{ id: string }>(`/payments/${scheduleItemId}/online/start`, {
     method: 'POST',
-    headers: { 'Idempotency-Key': crypto.randomUUID() },
+    headers: { 'Idempotency-Key': createClientId() },
   });
   return response.data;
 }

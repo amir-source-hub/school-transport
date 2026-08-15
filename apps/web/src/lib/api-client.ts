@@ -5,6 +5,7 @@ import {
   setAuthAccessToken,
 } from '@/features/auth/auth-session';
 import type { ApiEnvelope, ApiFailure, ApiSuccess } from '@/types/api';
+import { createClientId } from '@/lib/client-id';
 
 type ApiRequestOptions = Omit<RequestInit, 'body' | 'credentials'> & {
   body?: unknown;
@@ -104,7 +105,7 @@ async function performApiRequest<T>(
   } = options;
   const url = buildApiUrl(path);
   const headers = new Headers(options.headers);
-  const correlationId = crypto.randomUUID();
+  const correlationId = createClientId();
   headers.set('Accept', 'application/json');
   headers.set('X-Correlation-Id', correlationId);
   const { accessToken } = getAuthSession();
@@ -193,7 +194,7 @@ async function refreshBrowserSession() {
         const response = await fetch(buildApiUrl('/auth/refresh'), {
           method: 'POST',
           credentials: 'include',
-          headers: { Accept: 'application/json', 'X-Correlation-Id': crypto.randomUUID() },
+          headers: { Accept: 'application/json', 'X-Correlation-Id': createClientId() },
         });
         if (!response.ok) return false;
         const payload = (await response.json()) as ApiSuccess<{ accessToken: string }>;
