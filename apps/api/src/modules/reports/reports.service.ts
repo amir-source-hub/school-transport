@@ -32,75 +32,60 @@ export class ReportsService {
   constructor(@Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService) {}
 
   async createComprehensiveWorkbook(): Promise<Buffer> {
-    const [
-      userRows,
-      parentRows,
-      addressRows,
-      schoolRows,
-      studentRows,
-      registrationRows,
-      priceRows,
-      planRows,
-      scheduleRows,
-      transactionRows,
-      contractRows,
-    ] = await Promise.all([
-      this.db.db
-        .select()
-        .from(users)
-        .orderBy(asc(users.id))
-        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
-      this.db.db
-        .select()
-        .from(parents)
-        .orderBy(asc(parents.id))
-        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
-      this.db.db
-        .select()
-        .from(familyAddresses)
-        .orderBy(asc(familyAddresses.id))
-        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
-      this.db.db
-        .select()
-        .from(schools)
-        .orderBy(asc(schools.id))
-        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
-      this.db.db
-        .select()
-        .from(students)
-        .orderBy(asc(students.id))
-        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
-      this.db.db
-        .select()
-        .from(serviceRegistrations)
-        .orderBy(asc(serviceRegistrations.id))
-        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
-      this.db.db
-        .select()
-        .from(registrationPrices)
-        .orderBy(asc(registrationPrices.id))
-        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
-      this.db.db
-        .select()
-        .from(paymentPlans)
-        .orderBy(asc(paymentPlans.id))
-        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
-      this.db.db
-        .select()
-        .from(paymentScheduleItems)
-        .orderBy(asc(paymentScheduleItems.id))
-        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
-      this.db.db
-        .select()
-        .from(paymentTransactions)
-        .orderBy(asc(paymentTransactions.id))
-        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
-      this.db.db
-        .select()
-        .from(contracts)
-        .orderBy(asc(contracts.id))
-        .limit(REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1),
-    ]);
+    // Keep production database pressure bounded. A comprehensive export touches many tables and
+    // opening all queries at once can exhaust small managed-database pools.
+    const limit = REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1;
+    const userRows = await this.db.db.select().from(users).orderBy(asc(users.id)).limit(limit);
+    const parentRows = await this.db.db
+      .select()
+      .from(parents)
+      .orderBy(asc(parents.id))
+      .limit(limit);
+    const addressRows = await this.db.db
+      .select()
+      .from(familyAddresses)
+      .orderBy(asc(familyAddresses.id))
+      .limit(limit);
+    const schoolRows = await this.db.db
+      .select()
+      .from(schools)
+      .orderBy(asc(schools.id))
+      .limit(limit);
+    const studentRows = await this.db.db
+      .select()
+      .from(students)
+      .orderBy(asc(students.id))
+      .limit(limit);
+    const registrationRows = await this.db.db
+      .select()
+      .from(serviceRegistrations)
+      .orderBy(asc(serviceRegistrations.id))
+      .limit(limit);
+    const priceRows = await this.db.db
+      .select()
+      .from(registrationPrices)
+      .orderBy(asc(registrationPrices.id))
+      .limit(limit);
+    const planRows = await this.db.db
+      .select()
+      .from(paymentPlans)
+      .orderBy(asc(paymentPlans.id))
+      .limit(limit);
+    const scheduleRows = await this.db.db
+      .select()
+      .from(paymentScheduleItems)
+      .orderBy(asc(paymentScheduleItems.id))
+      .limit(limit);
+    const transactionRows = await this.db.db
+      .select()
+      .from(paymentTransactions)
+      .orderBy(asc(paymentTransactions.id))
+      .limit(limit);
+    const contractRows = await this.db.db
+      .select()
+      .from(contracts)
+      .orderBy(asc(contracts.id))
+      .limit(limit);
 
     if (
       [

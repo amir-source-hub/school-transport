@@ -8,7 +8,12 @@ import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
-import { approveAdminPhoto, rejectAdminPhoto, type AdminPhoto } from './admin-student-photos-api';
+import {
+  approveAdminPhoto,
+  getAdminPhotoViewUrl,
+  rejectAdminPhoto,
+  type AdminPhoto,
+} from './admin-student-photos-api';
 
 const rejectionOptions = [
   ['BLURRED', 'تار یا خارج از فوکوس'],
@@ -40,9 +45,10 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
     setMessage(undefined);
     try {
       if (action === 'preview') {
+        const { viewUrl } = await getAdminPhotoViewUrl(item.uploadId);
         setPreview((current) => ({
           ...current,
-          [item.uploadId]: `/api/admin/student-photos/${item.uploadId}/image?version=${item.version}`,
+          [item.uploadId]: viewUrl,
         }));
       } else if (action === 'approve') {
         await approveAdminPhoto(item.uploadId, item.version);

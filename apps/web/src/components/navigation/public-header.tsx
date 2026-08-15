@@ -99,7 +99,7 @@ export function PublicHeader() {
   const accountHref =
     role === 'ADMIN' ? '/admin/dashboard' : role === 'PARENT' ? '/student/dashboard' : '/login';
   const accountLabel =
-    role === 'ADMIN' ? 'پنل مدیریت' : role === 'PARENT' ? 'پنل خانواده' : 'ثبت‌نام و ورود';
+    role === 'ADMIN' ? 'پنل مدیریت' : role === 'PARENT' ? 'پنل دانش‌آموز' : 'ثبت‌نام و ورود';
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 pt-3 transition-all duration-[var(--duration-ui)] sm:pt-4">

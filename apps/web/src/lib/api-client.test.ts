@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ApiClientError,
   apiRequest,
+  downloadApiFile,
   resetApiClientTransitionStateForTests,
 } from '@/lib/api-client';
 import { clearAuthSession, setAuthSession } from '@/features/auth/auth-session';
@@ -139,5 +140,49 @@ describe('API client', () => {
     expect(
       fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/auth/refresh')),
     ).toHaveLength(1);
+  });
+
+  it('refreshes an expired session before retrying a file download', async () => {
+    setAuthSession('expired-access', 'ADMIN');
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: true, data: { accessToken: 'fresh-access' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(new Uint8Array([80, 75, 3, 4]), {
+          status: 200,
+          headers: { 'Content-Disposition': 'attachment; filename="report.xlsx"' },
+        }),
+      );
+
+    await expect(downloadApiFile('/admin/reports/comprehensive.xlsx')).resolves.toMatchObject({
+      filename: 'report.xlsx',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('preserves the backend error for a failed file download', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: false,
+          error: { code: 'REPORT_TOO_LARGE', message: 'بازه گزارش را کوچک‌تر کنید.' },
+          meta: { requestId: 'report-request' },
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    await expect(downloadApiFile('/admin/reports/comprehensive.xlsx')).rejects.toMatchObject({
+      status: 400,
+      code: 'REPORT_TOO_LARGE',
+      message: 'بازه گزارش را کوچک‌تر کنید.',
+      requestId: 'report-request',
+    } satisfies Partial<ApiClientError>);
   });
 });

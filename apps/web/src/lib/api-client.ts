@@ -40,6 +40,13 @@ export async function apiRequest<T>(
 }
 
 export async function downloadApiFile(path: string): Promise<{ blob: Blob; filename: string }> {
+  return performFileDownload(path, true);
+}
+
+async function performFileDownload(
+  path: string,
+  allowRefresh: boolean,
+): Promise<{ blob: Blob; filename: string }> {
   const headers = new Headers({
     Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
@@ -49,9 +56,34 @@ export async function downloadApiFile(path: string): Promise<{ blob: Blob; filen
     credentials: 'include',
     headers,
   });
+  if (response.status === 401 && allowRefresh) {
+    const refreshed = await refreshBrowserSession();
+    if (refreshed) return performFileDownload(path, false);
+    redirectToLogin();
+  }
   if (!response.ok) {
     if (response.status === 401) redirectToLogin();
-    throw new ApiClientError(response.status, 'DOWNLOAD_FAILED', 'Report download failed.');
+    const requestId = response.headers.get('X-Request-Id') ?? undefined;
+    try {
+      const payload = (await response.json()) as ApiFailure;
+      if (!payload.success) {
+        throw new ApiClientError(
+          response.status,
+          payload.error.code || 'DOWNLOAD_FAILED',
+          payload.error.message || 'Report download failed.',
+          payload.meta?.requestId ?? requestId,
+          payload.error.fieldErrors,
+        );
+      }
+    } catch (error) {
+      if (error instanceof ApiClientError) throw error;
+    }
+    throw new ApiClientError(
+      response.status,
+      'DOWNLOAD_FAILED',
+      'Report download failed.',
+      requestId,
+    );
   }
   const disposition = response.headers.get('Content-Disposition') ?? '';
   const filename = disposition.match(/filename="([^"]+)"/i)?.[1] ?? `school-transport-report.xlsx`;
