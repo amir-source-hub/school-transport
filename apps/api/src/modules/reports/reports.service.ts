@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { asc } from 'drizzle-orm';
 import { DatabaseService } from '../../database/database.service';
@@ -29,13 +29,17 @@ export function neutralizeSpreadsheetFormula(value: CellValue): CellValue {
 
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(@Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService) {}
 
   async createComprehensiveWorkbook(): Promise<Buffer> {
     // Keep production database pressure bounded. A comprehensive export touches many tables and
     // opening all queries at once can exhaust small managed-database pools.
     const limit = REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1;
-    const userRows = await this.db.db
+    const unavailableSources: string[] = [];
+    const userRows = await this.loadExportSource('users', unavailableSources, () =>
+      this.db.db
       .select({
         id: users.id,
         username: users.username,
@@ -43,8 +47,10 @@ export class ReportsService {
       })
       .from(users)
       .orderBy(asc(users.id))
-      .limit(limit);
-    const parentRows = await this.db.db
+      .limit(limit),
+    );
+    const parentRows = await this.loadExportSource('parents', unavailableSources, () =>
+      this.db.db
       .select({
         id: parents.id,
         userId: parents.userId,
@@ -57,8 +63,10 @@ export class ReportsService {
       })
       .from(parents)
       .orderBy(asc(parents.id))
-      .limit(limit);
-    const addressRows = await this.db.db
+      .limit(limit),
+    );
+    const addressRows = await this.loadExportSource('family_addresses', unavailableSources, () =>
+      this.db.db
       .select({
         id: familyAddresses.id,
         userId: familyAddresses.userId,
@@ -72,13 +80,17 @@ export class ReportsService {
       })
       .from(familyAddresses)
       .orderBy(asc(familyAddresses.id))
-      .limit(limit);
-    const schoolRows = await this.db.db
+      .limit(limit),
+    );
+    const schoolRows = await this.loadExportSource('schools', unavailableSources, () =>
+      this.db.db
       .select({ id: schools.id, name: schools.name })
       .from(schools)
       .orderBy(asc(schools.id))
-      .limit(limit);
-    const studentRows = await this.db.db
+      .limit(limit),
+    );
+    const studentRows = await this.loadExportSource('students', unavailableSources, () =>
+      this.db.db
       .select({
         id: students.id,
         userId: students.userId,
@@ -95,8 +107,13 @@ export class ReportsService {
       })
       .from(students)
       .orderBy(asc(students.id))
-      .limit(limit);
-    const registrationRows = await this.db.db
+      .limit(limit),
+    );
+    const registrationRows = await this.loadExportSource(
+      'service_registrations',
+      unavailableSources,
+      () =>
+        this.db.db
       .select({
         id: serviceRegistrations.id,
         studentId: serviceRegistrations.studentId,
@@ -111,8 +128,10 @@ export class ReportsService {
       })
       .from(serviceRegistrations)
       .orderBy(asc(serviceRegistrations.id))
-      .limit(limit);
-    const priceRows = await this.db.db
+      .limit(limit),
+    );
+    const priceRows = await this.loadExportSource('registration_prices', unavailableSources, () =>
+      this.db.db
       .select({
         id: registrationPrices.id,
         registrationId: registrationPrices.registrationId,
@@ -120,8 +139,10 @@ export class ReportsService {
       })
       .from(registrationPrices)
       .orderBy(asc(registrationPrices.id))
-      .limit(limit);
-    const planRows = await this.db.db
+      .limit(limit),
+    );
+    const planRows = await this.loadExportSource('payment_plans', unavailableSources, () =>
+      this.db.db
       .select({
         id: paymentPlans.id,
         registrationPriceId: paymentPlans.registrationPriceId,
@@ -130,8 +151,13 @@ export class ReportsService {
       })
       .from(paymentPlans)
       .orderBy(asc(paymentPlans.id))
-      .limit(limit);
-    const scheduleRows = await this.db.db
+      .limit(limit),
+    );
+    const scheduleRows = await this.loadExportSource(
+      'payment_schedule_items',
+      unavailableSources,
+      () =>
+        this.db.db
       .select({
         id: paymentScheduleItems.id,
         paymentPlanId: paymentScheduleItems.paymentPlanId,
@@ -145,8 +171,13 @@ export class ReportsService {
       })
       .from(paymentScheduleItems)
       .orderBy(asc(paymentScheduleItems.id))
-      .limit(limit);
-    const transactionRows = await this.db.db
+      .limit(limit),
+    );
+    const transactionRows = await this.loadExportSource(
+      'payment_transactions',
+      unavailableSources,
+      () =>
+        this.db.db
       .select({
         id: paymentTransactions.id,
         paymentScheduleItemId: paymentTransactions.paymentScheduleItemId,
@@ -157,8 +188,10 @@ export class ReportsService {
       })
       .from(paymentTransactions)
       .orderBy(asc(paymentTransactions.id))
-      .limit(limit);
-    const contractRows = await this.db.db
+      .limit(limit),
+    );
+    const contractRows = await this.loadExportSource('contracts', unavailableSources, () =>
+      this.db.db
       .select({
         id: contracts.id,
         registrationId: contracts.registrationId,
@@ -172,7 +205,8 @@ export class ReportsService {
       })
       .from(contracts)
       .orderBy(asc(contracts.id))
-      .limit(limit);
+      .limit(limit),
+    );
 
     if (
       [
@@ -198,6 +232,21 @@ export class ReportsService {
     workbook.creator = 'سامانه سرویس مدارس';
     workbook.created = new Date();
     workbook.modified = new Date();
+
+    if (unavailableSources.length > 0) {
+      this.addSheet(
+        workbook,
+        'وضعیت گزارش',
+        [
+          ['source', 'منبع در دسترس نبود'],
+          ['guidance', 'راهنما'],
+        ],
+        unavailableSources.map((source) => ({
+          source,
+          guidance: 'مایگریشن‌های پایگاه داده تولید را اجرا کنید و سپس گزارش را دوباره بگیرید.',
+        })),
+      );
+    }
 
     this.addSheet(
       workbook,
@@ -663,5 +712,22 @@ export class ReportsService {
         });
       }
     });
+  }
+
+  private async loadExportSource<T>(
+    source: string,
+    unavailableSources: string[],
+    load: () => Promise<T[]>,
+  ): Promise<T[]> {
+    try {
+      return await load();
+    } catch (error) {
+      unavailableSources.push(source);
+      this.logger.error(
+        `Comprehensive report source ${source} is unavailable.`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return [];
+    }
   }
 }

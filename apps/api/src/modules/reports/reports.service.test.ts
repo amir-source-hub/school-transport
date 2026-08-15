@@ -69,6 +69,36 @@ describe('ReportsService', () => {
     });
   });
 
+  it('still downloads a workbook and identifies a production source that is unavailable', async () => {
+    let queryNumber = 0;
+    const database = {
+      db: {
+        select: () => ({
+          from: () => ({
+            orderBy: () => ({
+              limit: async () => {
+                queryNumber += 1;
+                if (queryNumber === 1) throw new Error('column does not exist');
+                return [];
+              },
+            }),
+          }),
+        }),
+      },
+    } as unknown as DatabaseService;
+
+    const report = await new ReportsService(database).createComprehensiveWorkbook();
+    const workbook = new ExcelJS.Workbook();
+    const reportArrayBuffer = report.buffer.slice(
+      report.byteOffset,
+      report.byteOffset + report.byteLength,
+    ) as ArrayBuffer;
+    await workbook.xlsx.load(reportArrayBuffer);
+
+    expect(workbook.getWorksheet('وضعیت گزارش')?.getCell('A2').value).toBe('users');
+    expect(workbook.getWorksheet('دانش‌آموزان')).toBeTruthy();
+  });
+
   it('returns a bounded, ordered preview without sensitive student fields', async () => {
     const createdAt = new Date('2026-08-02T10:00:00.000Z');
     const database = {
