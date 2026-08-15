@@ -108,7 +108,7 @@ function StudentNavigation({ mobile = false }: { mobile?: boolean }) {
             aria-current={active ? 'page' : undefined}
             className={cn(
               'relative flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 text-sm font-bold transition-all duration-[var(--duration-fast)]',
-              active ? 'bg-sun/15 text-sun' : 'text-white/60 hover:bg-white/5 hover:text-white',
+              active ? 'bg-sun/15 text-sun' : 'text-white hover:bg-white/10',
             )}
           >
             <Icon aria-hidden="true" className="size-5" />
@@ -173,7 +173,11 @@ export function StudentShell({ children }: { children: ReactNode }) {
                 <Menu aria-hidden="true" className="size-5" />
               </Button>
             </DrawerTrigger>
-            <DrawerContent title="پنل دانش‌آموز" description="دسترسی به بخش‌های سرویس دانش‌آموزان">
+            <DrawerContent
+              title="پنل دانش‌آموز"
+              description="دسترسی به بخش‌های سرویس دانش‌آموزان"
+              dark
+            >
               <StudentNavigation mobile />
             </DrawerContent>
           </Drawer>

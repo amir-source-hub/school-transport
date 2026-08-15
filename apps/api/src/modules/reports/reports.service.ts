@@ -35,19 +35,46 @@ export class ReportsService {
     // Keep production database pressure bounded. A comprehensive export touches many tables and
     // opening all queries at once can exhaust small managed-database pools.
     const limit = REPORT_EXPORT_MAX_ROWS_PER_SOURCE + 1;
-    const userRows = await this.db.db.select().from(users).orderBy(asc(users.id)).limit(limit);
+    const userRows = await this.db.db
+      .select({
+        id: users.id,
+        username: users.username,
+        phoneNumber: users.phoneNumber,
+      })
+      .from(users)
+      .orderBy(asc(users.id))
+      .limit(limit);
     const parentRows = await this.db.db
-      .select()
+      .select({
+        id: parents.id,
+        userId: parents.userId,
+        parentType: parents.parentType,
+        firstName: parents.firstName,
+        lastName: parents.lastName,
+        nationalId: parents.nationalId,
+        phoneNumber: parents.phoneNumber,
+        isPrimaryContact: parents.isPrimaryContact,
+      })
       .from(parents)
       .orderBy(asc(parents.id))
       .limit(limit);
     const addressRows = await this.db.db
-      .select()
+      .select({
+        id: familyAddresses.id,
+        userId: familyAddresses.userId,
+        title: familyAddresses.title,
+        province: familyAddresses.province,
+        city: familyAddresses.city,
+        district: familyAddresses.district,
+        streetAddress: familyAddresses.streetAddress,
+        postalCode: familyAddresses.postalCode,
+        isActive: familyAddresses.isActive,
+      })
       .from(familyAddresses)
       .orderBy(asc(familyAddresses.id))
       .limit(limit);
     const schoolRows = await this.db.db
-      .select()
+      .select({ id: schools.id, name: schools.name })
       .from(schools)
       .orderBy(asc(schools.id))
       .limit(limit);
@@ -70,32 +97,79 @@ export class ReportsService {
       .orderBy(asc(students.id))
       .limit(limit);
     const registrationRows = await this.db.db
-      .select()
+      .select({
+        id: serviceRegistrations.id,
+        studentId: serviceRegistrations.studentId,
+        academicYear: serviceRegistrations.academicYear,
+        serviceType: serviceRegistrations.serviceType,
+        registrationStatus: serviceRegistrations.registrationStatus,
+        requestedStartDate: serviceRegistrations.requestedStartDate,
+        submittedAt: serviceRegistrations.submittedAt,
+        reviewedAt: serviceRegistrations.reviewedAt,
+        parentNotes: serviceRegistrations.parentNotes,
+        rejectionReason: serviceRegistrations.rejectionReason,
+      })
       .from(serviceRegistrations)
       .orderBy(asc(serviceRegistrations.id))
       .limit(limit);
     const priceRows = await this.db.db
-      .select()
+      .select({
+        id: registrationPrices.id,
+        registrationId: registrationPrices.registrationId,
+        totalAmount: registrationPrices.totalAmount,
+      })
       .from(registrationPrices)
       .orderBy(asc(registrationPrices.id))
       .limit(limit);
     const planRows = await this.db.db
-      .select()
+      .select({
+        id: paymentPlans.id,
+        registrationPriceId: paymentPlans.registrationPriceId,
+        planType: paymentPlans.planType,
+        planStatus: paymentPlans.planStatus,
+      })
       .from(paymentPlans)
       .orderBy(asc(paymentPlans.id))
       .limit(limit);
     const scheduleRows = await this.db.db
-      .select()
+      .select({
+        id: paymentScheduleItems.id,
+        paymentPlanId: paymentScheduleItems.paymentPlanId,
+        itemType: paymentScheduleItems.itemType,
+        sequenceNumber: paymentScheduleItems.sequenceNumber,
+        amount: paymentScheduleItems.amount,
+        dueDate: paymentScheduleItems.dueDate,
+        itemStatus: paymentScheduleItems.itemStatus,
+        paidAmount: paymentScheduleItems.paidAmount,
+        paidAt: paymentScheduleItems.paidAt,
+      })
       .from(paymentScheduleItems)
       .orderBy(asc(paymentScheduleItems.id))
       .limit(limit);
     const transactionRows = await this.db.db
-      .select()
+      .select({
+        id: paymentTransactions.id,
+        paymentScheduleItemId: paymentTransactions.paymentScheduleItemId,
+        transactionStatus: paymentTransactions.transactionStatus,
+        paymentMethod: paymentTransactions.paymentMethod,
+        gatewayTransactionId: paymentTransactions.gatewayTransactionId,
+        createdAt: paymentTransactions.createdAt,
+      })
       .from(paymentTransactions)
       .orderBy(asc(paymentTransactions.id))
       .limit(limit);
     const contractRows = await this.db.db
-      .select()
+      .select({
+        id: contracts.id,
+        registrationId: contracts.registrationId,
+        registrationPriceId: contracts.registrationPriceId,
+        contractNumber: contracts.contractNumber,
+        contractStatus: contracts.contractStatus,
+        versionNumber: contracts.versionNumber,
+        generatedAt: contracts.generatedAt,
+        acceptedAt: contracts.acceptedAt,
+        cancelledAt: contracts.cancelledAt,
+      })
       .from(contracts)
       .orderBy(asc(contracts.id))
       .limit(limit);

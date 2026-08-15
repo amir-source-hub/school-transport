@@ -13,7 +13,7 @@ export function ForgotPasswordForm() {
           <div className="min-w-0">
             <p className="text-sm font-black">ورود خانواده با مشخصات ثابت</p>
             <p className="mt-1 text-xs leading-5 text-muted">
-              برای ورود به پنل دانش‌آموز از شماره همراه سرپرست و کد ملی دانش‌آموز استفاده می‌کنید؛
+              برای ورود به پنل دانش‌آموز از شماره همراه و کد ملی سرپرست استفاده می‌کنید؛
               رمز عبور دیگر لازم نیست.
             </p>
           </div>

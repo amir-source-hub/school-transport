@@ -102,7 +102,7 @@ export function StudentPortalLoginForm({ nextPath }: { nextPath?: string }) {
         />
       </Field>
       <Field
-        label="کد ملی دانش‌آموز"
+        label="کد ملی سرپرست"
         htmlFor="auth-national-id"
         required
         error={form.formState.errors.nationalId?.message}

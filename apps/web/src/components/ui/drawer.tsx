@@ -15,12 +15,14 @@ export function DrawerContent({
   children,
   side = 'right',
   className,
+  dark = false,
 }: {
   title: string;
   description?: string;
   children: ReactNode;
   side?: 'right' | 'left';
   className?: string;
+  dark?: boolean;
 }) {
   return (
     <DialogPrimitive.Portal>
@@ -30,13 +32,16 @@ export function DrawerContent({
         className={cn(
           'fixed inset-y-0 z-50 flex max-h-[100dvh] w-[min(22rem,calc(100vw-1rem))] flex-col overflow-hidden border-border bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-md)]',
           side === 'right' ? 'right-0 border-l' : 'left-0 border-r',
+          dark && 'border-white/10 bg-navy text-white',
           className,
         )}
       >
         <div className="pe-9">
           <DialogPrimitive.Title className="text-lg font-black">{title}</DialogPrimitive.Title>
           {description && (
-            <DialogPrimitive.Description className="mt-1 text-sm text-muted">
+            <DialogPrimitive.Description
+              className={cn('mt-1 text-sm', dark ? 'text-white/70' : 'text-muted')}
+            >
               {description}
             </DialogPrimitive.Description>
           )}
@@ -46,7 +51,12 @@ export function DrawerContent({
         </div>
         <DialogPrimitive.Close
           aria-label="بستن"
-          className="absolute end-3 top-3 grid size-11 place-items-center rounded-lg text-muted hover:bg-surface-muted hover:text-foreground"
+          className={cn(
+            'absolute end-3 top-3 grid size-11 place-items-center rounded-lg',
+            dark
+              ? 'text-white/80 hover:bg-white/10 hover:text-white'
+              : 'text-muted hover:bg-surface-muted hover:text-foreground',
+          )}
         >
           <X aria-hidden="true" className="size-5" />
         </DialogPrimitive.Close>

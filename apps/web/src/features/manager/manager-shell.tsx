@@ -44,13 +44,7 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold',
-                mobile
-                  ? active
-                    ? 'bg-primary-soft text-primary'
-                    : 'text-slate-700 hover:bg-surface-muted'
-                  : active
-                    ? 'bg-sun text-navy'
-                    : 'text-slate-200 hover:bg-white/10 hover:text-white',
+                active ? 'bg-sun text-navy' : 'text-white hover:bg-white/10',
               )}
             >
               <Icon className="size-4" aria-hidden="true" />
@@ -66,8 +60,8 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
           );
         })}
       </nav>
-      <div className={cn('mt-auto border-t pt-4', mobile ? 'border-border' : 'border-white/10')}>
-        <LogoutMenuItem mobile={mobile} />
+      <div className="mt-auto border-t border-white/10 pt-4">
+        <LogoutMenuItem mobile={false} />
       </div>
     </div>
   );
@@ -88,7 +82,7 @@ export function ManagerShell({ children }: { children: ReactNode }) {
                 <Menu className="size-5" />
               </Button>
             </DrawerTrigger>
-            <DrawerContent title="پنل مدیر مدرسه" description="مدیریت خدمات مدرسه">
+            <DrawerContent title="پنل مدیر مدرسه" description="مدیریت خدمات مدرسه" dark>
               <Navigation mobile />
             </DrawerContent>
           </Drawer>
