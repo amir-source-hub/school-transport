@@ -206,6 +206,7 @@ export function CreateEnrollmentForm({
     const persianTextFields = new Set<keyof typeof form>([
       'studentFirst',
       'studentLast',
+      'studentFatherName',
       'guardianFirst',
       'guardianLast',
       'guardianRelationshipDescription',
@@ -225,6 +226,7 @@ export function CreateEnrollmentForm({
     const requiredFields: (keyof typeof form)[] = [
       'studentFirst',
       'studentLast',
+      'studentFatherName',
       'studentNationalId',
       'gender',
       'guardianRelationshipType',
@@ -319,7 +321,14 @@ export function CreateEnrollmentForm({
     ) {
       normalizedValue = normalizeDigits(value).replace(/\D/g, '').slice(0, 10);
     }
-    setForm((current) => ({ ...current, [key]: normalizedValue }));
+    setForm((current) => {
+      const next = { ...current, [key]: normalizedValue };
+      if (current.guardianRelationshipType === 'FATHER') {
+        if (key === 'studentFatherName') next.guardianFirst = String(normalizedValue);
+        if (key === 'studentLast') next.guardianLast = String(normalizedValue);
+      }
+      return next;
+    });
     setFieldErrors((current) => ({ ...current, [key]: validateField(key, value) }));
   }
 
@@ -329,6 +338,7 @@ export function CreateEnrollmentForm({
         ? [
             'studentFirst',
             'studentLast',
+            'studentFatherName',
             'studentNationalId',
             'gender',
             'guardianRelationshipType',
@@ -395,6 +405,7 @@ export function CreateEnrollmentForm({
         existingStudentId: '',
         studentFirst: '',
         studentLast: '',
+        studentFatherName: '',
         studentNationalId: '',
         birthDate: '',
         gender: '',
@@ -414,6 +425,7 @@ export function CreateEnrollmentForm({
       existingStudentId: student.id,
       studentFirst: student.firstName,
       studentLast: student.lastName,
+      studentFatherName: student.fatherName ?? '',
       studentNationalId: student.nationalId,
       birthDate: student.birthDate ?? '',
       gender: student.gender ?? '',
@@ -461,6 +473,7 @@ export function CreateEnrollmentForm({
       const requiredNames = [
         form.studentFirst,
         form.studentLast,
+        form.studentFatherName,
         form.guardianRelationshipType,
         form.gender,
       ];
@@ -605,6 +618,7 @@ export function CreateEnrollmentForm({
           id: form.existingStudentId || undefined,
           firstName: form.studentFirst,
           lastName: form.studentLast,
+          fatherName: form.studentFatherName,
           nationalId: normalizeDigits(form.studentNationalId),
           birthDate: form.birthDate || undefined,
           gender: form.gender as StudentInput['gender'],
@@ -677,6 +691,7 @@ export function CreateEnrollmentForm({
       const pathToField: Record<string, keyof typeof form> = {
         'student.firstName': 'studentFirst',
         'student.lastName': 'studentLast',
+        'student.fatherName': 'studentFatherName',
         'student.nationalId': 'studentNationalId',
         'student.birthDate': 'birthDate',
         'student.phoneNumber': 'studentPhone',
@@ -741,6 +756,10 @@ export function CreateEnrollmentForm({
   }
   if (mode === 'onboarding' && onboardingGuardianNationalId) {
     lockedParentFields.add('guardianNationalId');
+  }
+  if (form.guardianRelationshipType === 'FATHER') {
+    lockedParentFields.add('guardianFirst');
+    lockedParentFields.add('guardianLast');
   }
   const optionalSectionKeys = new Set<keyof typeof form>([
     ...fatherKeys,
@@ -850,6 +869,7 @@ export function CreateEnrollmentForm({
   const fieldLabels: Partial<Record<keyof typeof form, string>> = {
     studentFirst: 'نام دانش‌آموز',
     studentLast: 'نام خانوادگی دانش‌آموز',
+    studentFatherName: 'نام پدر دانش‌آموز',
     studentNationalId: 'کد ملی دانش‌آموز',
     guardianFirst: 'نام سرپرست',
     guardianLast: 'نام خانوادگی سرپرست',
@@ -962,6 +982,7 @@ export function CreateEnrollmentForm({
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {field('studentFirst', 'نام دانش‌آموز')}
                 {field('studentLast', 'نام خانوادگی')}
+                {field('studentFatherName', 'نام پدر')}
                 {field('studentNationalId', 'کد ملی', 'tel')}
                 {prefixField('studentPhone', 'شماره همراه دانش‌آموز', '09', 9)}
                 <div className="text-sm font-bold">
@@ -1022,7 +1043,16 @@ export function CreateEnrollmentForm({
                     className="mt-2"
                     value={form.guardianRelationshipType}
                     onValueChange={(value) => {
-                      set('guardianRelationshipType', value);
+                      setForm((current) => ({
+                        ...current,
+                        guardianRelationshipType: value,
+                        ...(value === 'FATHER'
+                          ? {
+                              guardianFirst: current.studentFatherName,
+                              guardianLast: current.studentLast,
+                            }
+                          : {}),
+                      }));
                       setFieldErrors((current) => ({
                         ...current,
                         guardianFirst: undefined,

@@ -9,6 +9,7 @@ function validEnrollment(): GuidedEnrollmentData {
     student: {
       firstName: 'Ali',
       lastName: 'Ahmadi',
+      fatherName: 'Reza',
       nationalId: '۰۰۱۳۵۴۰۳۹۴',
       gender: 'MALE',
     },

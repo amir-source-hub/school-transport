@@ -14,6 +14,7 @@ export const students = pgTable(
       .references(() => schools.id),
     firstName: varchar('first_name', { length: 100 }).notNull(),
     lastName: varchar('last_name', { length: 100 }).notNull(),
+    fatherName: varchar('father_name', { length: 100 }),
     nationalId: varchar('national_id', { length: 20 }).notNull().unique(),
     birthDate: date('birth_date'),
     gender: varchar('gender', { length: 10 }),

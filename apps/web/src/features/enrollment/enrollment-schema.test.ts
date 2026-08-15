@@ -5,6 +5,7 @@ const validInput = {
   student: {
     firstName: 'علی',
     lastName: 'احمدی',
+    fatherName: 'حسین',
     nationalId: '0013542419',
     birthDate: '2012-05-14',
     gender: 'MALE',
@@ -66,6 +67,14 @@ describe('guided enrollment schema', () => {
       emergencyContact: null,
     });
     expect(result.success).toBe(true);
+  });
+
+  it('requires the student father name independently', () => {
+    const result = guidedEnrollmentSchema.safeParse({
+      ...validInput,
+      student: { ...validInput.student, fatherName: '' },
+    });
+    expect(result.success).toBe(false);
   });
 
   it('requires a guardian relationship description when relationship is OTHER', () => {

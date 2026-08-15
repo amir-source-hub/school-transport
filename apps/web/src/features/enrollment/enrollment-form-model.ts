@@ -22,6 +22,7 @@ export type ExistingStudent = {
   schoolId: string;
   firstName: string;
   lastName: string;
+  fatherName?: string | null;
   nationalId: string;
   birthDate: string | null;
   gender: string | null;
@@ -58,6 +59,7 @@ export type EnrollmentFormState = {
   existingStudentId: string;
   studentFirst: string;
   studentLast: string;
+  studentFatherName: string;
   studentNationalId: string;
   birthDate: string;
   gender: string;
@@ -102,6 +104,7 @@ const emptyForm: EnrollmentFormState = {
   existingStudentId: '',
   studentFirst: '',
   studentLast: '',
+  studentFatherName: '',
   studentNationalId: '',
   birthDate: '',
   gender: '',
@@ -170,6 +173,7 @@ export function createEnrollmentFormState({
     existingStudentId: firstExisting?.id ?? '',
     studentFirst: firstExisting?.firstName ?? '',
     studentLast: firstExisting?.lastName ?? '',
+    studentFatherName: firstExisting?.fatherName ?? '',
     studentNationalId: firstExisting?.nationalId ?? '',
     birthDate: firstExisting?.birthDate ?? '',
     gender: firstExisting?.gender ?? '',

@@ -239,6 +239,13 @@
       "when": 1786896000000,
       "tag": "0033_student_field_of_study",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1786982400000,
+      "tag": "0034_student_father_name",
+      "breakpoints": true
     }
   ]
 }

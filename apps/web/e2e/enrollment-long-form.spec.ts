@@ -97,6 +97,7 @@ test('combined enrollment rules survive retry and submit normalized values', asy
   await guardianSection.getByLabel('شماره تلفن منزل').fill('۲۲۱۱۳۳۳۳');
   await studentSection.getByLabel('نام دانش‌آموز').fill('علی');
   await studentSection.getByLabel('نام خانوادگی').fill('احمدی');
+  await studentSection.getByLabel('نام پدر').fill('حسین');
   const studentNationalId = studentSection.getByLabel('کد ملی');
   await studentNationalId.fill('۰۰۲۳');
   await expect(studentNationalId).toHaveAttribute('dir', 'ltr');
@@ -113,6 +114,10 @@ test('combined enrollment rules survive retry and submit normalized values', asy
   await guardianSection.getByRole('combobox', { name: 'نسبت' }).click();
   await page.getByRole('option', { name: 'پدر' }).click();
   await expect(guardianSection.getByLabel('نام', { exact: true })).toHaveCount(1);
+  await expect(guardianSection.getByLabel('نام', { exact: true })).toHaveValue('حسین');
+  await expect(guardianSection.getByLabel('نام', { exact: true })).toBeDisabled();
+  await expect(guardianSection.getByLabel('نام خانوادگی')).toHaveValue('احمدی');
+  await expect(guardianSection.getByLabel('نام خانوادگی')).toBeDisabled();
   await expect(page.getByRole('heading', { name: 'اطلاعات پدر' })).toHaveCount(0);
   const motherSection = page
     .getByRole('heading', { name: 'اطلاعات مادر' })

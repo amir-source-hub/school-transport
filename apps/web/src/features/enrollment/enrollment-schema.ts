@@ -42,6 +42,7 @@ export const studentSchema = z.object({
   id: z.string().uuid().optional(),
   firstName: name,
   lastName: name,
+  fatherName: name,
   nationalId,
   birthDate: z
     .string()

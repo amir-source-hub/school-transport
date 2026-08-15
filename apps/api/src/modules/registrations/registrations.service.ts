@@ -311,6 +311,7 @@ export class RegistrationsService {
             .set({
               schoolId: data.school.schoolId,
               birthDate: data.student.birthDate || null,
+              fatherName: data.student.fatherName,
               gender: data.student.gender || null,
               phoneNumber: data.student.phoneNumber ?? null,
               grade: data.school.grade,
@@ -326,6 +327,7 @@ export class RegistrationsService {
             schoolId: data.school.schoolId,
             firstName: data.student.firstName,
             lastName: data.student.lastName,
+            fatherName: data.student.fatherName,
             nationalId: data.student.nationalId,
             birthDate: data.student.birthDate || null,
             gender: data.student.gender || null,

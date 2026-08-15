@@ -11,6 +11,7 @@ export type StudentEnrollmentData = {
   id?: string;
   firstName: string;
   lastName: string;
+  fatherName: string;
   nationalId: string;
   birthDate?: string;
   gender: string;
@@ -115,6 +116,7 @@ export function normalizeAndValidateGuidedEnrollment(
   const required = [
     data.student.firstName,
     data.student.lastName,
+    data.student.fatherName,
     data.student.nationalId,
     data.student.gender,
     data.guardian.firstName,

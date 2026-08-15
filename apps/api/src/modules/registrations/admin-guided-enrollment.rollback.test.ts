@@ -76,7 +76,13 @@ const mother = {
 };
 
 const baseInput: GuidedEnrollmentData = {
-  student: { firstName: 'Ali', lastName: 'Ahmadi', nationalId: '0013540394', gender: 'MALE' },
+  student: {
+    firstName: 'Ali',
+    lastName: 'Ahmadi',
+    fatherName: 'Reza',
+    nationalId: '0013540394',
+    gender: 'MALE',
+  },
   guardian: {
     firstName: 'Reza',
     lastName: 'Ahmadi',

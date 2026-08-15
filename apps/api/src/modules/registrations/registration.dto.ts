@@ -37,6 +37,10 @@ class IdentityInputDto {
 }
 
 export class StudentInputDto extends IdentityInputDto {
+  @IsString({ message: 'نام پدر باید متن باشد.' })
+  @Length(1, 100, { message: 'نام پدر باید بین ۱ تا ۱۰۰ نویسه باشد.' })
+  @Matches(persianOnly, { message: persianOnlyMessage })
+  fatherName!: string;
   @IsOptional() @IsUUID(undefined, { message: 'شناسه دانشآموز معتبر نیست.' }) id?: string;
   @IsOptional()
   @Transform(digits)
