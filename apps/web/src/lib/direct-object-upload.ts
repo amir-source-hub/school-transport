@@ -2,6 +2,8 @@ export type DirectUploadOptions = {
   signal?: AbortSignal;
   timeoutMs?: number;
   onProgress?: (percent: number | null) => void;
+  contentType?: string;
+  fallbackPath?: string;
 };
 
 export class DirectUploadError extends Error {
@@ -25,7 +27,7 @@ export async function putFileDirectly(
     const cleanup = () => options.signal?.removeEventListener('abort', abort);
     request.open('PUT', uploadUrl);
     request.timeout = options.timeoutMs ?? 120_000;
-    request.setRequestHeader('Content-Type', file.type);
+    request.setRequestHeader('Content-Type', options.contentType ?? file.type);
     options.onProgress?.(null);
     request.upload.onprogress = (event) => {
       options.onProgress?.(
@@ -54,6 +56,28 @@ export async function putFileDirectly(
     options.signal?.addEventListener('abort', abort, { once: true });
     if (options.signal?.aborted) abort();
     else request.send(file);
+  }).catch(async (error) => {
+    if (
+      !(error instanceof DirectUploadError) ||
+      error.kind !== 'network' ||
+      !options.fallbackPath ||
+      options.signal?.aborted
+    ) {
+      throw error;
+    }
+
+    const response = await fetch(options.fallbackPath, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': options.contentType ?? file.type,
+        'X-Upload-Target': uploadUrl,
+      },
+      credentials: 'same-origin',
+      signal: options.signal,
+    });
+    if (!response.ok) throw new DirectUploadError('http', response.status);
+    options.onProgress?.(100);
   });
 }
 

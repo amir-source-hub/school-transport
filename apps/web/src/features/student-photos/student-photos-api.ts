@@ -80,10 +80,16 @@ export async function authorizePhotoUpload(
 export async function putPhotoObject(
   uploadUrl: string,
   file: File,
-  options: { signal?: AbortSignal; onProgress?: (percent: number) => void } = {},
+  options: {
+    signal?: AbortSignal;
+    onProgress?: (percent: number) => void;
+    contentType?: (typeof ACCEPTED_PHOTO_MIMES)[number];
+  } = {},
 ) {
   await putFileDirectly(uploadUrl, file, {
     signal: options.signal,
+    contentType: options.contentType,
+    fallbackPath: '/api/student-photo-upload',
     onProgress: (percent) => options.onProgress?.(percent ?? 0),
   });
 }

@@ -138,6 +138,7 @@ describe('PhotoUploadCard', () => {
         expect.any(File),
         expect.objectContaining({
           signal: expect.any(AbortSignal),
+          contentType: 'image/png',
           onProgress: expect.any(Function),
         }),
       ),

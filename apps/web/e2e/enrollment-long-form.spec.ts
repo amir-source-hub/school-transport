@@ -17,7 +17,10 @@ test('enrollment form keeps validation errors visible without mobile overflow', 
   await page.goto('/student/enrollments');
   await expect(page.getByRole('heading', { level: 1, name: 'ثبت‌نام و پیگیری' })).toBeVisible();
   await expect(page.getByLabel('تاریخ تولد (شمسی)')).toBeVisible();
-  await expect(page.getByLabel(/انتخاب عکس/)).toHaveAttribute('accept', 'image/jpeg,image/png');
+  await expect(page.getByLabel(/انتخاب عکس/)).toHaveAttribute(
+    'accept',
+    'image/jpeg,image/png,image/heic,image/heif,.heic,.heif',
+  );
 
   await page.getByLabel('جنسیت').click();
   await page.getByRole('option', { name: 'دختر' }).click();

@@ -45,6 +45,44 @@ function normalizedPhotoMime(file: File): (typeof ACCEPTED_PHOTO_MIMES)[number] 
   return null;
 }
 
+function isAppleHighEfficiencyImage(file: File) {
+  return (
+    ['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'].includes(
+      file.type.toLowerCase(),
+    ) || /\.hei[cf]$/i.test(file.name)
+  );
+}
+
+async function convertToJpeg(file: File): Promise<File> {
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.decoding = 'async';
+    image.src = sourceUrl;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    const scale = Math.min(1, 2400 / Math.max(image.naturalWidth, image.naturalHeight));
+    canvas.width = Math.round(image.naturalWidth * scale);
+    canvas.height = Math.round(image.naturalHeight * scale);
+    const context = canvas.getContext('2d');
+    if (!context || canvas.width === 0 || canvas.height === 0) throw new Error('IMAGE_DECODE_FAILED');
+    context.drawImage(image, 0, 0);
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob(
+        (result) => (result ? resolve(result) : reject(new Error('IMAGE_CONVERSION_FAILED'))),
+        'image/jpeg',
+        0.9,
+      ),
+    );
+    return new File([blob], file.name.replace(/\.hei[cf]$/i, '') + '.jpg', {
+      type: 'image/jpeg',
+      lastModified: file.lastModified,
+    });
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 function directUploadMessage(error: unknown) {
   if (!(error instanceof DirectUploadError)) return DIRECT_UPLOAD_RETRY_MESSAGE;
   if (error.kind === 'timeout')
@@ -111,10 +149,23 @@ export function PhotoUploadCard({
   );
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+    const originalFile = event.target.files?.[0];
     if (event.target) event.target.value = '';
-    if (!file) return;
+    if (!originalFile) return;
     setMessage(undefined);
+
+    let file = originalFile;
+    if (isAppleHighEfficiencyImage(file)) {
+      setMessage('در حال تبدیل عکس آیفون از HEIC/HEIF به JPEG…');
+      try {
+        file = await convertToJpeg(file);
+      } catch {
+        setMessage(
+          'مرورگر نتوانست عکس HEIC/HEIF را تبدیل کند. در آیفون از Share > Options گزینه Most Compatible را انتخاب کنید یا از عکس اسکرین‌شات بگیرید و دوباره ارسال کنید.',
+        );
+        return;
+      }
+    }
 
     const mime = normalizedPhotoMime(file);
     if (!mime) {
@@ -150,6 +201,7 @@ export function PhotoUploadCard({
     setPending(true);
     setProgress(0);
     setMessage(undefined);
+    let stage: 'authorization' | 'storage' | 'confirmation' = 'authorization';
     try {
       let authorization = authorizationRef.current;
       if (!authorization || authorization.file !== file || authorization.expiresAt <= Date.now()) {
@@ -169,9 +221,11 @@ export function PhotoUploadCard({
         };
         authorizationRef.current = authorization;
       }
+      stage = 'storage';
       try {
         await putPhotoObject(authorization.uploadUrl, file, {
           signal: controller.signal,
+          contentType: selected.mime,
           onProgress: setProgress,
         });
       } catch (error) {
@@ -182,6 +236,7 @@ export function PhotoUploadCard({
         setMessage(directUploadMessage(error));
         return;
       }
+      stage = 'confirmation';
       const completed = familyId
         ? await completePhotoUpload(authorization.uploadId, mode, familyId, controller.signal)
         : await completePhotoUpload(authorization.uploadId, mode, undefined, controller.signal);
@@ -192,10 +247,16 @@ export function PhotoUploadCard({
       setMessage('عکس پرسنلی دانش‌آموز بارگذاری شد و برای صدور کارت سرویس در صف بررسی قرار گرفت.');
       router.refresh();
     } catch (error) {
+      const connectionMessage =
+        error instanceof TypeError
+          ? stage === 'authorization'
+            ? 'سایت نتوانست مجوز بارگذاری عکس را از سرویس دریافت کند. صفحه را یک‌بار کامل ببندید و باز کنید؛ اگر ادامه داشت، این خطا مربوط به ارتباط API است نه فرمت عکس.'
+            : 'فایل به ذخیره‌گاه رسید، اما تأیید نهایی آن انجام نشد. همین عکس را دوباره ارسال کنید؛ مجوز موجود دوباره استفاده می‌شود.'
+          : undefined;
       setMessage(
         isAbortError(error)
           ? 'بارگذاری لغو شد. می‌توانید همین عکس یا عکس دیگری را انتخاب کنید.'
-          : getApiErrorFeedback(error).message,
+          : (connectionMessage ?? getApiErrorFeedback(error).message),
       );
     } finally {
       setPending(false);
@@ -239,7 +300,7 @@ export function PhotoUploadCard({
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,image/png"
+            accept="image/jpeg,image/png,image/heic,image/heif,.heic,.heif"
             className="sr-only"
             disabled={pending}
             onChange={handleFileChange}
@@ -248,7 +309,7 @@ export function PhotoUploadCard({
           <span className="text-sm font-black">
             {pending ? 'در حال بارگذاری و بررسی…' : 'انتخاب عکس'}
           </span>
-          <span className="text-xs text-muted">فرمت JPG یا PNG، حداکثر ۵ مگابایت</span>
+          <span className="text-xs text-muted">فرمت JPG، PNG یا عکس HEIC/HEIF آیفون، حداکثر ۵ مگابایت پس از تبدیل</span>
         </label>
       )}
 
@@ -259,7 +320,7 @@ export function PhotoUploadCard({
           <li>نمای روبه‌رو و چهره کاملاً مشخص</li>
           <li>نور یکنواخت و پس‌زمینه ساده</li>
           <li>بدون فیلتر یا عینک آفتابی</li>
-          <li>فرمت JPEG یا PNG</li>
+          <li>فرمت JPEG، PNG یا HEIC/HEIF آیفون</li>
           <li>حداکثر حجم فایل ۵ مگابایت</li>
         </ul>
       </div>
