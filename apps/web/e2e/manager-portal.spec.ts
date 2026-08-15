@@ -43,13 +43,12 @@ test('manager drawer is keyboard accessible and restores focus', async ({ page }
 
 test('manager sees scoped students and can open an allowed detail', async ({ page }) => {
   await page.goto('/manager/students');
-  await expect(page.getByText('***5678')).toHaveCount(2);
+  await expect(page.getByText('0012345678')).toHaveCount(2);
   await expect(page.getByText('09120000000')).toHaveCount(0);
-  await page
-    .locator('a:visible')
-    .filter({ hasText: 'دانش‌آموز با نام طولانی آزمایشی' })
-    .click();
+  await page.locator('a:visible').filter({ hasText: 'دانش‌آموز با نام طولانی آزمایشی' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('دانش‌آموز');
+  await expect(page.getByText('09120000000')).toBeVisible();
+  await expect(page.getByText('نشانی‌ها')).toBeVisible();
   await expect(page.getByText('اطلاعات راننده آزمایشی است')).toBeVisible();
 });
 
@@ -63,7 +62,10 @@ test('experimental and deferred features perform no location, camera, or driver-
   });
   await page.goto('/manager/drivers');
   await expect(page.getByText('اطلاعات آزمایشی').first()).toBeVisible();
-  await expect(page.getByText(/شماره تماس|کد ملی|گواهینامه/)).toHaveCount(0);
+  await page.getByRole('link', { name: /آریا نیک‌راه/ }).click();
+  await expect(page.getByText('09121234567')).toBeVisible();
+  await expect(page.getByText('0013540394')).toBeVisible();
+  await expect(page.getByText('1404123456')).toBeVisible();
   await page.goto('/manager/online-control');
   await expect(page.getByRole('button', { name: 'نمایش موقعیت زنده' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'مشاهده تصویر خودرو' })).toBeDisabled();

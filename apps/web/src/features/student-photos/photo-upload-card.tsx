@@ -69,12 +69,14 @@ export function PhotoUploadCard({
   mode = 'panel',
   familyId,
   onUploadCompleted,
+  showHeading = true,
 }: {
   studentId?: string;
   initialItems: PhotoUploadView[];
   mode?: PhotoUploadMode;
   familyId?: string;
   onUploadCompleted?: (uploadId: string) => void;
+  showHeading?: boolean;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -214,10 +216,12 @@ export function PhotoUploadCard({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="flex items-center gap-2 text-lg font-black">
-          <ImageIcon aria-hidden="true" className="size-5 text-primary" />
-          عکس پرسنلی دانش‌آموز برای صدور کارت سرویس
-        </h2>
+        {showHeading && (
+          <h2 className="flex items-center gap-2 text-lg font-black">
+            <ImageIcon aria-hidden="true" className="size-5 text-primary" />
+            عکس پرسنلی دانش‌آموز برای صدور کارت سرویس
+          </h2>
+        )}
         <p className="mt-1 text-sm text-muted">
           عکس رنگی جدید، تک‌نفره، روبه‌رو، واضح، با نور یکنواخت و پس‌زمینه ساده باشد. چهره کامل،
           بدون فیلتر، عینک آفتابی، بازتاب عینک یا پوشش نامناسب دیده شود.

@@ -24,7 +24,7 @@ const links = [
   ['/manager/students', 'دانش‌آموزان', GraduationCap],
   ['/manager/drivers', 'رانندگان', Bus],
   ['/manager/online-control', 'کنترل آنلاین', Monitor],
-  ['/manager/hyperschool', 'هایپراسکول', Sparkles],
+  ['/manager/hyperschool', 'هایپرمدرسه', Sparkles],
   ['/manager/feedback', 'انتقادات و پیشنهادات', MessageSquareText],
   ['/manager/settings', 'تنظیمات', Settings],
 ] as const;
@@ -47,10 +47,10 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
                 mobile
                   ? active
                     ? 'bg-primary-soft text-primary'
-                    : 'text-muted hover:bg-surface-muted'
+                    : 'text-slate-700 hover:bg-surface-muted'
                   : active
                     ? 'bg-sun text-navy'
-                    : 'text-white/65 hover:bg-white/10 hover:text-white',
+                    : 'text-slate-200 hover:bg-white/10 hover:text-white',
               )}
             >
               <Icon className="size-4" aria-hidden="true" />

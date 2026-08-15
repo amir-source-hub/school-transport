@@ -1,8 +1,11 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
 
 export const MANAGER_STUDENT_SORT_KEYS = [
   'name',
+  'nationalId',
+  'studentCode',
+  'educationLevel',
   'grade',
   'createdAt',
   'registrationStatus',
@@ -12,6 +15,9 @@ export const MANAGER_PHOTO_STATUS_FILTERS = ['all', 'with_photo', 'without_photo
 export type ManagerStudentSortKey = (typeof MANAGER_STUDENT_SORT_KEYS)[number];
 export type ManagerSortDirection = (typeof MANAGER_STUDENT_SORT_DIRECTIONS)[number];
 export type ManagerPhotoStatusFilter = (typeof MANAGER_PHOTO_STATUS_FILTERS)[number];
+
+const blankToUndefined = ({ value }: { value: unknown }) =>
+  typeof value === 'string' && value.trim() === '' ? undefined : value;
 
 export class ManagerStudentListQueryDto {
   @Type(() => Number)
@@ -26,26 +32,31 @@ export class ManagerStudentListQueryDto {
   pageSize = 20;
 
   @IsOptional()
+  @Transform(blankToUndefined)
   @IsString()
   @Length(1, 120)
   query?: string;
 
   @IsOptional()
+  @Transform(blankToUndefined)
   @IsString()
   @Length(1, 60)
   educationLevel?: string;
 
   @IsOptional()
+  @Transform(blankToUndefined)
   @IsString()
   @Length(1, 60)
   grade?: string;
 
   @IsOptional()
+  @Transform(blankToUndefined)
   @IsString()
   @Length(1, 20)
   serviceType?: string;
 
   @IsOptional()
+  @Transform(blankToUndefined)
   @IsString()
   @Length(1, 30)
   registrationStatus?: string;

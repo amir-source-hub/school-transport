@@ -52,7 +52,20 @@ export class ReportsService {
       .orderBy(asc(schools.id))
       .limit(limit);
     const studentRows = await this.db.db
-      .select()
+      .select({
+        id: students.id,
+        userId: students.userId,
+        schoolId: students.schoolId,
+        firstName: students.firstName,
+        lastName: students.lastName,
+        nationalId: students.nationalId,
+        birthDate: students.birthDate,
+        gender: students.gender,
+        grade: students.grade,
+        className: students.className,
+        isActive: students.isActive,
+        createdAt: students.createdAt,
+      })
       .from(students)
       .orderBy(asc(students.id))
       .limit(limit);

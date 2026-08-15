@@ -112,7 +112,7 @@ export default async function Page() {
               <div>
                 <h2 className="font-black">امکانات در راه</h2>
                 <p className="mt-2 text-sm leading-7 text-muted">
-                  موقعیت زنده، تصویر خودرو و هایپراسکول هنوز فعال نیستند.
+                  موقعیت زنده، تصویر خودرو و هایپرمدرسه به‌زودی در دسترس قرار می‌گیرند.
                 </p>
               </div>
             </div>

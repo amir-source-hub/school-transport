@@ -18,6 +18,7 @@ import { DatabaseService } from '../../database/database.service';
 import {
   contracts,
   feedbackSubmissions,
+  familyAddresses,
   parents,
   registrationPrices,
   schoolManagerUsers,
@@ -28,12 +29,6 @@ import {
 } from '../../database/schemas';
 import { SchoolManagerScopeService } from '../access-control/school-manager-scope.service';
 import type { ManagerStudentListQueryDto } from './school-manager.dto';
-
-function maskNationalId(value: string | null): string | null {
-  if (!value) return null;
-  const lastFour = value.slice(-4);
-  return `***${lastFour}`;
-}
 
 const EDUCATION_LEVEL_MAP: Record<string, string> = {
   ابتدایی: 'ابتدایی',
@@ -312,7 +307,7 @@ export class SchoolManagersService {
         educationLevel: mapEducationLevel(row.className),
         grade: row.grade,
         studentCode: row.studentCode,
-        nationalIdMasked: maskNationalId(row.nationalId),
+        nationalId: row.nationalId,
         guardianName: guardianByUser.get(row.userId) ?? null,
         isActive: row.isActive,
         schoolName: row.schoolName,
@@ -355,9 +350,12 @@ export class SchoolManagersService {
         lastName: students.lastName,
         nationalId: students.nationalId,
         birthDate: students.birthDate,
+        fatherName: students.fatherName,
         gender: students.gender,
+        phoneNumber: students.phoneNumber,
         grade: students.grade,
         className: students.className,
+        fieldOfStudy: students.fieldOfStudy,
         studentCode: students.studentCode,
         isActive: students.isActive,
         createdAt: students.createdAt,
@@ -370,18 +368,28 @@ export class SchoolManagersService {
       .limit(1);
     if (!studentRow) throw new AuthorizationError('Access denied.');
 
-    const [parentRows, registrationRows, photoRow] = await Promise.all([
+    const [parentRows, addressRows, registrationRows, photoRow] = await Promise.all([
       this.db.db
         .select({
           id: parents.id,
           parentType: parents.parentType,
           firstName: parents.firstName,
           lastName: parents.lastName,
+          nationalId: parents.nationalId,
+          phoneNumber: parents.phoneNumber,
+          homePhone: parents.homePhone,
+          relationshipType: parents.relationshipType,
+          relationshipDescription: parents.relationshipDescription,
           isPrimaryContact: parents.isPrimaryContact,
         })
         .from(parents)
         .where(eq(parents.userId, studentRow.userId))
         .orderBy(desc(parents.isPrimaryContact), desc(parents.createdAt)),
+      this.db.db
+        .select()
+        .from(familyAddresses)
+        .where(eq(familyAddresses.userId, studentRow.userId))
+        .orderBy(desc(familyAddresses.isActive), desc(familyAddresses.createdAt)),
       this.db.db
         .select()
         .from(serviceRegistrations)
@@ -448,11 +456,14 @@ export class SchoolManagersService {
       id: studentRow.id,
       firstName: studentRow.firstName,
       lastName: studentRow.lastName,
-      nationalIdMasked: maskNationalId(studentRow.nationalId),
+      nationalId: studentRow.nationalId,
       birthDate: studentRow.birthDate,
+      fatherName: studentRow.fatherName,
       gender: studentRow.gender,
+      phoneNumber: studentRow.phoneNumber,
       educationLevel: mapEducationLevel(studentRow.className),
       grade: studentRow.grade,
+      fieldOfStudy: studentRow.fieldOfStudy,
       studentCode: studentRow.studentCode,
       isActive: studentRow.isActive,
       createdAt: studentRow.createdAt,
@@ -465,7 +476,24 @@ export class SchoolManagersService {
         id: parent.id,
         parentType: parent.parentType,
         name: `${parent.firstName} ${parent.lastName}`,
+        nationalId: parent.nationalId,
+        phoneNumber: parent.phoneNumber,
+        homePhone: parent.homePhone,
+        relationshipType: parent.relationshipType,
+        relationshipDescription: parent.relationshipDescription,
         isPrimaryContact: parent.isPrimaryContact,
+      })),
+      addresses: addressRows.map((address) => ({
+        id: address.id,
+        title: address.title,
+        province: address.province,
+        city: address.city,
+        district: address.district,
+        streetAddress: address.streetAddress,
+        postalCode: address.postalCode,
+        latitude: address.latitude,
+        longitude: address.longitude,
+        isActive: address.isActive,
       })),
       hasApprovedPhoto: Boolean(photoRow[0]),
       enrollmentSummary,
@@ -496,10 +524,10 @@ export class SchoolManagersService {
     if (!managerRow) throw new AuthorizationError('حساب مدیر مدرسه در دسترس نیست.');
 
     const schoolRows = await this.db.db
-        .select()
-        .from(schools)
-        .where(inArray(schools.id, schoolIds))
-        .orderBy(schools.createdAt);
+      .select()
+      .from(schools)
+      .where(inArray(schools.id, schoolIds))
+      .orderBy(schools.createdAt);
 
     return {
       manager: {
@@ -543,6 +571,9 @@ export class SchoolManagersService {
     if (sortBy === 'name') {
       return [sql`${students.firstName} ${direction}`, sql`${students.lastName} ${direction}`];
     }
+    if (sortBy === 'nationalId') return [sql`${students.nationalId} ${direction}`];
+    if (sortBy === 'studentCode') return [sql`${students.studentCode} ${direction}`];
+    if (sortBy === 'educationLevel') return [sql`${students.className} ${direction}`];
     if (sortBy === 'grade') return [sql`${students.grade} ${direction}`, desc(students.id)];
     return [sql`${students.createdAt} ${direction}`, desc(students.id)];
   }

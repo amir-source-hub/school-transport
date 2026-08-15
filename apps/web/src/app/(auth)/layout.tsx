@@ -1,4 +1,4 @@
-import { ArrowRight, Route, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { BrandMark } from '@/components/brand/brand-mark';
@@ -51,9 +51,6 @@ export default function AuthLayout({ children }: Readonly<{ children: React.Reac
         </div>
         <div className="pt-6">{children}</div>
         <div className="mt-7 flex items-center justify-center gap-3 border-t border-slate-200/70 pt-5 text-xs text-muted">
-          <Route className="size-4 text-primary" />
-          <span>ورود با کد یک‌بارمصرف</span>
-          <span className="size-1 rounded-full bg-slate-300" />
           <Link href="/contact" className="font-bold hover:text-primary">
             پشتیبانی
           </Link>

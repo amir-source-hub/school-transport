@@ -1015,6 +1015,7 @@ export function CreateEnrollmentForm({
             </Section>
             <Section title="عکس پرسنلی دانش‌آموز برای صدور کارت سرویس">
               <PhotoUploadCard
+                showHeading={false}
                 studentId={form.existingStudentId || undefined}
                 initialItems={[]}
                 mode={adminFamilyId ? 'admin' : mode}
@@ -1077,7 +1078,7 @@ export function CreateEnrollmentForm({
                     {field('guardianRelationshipDescription', 'شرح نسبت')}
                   </div>
                 )}
-                <div className="sm:col-span-2 lg:col-span-4">
+                <div className="sm:col-span-1 lg:col-span-2">
                   <label
                     htmlFor="enrollment-guardianPhone"
                     className="text-sm font-bold text-foreground"
@@ -1097,7 +1098,9 @@ export function CreateEnrollmentForm({
                     شماره تأییدشده هنگام ورود به حساب؛ قابل تغییر نیست.
                   </p>
                 </div>
-                {prefixField('homePhone', 'شماره تلفن منزل', '021', 8)}
+                <div className="sm:col-span-1 lg:col-span-2">
+                  {prefixField('homePhone', 'شماره تلفن منزل', '021', 8)}
+                </div>
               </div>
             </Section>
             {form.guardianRelationshipType === 'MOTHER' && (
@@ -1253,9 +1256,6 @@ export function CreateEnrollmentForm({
                     className="mt-2"
                   />
                 </label>
-                {form.educationLevel === 'متوسطه دوم' && (
-                  <div>{field('fieldOfStudy', 'رشته تحصیلی')}</div>
-                )}
                 <label className="text-sm font-bold">
                   مقطع تحصیلی
                   <Select
@@ -1276,6 +1276,9 @@ export function CreateEnrollmentForm({
                     className="mt-2"
                   />
                 </label>
+                {form.educationLevel === 'متوسطه دوم' && (
+                  <div>{field('fieldOfStudy', 'رشته تحصیلی')}</div>
+                )}
               </div>
             </Section>
             {selectedSchool && (
@@ -1622,7 +1625,7 @@ export function WizardFooter({
   error?: string;
 }) {
   return (
-    <div className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-20 -mx-4 border-t border-slate-100 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_-24px_rgba(15,23,42,.5)] backdrop-blur sm:mx-0 sm:px-0 lg:bottom-0">
+    <div className="-mx-4 border-t border-slate-100 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_-24px_rgba(15,23,42,.5)] backdrop-blur sm:sticky sm:bottom-0 sm:z-20 sm:mx-0 sm:px-0">
       {error && (
         <p
           role="alert"

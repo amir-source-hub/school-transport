@@ -27,7 +27,7 @@ export default function Page() {
           <div className="grid min-h-44 place-items-center text-center">
             <div>
               <Radio className="mx-auto size-10 text-muted" />
-              <p className="mt-3 font-black">نقشه زنده هنوز راه‌اندازی نشده است</p>
+              <p className="mt-3 font-black">نقشه زنده به‌زودی در دسترس قرار می‌گیرد</p>
               <p className="mt-2 text-sm text-muted">هیچ کاشی نقشه یا داده GPS بارگیری نمی‌شود.</p>
             </div>
           </div>

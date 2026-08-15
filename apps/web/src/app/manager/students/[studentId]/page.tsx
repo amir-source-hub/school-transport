@@ -46,11 +46,29 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
             <div>
               <dt className="text-muted">کد ملی</dt>
-              <dd className="mt-1 font-mono font-bold">{s.nationalIdMasked ?? '—'}</dd>
+              <dd className="mt-1 font-mono font-bold">{s.nationalId ?? '—'}</dd>
             </div>
             <div>
               <dt className="text-muted">کد دانش‌آموزی</dt>
               <dd className="mt-1 font-bold">{s.studentCode ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">نام پدر</dt>
+              <dd className="mt-1 font-bold">{s.fatherName ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">تاریخ تولد</dt>
+              <dd className="mt-1 font-bold">{s.birthDate ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">جنسیت</dt>
+              <dd className="mt-1 font-bold">
+                {s.gender === 'FEMALE' ? 'دختر' : s.gender === 'MALE' ? 'پسر' : '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted">شماره همراه</dt>
+              <dd className="mt-1 font-mono font-bold">{s.phoneNumber ?? '—'}</dd>
             </div>
             <div>
               <dt className="text-muted">مقطع</dt>
@@ -60,6 +78,12 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
               <dt className="text-muted">پایه</dt>
               <dd className="mt-1 font-bold">{s.grade ?? '—'}</dd>
             </div>
+            {s.fieldOfStudy && (
+              <div>
+                <dt className="text-muted">رشته تحصیلی</dt>
+                <dd className="mt-1 font-bold">{s.fieldOfStudy}</dd>
+              </div>
+            )}
           </dl>
         </Card>
         <Card>
@@ -70,10 +94,39 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
                 key={g.id}
                 className="flex justify-between rounded-xl bg-surface-muted p-3 text-sm"
               >
-                <span className="font-bold">{g.name}</span>
+                <div>
+                  <p className="font-bold">{g.name}</p>
+                  <p className="mt-1 font-mono text-xs text-muted">
+                    {g.phoneNumber} · {g.nationalId}
+                  </p>
+                  {g.homePhone && (
+                    <p className="mt-1 text-xs text-muted">تلفن منزل: {g.homePhone}</p>
+                  )}
+                </div>
                 {g.isPrimaryContact && <Badge tone="info">سرپرست اصلی</Badge>}
               </div>
             ))}
+          </div>
+        </Card>
+        <Card className="lg:col-span-2">
+          <h2 className="font-black">نشانی‌ها</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {s.addresses.map((address) => (
+              <div key={address.id} className="rounded-xl bg-surface-muted p-4 text-sm">
+                <div className="flex justify-between gap-3">
+                  <p className="font-black">{address.title}</p>
+                  {address.isActive && <Badge tone="success">فعال</Badge>}
+                </div>
+                <p className="mt-2 leading-7">
+                  {address.province}، {address.city}
+                  {address.district ? `، ${address.district}` : ''}، {address.streetAddress}
+                </p>
+                {address.postalCode && (
+                  <p className="mt-1 font-mono text-muted">کد پستی: {address.postalCode}</p>
+                )}
+              </div>
+            ))}
+            {s.addresses.length === 0 && <p className="text-sm text-muted">نشانی ثبت نشده است.</p>}
           </div>
         </Card>
         <Card className="lg:col-span-2">

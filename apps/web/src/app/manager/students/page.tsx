@@ -30,7 +30,7 @@ export default async function Page({
         </p>
       </header>
       <Card>
-        <form className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+        <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <label className="relative">
             <span className="sr-only">جست‌وجو</span>
             <Search className="absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
@@ -41,6 +41,16 @@ export default async function Page({
               className="pe-10"
             />
           </label>
+          <Input
+            name="educationLevel"
+            defaultValue={typeof raw.educationLevel === 'string' ? raw.educationLevel : ''}
+            placeholder="مقطع تحصیلی"
+          />
+          <Input
+            name="grade"
+            defaultValue={typeof raw.grade === 'string' ? raw.grade : ''}
+            placeholder="پایه تحصیلی"
+          />
           <select
             name="photoStatus"
             aria-label="وضعیت عکس دانش‌آموز"
@@ -50,6 +60,29 @@ export default async function Page({
             <option value="all">همه عکس‌ها</option>
             <option value="with_photo">دارای عکس</option>
             <option value="without_photo">بدون عکس</option>
+          </select>
+          <select
+            name="sortBy"
+            aria-label="مرتب‌سازی دانش‌آموزان"
+            defaultValue={typeof raw.sortBy === 'string' ? raw.sortBy : 'createdAt'}
+            className="min-h-12 rounded-xl border border-border bg-white px-3"
+          >
+            <option value="createdAt">تاریخ ثبت</option>
+            <option value="name">نام دانش‌آموز</option>
+            <option value="nationalId">کد ملی</option>
+            <option value="studentCode">کد دانش‌آموزی</option>
+            <option value="educationLevel">مقطع تحصیلی</option>
+            <option value="grade">پایه تحصیلی</option>
+            <option value="registrationStatus">وضعیت ثبت‌نام</option>
+          </select>
+          <select
+            name="sortOrder"
+            aria-label="جهت مرتب‌سازی"
+            defaultValue={typeof raw.sortOrder === 'string' ? raw.sortOrder : 'desc'}
+            className="min-h-12 rounded-xl border border-border bg-white px-3"
+          >
+            <option value="asc">صعودی</option>
+            <option value="desc">نزولی</option>
           </select>
           <Button>اعمال فیلتر</Button>
         </form>
@@ -91,7 +124,7 @@ export default async function Page({
                       {x.educationLevel ?? '—'}، پایه {x.grade ?? '—'}
                     </td>
                     <td className="p-4">{x.guardianName ?? '—'}</td>
-                    <td className="p-4 font-mono">{x.nationalIdMasked ?? '—'}</td>
+                    <td className="p-4 font-mono">{x.nationalId ?? '—'}</td>
                     <td className="p-4">
                       <Badge tone={x.isActive ? 'success' : 'neutral'}>
                         {x.isActive ? 'فعال' : 'غیرفعال'}
@@ -126,7 +159,7 @@ export default async function Page({
                   </div>
                   <div>
                     <dt className="text-muted">کد ملی</dt>
-                    <dd className="font-mono">{x.nationalIdMasked ?? '—'}</dd>
+                    <dd className="font-mono">{x.nationalId ?? '—'}</dd>
                   </div>
                   <div>
                     <dt className="text-muted">عکس</dt>

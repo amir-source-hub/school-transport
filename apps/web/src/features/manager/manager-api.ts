@@ -34,7 +34,7 @@ export type ManagerStudent = {
   educationLevel: string | null;
   grade: string | null;
   studentCode: string | null;
-  nationalIdMasked: string | null;
+  nationalId: string | null;
   guardianName: string | null;
   isActive: boolean;
   schoolName: string;
@@ -50,9 +50,34 @@ export type ManagerStudent = {
 
 export type ManagerStudentDetail = ManagerStudent & {
   birthDate: string | null;
+  fatherName: string | null;
   gender: string | null;
+  phoneNumber: string | null;
+  fieldOfStudy: string | null;
   school: { id: string; name: string; schoolType: string | null };
-  guardians: Array<{ id: string; parentType: string; name: string; isPrimaryContact: boolean }>;
+  guardians: Array<{
+    id: string;
+    parentType: string;
+    name: string;
+    nationalId: string;
+    phoneNumber: string;
+    homePhone: string | null;
+    relationshipType: string | null;
+    relationshipDescription: string | null;
+    isPrimaryContact: boolean;
+  }>;
+  addresses: Array<{
+    id: string;
+    title: string;
+    province: string;
+    city: string;
+    district: string | null;
+    streetAddress: string;
+    postalCode: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    isActive: boolean;
+  }>;
   enrollmentSummary: null | {
     registrationStatus: string;
     academicYear: string;

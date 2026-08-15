@@ -392,9 +392,9 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
   {
     path: '/manager/hyperschool',
     audience: 'manager',
-    title: 'هایپراسکول',
-    description: 'معرفی قابلیت در راه هایپراسکول.',
-    primaryHeading: 'هایپراسکول در حال آماده‌سازی است',
+    title: 'هایپرمدرسه',
+    description: 'معرفی قابلیت در راه هایپرمدرسه.',
+    primaryHeading: 'هایپرمدرسه در حال آماده‌سازی است',
   },
   {
     path: '/manager/feedback',
