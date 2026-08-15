@@ -7,7 +7,7 @@ test.beforeEach(async ({ context, baseURL }) => {
   ]);
 });
 
-test('enrollment form restores safe choices and focuses mobile validation errors', async ({
+test('enrollment form keeps validation errors visible without mobile overflow', async ({
   page,
 }, testInfo) => {
   test.skip(
@@ -21,14 +21,6 @@ test('enrollment form restores safe choices and focuses mobile validation errors
 
   await page.getByLabel('جنسیت').click();
   await page.getByRole('option', { name: 'دختر' }).click();
-  await expect
-    .poll(() =>
-      page.evaluate(() =>
-        sessionStorage.getItem('school-transport:enrollment-safe-draft:v1:panel'),
-      ),
-    )
-    .toContain('FEMALE');
-  await page.reload();
   await expect(page.getByLabel('جنسیت')).toContainText('دختر');
 
   await page.getByRole('button', { name: 'مرحله بعد' }).click();
@@ -36,23 +28,6 @@ test('enrollment form restores safe choices and focuses mobile validation errors
     page.getByRole('alert').filter({ hasText: 'لطفاً خطاهای زیر را اصلاح کنید' }),
   ).toBeVisible();
   await expect(page.getByLabel('نام دانش‌آموز')).toBeFocused();
-  await page.evaluate(() =>
-    sessionStorage.setItem(
-      'school-transport:enrollment-safe-draft:v1:panel',
-      JSON.stringify({
-        version: 1,
-        savedAt: Date.now(),
-        step: 2,
-        values: { addressTitle: 'خانه', province: 'تهران', city: 'تهران' },
-      }),
-    ),
-  );
-  await page.reload();
-  const map = page.getByLabel('نقشه انتخاب موقعیت؛ برای جابه‌جایی نشانگر روی نقشه کلیک کنید');
-  await expect(map).toBeVisible();
-  await map.focus();
-  await expect(map).toBeFocused();
-  await expect(page.getByLabel('نشانی کامل')).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
@@ -110,12 +85,16 @@ test('combined enrollment rules survive retry and submit normalized values', asy
   });
 
   await page.goto('/student/enrollments');
-  const studentSection = page.getByRole('heading', { name: 'مشخصات دانش‌آموز' }).locator('..');
-  await expect(studentSection.getByLabel('شماره تلفن منزل')).toHaveValue('');
-  await expect(studentSection.getByText('021')).toBeVisible();
+  const studentSection = page
+    .getByRole('heading', { name: 'مشخصات دانش‌آموز' })
+    .locator('..')
+    .locator('..');
+  const guardianSection = page.getByRole('heading', { name: 'سرپرست' }).locator('..').locator('..');
+  await expect(guardianSection.getByLabel('شماره تلفن منزل')).toHaveValue('');
+  await expect(guardianSection.getByText('021')).toBeVisible();
   await expect(studentSection.getByLabel('شماره همراه دانش‌آموز')).toHaveValue('');
   await expect(studentSection.getByText('09')).toBeVisible();
-  await studentSection.getByLabel('شماره تلفن منزل').fill('۲۲۱۱۳۳۳۳');
+  await guardianSection.getByLabel('شماره تلفن منزل').fill('۲۲۱۱۳۳۳۳');
   await studentSection.getByLabel('نام دانش‌آموز').fill('علی');
   await studentSection.getByLabel('نام خانوادگی').fill('احمدی');
   const studentNationalId = studentSection.getByLabel('کد ملی');
@@ -128,13 +107,17 @@ test('combined enrollment rules survive retry and submit normalized values', asy
   await birthDate.getByLabel('ماه').fill('۰۷');
   await birthDate.getByLabel('روز').fill('۱۵');
   await expect(page.getByText(/تاریخ انتخاب‌شده/)).toContainText('1395/07/15');
+  await studentSection.getByRole('combobox', { name: 'جنسیت' }).click();
+  await page.getByRole('option', { name: 'پسر' }).click();
 
-  const guardianSection = page.getByRole('heading', { name: 'سرپرست' }).locator('..');
   await guardianSection.getByRole('combobox', { name: 'نسبت' }).click();
   await page.getByRole('option', { name: 'پدر' }).click();
-  await expect(guardianSection.getByLabel('نام', { exact: true })).toHaveCount(0);
+  await expect(guardianSection.getByLabel('نام', { exact: true })).toHaveCount(1);
   await expect(page.getByRole('heading', { name: 'اطلاعات پدر' })).toHaveCount(0);
-  const motherSection = page.getByRole('heading', { name: 'اطلاعات مادر' }).locator('..');
+  const motherSection = page
+    .getByRole('heading', { name: 'اطلاعات مادر' })
+    .locator('..')
+    .locator('..');
   await motherSection.getByLabel('نام', { exact: true }).fill('مریم');
   await motherSection.getByLabel('نام خانوادگی').fill('احمدی');
   await motherSection.getByLabel('کد ملی').fill('۰۰۶۷۷۴۹۸۱۱');

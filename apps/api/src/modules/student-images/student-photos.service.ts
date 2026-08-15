@@ -214,11 +214,24 @@ export class StudentPhotosService {
         error instanceof PhotoValidationError ? error.rejectionCode : 'PROCESSING_FAILED';
       await this.markFailed(upload.id, code, ip);
       await this.storage.deleteObject(upload.rawKey).catch(() => undefined);
-      throw new ValidationError(
-        code === 'EXTREME_ASPECT_RATIO'
-          ? 'نسبت طول به عرض عکس نامعتبر است. لطفاً یک عکس پرسنلی با قاب معمولی بارگذاری کنید.'
-          : 'عکس بارگذاری‌شده معتبر نیست و در صف بررسی قرار نمی‌گیرد.',
-      );
+      const messages: Record<string, string> = {
+        ZERO_BYTE: 'فایل عکس خالی است. یک فایل JPEG یا PNG سالم انتخاب کنید.',
+        TOO_LARGE: 'حجم عکس از حد مجاز ۵ مگابایت بیشتر است. حجم فایل را کاهش دهید.',
+        UNSUPPORTED_FORMAT:
+          'محتوای فایل JPEG یا PNG معتبر نیست. تصاویر HEIC/HEIF را ابتدا به JPEG تبدیل کنید.',
+        CORRUPT_IMAGE:
+          'فایل عکس خراب یا ناقص است و قابل خواندن نیست. عکس را دوباره ذخیره یا انتخاب کنید.',
+        TOO_MANY_PIXELS:
+          'ابعاد پیکسلی عکس بیش از حد مجاز است. عکس را کوچک‌تر کنید یا با وضوح پایین‌تر دوباره ذخیره کنید.',
+        EXTREME_AXIS:
+          'طول یا عرض عکس بیش از حد مجاز است. عکس را با حداکثر ضلع ۸۰۰۰ پیکسل کوچک‌تر کنید.',
+        EXTREME_ASPECT_RATIO:
+          'نسبت طول به عرض عکس نامعتبر است. یک عکس پرسنلی با قاب معمولی بارگذاری کنید.',
+        CANONICAL_REJECTED: 'تبدیل عکس به اندازه استاندارد کارت کامل نشد. فایل دیگری انتخاب کنید.',
+        PROCESSING_FAILED:
+          'پردازش عکس موقتاً ناموفق بود. دوباره تلاش کنید و در صورت تکرار با پشتیبانی تماس بگیرید.',
+      };
+      throw new ValidationError(messages[code] ?? messages.PROCESSING_FAILED);
     }
 
     const canonicalKey = keyOfPrefix(CANONICAL_PREFIX, '.jpg');

@@ -225,6 +225,20 @@
       "when": 1786809600000,
       "tag": "0031_school_manager_portal",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1786813200000,
+      "tag": "0032_feedback_polymorphic_senders",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1786896000000,
+      "tag": "0033_student_field_of_study",
+      "breakpoints": true
     }
   ]
 }

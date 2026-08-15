@@ -57,7 +57,7 @@ describe('LocationPicker', () => {
 
     await waitFor(() => expect(leaflet.tileLayer).toHaveBeenCalledTimes(2));
     expect(leaflet.tileLayer).toHaveBeenLastCalledWith(
-      '/api/map-tiles/{z}/{x}/{y}?attempt=1',
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       expect.objectContaining({ maxZoom: 19 }),
     );
   });

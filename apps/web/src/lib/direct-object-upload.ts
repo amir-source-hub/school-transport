@@ -4,6 +4,16 @@ export type DirectUploadOptions = {
   onProgress?: (percent: number | null) => void;
 };
 
+export class DirectUploadError extends Error {
+  constructor(
+    public readonly kind: 'network' | 'timeout' | 'http',
+    public readonly status?: number,
+  ) {
+    super(kind === 'http' ? `DIRECT_UPLOAD_HTTP_${status}` : `DIRECT_UPLOAD_${kind.toUpperCase()}`);
+    this.name = 'DirectUploadError';
+  }
+}
+
 export async function putFileDirectly(
   uploadUrl: string,
   file: File,
@@ -27,15 +37,15 @@ export async function putFileDirectly(
     request.onload = () => {
       cleanup();
       if (request.status >= 200 && request.status < 300) resolve();
-      else reject(new Error(`DIRECT_UPLOAD_HTTP_${request.status}`));
+      else reject(new DirectUploadError('http', request.status));
     };
     request.onerror = () => {
       cleanup();
-      reject(new TypeError('DIRECT_UPLOAD_NETWORK'));
+      reject(new DirectUploadError('network'));
     };
     request.ontimeout = () => {
       cleanup();
-      reject(new DOMException('Direct upload timed out', 'TimeoutError'));
+      reject(new DirectUploadError('timeout'));
     };
     request.onabort = () => {
       cleanup();
@@ -48,4 +58,4 @@ export async function putFileDirectly(
 }
 
 export const DIRECT_UPLOAD_RETRY_MESSAGE =
-  'ارسال تصویر کامل نشد. از پایداری اینترنت مطمئن شوید، کمی صبر کنید و دوباره تلاش کنید.';
+  'ارسال تصویر به ذخیره‌گاه کامل نشد. اینترنت را بررسی کنید و دوباره تلاش کنید. اگر خطا ادامه داشت، تنظیمات CORS ذخیره‌گاه باید برای دامنه سایت و روش PUT بررسی شود.';

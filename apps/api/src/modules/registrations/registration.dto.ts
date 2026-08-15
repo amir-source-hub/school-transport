@@ -42,9 +42,8 @@ export class StudentInputDto extends IdentityInputDto {
   @Transform(digits)
   @IsDateString({ strict: true }, { message: 'تاریخ تولد باید معتبر باشد.' })
   birthDate?: string;
-  @IsOptional()
   @IsIn(['MALE', 'FEMALE'], { message: 'جنسیت باید پسر یا دختر باشد.' })
-  gender?: string;
+  gender!: string;
   @IsOptional()
   @Transform(digits)
   @Matches(/^09\d{9}$/, { message: 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.' })
@@ -125,6 +124,10 @@ export class SchoolInputDto {
   @IsString({ message: 'پایه تحصیلی باید متن باشد.' })
   @Length(1, 50, { message: 'پایه تحصیلی باید بین ۱ تا ۵۰ نویسه باشد.' })
   grade!: string;
+  @ValidateIf((o: SchoolInputDto) => o.educationLevel === 'متوسطه دوم')
+  @IsString({ message: 'رشته تحصیلی باید متن باشد.' })
+  @Length(1, 100, { message: 'رشته تحصیلی را وارد کنید.' })
+  fieldOfStudy?: string;
 }
 
 export class ServiceInputDto {

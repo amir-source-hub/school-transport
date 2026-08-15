@@ -18,7 +18,9 @@ test('student photo field supports touch upload, preview, privacy, and responsiv
   test.skip(testInfo.project.name === 'chromium', 'Photo capture runs in touch viewports.');
   await page.goto('/student/students/student-photo-1');
 
-  await expect(page.getByRole('heading', { name: 'عکس کارت سرویس' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'عکس پرسنلی دانش‌آموز برای صدور کارت سرویس' }),
+  ).toBeVisible();
   await expect(page.getByRole('link', { name: 'حریم خصوصی و نحوه نگهداری عکس' })).toHaveAttribute(
     'href',
     '/about#privacy',
@@ -38,7 +40,7 @@ test('student photo field supports touch upload, preview, privacy, and responsiv
 
   await page.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }).click();
   await expect(page.getByRole('status')).toContainText(
-    'عکس کارت سرویس بارگذاری شد و در صف بررسی قرار گرفت.',
+    'عکس پرسنلی دانش‌آموز بارگذاری شد و برای صدور کارت سرویس در صف بررسی قرار گرفت.',
   );
   await expect(page.getByAltText('پیش‌نمایش عکس انتخابی')).toHaveCount(0);
 });

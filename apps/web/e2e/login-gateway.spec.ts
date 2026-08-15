@@ -33,7 +33,11 @@ test.describe('unified login gateway', () => {
     );
   });
 
-  test('already-authenticated families and admins skip login', async ({ page, context, baseURL }) => {
+  test('already-authenticated families and admins skip login', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
     await context.addCookies([{ name: 'e2e-role', value: 'PARENT', url: baseURL! }]);
     await page.goto('/login');
     await expect(page).toHaveURL(/\/student\/dashboard$/);
@@ -44,13 +48,13 @@ test.describe('unified login gateway', () => {
     await expect(page).toHaveURL(/\/admin\/dashboard$/);
   });
 
-  test('offers a dedicated admin login entry point', async ({ page, context, baseURL }) => {
+  test('does not expose the private admin login entry point', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
     await context.addCookies([{ name: 'e2e-auth', value: 'anon', url: baseURL! }]);
     await page.goto('/login');
-    const adminLink = page.getByRole('link', { name: /صفحه ورود مدیریت/ });
-    await expect(adminLink).toHaveAttribute('href', '/admin/login');
-    await adminLink.click();
-    await expect(page).toHaveURL('/admin/login');
-    await expect(page.getByRole('heading', { level: 1, name: /ورود مدیران/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /صفحه ورود مدیریت/ })).toHaveCount(0);
   });
 });

@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ShieldCheck } from 'lucide-react';
-import Link from 'next/link';
 
 import { RouteLoading } from '@/components/feedback/route-loading';
 import { apiRequest } from '@/lib/api-client';
@@ -50,14 +48,6 @@ export function PortalLoginGateway() {
         {role === 'STUDENT_PORTAL' && <StudentPortalLoginForm nextPath={next ?? undefined} />}
         {role === 'SCHOOL_MANAGER' && <ManagerPortalLoginForm nextPath={next ?? undefined} />}
         {role === 'DRIVER_COMING_SOON' && <DriverComingSoonForm />}
-      </div>
-
-      <div className="flex items-center justify-center gap-2 border-t border-slate-200/70 pt-5 text-xs text-muted">
-        <ShieldCheck className="size-4 text-primary" />
-        <span>ورود مدیران سامانه از</span>
-        <Link href="/admin/login" className="font-bold text-primary hover:text-primary-hover">
-          صفحه ورود مدیریت
-        </Link>
       </div>
     </div>
   );

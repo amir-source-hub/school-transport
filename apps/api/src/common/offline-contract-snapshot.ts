@@ -25,7 +25,7 @@ export type OfflineContractEnrollmentData = {
     latitude: number;
     longitude: number;
   };
-  school: { schoolId: string; educationLevel: string; grade: string };
+  school: { schoolId: string; educationLevel: string; grade: string; fieldOfStudy?: string };
   service: { serviceType: string; paymentPlanType: 'FULL' | 'INSTALLMENTS'; parentNotes?: string };
 };
 
@@ -65,7 +65,7 @@ export function buildOfflineContractSnapshot(
     studentNationalId: data.student.nationalId,
     educationLevel: data.school.educationLevel,
     grade: data.school.grade,
-    fieldOfStudy: 'ندارد',
+    fieldOfStudy: data.school.fieldOfStudy || 'ندارد',
     academicYear: academicYear.replace('-', '–'),
     serviceAmountRial: OFFLINE_PREPAYMENT_AMOUNT_IRR.toLocaleString('fa-IR'),
     serviceAmountToman: (OFFLINE_PREPAYMENT_AMOUNT_IRR / 10).toLocaleString('fa-IR'),

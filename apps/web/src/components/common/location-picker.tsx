@@ -48,7 +48,7 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
           touchZoom: true,
         });
 
-        const tiles = L.tileLayer(`/api/map-tiles/{z}/{x}/{y}?attempt=${retryAttempt}`, {
+        const tiles = L.tileLayer(`https://tile.openstreetmap.org/{z}/{x}/{y}.png`, {
           attribution:
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           maxZoom: 19,

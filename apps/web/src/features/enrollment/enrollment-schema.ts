@@ -53,7 +53,7 @@ export const studentSchema = z.object({
       message: 'تاریخ تولد از بازه مجاز قدیمی‌تر است.',
     })
     .optional(),
-  gender: z.enum(['MALE', 'FEMALE']).optional(),
+  gender: z.enum(['MALE', 'FEMALE'], { message: 'انتخاب جنسیت اجباری است.' }),
   phoneNumber: mobile.optional(),
 });
 
@@ -112,11 +112,22 @@ export const addressSchema = z.object({
   longitude: z.number().min(-180).max(180),
 });
 
-export const schoolSchema = z.object({
-  schoolId: z.string().uuid('مدرسه انتخاب‌شده معتبر نیست.'),
-  educationLevel: z.string().min(1, required),
-  grade: z.string().min(1, required),
-});
+export const schoolSchema = z
+  .object({
+    schoolId: z.string().uuid('مدرسه انتخاب‌شده معتبر نیست.'),
+    educationLevel: z.string().min(1, required),
+    grade: z.string().min(1, required),
+    fieldOfStudy: z.string().trim().max(100, 'حداکثر ۱۰۰ نویسه مجاز است.').optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.educationLevel === 'متوسطه دوم' && !value.fieldOfStudy) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['fieldOfStudy'],
+        message: 'رشته تحصیلی را وارد کنید.',
+      });
+    }
+  });
 
 export const serviceSchema = z.object({
   serviceType: z.enum(['BUS', 'MINIBUS', 'CAR', 'VAN']),

@@ -135,18 +135,20 @@ describe('onboarding guided enrollment funnel', () => {
     const user = userEvent.setup();
     renderOnboarding();
 
-    await fillIn(user, 'مشخصات دانش‌آموز', 'شماره تلفن منزل', '22113333');
+    await fillIn(user, 'سرپرست', 'شماره تلفن منزل', '22113333');
     await fillIn(user, 'مشخصات دانش‌آموز', 'نام دانش‌آموز', 'علی');
     await fillIn(user, 'مشخصات دانش‌آموز', 'نام خانوادگی', 'احمدی');
-    await fillIn(user, 'مشخصات دانش‌آموز', 'کد ملی', '1234567891');
+    await fillIn(user, 'مشخصات دانش‌آموز', 'کد ملی', '0013540394');
+    await user.click(within(section('مشخصات دانش‌آموز')).getByRole('combobox', { name: 'جنسیت' }));
+    await user.click(await screen.findByRole('option', { name: 'پسر' }));
     await fillIn(user, 'سرپرست', 'نام', 'حسین');
     await fillIn(user, 'سرپرست', 'نام خانوادگی', 'احمدی');
-    await fillIn(user, 'سرپرست', 'کد ملی', '1234567891');
+    await fillIn(user, 'سرپرست', 'کد ملی', '0499370899');
     await user.click(within(section('سرپرست')).getByRole('combobox', { name: 'نسبت' }));
     await user.click(await screen.findByRole('option', { name: 'پدر' }));
-    await fillIn(user, 'اطلاعات مادر', 'نام', 'مریم');
-    await fillIn(user, 'اطلاعات مادر', 'نام خانوادگی', 'رضایی');
-    await fillIn(user, 'اطلاعات مادر', 'کد ملی', '1234567891');
+    await fillIn(user, 'اطلاعات مادر', 'نام', 'سارا');
+    await fillIn(user, 'اطلاعات مادر', 'نام خانوادگی', 'کریمی');
+    await fillIn(user, 'اطلاعات مادر', 'کد ملی', '0067749811');
     await fillIn(user, 'اطلاعات مادر', 'شماره همراه', '09129998877');
     await user.click(screen.getByRole('button', { name: 'ثبت عکس آزمایشی' }));
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
@@ -204,7 +206,7 @@ describe('onboarding guided enrollment funnel', () => {
     const user = userEvent.setup();
     renderOnboarding();
 
-    const homePhoneInput = within(section('مشخصات دانش‌آموز')).getByLabelText('شماره تلفن منزل');
+    const homePhoneInput = within(section('سرپرست')).getByLabelText('شماره تلفن منزل');
     await user.clear(homePhoneInput);
     await user.paste('2211333344');
     expect(homePhoneInput).toHaveValue('');
@@ -223,18 +225,20 @@ describe('onboarding guided enrollment funnel', () => {
     const user = userEvent.setup();
     renderOnboardingWithoutCoordinates();
 
-    await fillIn(user, 'مشخصات دانش‌آموز', 'شماره تلفن منزل', '22113333');
+    await fillIn(user, 'سرپرست', 'شماره تلفن منزل', '22113333');
     await fillIn(user, 'مشخصات دانش‌آموز', 'نام دانش‌آموز', 'علی');
     await fillIn(user, 'مشخصات دانش‌آموز', 'نام خانوادگی', 'احمدی');
-    await fillIn(user, 'مشخصات دانش‌آموز', 'کد ملی', '1234567891');
+    await fillIn(user, 'مشخصات دانش‌آموز', 'کد ملی', '0013540394');
+    await user.click(within(section('مشخصات دانش‌آموز')).getByRole('combobox', { name: 'جنسیت' }));
+    await user.click(await screen.findByRole('option', { name: 'پسر' }));
     await fillIn(user, 'سرپرست', 'نام', 'حسین');
     await fillIn(user, 'سرپرست', 'نام خانوادگی', 'احمدی');
-    await fillIn(user, 'سرپرست', 'کد ملی', '1234567891');
+    await fillIn(user, 'سرپرست', 'کد ملی', '0499370899');
     await user.click(within(section('سرپرست')).getByRole('combobox', { name: 'نسبت' }));
     await user.click(await screen.findByRole('option', { name: 'پدر' }));
-    await fillIn(user, 'اطلاعات مادر', 'نام', 'مریم');
-    await fillIn(user, 'اطلاعات مادر', 'نام خانوادگی', 'رضایی');
-    await fillIn(user, 'اطلاعات مادر', 'کد ملی', '1234567891');
+    await fillIn(user, 'اطلاعات مادر', 'نام', 'سارا');
+    await fillIn(user, 'اطلاعات مادر', 'نام خانوادگی', 'کریمی');
+    await fillIn(user, 'اطلاعات مادر', 'کد ملی', '0067749811');
     await fillIn(user, 'اطلاعات مادر', 'شماره همراه', '09129998877');
     await user.click(screen.getByRole('button', { name: 'ثبت عکس آزمایشی' }));
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));

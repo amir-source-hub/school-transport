@@ -20,6 +20,7 @@ export const students = pgTable(
     phoneNumber: varchar('phone_number', { length: 20 }),
     grade: varchar('grade', { length: 50 }),
     className: varchar('class_name', { length: 50 }),
+    fieldOfStudy: varchar('field_of_study', { length: 100 }),
     studentCode: varchar('student_code', { length: 50 }),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

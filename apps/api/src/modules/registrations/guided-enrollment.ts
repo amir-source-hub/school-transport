@@ -13,7 +13,7 @@ export type StudentEnrollmentData = {
   lastName: string;
   nationalId: string;
   birthDate?: string;
-  gender?: string;
+  gender: string;
   phoneNumber?: string;
 };
 
@@ -56,7 +56,7 @@ export type GuidedEnrollmentData = {
     latitude: number;
     longitude: number;
   };
-  school: { schoolId: string; educationLevel: string; grade: string };
+  school: { schoolId: string; educationLevel: string; grade: string; fieldOfStudy?: string };
   service: {
     serviceType: string;
     paymentPlanType: 'FULL' | 'INSTALLMENTS';
@@ -116,6 +116,7 @@ export function normalizeAndValidateGuidedEnrollment(
     data.student.firstName,
     data.student.lastName,
     data.student.nationalId,
+    data.student.gender,
     data.guardian.firstName,
     data.guardian.lastName,
     data.guardian.nationalId,
@@ -137,6 +138,12 @@ export function normalizeAndValidateGuidedEnrollment(
   }
   if (!homePhonePattern.test(data.homePhone)) {
     throw new ConflictError('INVALID_HOME_PHONE', 'A 021 Tehran landline number is required.');
+  }
+  if (!['MALE', 'FEMALE'].includes(data.student.gender)) {
+    throw new ConflictError('INVALID_GENDER', 'انتخاب جنسیت دانش‌آموز اجباری است.');
+  }
+  if (data.school.educationLevel === 'متوسطه دوم' && !data.school.fieldOfStudy?.trim()) {
+    throw new ConflictError('FIELD_OF_STUDY_REQUIRED', 'رشته تحصیلی را وارد کنید.');
   }
   if (data.student.phoneNumber && !iranianMobilePattern.test(data.student.phoneNumber)) {
     throw new ConflictError(
@@ -183,22 +190,6 @@ export function normalizeAndValidateGuidedEnrollment(
     data.father = null;
     data.mother = null;
   }
-  const otherParent =
-    data.guardian.relationshipType === 'FATHER'
-      ? data.mother
-      : data.guardian.relationshipType === 'MOTHER'
-        ? data.father
-        : null;
-  if (
-    data.guardian.relationshipType !== 'OTHER' &&
-    (!otherParent ||
-      !sectionIsComplete(otherParent, ['firstName', 'lastName', 'nationalId', 'phoneNumber']))
-  ) {
-    throw new ConflictError(
-      'INCOMPLETE_CONTACT',
-      'The non-attendant parent must have a complete parent record.',
-    );
-  }
   if (![data.student.nationalId, data.guardian.nationalId].every(isIranianNationalId)) {
     throw new ConflictError(
       'INVALID_NATIONAL_ID',
@@ -216,6 +207,24 @@ export function normalizeAndValidateGuidedEnrollment(
     throw new ConflictError(
       'DUPLICATE_NATIONAL_ID',
       'کد ملی هر دانش‌آموز و هر یک از والدین باید منحصربه‌فرد باشد.',
+    );
+  }
+
+  const personNames = [
+    `${data.student.firstName} ${data.student.lastName}`,
+    `${data.guardian.firstName} ${data.guardian.lastName}`,
+    data.father ? `${data.father.firstName} ${data.father.lastName}` : '',
+    data.mother ? `${data.mother.firstName} ${data.mother.lastName}` : '',
+    data.emergencyContact
+      ? `${data.emergencyContact.firstName} ${data.emergencyContact.lastName}`
+      : '',
+  ]
+    .map((value) => value.trim().replace(/\s+/g, ' '))
+    .filter(Boolean);
+  if (new Set(personNames).size !== personNames.length) {
+    throw new ConflictError(
+      'DUPLICATE_PERSON_NAME',
+      'نام و نام خانوادگی دانش‌آموز، سرپرست، والدین و تماس اضطراری نباید یکسان باشد.',
     );
   }
 
@@ -254,6 +263,13 @@ export function normalizeAndValidateGuidedEnrollment(
   }
   if (phoneNumbers.some((phoneNumber) => !iranianMobilePattern.test(phoneNumber))) {
     throw new ConflictError('INVALID_PHONE_NUMBER', 'Valid Iranian mobile numbers are required.');
+  }
+  if (data.student.phoneNumber) phoneNumbers.push(data.student.phoneNumber);
+  if (new Set(phoneNumbers).size !== phoneNumbers.length) {
+    throw new ConflictError(
+      'DUPLICATE_PHONE_NUMBER',
+      'شماره همراه دانش‌آموز، والدین و تماس اضطراری باید متفاوت باشد.',
+    );
   }
   if (!Number.isFinite(data.address.latitude) || !Number.isFinite(data.address.longitude)) {
     throw new ConflictError('INVALID_LOCATION', 'A valid map location is required.');

@@ -10,6 +10,7 @@ function validEnrollment(): GuidedEnrollmentData {
       firstName: 'Ali',
       lastName: 'Ahmadi',
       nationalId: '۰۰۱۳۵۴۰۳۹۴',
+      gender: 'MALE',
     },
     guardian: {
       firstName: 'Reza',
@@ -134,13 +135,11 @@ describe('guided enrollment policy', () => {
     expect(result.mother).toBeNull();
   });
 
-  it('requires the non-attendant parent record', () => {
+  it('allows the non-attendant parent record to be omitted', () => {
     const input = validEnrollment();
     input.mother = null;
 
-    expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow(
-      'The non-attendant parent must have a complete parent record.',
-    );
+    expect(normalizeAndValidateGuidedEnrollment(input).mother).toBeNull();
   });
 
   it('accepts an enrollment with no optional contacts', () => {

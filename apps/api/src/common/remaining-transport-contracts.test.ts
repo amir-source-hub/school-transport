@@ -216,7 +216,7 @@ function guided() {
     phoneNumber: '۰۹۱۲۰۰۰۰۰۰۰',
   };
   return {
-    student: { firstName: 'سارا', lastName: 'احمدی', nationalId: '1234567891' },
+    student: { firstName: 'سارا', lastName: 'احمدی', nationalId: '1234567891', gender: 'FEMALE' },
     guardian: {
       firstName: 'مریم',
       lastName: 'احمدی',

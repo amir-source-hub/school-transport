@@ -315,6 +315,7 @@ export class RegistrationsService {
               phoneNumber: data.student.phoneNumber ?? null,
               grade: data.school.grade,
               className: data.school.educationLevel,
+              fieldOfStudy: data.school.fieldOfStudy ?? null,
               updatedAt: new Date(),
             })
             .where(and(eq(students.id, studentId), eq(students.userId, userId)));
@@ -331,6 +332,7 @@ export class RegistrationsService {
             phoneNumber: data.student.phoneNumber ?? null,
             grade: data.school.grade,
             className: data.school.educationLevel,
+            fieldOfStudy: data.school.fieldOfStudy ?? null,
           });
         }
         if (data.studentPhotoUploadId) {

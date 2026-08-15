@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
-import { DIRECT_UPLOAD_RETRY_MESSAGE } from '@/lib/direct-object-upload';
+import { DirectUploadError, DIRECT_UPLOAD_RETRY_MESSAGE } from '@/lib/direct-object-upload';
 import {
   ACCEPTED_PHOTO_MIMES,
   authorizePhotoUpload,
@@ -36,8 +36,27 @@ const STATUS_META: Record<
   SUPERSEDED: { label: 'جایگزین شد', tone: 'neutral' },
 };
 
-function isAcceptedMime(type: string): type is (typeof ACCEPTED_PHOTO_MIMES)[number] {
-  return (ACCEPTED_PHOTO_MIMES as readonly string[]).includes(type);
+function normalizedPhotoMime(file: File): (typeof ACCEPTED_PHOTO_MIMES)[number] | null {
+  const type = file.type.toLowerCase();
+  if (type === 'image/jpeg' || type === 'image/jpg') return 'image/jpeg';
+  if (type === 'image/png') return 'image/png';
+  if (!type && /\.jpe?g$/i.test(file.name)) return 'image/jpeg';
+  if (!type && /\.png$/i.test(file.name)) return 'image/png';
+  return null;
+}
+
+function directUploadMessage(error: unknown) {
+  if (!(error instanceof DirectUploadError)) return DIRECT_UPLOAD_RETRY_MESSAGE;
+  if (error.kind === 'timeout')
+    return 'مهلت ارسال عکس تمام شد. اتصال پایدارتر را امتحان کنید یا حجم عکس را کاهش دهید و دوباره بفرستید.';
+  if (error.kind === 'http') {
+    if (error.status === 403)
+      return 'ذخیره‌گاه اجازه بارگذاری نداد (خطای ۴۰۳). زمان مجوز یا تنظیمات CORS دامنه باید بررسی شود؛ دوباره تلاش کنید.';
+    if (error.status === 413)
+      return 'ذخیره‌گاه فایل را به‌علت حجم زیاد نپذیرفت. عکسی کوچک‌تر از ۵ مگابایت انتخاب کنید.';
+    return `ذخیره‌گاه عکس را نپذیرفت (خطای ${error.status ?? 'نامشخص'}). دوباره تلاش کنید؛ در صورت تکرار با پشتیبانی تماس بگیرید.`;
+  }
+  return DIRECT_UPLOAD_RETRY_MESSAGE;
 }
 
 function isAbortError(error: unknown) {
@@ -95,8 +114,11 @@ export function PhotoUploadCard({
     if (!file) return;
     setMessage(undefined);
 
-    if (!isAcceptedMime(file.type)) {
-      setMessage('فرمت فایل پشتیبانی نمی‌شود. فقط تصویر JPG یا PNG بارگذاری کنید.');
+    const mime = normalizedPhotoMime(file);
+    if (!mime) {
+      setMessage(
+        'فرمت فایل پشتیبانی نمی‌شود. فقط تصویر واقعی JPEG/JPG یا PNG انتخاب کنید؛ تصاویر HEIC/HEIF را ابتدا به JPEG تبدیل کنید.',
+      );
       return;
     }
     if (file.size > MAX_PHOTO_BYTES) {
@@ -105,7 +127,7 @@ export function PhotoUploadCard({
     }
 
     if (selected) URL.revokeObjectURL(selected.previewUrl);
-    setSelected({ file, previewUrl: URL.createObjectURL(file), mime: file.type });
+    setSelected({ file, previewUrl: URL.createObjectURL(file), mime });
     authorizationRef.current = undefined;
     setProgress(0);
   }
@@ -155,7 +177,7 @@ export function PhotoUploadCard({
           setMessage('بارگذاری لغو شد. می‌توانید همین عکس یا عکس دیگری را انتخاب کنید.');
           return;
         }
-        setMessage(DIRECT_UPLOAD_RETRY_MESSAGE);
+        setMessage(directUploadMessage(error));
         return;
       }
       const completed = familyId
@@ -165,7 +187,7 @@ export function PhotoUploadCard({
       if (mode === 'panel' && studentId) setItems(await getMyPhotoUploads(studentId));
       else setItems([completed]);
       removeSelection();
-      setMessage('عکس کارت سرویس بارگذاری شد و در صف بررسی قرار گرفت.');
+      setMessage('عکس پرسنلی دانش‌آموز بارگذاری شد و برای صدور کارت سرویس در صف بررسی قرار گرفت.');
       router.refresh();
     } catch (error) {
       setMessage(
@@ -194,7 +216,7 @@ export function PhotoUploadCard({
       <div>
         <h2 className="flex items-center gap-2 text-lg font-black">
           <ImageIcon aria-hidden="true" className="size-5 text-primary" />
-          عکس کارت سرویس
+          عکس پرسنلی دانش‌آموز برای صدور کارت سرویس
         </h2>
         <p className="mt-1 text-sm text-muted">
           عکس رنگی جدید، تک‌نفره، روبه‌رو، واضح، با نور یکنواخت و پس‌زمینه ساده باشد. چهره کامل،

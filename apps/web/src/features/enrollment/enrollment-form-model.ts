@@ -92,6 +92,7 @@ export type EnrollmentFormState = {
   schoolId: string;
   educationLevel: string;
   grade: string;
+  fieldOfStudy: string;
   serviceType: string;
   paymentPlanType: string;
   parentNotes: string;
@@ -135,6 +136,7 @@ const emptyForm: EnrollmentFormState = {
   schoolId: '',
   educationLevel: '',
   grade: '',
+  fieldOfStudy: '',
   serviceType: 'BUS',
   paymentPlanType: 'INSTALLMENTS',
   parentNotes: '',
@@ -202,5 +204,6 @@ export function createEnrollmentFormState({
     schoolId: firstExisting?.schoolId ?? firstSchool?.id ?? '',
     educationLevel: existingLevel?.level ?? firstLevel?.level ?? '',
     grade: firstExisting?.grade ?? existingLevel?.grades[0] ?? firstLevel?.grades[0] ?? '',
+    fieldOfStudy: '',
   };
 }

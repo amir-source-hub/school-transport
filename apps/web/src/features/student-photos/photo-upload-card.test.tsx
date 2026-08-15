@@ -80,7 +80,7 @@ describe('PhotoUploadCard', () => {
       new File(['x'], 'notes.txt', { type: 'text/plain' }),
     );
 
-    expect(await screen.findByText(/فقط تصویر JPG یا PNG/)).toBeInTheDocument();
+    expect(await screen.findByText(/فقط تصویر واقعی JPEG\/JPG یا PNG/)).toBeInTheDocument();
     expect(authorizePhotoUpload).not.toHaveBeenCalled();
   });
 
@@ -172,7 +172,7 @@ describe('PhotoUploadCard', () => {
     await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile());
     await user.click(screen.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent(/از پایداری اینترنت مطمئن شوید/);
+    expect(await screen.findByRole('status')).toHaveTextContent(/تنظیمات CORS ذخیره‌گاه/);
     expect(completePhotoUpload).not.toHaveBeenCalled();
   });
 

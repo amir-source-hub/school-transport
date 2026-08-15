@@ -244,6 +244,7 @@ const server = createServer((request, response) => {
         username: 'family',
         mother: null,
         father: null,
+        guardian: null,
         addresses: [],
         emergencyContacts: [],
       },

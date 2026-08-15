@@ -10,6 +10,7 @@ import {
   ExternalLink,
   FileCheck2,
   LocateFixed,
+  LogOut,
   ShieldCheck,
   Truck,
   WalletCards,
@@ -184,9 +185,8 @@ export function CreateEnrollmentForm({
     'emergencyPhone',
   ];
   function sectionStarted(name: 'father' | 'mother' | 'emergency') {
-    if (name === 'father') return form.guardianRelationshipType === 'MOTHER';
-    if (name === 'mother') return form.guardianRelationshipType === 'FATHER';
-    return emergencyKeys.some((key) => {
+    const keys = name === 'father' ? fatherKeys : name === 'mother' ? motherKeys : emergencyKeys;
+    return keys.some((key) => {
       const value = String(form[key]).trim();
       return value !== '' && !(key.toString().endsWith('Phone') && value === '09');
     });
@@ -226,6 +226,7 @@ export function CreateEnrollmentForm({
       'studentFirst',
       'studentLast',
       'studentNationalId',
+      'gender',
       'guardianRelationshipType',
       'homePhone',
       'addressTitle',
@@ -235,8 +236,6 @@ export function CreateEnrollmentForm({
       'postalCode',
     ];
     requiredFields.push('guardianFirst', 'guardianLast', 'guardianNationalId');
-    if (form.guardianRelationshipType === 'FATHER') requiredFields.push(...motherKeys);
-    if (form.guardianRelationshipType === 'MOTHER') requiredFields.push(...fatherKeys);
     const section = sectionOf(key);
     if (section && !sectionStarted(section)) return undefined;
     if (requiredFields.includes(key) && !text) return 'پر کردن این فیلد اجباری است';
@@ -247,6 +246,7 @@ export function CreateEnrollmentForm({
       if (form.guardianRelationshipType === 'OTHER' && !text) return 'شرح نسبت را وارد کنید.';
       return undefined;
     }
+    if (key === 'gender') return text ? undefined : 'انتخاب جنسیت اجباری است.';
     if (key === 'homePhone') {
       if (!text) return 'پر کردن این فیلد اجباری است';
       return /^\d{8}$/.test(normalizeDigits(text))
@@ -330,6 +330,7 @@ export function CreateEnrollmentForm({
             'studentFirst',
             'studentLast',
             'studentNationalId',
+            'gender',
             'guardianRelationshipType',
             'guardianRelationshipDescription',
             'guardianFirst',
@@ -377,7 +378,12 @@ export function CreateEnrollmentForm({
   function selectLevel(educationLevel: string) {
     const grades =
       selectedSchool?.educationOptions.find(({ level }) => level === educationLevel)?.grades ?? [];
-    setForm((current) => ({ ...current, educationLevel, grade: grades[0] ?? '' }));
+    setForm((current) => ({
+      ...current,
+      educationLevel,
+      grade: grades[0] ?? '',
+      fieldOfStudy: educationLevel === 'متوسطه دوم' ? current.fieldOfStudy : '',
+    }));
   }
 
   function selectExistingStudent(studentId: string) {
@@ -452,7 +458,12 @@ export function CreateEnrollmentForm({
 
   function validateStep(currentStep: number): string | null {
     if (currentStep === 1) {
-      const requiredNames = [form.studentFirst, form.studentLast, form.guardianRelationshipType];
+      const requiredNames = [
+        form.studentFirst,
+        form.studentLast,
+        form.guardianRelationshipType,
+        form.gender,
+      ];
       requiredNames.push(form.guardianFirst, form.guardianLast);
       if (requiredNames.some((value) => !value.trim()))
         return 'تمام مشخصات فردی ضروری را تکمیل کنید.';
@@ -475,13 +486,13 @@ export function CreateEnrollmentForm({
       ) {
         return 'شرح نسبت را وارد کنید.';
       }
-      if (sectionStarted('father')) {
+      if (form.guardianRelationshipType === 'MOTHER' && sectionStarted('father')) {
         if (!isValidIranianNationalId(form.fatherNationalId))
           return `کد ملی پدر ${nationalIdError}`;
         if (!/^09\d{9}$/.test(normalizeDigits(form.fatherPhone)))
           return 'شماره همراه پدر نامعتبر است.';
       }
-      if (sectionStarted('mother')) {
+      if (form.guardianRelationshipType === 'FATHER' && sectionStarted('mother')) {
         if (!isValidIranianNationalId(form.motherNationalId))
           return `کد ملی مادر ${nationalIdError}`;
         if (!/^09\d{9}$/.test(normalizeDigits(form.motherPhone)))
@@ -490,6 +501,73 @@ export function CreateEnrollmentForm({
       if (sectionStarted('emergency')) {
         if (!/^09\d{9}$/.test(normalizeDigits(form.emergencyPhone)))
           return 'شماره همراه تماس اضطراری نامعتبر است.';
+      }
+      const people = [
+        {
+          label: 'دانش‌آموز',
+          name: `${form.studentFirst} ${form.studentLast}`,
+          nationalId: form.studentNationalId,
+          phone: form.studentPhone ? composeMobileNumber(form.studentPhone) : '',
+        },
+        {
+          label: 'سرپرست',
+          name: `${form.guardianFirst} ${form.guardianLast}`,
+          nationalId: form.guardianNationalId,
+          phone: form.guardianPhone,
+        },
+        ...(form.guardianRelationshipType === 'MOTHER' && sectionStarted('father')
+          ? [
+              {
+                label: 'پدر',
+                name: `${form.fatherFirst} ${form.fatherLast}`,
+                nationalId: form.fatherNationalId,
+                phone: form.fatherPhone,
+              },
+            ]
+          : []),
+        ...(form.guardianRelationshipType === 'FATHER' && sectionStarted('mother')
+          ? [
+              {
+                label: 'مادر',
+                name: `${form.motherFirst} ${form.motherLast}`,
+                nationalId: form.motherNationalId,
+                phone: form.motherPhone,
+              },
+            ]
+          : []),
+        ...(sectionStarted('emergency')
+          ? [
+              {
+                label: 'تماس اضطراری',
+                name: `${form.emergencyFirst} ${form.emergencyLast}`,
+                nationalId: '',
+                phone: form.emergencyPhone,
+              },
+            ]
+          : []),
+      ].map((person) => ({
+        ...person,
+        name: person.name.trim().replace(/\s+/g, ' '),
+        nationalId: normalizeDigits(person.nationalId),
+        phone: normalizeDigits(person.phone),
+      }));
+      for (const key of ['name', 'nationalId', 'phone'] as const) {
+        const seen = new Map<string, string>();
+        for (const person of people) {
+          const value = person[key];
+          if (!value) continue;
+          const previous = seen.get(value);
+          if (previous) {
+            const kind =
+              key === 'name'
+                ? 'نام و نام خانوادگی'
+                : key === 'nationalId'
+                  ? 'کد ملی'
+                  : 'شماره همراه';
+            return `${kind} ${previous} و ${person.label} نمی‌تواند یکسان باشد.`;
+          }
+          seen.set(value, person.label);
+        }
       }
     }
     if (
@@ -502,6 +580,9 @@ export function CreateEnrollmentForm({
     }
     if (currentStep === 3 && (!form.schoolId || !form.educationLevel || !form.grade)) {
       return 'مدرسه، مقطع و پایه تحصیلی را انتخاب کنید.';
+    }
+    if (currentStep === 3 && form.educationLevel === 'متوسطه دوم' && !form.fieldOfStudy.trim()) {
+      return 'رشته تحصیلی را وارد کنید.';
     }
     return null;
   }
@@ -526,7 +607,7 @@ export function CreateEnrollmentForm({
           lastName: form.studentLast,
           nationalId: normalizeDigits(form.studentNationalId),
           birthDate: form.birthDate || undefined,
-          gender: (form.gender || undefined) as StudentInput['gender'],
+          gender: form.gender as StudentInput['gender'],
           ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
         },
         guardian: {
@@ -540,7 +621,7 @@ export function CreateEnrollmentForm({
               : undefined,
         },
         father:
-          form.guardianRelationshipType === 'MOTHER'
+          form.guardianRelationshipType === 'MOTHER' && sectionStarted('father')
             ? {
                 firstName: form.fatherFirst,
                 lastName: form.fatherLast,
@@ -549,7 +630,7 @@ export function CreateEnrollmentForm({
               }
             : null,
         mother:
-          form.guardianRelationshipType === 'FATHER'
+          form.guardianRelationshipType === 'FATHER' && sectionStarted('mother')
             ? {
                 firstName: form.motherFirst,
                 lastName: form.motherLast,
@@ -579,6 +660,7 @@ export function CreateEnrollmentForm({
           schoolId: form.schoolId,
           educationLevel: form.educationLevel,
           grade: form.grade,
+          fieldOfStudy: form.educationLevel === 'متوسطه دوم' ? form.fieldOfStudy.trim() : undefined,
         },
         service: {
           serviceType: form.serviceType as ServiceInput['serviceType'],
@@ -878,7 +960,6 @@ export function CreateEnrollmentForm({
             )}
             <Section title="مشخصات دانش‌آموز">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {prefixField('homePhone', 'شماره تلفن منزل', '021', 8)}
                 {field('studentFirst', 'نام دانش‌آموز')}
                 {field('studentLast', 'نام خانوادگی')}
                 {field('studentNationalId', 'کد ملی', 'tel')}
@@ -911,7 +992,7 @@ export function CreateEnrollmentForm({
                 </label>
               </div>
             </Section>
-            <Section title="عکس کارت سرویس">
+            <Section title="عکس پرسنلی دانش‌آموز برای صدور کارت سرویس">
               <PhotoUploadCard
                 studentId={form.existingStudentId || undefined}
                 initialItems={[]}
@@ -986,6 +1067,7 @@ export function CreateEnrollmentForm({
                     شماره تأییدشده هنگام ورود به حساب؛ قابل تغییر نیست.
                   </p>
                 </div>
+                {prefixField('homePhone', 'شماره تلفن منزل', '021', 8)}
               </div>
             </Section>
             {form.guardianRelationshipType === 'MOTHER' && (
@@ -1029,12 +1111,11 @@ export function CreateEnrollmentForm({
               </div>
             </Section>
             {validationSummary}
-            {error && (
-              <p role="alert" className="text-sm text-danger">
-                {error}
-              </p>
-            )}
-            <WizardFooter pending={pending} />
+            <WizardFooter
+              pending={pending}
+              error={error}
+              onExit={() => router.push(mode === 'onboarding' ? '/' : '/student/dashboard')}
+            />
           </form>
         )}
         {step === 2 && (
@@ -1118,12 +1199,12 @@ export function CreateEnrollmentForm({
               {locationError && <p className="mt-2 text-sm text-danger">{locationError}</p>}
             </div>
             {validationSummary}
-            {error && (
-              <p role="alert" className="text-sm text-danger">
-                {error}
-              </p>
-            )}
-            <WizardFooter onBack={() => setStep(1)} pending={pending} />
+            <WizardFooter
+              onBack={() => setStep(1)}
+              pending={pending}
+              error={error}
+              onExit={() => router.push(mode === 'onboarding' ? '/' : '/student/dashboard')}
+            />
           </form>
         )}
         {step === 3 && (
@@ -1142,6 +1223,9 @@ export function CreateEnrollmentForm({
                     className="mt-2"
                   />
                 </label>
+                {form.educationLevel === 'متوسطه دوم' && (
+                  <div>{field('fieldOfStudy', 'رشته تحصیلی')}</div>
+                )}
                 <label className="text-sm font-bold">
                   مقطع تحصیلی
                   <Select
@@ -1177,8 +1261,12 @@ export function CreateEnrollmentForm({
                 </div>
               </div>
             )}
-            {error && <p className="text-sm text-danger">{error}</p>}
-            <WizardFooter onBack={() => setStep(2)} pending={pending} />
+            <WizardFooter
+              onBack={() => setStep(2)}
+              pending={pending}
+              error={error}
+              onExit={() => router.push(mode === 'onboarding' ? '/' : '/student/dashboard')}
+            />
           </form>
         )}
         {step === 4 && !result && (
@@ -1264,11 +1352,12 @@ export function CreateEnrollmentForm({
                 onChange={(event) => set('parentNotes', event.target.value)}
               />
             </label>
-            {error && <p className="text-sm text-danger">{error}</p>}
             <WizardFooter
               onBack={() => setStep(3)}
               submitLabel="مشاهده قرارداد"
               pending={pending}
+              error={error}
+              onExit={() => router.push(mode === 'onboarding' ? '/' : '/student/dashboard')}
             />
           </form>
         )}
@@ -1491,33 +1580,59 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function WizardFooter({
   onBack,
+  onExit,
   submitLabel = 'مرحله بعد',
   pending,
+  error,
 }: {
   onBack?: () => void;
+  onExit?: () => void;
   submitLabel?: string;
   pending?: boolean;
+  error?: string;
 }) {
   return (
-    <div className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-20 -mx-4 flex flex-col-reverse gap-2 border-t border-slate-100 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_-24px_rgba(15,23,42,.5)] backdrop-blur sm:mx-0 sm:flex-row sm:items-center sm:justify-between sm:px-0 lg:bottom-0">
-      {onBack ? (
-        <Button
-          className="w-full sm:w-auto"
-          type="button"
-          variant="ghost"
-          onClick={onBack}
-          disabled={pending}
+    <div className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-20 -mx-4 border-t border-slate-100 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_-24px_rgba(15,23,42,.5)] backdrop-blur sm:mx-0 sm:px-0 lg:bottom-0">
+      {error && (
+        <p
+          role="alert"
+          className="mb-3 rounded-lg bg-danger-soft p-3 text-sm font-bold text-danger"
         >
-          <ChevronRight className="size-4" />
-          مرحله قبل
-        </Button>
-      ) : (
-        <span />
+          {error}
+        </p>
       )}
-      <Button className="w-full sm:w-auto" type="submit" loading={pending} disabled={pending}>
-        {submitLabel}
-        <ChevronLeft className="size-4" />
-      </Button>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          {onExit && (
+            <Button
+              className="w-full sm:w-auto"
+              type="button"
+              variant="danger"
+              onClick={onExit}
+              disabled={pending}
+            >
+              <LogOut className="size-4" />
+              خروج از فرم
+            </Button>
+          )}
+          {onBack && (
+            <Button
+              className="w-full sm:w-auto"
+              type="button"
+              variant="ghost"
+              onClick={onBack}
+              disabled={pending}
+            >
+              <ChevronRight className="size-4" />
+              مرحله قبل
+            </Button>
+          )}
+        </div>
+        <Button className="w-full sm:w-auto" type="submit" loading={pending} disabled={pending}>
+          {submitLabel}
+          <ChevronLeft className="size-4" />
+        </Button>
+      </div>
     </div>
   );
 }
