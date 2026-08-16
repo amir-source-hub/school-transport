@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Logger, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
@@ -13,6 +13,8 @@ import { Inject } from '@nestjs/common';
 @Roles('ADMIN')
 @Controller('admin/reports')
 export class ReportsController {
+  private readonly logger = new Logger(ReportsController.name);
+
   constructor(
     private readonly reportsService: ReportsService,
     @Inject(AUDIT_PORT) private readonly auditService: AuditPort,
@@ -40,20 +42,38 @@ export class ReportsController {
     @Res() reply: FastifyReply,
     @Req() req: FastifyRequest & { user?: { id?: string } },
   ) {
-    const report = await this.reportsService.createComprehensiveWorkbook();
-    await this.auditService.record({
-      actorType: 'ADMIN',
-      actorId: req.user?.id ?? 'unknown',
-      action: 'REPORT_EXPORTED',
-      entityType: 'REPORT',
-      entityId: 'comprehensive',
-      ipAddress: req.ip,
-    });
-    const date = new Date().toISOString().slice(0, 10);
-    reply
-      .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-      .header('Content-Disposition', `attachment; filename="school-transport-report-${date}.xlsx"`)
-      .header('Cache-Control', 'private, no-store')
-      .send(report);
+    const requestId = String(req.id ?? 'unknown');
+    let stage = 'workbook';
+    try {
+      this.logger.log(`Comprehensive report export started requestId=${requestId}.`);
+      const report = await this.reportsService.createComprehensiveWorkbook();
+      stage = 'audit';
+      await this.auditService.record({
+        actorType: 'ADMIN',
+        actorId: req.user?.id ?? 'unknown',
+        action: 'REPORT_EXPORTED',
+        entityType: 'REPORT',
+        ipAddress: req.ip,
+      });
+      stage = 'response';
+      const date = new Date().toISOString().slice(0, 10);
+      reply
+        .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .header(
+          'Content-Disposition',
+          `attachment; filename="school-transport-report-${date}.xlsx"`,
+        )
+        .header('Cache-Control', 'private, no-store')
+        .send(report);
+      this.logger.log(
+        `Comprehensive report export completed requestId=${requestId} bytes=${report.byteLength}.`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Comprehensive report export failed requestId=${requestId} stage=${stage}.`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw error;
+    }
   }
 }
