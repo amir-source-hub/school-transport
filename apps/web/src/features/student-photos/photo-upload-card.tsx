@@ -18,6 +18,7 @@ import {
   type PhotoUploadView,
   type PhotoUploadMode,
 } from './student-photos-api';
+import { normalizeBrowserPhoto } from './normalize-browser-photo';
 
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
@@ -51,36 +52,6 @@ function isAppleHighEfficiencyImage(file: File) {
       file.type.toLowerCase(),
     ) || /\.hei[cf]$/i.test(file.name)
   );
-}
-
-async function convertToJpeg(file: File): Promise<File> {
-  const sourceUrl = URL.createObjectURL(file);
-  try {
-    const image = new Image();
-    image.decoding = 'async';
-    image.src = sourceUrl;
-    await image.decode();
-    const canvas = document.createElement('canvas');
-    const scale = Math.min(1, 2400 / Math.max(image.naturalWidth, image.naturalHeight));
-    canvas.width = Math.round(image.naturalWidth * scale);
-    canvas.height = Math.round(image.naturalHeight * scale);
-    const context = canvas.getContext('2d');
-    if (!context || canvas.width === 0 || canvas.height === 0) throw new Error('IMAGE_DECODE_FAILED');
-    context.drawImage(image, 0, 0);
-    const blob = await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob(
-        (result) => (result ? resolve(result) : reject(new Error('IMAGE_CONVERSION_FAILED'))),
-        'image/jpeg',
-        0.9,
-      ),
-    );
-    return new File([blob], file.name.replace(/\.hei[cf]$/i, '') + '.jpg', {
-      type: 'image/jpeg',
-      lastModified: file.lastModified,
-    });
-  } finally {
-    URL.revokeObjectURL(sourceUrl);
-  }
 }
 
 function directUploadMessage(error: unknown) {
@@ -154,23 +125,23 @@ export function PhotoUploadCard({
     if (!originalFile) return;
     setMessage(undefined);
 
-    let file = originalFile;
-    if (isAppleHighEfficiencyImage(file)) {
-      setMessage('در حال تبدیل عکس آیفون از HEIC/HEIF به JPEG…');
-      try {
-        file = await convertToJpeg(file);
-      } catch {
-        setMessage(
-          'مرورگر نتوانست عکس HEIC/HEIF را تبدیل کند. در آیفون از Share > Options گزینه Most Compatible را انتخاب کنید یا از عکس اسکرین‌شات بگیرید و دوباره ارسال کنید.',
-        );
-        return;
-      }
-    }
-
-    const mime = normalizedPhotoMime(file);
-    if (!mime) {
+    const originalMime = normalizedPhotoMime(originalFile);
+    const isHighEfficiency = isAppleHighEfficiencyImage(originalFile);
+    if (!originalMime && !isHighEfficiency) {
       setMessage(
         'فرمت فایل پشتیبانی نمی‌شود. فقط تصویر واقعی JPEG/JPG یا PNG انتخاب کنید؛ تصاویر HEIC/HEIF را ابتدا به JPEG تبدیل کنید.',
+      );
+      return;
+    }
+    setMessage('در حال آماده‌سازی و استانداردسازی عکس…');
+    let file: File;
+    try {
+      file = await normalizeBrowserPhoto(originalFile);
+    } catch {
+      setMessage(
+        isHighEfficiency
+          ? 'مرورگر نتوانست عکس HEIC/HEIF را تبدیل کند. در آیفون از Share > Options گزینه Most Compatible را انتخاب کنید یا از عکس اسکرین‌شات بگیرید و دوباره ارسال کنید.'
+          : 'مرورگر نتوانست محتوای این عکس را بازخوانی کند. عکس را در گالری باز کنید، یک اسکرین‌شات بگیرید یا آن را دوباره با فرمت JPG ذخیره کنید.',
       );
       return;
     }
@@ -180,7 +151,7 @@ export function PhotoUploadCard({
     }
 
     if (selected) URL.revokeObjectURL(selected.previewUrl);
-    setSelected({ file, previewUrl: URL.createObjectURL(file), mime });
+    setSelected({ file, previewUrl: URL.createObjectURL(file), mime: 'image/jpeg' });
     authorizationRef.current = undefined;
     setProgress(0);
   }
@@ -334,7 +305,7 @@ export function PhotoUploadCard({
             className="aspect-[3/4] w-full rounded-lg object-cover"
           />
           <div className="space-y-3">
-            <p className="break-all text-sm font-bold">{selected.file.name}</p>
+            <p dir="ltr" className="break-all text-left text-sm font-bold">{selected.file.name}</p>
             {pending && (
               <div>
                 <div

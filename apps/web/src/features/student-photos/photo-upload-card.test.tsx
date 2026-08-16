@@ -9,6 +9,7 @@ const putPhotoObject = vi.hoisted(() => vi.fn());
 const completePhotoUpload = vi.hoisted(() => vi.fn());
 const getMyPhotoUploads = vi.hoisted(() => vi.fn());
 const getPhotoViewUrl = vi.hoisted(() => vi.fn());
+const normalizeBrowserPhoto = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
@@ -23,6 +24,7 @@ vi.mock('./student-photos-api', async (importOriginal) => {
     getPhotoViewUrl,
   };
 });
+vi.mock('./normalize-browser-photo', () => ({ normalizeBrowserPhoto }));
 
 function upload(overrides: Record<string, unknown> = {}): PhotoUploadView {
   return {
@@ -51,6 +53,10 @@ describe('PhotoUploadCard', () => {
       configurable: true,
       value: vi.fn(() => undefined),
     });
+    normalizeBrowserPhoto.mockImplementation(
+      async (file: File) =>
+        new File([file], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }),
+    );
   });
 
   it('renders the Persian status of each provided upload', () => {
@@ -124,7 +130,7 @@ describe('PhotoUploadCard', () => {
       expect(authorizePhotoUpload).toHaveBeenCalledWith(
         {
           studentId: 'student-1',
-          declaredMime: 'image/png',
+          declaredMime: 'image/jpeg',
           declaredSize: 10_000,
         },
         'panel',
@@ -138,7 +144,7 @@ describe('PhotoUploadCard', () => {
         expect.any(File),
         expect.objectContaining({
           signal: expect.any(AbortSignal),
-          contentType: 'image/png',
+          contentType: 'image/jpeg',
           onProgress: expect.any(Function),
         }),
       ),
