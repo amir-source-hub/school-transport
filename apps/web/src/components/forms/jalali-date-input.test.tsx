@@ -43,16 +43,31 @@ describe('JalaliDateInput', () => {
     expect(onChange).toHaveBeenLastCalledWith('2026-03-21');
   });
 
-  it('rejects impossible, future, and out-of-policy dates with specific messages', async () => {
+  it('prevents impossible segment values before they enter the fields', async () => {
     const user = userEvent.setup();
-    const { rerender } = render(
+    render(
       <JalaliDateInput value="" onChange={vi.fn()} maxDate="2026-08-11" minDate="1900-01-01" />,
     );
 
-    await user.type(screen.getByLabelText('سال'), '1405');
-    await user.type(screen.getByLabelText('ماه'), '13');
-    await user.type(screen.getByLabelText('روز'), '01');
-    expect(screen.getByText(/تاریخ شمسی معتبر/)).toBeInTheDocument();
+    const year = screen.getByLabelText('سال');
+    const month = screen.getByLabelText('ماه');
+    const day = screen.getByLabelText('روز');
+    await user.type(year, '1299');
+    expect(year).toHaveValue('129');
+    await user.clear(year);
+    await user.type(year, '1405');
+    await user.type(month, '13');
+    expect(month).toHaveValue('1');
+    await user.clear(month);
+    await user.type(month, '07');
+    await user.type(day, '32');
+    expect(day).toHaveValue('3');
+  });
+
+  it('reports dates outside the configured policy range', async () => {
+    const { rerender } = render(
+      <JalaliDateInput value="" onChange={vi.fn()} maxDate="2026-08-11" minDate="1900-01-01" />,
+    );
 
     rerender(
       <JalaliDateInput

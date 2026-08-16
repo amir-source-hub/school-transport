@@ -20,6 +20,24 @@ const splitJalali = (isoDate: string) => {
   return { year, month, day };
 };
 
+const validSegment = (
+  part: 'year' | 'month' | 'day',
+  digits: string,
+  segments: { year: string; month: string; day: string },
+) => {
+  if (!digits) return true;
+  const number = Number(digits);
+  if (part === 'year') return digits.length < 4 || number >= 1300;
+  if (part === 'month') return digits.length < 2 || (number >= 1 && number <= 12);
+  if (digits.length < 2 || number < 1 || number > 31) return digits.length < 2;
+  if (segments.year.length === 4 && segments.month.length === 2) {
+    return Boolean(
+      jalaliToIsoDate(`${segments.year}/${segments.month}/${digits.padStart(2, '0')}`),
+    );
+  }
+  return true;
+};
+
 export function JalaliDateInput({
   value,
   onChange,
@@ -82,6 +100,12 @@ export function JalaliDateInput({
         month: packed.slice(4, 6),
         day: packed.slice(6, 8),
       };
+      if (
+        !validSegment('year', next.year, next) ||
+        !validSegment('month', next.month, next) ||
+        !validSegment('day', next.day, next)
+      )
+        return;
       setSegments(next);
       const iso = jalaliToIsoDate(`${next.year}/${next.month}/${next.day}`);
       onChange(iso && (!minDate || iso >= minDate) && (!maxDate || iso <= maxDate) ? iso : '');
@@ -89,6 +113,7 @@ export function JalaliDateInput({
       return;
     }
     digits = digits.slice(0, part === 'year' ? 4 : 2);
+    if (!validSegment(part, digits, segments)) return;
     const next = { ...segments, [part]: digits };
     setSegments(next);
     const iso = jalaliToIsoDate(`${next.year}/${next.month}/${next.day}`);
