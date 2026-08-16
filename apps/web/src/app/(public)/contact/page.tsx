@@ -2,7 +2,7 @@
 
 import { Clock, Mail, MapPin, MessageSquare, Phone, Send } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,8 @@ import { Select, type SelectOption } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { PageContainer } from '@/components/common/page-container';
 import { cn } from '@/lib/cn';
+import { createPublicContactMessage } from '@/features/feedback/feedback-api';
+import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 
 const channels = [
   {
@@ -50,6 +52,29 @@ export default function ContactPage() {
   const [topic, setTopic] = useState('');
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
+  const [pending, setPending] = useState(false);
+  const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; message: string }>();
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFeedback(undefined);
+    if (!name.trim() || !topic || message.trim().length < 10) {
+      setFeedback({ kind: 'error', message: 'نام، موضوع و پیام حداقل ۱۰ حرفی را کامل کنید.' });
+      return;
+    }
+    setPending(true);
+    try {
+      await createPublicContactMessage({ name: name.trim(), topic, message: message.trim() });
+      setName('');
+      setTopic('');
+      setMessage('');
+      setFeedback({ kind: 'success', message: 'پیام شما با موفقیت برای مدیریت ارسال شد.' });
+    } catch (error) {
+      setFeedback({ kind: 'error', message: getApiErrorFeedback(error).message });
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <>
@@ -129,7 +154,7 @@ export default function ContactPage() {
                 <h2 className="mt-3 text-2xl font-black">ارسال پیام</h2>
                 <p className="mt-1 text-sm text-muted">فرم زیر را پر کنید تا با شما تماس بگیریم.</p>
               </div>
-              <div className="mt-8 space-y-5">
+              <form className="mt-8 space-y-5" onSubmit={submit}>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
                     <label htmlFor="contact-name" className="mb-1.5 block text-sm font-bold">
@@ -140,6 +165,9 @@ export default function ContactPage() {
                       placeholder="نام خود را وارد کنید"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
+                      required
+                      minLength={2}
+                      maxLength={120}
                     />
                   </div>
                   <div>
@@ -159,15 +187,31 @@ export default function ContactPage() {
                     rows={5}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
+                    required
+                    minLength={10}
+                    maxLength={2000}
                   />
                 </div>
+                {feedback && (
+                  <p
+                    role="status"
+                    className={feedback.kind === 'success' ? 'text-success' : 'text-danger'}
+                  >
+                    {feedback.message}
+                  </p>
+                )}
                 <div className="flex justify-end">
-                  <Button size="lg" className="bg-navy text-white hover:bg-navy/90">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="bg-navy text-white hover:bg-navy/90"
+                    disabled={pending}
+                  >
                     <Send aria-hidden="true" className="size-4" />
-                    ارسال پیام
+                    {pending ? 'در حال ارسال…' : 'ارسال پیام'}
                   </Button>
                 </div>
-              </div>
+              </form>
             </div>
             <div className="relative mt-10 lg:mt-0">
               <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-canvas)]">

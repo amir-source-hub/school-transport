@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { Roles } from '../../common/decorators';
+import { Public, Roles } from '../../common/decorators';
 import type { AuthenticatedRequest } from '../../common/http-request';
 import { paginatedResponse, successResponse } from '../../common/response';
 import { AuthGuard } from '../access-control/auth.guard';
@@ -20,11 +20,24 @@ import { SchoolManagerScopeService } from '../access-control/school-manager-scop
 import {
   AssignFeedbackDto,
   CreateFeedbackDto,
+  CreatePublicContactDto,
   FeedbackQueryDto,
   RespondFeedbackDto,
   VersionDto,
 } from './feedback.dto';
 import { FeedbackService } from './feedback.service';
+
+@Controller('public/contact-messages')
+export class PublicContactController {
+  constructor(private readonly service: FeedbackService) {}
+
+  @Public()
+  @Post()
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  async create(@Body() body: CreatePublicContactDto) {
+    return successResponse(await this.service.createPublic(body));
+  }
+}
 
 @UseGuards(AuthGuard)
 @Controller('feedback')

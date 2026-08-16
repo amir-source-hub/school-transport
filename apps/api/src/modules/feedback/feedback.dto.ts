@@ -22,6 +22,13 @@ export const FEEDBACK_CATEGORIES = [
   'SAFETY',
 ] as const;
 const PLAIN_TEXT = /^(?![\s\S]*<[^>]+>)[\s\S]*$/;
+const CONTACT_TOPICS = ['registration', 'payment', 'contract', 'technical', 'other'] as const;
+
+export class CreatePublicContactDto {
+  @IsString() @Length(2, 120) @Matches(PLAIN_TEXT) name!: string;
+  @IsIn(CONTACT_TOPICS) topic!: (typeof CONTACT_TOPICS)[number];
+  @IsString() @Length(10, 2000) @Matches(PLAIN_TEXT) message!: string;
+}
 
 export class CreateFeedbackDto {
   @IsIn(FEEDBACK_CATEGORIES) category!: (typeof FEEDBACK_CATEGORIES)[number];
@@ -34,7 +41,7 @@ export class FeedbackQueryDto {
   @Type(() => Number) @IsInt() @Min(5) @Max(50) pageSize = 10;
   @IsOptional() @IsIn(['NEW', 'READ', 'ESCALATED', 'ANSWERED', 'CLOSED']) status?: string;
   @IsOptional() @IsIn(FEEDBACK_CATEGORIES) category?: string;
-  @IsOptional() @IsIn(['PARENT', 'SCHOOL_MANAGER']) senderType?: string;
+  @IsOptional() @IsIn(['PARENT', 'SCHOOL_MANAGER', 'PUBLIC']) senderType?: string;
   @IsOptional() @IsDateString({ strict: true }) snapshotAt?: string;
 }
 export class AssignFeedbackDto {

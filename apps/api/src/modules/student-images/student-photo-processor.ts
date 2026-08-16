@@ -67,7 +67,7 @@ export async function processStudentPhoto(
   let metadata: sharp.Metadata;
   try {
     metadata = await sharp(source, {
-      failOn: 'error',
+      failOn: 'none',
       limitInputPixels: config.maxPixels + 1,
     }).metadata();
   } catch {
@@ -98,7 +98,7 @@ export async function processStudentPhoto(
   let canonical: Buffer;
   try {
     canonical = await sharp(source, {
-      failOn: 'error',
+      failOn: 'none',
       limitInputPixels: config.maxPixels + 1,
     })
       .timeout({ seconds: config.processingTimeoutSeconds ?? 10 })

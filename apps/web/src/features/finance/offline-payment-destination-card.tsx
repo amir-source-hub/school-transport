@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { getOfflineDestination, type OfflineDestination } from './payments-api';
+import { CopyPaymentValue } from './copy-payment-value';
 
 export function OfflinePaymentDestinationCard({
   mode = 'panel',
@@ -40,6 +41,7 @@ export function OfflinePaymentDestinationCard({
         <dd className="font-bold" dir="ltr">
           {destination.cardNumber}
         </dd>
+        <CopyPaymentValue value={destination.cardNumber} label="شماره کارت" />
       </div>
       {destination.iban && (
         <div className="rounded-2xl bg-white/85 p-3 shadow-sm">
@@ -47,6 +49,7 @@ export function OfflinePaymentDestinationCard({
           <dd className="break-all font-bold" dir="ltr">
             {destination.iban}
           </dd>
+          <CopyPaymentValue value={destination.iban} label="شماره شبا" />
         </div>
       )}
       {destination.accountNumber && (
@@ -55,6 +58,7 @@ export function OfflinePaymentDestinationCard({
           <dd className="font-bold" dir="ltr">
             {destination.accountNumber}
           </dd>
+          <CopyPaymentValue value={destination.accountNumber} label="شماره حساب" />
         </div>
       )}
       <div className="rounded-2xl bg-navy p-4 text-white sm:col-span-2">

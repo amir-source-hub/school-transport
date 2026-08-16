@@ -228,6 +228,7 @@ export function CreateEnrollmentForm({
       'studentLast',
       'studentFatherName',
       'studentNationalId',
+      'birthDate',
       'gender',
       'guardianRelationshipType',
       'homePhone',
@@ -284,6 +285,7 @@ export function CreateEnrollmentForm({
     const persianOnlyKeys: (keyof typeof form)[] = [
       'studentFirst',
       'studentLast',
+      'studentFatherName',
       'guardianFirst',
       'guardianLast',
       'guardianRelationshipDescription',
@@ -329,7 +331,7 @@ export function CreateEnrollmentForm({
       }
       return next;
     });
-    setFieldErrors((current) => ({ ...current, [key]: validateField(key, value) }));
+    setFieldErrors((current) => ({ ...current, [key]: validateField(key, normalizedValue) }));
   }
 
   function validateVisibleFields(currentStep: number) {
@@ -340,6 +342,7 @@ export function CreateEnrollmentForm({
             'studentLast',
             'studentFatherName',
             'studentNationalId',
+            'birthDate',
             'gender',
             'guardianRelationshipType',
             'guardianRelationshipDescription',
@@ -354,10 +357,13 @@ export function CreateEnrollmentForm({
         : currentStep === 2
           ? ['addressTitle', 'province', 'city', 'streetAddress', 'postalCode']
           : [];
-    const nextErrors = Object.fromEntries(
-      keys.map((key) => [key, validateField(key, form[key])]).filter(([, message]) => message),
+    const checkedErrors = Object.fromEntries(
+      keys.map((key) => [key, validateField(key, form[key])]),
     );
-    setFieldErrors((current) => ({ ...current, ...nextErrors }));
+    const nextErrors = Object.fromEntries(
+      Object.entries(checkedErrors).filter(([, message]) => message),
+    );
+    setFieldErrors((current) => ({ ...current, ...checkedErrors }));
     const firstInvalid = Object.keys(nextErrors)[0];
     if (firstInvalid) {
       requestAnimationFrame(() => document.getElementById(`enrollment-${firstInvalid}`)?.focus());
@@ -776,7 +782,7 @@ export function CreateEnrollmentForm({
       </label>
       <Input
         id={`enrollment-${key}`}
-        required={key !== 'birthDate' && !optionalSectionKeys.has(key) && key !== 'guardianPhone'}
+        required={!optionalSectionKeys.has(key) && key !== 'guardianPhone'}
         type={type}
         value={String(form[key])}
         dir={['tel', 'number'].includes(type) ? 'ltr' : undefined}
@@ -871,6 +877,8 @@ export function CreateEnrollmentForm({
     studentLast: 'نام خانوادگی دانش‌آموز',
     studentFatherName: 'نام پدر دانش‌آموز',
     studentNationalId: 'کد ملی دانش‌آموز',
+    birthDate: 'تاریخ تولد',
+    gender: 'جنسیت',
     guardianFirst: 'نام سرپرست',
     guardianLast: 'نام خانوادگی سرپرست',
     guardianNationalId: 'کد ملی سرپرست',
@@ -1059,6 +1067,7 @@ export function CreateEnrollmentForm({
                         guardianFirst: undefined,
                         guardianLast: undefined,
                         guardianNationalId: undefined,
+                        guardianRelationshipType: undefined,
                         guardianRelationshipDescription: undefined,
                       }));
                     }}
@@ -1396,6 +1405,10 @@ export function CreateEnrollmentForm({
         )}
         {step === 4 && result && !accepted && (
           <div className="space-y-5">
+            <Button type="button" variant="ghost" onClick={() => setStep(3)} disabled={pending}>
+              <ChevronRight className="size-4" />
+              مرحله قبل
+            </Button>
             <div className="flex items-center gap-3">
               <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-soft text-primary">
                 <FileCheck2 />

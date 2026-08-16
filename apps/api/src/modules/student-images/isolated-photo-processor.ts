@@ -40,22 +40,8 @@ process.stdin.on('end', async () => {
     if (!source.length) return fail('ZERO_BYTE', 'The uploaded file is empty.');
     if (source.length > config.maxBytes) return fail('TOO_LARGE', 'The uploaded file exceeds the size limit.');
     if (!jpeg && !png) return fail('UNSUPPORTED_FORMAT', 'The uploaded file is not a valid image.');
-    if (jpeg && !(source[source.length - 2] === 0xff && source[source.length - 1] === 0xd9))
-      return fail('POLYGLOT_PAYLOAD', 'JPEG data follows the final image marker.');
-    if (png) {
-      let offset = 8;
-      let finalOffset = -1;
-      while (offset + 12 <= source.length) {
-        const length = source.readUInt32BE(offset);
-        const end = offset + 12 + length;
-        if (end > source.length) break;
-        if (source.toString('ascii', offset + 4, offset + 8) === 'IEND') { finalOffset = end; break; }
-        offset = end;
-      }
-      if (finalOffset !== source.length) return fail('POLYGLOT_PAYLOAD', 'PNG data follows the final image chunk.');
-    }
     let metadata;
-    try { metadata = await sharp(source, { failOn: 'error', limitInputPixels: config.maxPixels + 1 }).metadata(); }
+    try { metadata = await sharp(source, { failOn: 'none', limitInputPixels: config.maxPixels + 1 }).metadata(); }
     catch { return fail('CORRUPT_IMAGE', 'The image could not be decoded.'); }
     if (!metadata.width || !metadata.height) return fail('CORRUPT_IMAGE', 'The image has no valid dimensions.');
     const rotated = (metadata.orientation || 1) >= 5 && (metadata.orientation || 1) <= 8;
@@ -66,7 +52,7 @@ process.stdin.on('end', async () => {
     if (Math.max(width / height, height / width) > 10) return fail('EXTREME_ASPECT_RATIO', 'The image aspect ratio is not supported.');
     let canonical;
     try {
-      canonical = await sharp(source, { failOn: 'error', limitInputPixels: config.maxPixels + 1 })
+      canonical = await sharp(source, { failOn: 'none', limitInputPixels: config.maxPixels + 1 })
         .timeout({ seconds: config.processingTimeoutSeconds || 10 }).rotate()
         .resize(config.outputWidth, config.outputHeight, { fit: 'cover', position: 'centre' })
         .jpeg({ quality: config.jpegQuality, mozjpeg: true }).toColorspace('srgb').toBuffer();

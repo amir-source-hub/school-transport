@@ -277,6 +277,13 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     primaryHeading: 'انتقادات و پیشنهادات',
   },
   {
+    path: '/admin/contact-messages',
+    audience: 'admin',
+    title: 'پیام‌های تماس',
+    description: 'مشاهده پیام‌های ارسال‌شده از فرم تماس با ما.',
+    primaryHeading: 'پیام‌های تماس',
+  },
+  {
     path: '/admin/notifications/broadcasts',
     audience: 'admin',
     title: 'ارسال گروهی پیامک',

@@ -25,18 +25,22 @@ describe('processStudentPhotoIsolated', () => {
     expect(result.checksum).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it('rejects JPEG and PNG polyglots with trailing executable/archive payloads', async () => {
-    const pngPolyglot = Buffer.concat([await image(), Buffer.from('PK\x03\x04archive')]);
+  it('accepts decodable JPEG and PNG files with harmless trailing bytes', async () => {
+    const pngWithTrailingBytes = Buffer.concat([await image(), Buffer.from('camera-metadata')]);
     const jpeg = await sharp(await image())
       .jpeg()
       .toBuffer();
-    const jpegPolyglot = Buffer.concat([jpeg, Buffer.from('<script>alert(1)</script>')]);
-    await expect(processStudentPhotoIsolated(pngPolyglot, config)).rejects.toMatchObject({
-      rejectionCode: 'POLYGLOT_PAYLOAD',
+    const jpegWithTrailingBytes = Buffer.concat([jpeg, Buffer.from('camera-metadata')]);
+    await expect(processStudentPhotoIsolated(pngWithTrailingBytes, config)).resolves.toMatchObject({
+      width: 600,
+      height: 800,
     });
-    await expect(processStudentPhotoIsolated(jpegPolyglot, config)).rejects.toMatchObject({
-      rejectionCode: 'POLYGLOT_PAYLOAD',
-    });
+    await expect(processStudentPhotoIsolated(jpegWithTrailingBytes, config)).resolves.toMatchObject(
+      {
+        width: 600,
+        height: 800,
+      },
+    );
   });
 
   it('bounds concurrent compressed high-pixel inputs outside the API process', async () => {

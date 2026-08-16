@@ -105,6 +105,13 @@ const fillIn = (
   value: string,
 ) => user.type(within(section(sectionTitle)).getByLabelText(label), value);
 
+async function fillBirthDate(user: ReturnType<typeof userEvent.setup>) {
+  const studentSection = within(section('مشخصات دانش‌آموز'));
+  await user.type(studentSection.getByLabelText('سال'), '1395');
+  await user.type(studentSection.getByLabelText('ماه'), '01');
+  await user.type(studentSection.getByLabelText('روز'), '01');
+}
+
 describe('onboarding guided enrollment funnel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -140,6 +147,7 @@ describe('onboarding guided enrollment funnel', () => {
     await fillIn(user, 'مشخصات دانش‌آموز', 'نام خانوادگی', 'احمدی');
     await fillIn(user, 'مشخصات دانش‌آموز', 'نام پدر', 'حسین');
     await fillIn(user, 'مشخصات دانش‌آموز', 'کد ملی', '0013540394');
+    await fillBirthDate(user);
     await user.click(within(section('مشخصات دانش‌آموز')).getByRole('combobox', { name: 'جنسیت' }));
     await user.click(await screen.findByRole('option', { name: 'پسر' }));
     await fillIn(user, 'سرپرست', 'کد ملی', '0499370899');
@@ -229,6 +237,7 @@ describe('onboarding guided enrollment funnel', () => {
     await fillIn(user, 'مشخصات دانش‌آموز', 'نام خانوادگی', 'احمدی');
     await fillIn(user, 'مشخصات دانش‌آموز', 'نام پدر', 'حسین');
     await fillIn(user, 'مشخصات دانش‌آموز', 'کد ملی', '0013540394');
+    await fillBirthDate(user);
     await user.click(within(section('مشخصات دانش‌آموز')).getByRole('combobox', { name: 'جنسیت' }));
     await user.click(await screen.findByRole('option', { name: 'پسر' }));
     await fillIn(user, 'سرپرست', 'کد ملی', '0499370899');

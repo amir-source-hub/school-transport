@@ -9,6 +9,7 @@ export const feedbackSubmissions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     senderType: varchar('sender_type', { length: 20 }).notNull().default('PARENT'),
+    contactName: varchar('contact_name', { length: 120 }),
     userId: uuid('user_id').references(() => users.id),
     managerUserId: uuid('manager_user_id').references(() => schoolManagerUsers.id),
     schoolId: uuid('school_id').references(() => schools.id),

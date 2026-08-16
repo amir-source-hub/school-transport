@@ -20,6 +20,7 @@ import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { ApiClientError } from '@/lib/api-client';
 import { createClientId } from '@/lib/client-id';
 import { DIRECT_UPLOAD_RETRY_MESSAGE, putFileDirectly } from '@/lib/direct-object-upload';
+import { CopyPaymentValue } from './copy-payment-value';
 
 const receiptDraftKey = (mode: string, scheduleItemId: string) =>
   `offline-receipt-draft:${mode}:${scheduleItemId}`;
@@ -199,6 +200,7 @@ export function OfflinePaymentForm({
             <dd className="font-bold" dir="ltr">
               {destination.cardNumber}
             </dd>
+            <CopyPaymentValue value={destination.cardNumber} label="شماره کارت" />
           </div>
           {destination.iban && (
             <div className="rounded-2xl border border-white bg-white/80 p-3 shadow-sm">
@@ -206,6 +208,7 @@ export function OfflinePaymentForm({
               <dd className="font-bold" dir="ltr">
                 {destination.iban}
               </dd>
+              <CopyPaymentValue value={destination.iban} label="شماره شبا" />
             </div>
           )}
           {destination.accountNumber && (
@@ -214,6 +217,7 @@ export function OfflinePaymentForm({
               <dd className="font-bold" dir="ltr">
                 {destination.accountNumber}
               </dd>
+              <CopyPaymentValue value={destination.accountNumber} label="شماره حساب" />
             </div>
           )}
           <div className="rounded-2xl bg-navy p-4 text-white sm:col-span-2">

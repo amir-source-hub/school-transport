@@ -6,7 +6,7 @@ import { generateId } from '../../common/utils';
 import { DatabaseService } from '../../database/database.service';
 import { adminUsers, feedbackSubmissions, students } from '../../database/schemas';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
-import type { CreateFeedbackDto, FeedbackQueryDto } from './feedback.dto';
+import type { CreateFeedbackDto, CreatePublicContactDto, FeedbackQueryDto } from './feedback.dto';
 
 @Injectable()
 export class FeedbackService {
@@ -16,6 +16,30 @@ export class FeedbackService {
     private readonly notifications: InAppNotificationService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
+  async createPublic(input: CreatePublicContactDto) {
+    const topics = {
+      registration: { category: 'SERVICE', subject: 'ثبت‌نام' },
+      payment: { category: 'BILLING', subject: 'پرداخت' },
+      contract: { category: 'SERVICE', subject: 'قرارداد' },
+      technical: { category: 'APP', subject: 'مشکل فنی' },
+      other: { category: 'SUGGESTION', subject: 'سایر موارد' },
+    } as const;
+    const topic = topics[input.topic];
+    const [saved] = await this.db.db
+      .insert(feedbackSubmissions)
+      .values({
+        id: generateId(),
+        senderType: 'PUBLIC',
+        contactName: input.name.trim(),
+        category: topic.category,
+        subject: topic.subject,
+        message: input.message.trim(),
+        status: 'NEW',
+        priority: 'NORMAL',
+      })
+      .returning();
+    return saved;
+  }
   async create(userId: string, input: CreateFeedbackDto) {
     if (input.studentId) {
       const [owned] = await this.db.db
