@@ -253,6 +253,13 @@
       "when": 1787068800000,
       "tag": "0035_public_contact_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1787155200000,
+      "tag": "0036_school_locations_and_closing_times",
+      "breakpoints": true
     }
   ]
 }

@@ -12,15 +12,7 @@ import {
   type FamilyProfile,
   updateAddress,
   updateEmergencyContact,
-  updateParent,
 } from './family-api';
-
-type ParentForm = {
-  firstName: string;
-  lastName: string;
-  nationalId: string;
-  phoneNumber: string;
-};
 
 export function FamilyProfileForm({ profile }: { profile: FamilyProfile }) {
   const guardianAsMother =
@@ -37,18 +29,6 @@ export function FamilyProfileForm({ profile }: { profile: FamilyProfile }) {
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string>();
-  const [mother, setMother] = useState<ParentForm>({
-    firstName: displayedMother?.firstName ?? '',
-    lastName: displayedMother?.lastName ?? '',
-    nationalId: displayedMother?.nationalId ?? '',
-    phoneNumber: displayedMother?.phoneNumber ?? '',
-  });
-  const [father, setFather] = useState<ParentForm>({
-    firstName: displayedFather?.firstName ?? '',
-    lastName: displayedFather?.lastName ?? '',
-    nationalId: displayedFather?.nationalId ?? '',
-    phoneNumber: displayedFather?.phoneNumber ?? '',
-  });
   const [addressForm, setAddressForm] = useState({
     title: address?.title ?? '',
     province: address?.province ?? '',
@@ -64,17 +44,11 @@ export function FamilyProfileForm({ profile }: { profile: FamilyProfile }) {
     phoneNumber: emergency?.phoneNumber ?? '',
   });
 
-  const setParent = (
-    setter: React.Dispatch<React.SetStateAction<ParentForm>>,
-    key: keyof ParentForm,
-    value: string,
-  ) => setter((current) => ({ ...current, [key]: value }));
-
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setSaved(false);
     setError(undefined);
-    const phones = [mother.phoneNumber, father.phoneNumber, emergencyForm.phoneNumber];
+    const phones = [emergencyForm.phoneNumber];
     if (phones.some((phone) => !/^09\d{9}$/.test(phone))) {
       setError('شماره‌های همراه باید ۱۱ رقم و با ۰۹ شروع شوند.');
       return;
@@ -82,8 +56,6 @@ export function FamilyProfileForm({ profile }: { profile: FamilyProfile }) {
     setPending(true);
     try {
       const jobs: Promise<unknown>[] = [];
-      if (profile.mother) jobs.push(updateParent('MOTHER', mother));
-      if (profile.father) jobs.push(updateParent('FATHER', father));
       if (address) jobs.push(updateAddress(address.id, addressForm));
       if (emergency) jobs.push(updateEmergencyContact(emergency.id, emergencyForm));
       await Promise.all(jobs);
@@ -150,12 +122,9 @@ export function FamilyProfileForm({ profile }: { profile: FamilyProfile }) {
 
   return (
     <form className="space-y-5" onSubmit={submit}>
-      <EditSection title="اطلاعات مادر">
-        <ParentInputs value={mother} onChange={(key, value) => setParent(setMother, key, value)} />
-      </EditSection>
-      <EditSection title="اطلاعات پدر">
-        <ParentInputs value={father} onChange={(key, value) => setParent(setFather, key, value)} />
-      </EditSection>
+      <Alert title="اطلاعات هویتی قابل تغییر نیست">
+        اطلاعات سرپرست و والدین پس از ثبت‌نام قفل است؛ فقط اطلاعات اختیاری نشانی و تماس اضطراری قابل ویرایش است.
+      </Alert>
       {address && (
         <EditSection title="نشانی فعال">
           <TextInput
@@ -303,41 +272,6 @@ function EditSection({ title, children }: { title: string; children: React.React
       <h2 className="text-lg font-black">{title}</h2>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">{children}</div>
     </section>
-  );
-}
-
-function ParentInputs({
-  value,
-  onChange,
-}: {
-  value: ParentForm;
-  onChange: (key: keyof ParentForm, value: string) => void;
-}) {
-  return (
-    <>
-      <TextInput
-        label="نام"
-        value={value.firstName}
-        onChange={(next) => onChange('firstName', next)}
-      />
-      <TextInput
-        label="نام خانوادگی"
-        value={value.lastName}
-        onChange={(next) => onChange('lastName', next)}
-      />
-      <TextInput
-        label="کد ملی"
-        value={value.nationalId}
-        ltr
-        onChange={(next) => onChange('nationalId', next.replace(/\D/g, ''))}
-      />
-      <TextInput
-        label="شماره همراه"
-        value={value.phoneNumber}
-        ltr
-        onChange={(next) => onChange('phoneNumber', next.replace(/\D/g, ''))}
-      />
-    </>
   );
 }
 

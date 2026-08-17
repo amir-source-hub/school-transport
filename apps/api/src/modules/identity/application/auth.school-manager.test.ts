@@ -200,8 +200,9 @@ describe('school manager provisioning', () => {
         username: '09120000000',
         firstName: 'مدیر',
         lastName: 'مدرسه',
-        phoneNumber: '09120000000',
-        schoolId: 'school-1',
+      phoneNumber: '09120000000',
+      schoolId: 'school-1',
+      password: 'temporary-password',
       },
       { id: 'admin-1', ip: '127.0.0.1' },
     );

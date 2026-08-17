@@ -12,6 +12,10 @@ const rawAdminStudentSchema = z.object({
   userId: z.string(),
   schoolId: z.string(),
   className: z.string().nullable(),
+  studentCode: z.string().nullable().optional(),
+  fatherName: z.string().nullable().optional(),
+  phoneNumber: z.string().nullable().optional(),
+  fieldOfStudy: z.string().nullable().optional(),
   isActive: z.boolean(),
 });
 
@@ -195,6 +199,14 @@ export async function getAdminStudentDetail(id: string): Promise<AdminStudentDet
     timeoutMs: 8_000,
   });
   return adminStudentDetailSchema.parse(response.data);
+}
+
+export async function getAdminStudentPhoto(id: string) {
+  const response = await apiRequest<{ status: 'APPROVED'; viewUrl: string; expiresInSeconds: number }>(
+    `/admin/student-photos/students/${id}/photo`,
+    { cache: 'no-store', timeoutMs: 8_000 },
+  );
+  return response.data;
 }
 
 export async function setAdminStudentActive(

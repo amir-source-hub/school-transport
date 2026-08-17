@@ -37,7 +37,7 @@ export function ParentEditor({ familyId, parent }: { familyId: string; parent?: 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(undefined);
-    if (!form.firstName.trim() || !form.lastName.trim() || !/^\d{1,10}$/.test(form.nationalId)) {
+    if (!form.firstName.trim() || !form.lastName.trim() || !/^\d{10}$/.test(form.nationalId)) {
       setError('نام، نام خانوادگی و کد ملی عددی الزامی است.');
       return;
     }

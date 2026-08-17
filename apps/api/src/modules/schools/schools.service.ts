@@ -33,6 +33,9 @@ export class SchoolsService {
         phoneNumber: schools.phoneNumber,
         openingTime: schools.openingTime,
         closingTime: schools.closingTime,
+        closingTimes: schools.closingTimes,
+        latitude: schools.latitude,
+        longitude: schools.longitude,
         educationOptions: schools.educationOptions,
       })
       .from(schools)
@@ -61,6 +64,9 @@ export class SchoolsService {
         phoneNumber: schools.phoneNumber,
         openingTime: schools.openingTime,
         closingTime: schools.closingTime,
+        closingTimes: schools.closingTimes,
+        latitude: schools.latitude,
+        longitude: schools.longitude,
         educationOptions: schools.educationOptions,
       })
       .from(schools)
@@ -83,6 +89,9 @@ export class SchoolsService {
     managerPhone?: string;
     openingTime: string;
     closingTime: string;
+    closingTimes?: string[];
+    latitude?: number;
+    longitude?: number;
     educationOptions?: SchoolEducationOption[];
   }) {
     const id = generateId();
@@ -94,6 +103,9 @@ export class SchoolsService {
       managerName: data.managerName || null,
       managerPhone: data.managerPhone || null,
       educationOptions: data.educationOptions ?? [],
+      closingTimes: data.closingTimes?.length ? data.closingTimes : [data.closingTime],
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null,
     });
     return this.getById(id);
   }
@@ -113,6 +125,9 @@ export class SchoolsService {
       managerPhone: string;
       openingTime: string;
       closingTime: string;
+      closingTimes: string[];
+      latitude: number;
+      longitude: number;
       educationOptions: SchoolEducationOption[];
       isActive: boolean;
     }>,

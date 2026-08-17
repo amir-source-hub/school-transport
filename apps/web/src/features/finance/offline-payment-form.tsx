@@ -15,12 +15,12 @@ import {
   submitOfflinePayment,
   type OfflineDestination,
 } from './payments-api';
-import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { ApiClientError } from '@/lib/api-client';
 import { createClientId } from '@/lib/client-id';
 import { DIRECT_UPLOAD_RETRY_MESSAGE, putFileDirectly } from '@/lib/direct-object-upload';
 import { CopyPaymentValue } from './copy-payment-value';
+import { formatIrr } from '@/lib/formatters';
 
 const receiptDraftKey = (mode: string, scheduleItemId: string) =>
   `offline-receipt-draft:${mode}:${scheduleItemId}`;
@@ -29,16 +29,12 @@ export function OfflinePaymentForm({
   items = [],
   mode = 'panel',
 }: {
-  items?: { id: string; label: string }[];
+  items?: { id: string; label: string; amount: number }[];
   mode?: 'panel' | 'onboarding';
 }) {
   const router = useRouter();
   const [scheduleItemId, setScheduleItemId] = useState(items[0]?.id ?? '');
-  const [paidAt, setPaidAt] = useState('');
-  const [referenceNumber, setReferenceNumber] = useState('');
   const [description, setDescription] = useState('');
-  const [payerName, setPayerName] = useState('');
-  const [sourceCardLastFour, setSourceCardLastFour] = useState('');
   const [destination, setDestination] = useState<OfflineDestination>();
   const [receipt, setReceipt] = useState<File>();
   const [previewUrl, setPreviewUrl] = useState<string>();
@@ -57,7 +53,7 @@ export function OfflinePaymentForm({
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string>();
-  const [formVersion, setFormVersion] = useState(0);
+  const selectedItem = items.find(({ id }) => id === scheduleItemId);
   useEffect(() => {
     let active = true;
     getOfflineDestination(mode)
@@ -86,20 +82,8 @@ export function OfflinePaymentForm({
           setError('ابتدا قسط موردنظر را انتخاب کنید.');
           return;
         }
-        if (!paidAt) {
-          setError('تاریخ شمسی معتبر را وارد کنید.');
-          return;
-        }
-        if (!referenceNumber.trim()) {
-          setError('شماره پیگیری یا مرجع پرداخت را وارد کنید.');
-          return;
-        }
-        if (/[A-Za-z]/.test(description) || /[A-Za-z]/.test(payerName)) {
+        if (/[A-Za-z]/.test(description)) {
           setError('در فیلدهای متنی فقط حروف فارسی مجاز است.');
-          return;
-        }
-        if (sourceCardLastFour && !/^\d{4}$/.test(sourceCardLastFour)) {
-          setError('چهار رقم آخر کارت مبدأ باید دقیقاً ۴ رقم باشد.');
           return;
         }
         if (!receipt) {
@@ -115,11 +99,9 @@ export function OfflinePaymentForm({
             (await submitOfflinePayment(
               scheduleItemId,
               {
-                paidAt,
-                referenceNumber: referenceNumber.trim(),
+                paidAt: new Date().toISOString(),
+                referenceNumber: `RECEIPT-${idempotencyKey.current}`,
                 description: description || undefined,
-                payerName: payerName || undefined,
-                sourceCardLastFour: sourceCardLastFour || undefined,
               },
               mode,
               idempotencyKey.current,
@@ -152,17 +134,12 @@ export function OfflinePaymentForm({
           receiptAuthorization.current = undefined;
           setSubmitted(true);
           setScheduleItemId('');
-          setPaidAt('');
-          setReferenceNumber('');
           setDescription('');
-          setPayerName('');
-          setSourceCardLastFour('');
           setReceipt(undefined);
           setPreviewUrl(undefined);
           setProgress(0);
           uploadAbort.current = undefined;
           idempotencyKey.current = createClientId();
-          setFormVersion((current) => current + 1);
           router.refresh();
         } catch (caught) {
           if (caught instanceof ApiClientError && caught.code === 'RECEIPT_NOT_DRAFT') {
@@ -182,8 +159,8 @@ export function OfflinePaymentForm({
       }}
     >
       <div className="rounded-2xl border border-primary/20 bg-gradient-to-l from-primary/15 via-sky-50 to-amber-50 p-5 text-sm leading-7 text-slate-700 shadow-sm">
-        اگر مبلغ را خارج از درگاه سامانه، مانند کارت‌به‌کارت یا واریز بانکی، پرداخت کرده‌اید؛ قسط،
-        تاریخ شمسی و شماره پیگیری بانکی را ثبت کنید. پرداخت پس از تأیید مدیر «پرداخت‌شده» می‌شود.
+        مبلغ را دقیقاً مطابق پرداخت انتخاب‌شده واریز کنید و فقط تصویر رسید را بفرستید. هر مبلغ کمتر
+        یا بیشتر از مبلغ اعلام‌شده قابل تأیید نیست و رسید رد خواهد شد.
       </div>
       {destination && (
         <dl className="grid gap-3 rounded-3xl border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-amber-50 p-4 text-sm shadow-[0_18px_45px_-32px_rgba(2,132,199,.6)] sm:grid-cols-2 sm:p-5">
@@ -246,40 +223,18 @@ export function OfflinePaymentForm({
           disabled={disabled}
         />
       </label>
-      <label className="text-sm font-bold">
-        تاریخ پرداخت (شمسی)
-        <div className="mt-2">
-          <JalaliDateInput
-            key={formVersion}
-            required
-            disabled={disabled}
-            value={paidAt}
-            onChange={setPaidAt}
-            maxDate={new Date().toISOString().slice(0, 10)}
-          />
+      {selectedItem && (
+        <div role="note" className="rounded-2xl border-2 border-danger/25 bg-danger/5 p-5">
+          <p className="font-black text-danger">
+            مبلغ دقیق این پرداخت: {formatIrr(selectedItem.amount)}
+          </p>
+          <p className="mt-2 text-sm leading-7 text-foreground">
+            فقط همین مبلغ را واریز کنید. رسید مربوط به هر مبلغ دیگری توسط مدیریت رد می‌شود.
+          </p>
         </div>
-      </label>
+      )}
       <label className="text-sm font-bold">
-        شماره پیگیری بانکی
-        <Input
-          disabled={disabled}
-          required
-          className="mt-2"
-          dir="ltr"
-          placeholder="مثلاً ۱۲۳۴۵۶۷۸۹"
-          value={referenceNumber}
-          onChange={(event) =>
-            setReferenceNumber(
-              event.target.value
-                .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
-                .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
-                .replace(/\D/g, ''),
-            )
-          }
-        />
-      </label>
-      <label className="text-sm font-bold">
-        توضیحات یا نام صاحب حساب (اختیاری)
+        توضیحات (اختیاری)
         <Textarea
           disabled={disabled}
           className="mt-2"
@@ -288,36 +243,6 @@ export function OfflinePaymentForm({
           onChange={(event) => setDescription(event.target.value.replace(/[A-Za-z]/g, ''))}
         />
       </label>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-bold">
-          نام پرداخت‌کننده (اختیاری)
-          <Input
-            disabled={disabled}
-            className="mt-2"
-            value={payerName}
-            onChange={(event) => setPayerName(event.target.value.replace(/[A-Za-z]/g, ''))}
-          />
-        </label>
-        <label className="text-sm font-bold">
-          چهار رقم آخر کارت مبدأ (اختیاری)
-          <Input
-            disabled={disabled}
-            className="mt-2"
-            dir="ltr"
-            inputMode="numeric"
-            maxLength={4}
-            value={sourceCardLastFour}
-            onChange={(event) =>
-              setSourceCardLastFour(
-                event.target.value
-                  .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
-                  .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
-                  .replace(/\D/g, ''),
-              )
-            }
-          />
-        </label>
-      </div>
       {!submitted && (
         <label className="block rounded-2xl border-2 border-dashed border-primary/25 bg-primary/[0.025] p-4 text-sm font-bold">
           تصویر رسید (JPEG یا PNG)

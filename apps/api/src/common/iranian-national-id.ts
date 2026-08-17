@@ -14,5 +14,5 @@ export function normalizeIranianDigits(value: string): string {
 
 export function isIranianNationalId(value: string): boolean {
   const normalized = normalizeIranianDigits(value).trim();
-  return /^\d{1,10}$/.test(normalized);
+  return /^\d{10}$/.test(normalized);
 }

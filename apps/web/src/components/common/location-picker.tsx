@@ -9,9 +9,10 @@ type LocationPickerProps = {
   latitude: number;
   longitude: number;
   onChange: (lat: number, lng: number) => void;
+  readOnly?: boolean;
 };
 
-export function LocationPicker({ latitude, longitude, onChange }: LocationPickerProps) {
+export function LocationPicker({ latitude, longitude, onChange, readOnly = false }: LocationPickerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -44,7 +45,7 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
           zoom: 16,
           zoomControl: true,
           scrollWheelZoom: false,
-          keyboard: true,
+          keyboard: !readOnly,
           touchZoom: true,
         });
 
@@ -68,7 +69,7 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
         marker = L.marker(
           [initialPositionRef.current.latitude, initialPositionRef.current.longitude],
           {
-            draggable: true,
+            draggable: !readOnly,
             icon: L.divIcon({
               className: 'location-picker-marker',
               html: '<span aria-hidden="true"></span>',
@@ -78,15 +79,17 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
           },
         ).addTo(map);
 
-        marker.on('dragend', () => {
-          const pos = marker?.getLatLng();
-          if (pos) onChangeRef.current(pos.lat, pos.lng);
-        });
+        if (!readOnly) {
+          marker.on('dragend', () => {
+            const pos = marker?.getLatLng();
+            if (pos) onChangeRef.current(pos.lat, pos.lng);
+          });
 
-        map.on('click', (e: LeafletMouseEvent) => {
-          marker?.setLatLng(e.latlng);
-          onChangeRef.current(e.latlng.lat, e.latlng.lng);
-        });
+          map.on('click', (e: LeafletMouseEvent) => {
+            marker?.setLatLng(e.latlng);
+            onChangeRef.current(e.latlng.lat, e.latlng.lng);
+          });
+        }
 
         mapInstanceRef.current = map;
         markerRef.current = marker;
@@ -120,7 +123,7 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
         markerRef.current = null;
       }
     };
-  }, [retryAttempt]);
+  }, [readOnly, retryAttempt]);
 
   useEffect(() => {
     initialPositionRef.current = { latitude, longitude };
@@ -141,7 +144,7 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
           ref={mapRef}
           tabIndex={0}
           className="z-0 h-64 w-full rounded-2xl border border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:h-72"
-          aria-label="نقشه انتخاب موقعیت؛ برای جابه‌جایی نشانگر روی نقشه کلیک کنید"
+          aria-label={readOnly ? 'نقشه موقعیت ثبت‌شده' : 'نقشه انتخاب موقعیت؛ برای جابه‌جایی نشانگر روی نقشه کلیک کنید'}
           aria-describedby="location-picker-help"
         />
         <span className="pointer-events-none absolute bottom-3 left-3 z-[1000] max-w-[calc(100%-1.5rem)] rounded-lg bg-white/95 px-3 py-2 text-xs font-bold shadow">
@@ -150,8 +153,9 @@ export function LocationPicker({ latitude, longitude, onChange }: LocationPicker
         </span>
       </div>
       <p id="location-picker-help" className="mt-2 text-xs leading-6 text-muted">
-        برای جلوگیری از جابه‌جایی ناخواسته صفحه، بزرگ‌نمایی با چرخ ماوس غیرفعال است. می‌توانید
-        نشانگر را بکشید، روی نقشه کلیک کنید یا مختصات را دستی وارد کنید.
+        {readOnly
+          ? 'این نقشه موقعیت ثبت‌شده را نمایش می‌دهد.'
+          : 'برای جلوگیری از جابه‌جایی ناخواسته صفحه، بزرگ‌نمایی با چرخ ماوس غیرفعال است. می‌توانید نشانگر را بکشید، روی نقشه کلیک کنید یا مختصات را دستی وارد کنید.'}
       </p>
       {loading && (
         <p role="status" className="mt-2 text-xs text-muted">

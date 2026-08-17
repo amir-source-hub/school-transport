@@ -70,19 +70,19 @@ describe('guided enrollment policy', () => {
     expect(input.student.nationalId).toBe('۰۰۱۳۵۴۰۳۹۴');
   });
 
-  it('accepts leading-zero and short national IDs preserving the normalized value', () => {
+  it('accepts leading-zero ten-digit national IDs preserving the normalized value', () => {
     const input = validEnrollment();
     input.student.nationalId = '0023518805';
-    input.guardian.nationalId = '123';
+    input.guardian.nationalId = '1234567891';
     input.father = { ...input.father!, nationalId: '0023518805' };
-    input.mother = { ...input.mother!, nationalId: '4567' };
+    input.mother = { ...input.mother!, nationalId: '0499370899' };
 
     const result = normalizeAndValidateGuidedEnrollment(input);
 
     expect(result.student.nationalId).toBe('0023518805');
-    expect(result.guardian.nationalId).toBe('123');
+    expect(result.guardian.nationalId).toBe('1234567891');
     expect(result.father).toBeNull();
-    expect(result.mother?.nationalId).toBe('4567');
+    expect(result.mother?.nationalId).toBe('0499370899');
   });
 
   it('rejects unsupported service types', () => {

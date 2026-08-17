@@ -7,6 +7,9 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  IsNumber,
+  Max,
+  Min,
   Length,
   Matches,
   ValidateNested,
@@ -16,6 +19,7 @@ import { normalizeIranianDigits } from '../../common/iranian-national-id';
 export const SCHOOL_TYPES = [
   'PUBLIC',
   'PRIVATE',
+  'BOARD_OF_TRUSTEES',
   'NEMOONE_DOLATI',
   'GIFTED',
   'SHAHED',
@@ -63,6 +67,11 @@ export class CreateSchoolDto {
   @IsString()
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'ساعت پایان باید با قالب ساعت:دقیقه باشد.' })
   closingTime!: string;
+  @IsOptional() @IsArray() @ArrayNotEmpty() @ArrayMaxSize(12)
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { each: true })
+  closingTimes!: string[];
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(-90) @Max(90) latitude?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(-180) @Max(180) longitude?: number;
   @IsArray()
   @ArrayNotEmpty()
   @ArrayMaxSize(20)
@@ -96,6 +105,10 @@ export class UpdateSchoolDto {
   @IsOptional() @IsString() @Length(1, 100) managerName?: string;
   @IsOptional() @IsString() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) openingTime?: string;
   @IsOptional() @IsString() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) closingTime?: string;
+  @IsOptional() @IsArray() @ArrayNotEmpty() @ArrayMaxSize(12)
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { each: true }) closingTimes?: string[];
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(-90) @Max(90) latitude?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(-180) @Max(180) longitude?: number;
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(20)

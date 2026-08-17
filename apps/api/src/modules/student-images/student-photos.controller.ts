@@ -118,6 +118,16 @@ export class AdminStudentPhotosController {
     return paginatedResponse(result.items, result.page, result.pageSize, result.total);
   }
 
+  @Get('students/:studentId/photo')
+  async approvedPhoto(
+    @Req() req: AuthenticatedRequest,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+  ) {
+    return successResponse(
+      await this.service.getAdminApprovedViewUrl(req.user.id, studentId, req.ip),
+    );
+  }
+
   @Get(':id/view-url')
   async viewUrl(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
     return successResponse(await this.service.getAdminViewUrl(req.user.id, id, req.ip));

@@ -159,7 +159,7 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
 
   if (error.status === 409) {
     const conflictMessages: Record<string, string> = {
-      INVALID_NATIONAL_ID: 'کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.',
+      INVALID_NATIONAL_ID: 'کد ملی باید دقیقاً ۱۰ رقم باشد.',
       INVALID_PHONE_NUMBER: 'شماره همراه واردشده معتبر نیست. باید با ۰۹ شروع شود.',
       INVALID_BIRTH_DATE: 'تاریخ تولد باید یک تاریخ شمسی واقعی، غیرآینده و در بازه مجاز باشد.',
       INCOMPLETE_ENROLLMENT: 'تمام فیلدهای ضروری را پر کنید.',

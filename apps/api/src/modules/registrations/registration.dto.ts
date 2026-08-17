@@ -32,7 +32,7 @@ class IdentityInputDto {
   @Matches(persianOnly, { message: persianOnlyMessage })
   lastName!: string;
   @Transform(digits)
-  @Matches(/^\d{1,10}$/, { message: 'کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.' })
+  @Matches(/^\d{10}$/, { message: 'کد ملی باید دقیقاً ۱۰ رقم باشد.' })
   nationalId!: string;
 }
 

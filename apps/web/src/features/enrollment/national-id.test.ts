@@ -7,9 +7,7 @@ describe('Iranian national ID utilities', () => {
     expect(normalizeDigits('۰۱۲٣٤')).toBe('01234');
   });
 
-  it('accepts numeric national IDs between 1 and 10 digits including leading zeros', () => {
-    expect(isValidIranianNationalId('1')).toBe(true);
-    expect(isValidIranianNationalId('123')).toBe(true);
+  it('accepts numeric national IDs of exactly 10 digits including leading zeros', () => {
     expect(isValidIranianNationalId('0023518805')).toBe(true);
     expect(isValidIranianNationalId('0013542419')).toBe(true);
     expect(isValidIranianNationalId('۰۰۱۳۵۴۲۴۱۹')).toBe(true);
@@ -24,9 +22,11 @@ describe('Iranian national ID utilities', () => {
     expect(isValidIranianNationalId('123A')).toBe(false);
     expect(isValidIranianNationalId('00 23518805')).toBe(false);
     expect(isValidIranianNationalId('')).toBe(false);
+    expect(isValidIranianNationalId('1')).toBe(false);
+    expect(isValidIranianNationalId('123')).toBe(false);
   });
 
   it('exposes the shared Persian error message', () => {
-    expect(nationalIdError).toBe('کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.');
+    expect(nationalIdError).toBe('کد ملی باید دقیقاً ۱۰ رقم باشد.');
   });
 });

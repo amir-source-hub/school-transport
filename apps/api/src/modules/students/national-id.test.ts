@@ -10,13 +10,10 @@ describe('Iranian national ID', () => {
     '1234567891',
     '0013542419',
     '0023518805',
-    '002453',
-    '123',
-    '1',
     '۰۰۱۳۵۴۲۴۱۹',
     '٠٤٩٩٣٧٠٨٩٩',
     ' 0013542419 ',
-  ] as const)('accepts a numeric national ID up to ten digits: %s', (value) => {
+  ] as const)('accepts a numeric national ID of exactly ten digits: %s', (value) => {
     expect(isIranianNationalId(value)).toBe(true);
   });
 
@@ -27,6 +24,9 @@ describe('Iranian national ID', () => {
     '12345678901234567890',
     '123A',
     '00 23518805',
+    '002453',
+    '123',
+    '1',
   ] as const)('rejects an invalid national ID: %s', (value) => {
     expect(isIranianNationalId(value)).toBe(false);
   });

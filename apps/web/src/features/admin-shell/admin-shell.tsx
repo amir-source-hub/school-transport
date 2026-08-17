@@ -40,8 +40,7 @@ const navigation = [
   { href: '/admin/reports', label: 'گزارش‌ها', icon: FileSpreadsheet },
   { href: '/admin/notifications', label: 'اعلان‌ها', icon: Bell, exact: true },
   { href: '/admin/notifications/broadcasts', label: 'ارسال گروهی پیامک', icon: Send },
-  { href: '/admin/feedback', label: 'انتقادات و پیشنهادات', icon: MessageSquareText },
-  { href: '/admin/contact-messages', label: 'پیام‌های تماس', icon: MessageSquareText },
+  { href: '/admin/feedback', label: 'پیام‌ها و بازخوردها', icon: MessageSquareText },
   { href: '/admin/admins', label: 'مدیران', icon: Shield },
   { href: '/admin/settings', label: 'تنظیمات', icon: Settings },
 ] as const;

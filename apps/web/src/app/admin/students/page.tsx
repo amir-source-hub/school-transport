@@ -128,9 +128,9 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
             {students.map((student) => (
               <Card key={student.id}>
                 <div className="flex items-start justify-between gap-3">
-                  <p className="font-black">
+                  <Link href={`/admin/students/${student.id}`} className="font-black text-primary hover:underline">
                     {student.firstName} {student.lastName}
-                  </p>
+                  </Link>
                   <Badge tone={student.isActive ? 'success' : 'neutral'}>{student.status}</Badge>
                 </div>
                 <p className="mt-1 text-sm text-muted">
@@ -181,7 +181,11 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
               <tbody>
                 {students.map((student) => (
                   <tr key={student.id} className="border-b border-border last:border-0">
-                    <td className="px-3 py-3 font-bold">{student.firstName}</td>
+                    <td className="px-3 py-3 font-bold">
+                      <Link href={`/admin/students/${student.id}`} className="text-primary hover:underline">
+                        {student.firstName}
+                      </Link>
+                    </td>
                     <td className="px-3 py-3">{student.lastName}</td>
                     <td className="px-3 py-3">{student.schoolName ?? '—'}</td>
                     <td className="px-3 py-3">{student.grade ?? '—'}</td>

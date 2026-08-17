@@ -152,7 +152,7 @@ export class ParentCredentialsDto {
 
   @Transform(digits)
   @IsString()
-  @Matches(/^\d{1,10}$/)
+  @Matches(/^\d{10}$/, { message: 'کد ملی باید دقیقاً ۱۰ رقم باشد.' })
   nationalId!: string;
 
   @IsOptional()
@@ -207,6 +207,10 @@ export class ProvisionSchoolManagerDto {
 
   @IsUUID()
   schoolId!: string;
+
+  @IsString()
+  @Length(8, 128)
+  password!: string;
 }
 
 @UseGuards(AuthGuard, RolesGuard)
@@ -244,6 +248,7 @@ export class AdminIdentityController {
           phoneNumber: dto.phoneNumber,
           email: dto.email,
           schoolId: dto.schoolId,
+          password: dto.password,
         },
         { id: req.user.id, ip: req.ip },
       ),

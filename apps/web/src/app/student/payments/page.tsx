@@ -53,6 +53,7 @@ export default async function PaymentsPage() {
       .filter(({ id, itemStatus }) => itemStatus !== 'PAID' && !pendingOfflineItemIds.has(id))
       .map((item) => ({
         id: item.id,
+        amount: item.amount,
         label: `${studentFirstName} ${studentLastName} — ${item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : plan.planType === 'FULL' ? 'پرداخت یکجای باقی‌مانده' : `قسط ${item.sequenceNumber}`} — ${formatIrr(item.amount)}`,
       })),
   );

@@ -282,6 +282,14 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     title: 'پیام‌های تماس',
     description: 'مشاهده پیام‌های ارسال‌شده از فرم تماس با ما.',
     primaryHeading: 'پیام‌های تماس',
+    redirectTo: '/admin/feedback',
+  },
+  {
+    path: '/admin/students/[studentId]',
+    audience: 'admin',
+    title: 'جزئیات دانش‌آموز',
+    description: 'مشاهده اطلاعات کامل، عکس و موقعیت دانش‌آموز.',
+    primaryHeading: 'جزئیات دانش‌آموز',
   },
   {
     path: '/admin/notifications/broadcasts',

@@ -139,20 +139,20 @@ describe('guided enrollment schema', () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issues = result.error.issues.map((issue) => issue.message);
-      expect(issues).toContain('کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.');
+      expect(issues).toContain('کد ملی باید دقیقاً ۱۰ رقم باشد.');
     }
   });
 
-  it('accepts national IDs with leading zeros and short values', () => {
+  it('accepts ten-digit national IDs with leading zeros', () => {
     const result = guidedEnrollmentSchema.safeParse({
       ...validInput,
       student: { ...validInput.student, nationalId: '0023518805' },
-      guardian: { ...validInput.guardian, nationalId: '123' },
+      guardian: { ...validInput.guardian, nationalId: '1234567891' },
     });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.student.nationalId).toBe('0023518805');
-      expect(result.data.guardian.nationalId).toBe('123');
+      expect(result.data.guardian.nationalId).toBe('1234567891');
     }
   });
 });

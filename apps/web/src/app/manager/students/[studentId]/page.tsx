@@ -1,6 +1,7 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { LocationDisplay } from '@/components/common/location-display';
 import { getManagerStudent, getManagerStudentPhoto } from '@/features/manager/manager-api';
 export const metadata = { title: 'جزئیات دانش‌آموز' };
 export default async function Page({ params }: { params: Promise<{ studentId: string }> }) {
@@ -123,6 +124,13 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
                 </p>
                 {address.postalCode && (
                   <p className="mt-1 font-mono text-muted">کد پستی: {address.postalCode}</p>
+                )}
+                {address.latitude != null && address.longitude != null ? (
+                  <div className="mt-4">
+                    <LocationDisplay latitude={address.latitude} longitude={address.longitude} />
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-muted">مختصات این نشانی ثبت نشده است.</p>
                 )}
               </div>
             ))}

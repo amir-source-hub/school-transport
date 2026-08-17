@@ -55,7 +55,6 @@ import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-sch
 import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
 import { OfflinePaymentDestinationCard } from '@/features/finance/offline-payment-destination-card';
 import { ContractReview } from '@/features/finance/contract-review';
-import { updateNotificationConsent } from '@/features/notifications/notifications-api';
 import { clearEnrollmentDraft } from './enrollment-draft';
 import {
   acceptAdminFamilyContract,
@@ -135,7 +134,6 @@ export function CreateEnrollmentForm({
   const [reviewedContractPages, setReviewedContractPages] = useState<number[]>([]);
   const [accepted, setAccepted] = useState(false);
   const [paid, setPaid] = useState(false);
-  const [optionalInAppConsent, setOptionalInAppConsent] = useState(false);
   const [paymentInstructionsAccepted, setPaymentInstructionsAccepted] = useState(false);
   const [photoUploadId, setPhotoUploadId] = useState<string>();
   const [pending, setPending] = useState(false);
@@ -455,8 +453,12 @@ export function CreateEnrollmentForm({
           longitude: coords.longitude,
           locationSelected: true,
         })),
-      () =>
-        setLocationError('اجازه دسترسی به موقعیت داده نشد. دسترسی Location مرورگر را فعال کنید.'),
+      (positionError) =>
+        setLocationError(
+          positionError.code === positionError.PERMISSION_DENIED
+            ? 'GPS گوشی را روشن کنید و در تنظیمات مرورگر، دسترسی Location این سایت را روی Allow قرار دهید؛ سپس دوباره تلاش کنید.'
+            : 'موقعیت دریافت نشد. GPS را روشن کنید، در فضای دارای آنتن بمانید و دوباره تلاش کنید.',
+        ),
       { enableHighAccuracy: true, timeout: 15_000, maximumAge: 30_000 },
     );
   }
@@ -755,6 +757,16 @@ export function CreateEnrollmentForm({
       ? (['guardianFirst', 'guardianLast', 'guardianNationalId'] as const)
       : []),
   ]);
+  const reusingFamilyProfile = existingStudents.length > 0 && !form.existingStudentId && !adminFamilyId;
+  if (reusingFamilyProfile) {
+    for (const key of [
+      'guardianRelationshipType', 'guardianFirst', 'guardianLast', 'guardianNationalId',
+      'fatherFirst', 'fatherLast', 'fatherNationalId', 'fatherPhone',
+      'motherFirst', 'motherLast', 'motherNationalId', 'motherPhone',
+      'addressTitle', 'province', 'city', 'streetAddress', 'postalCode',
+      'emergencyFirst', 'emergencyLast', 'emergencyRelationship', 'emergencyPhone',
+    ] as const) lockedParentFields.add(key);
+  }
   if (form.existingStudentId) {
     lockedParentFields.add('studentFirst');
     lockedParentFields.add('studentLast');
@@ -1055,12 +1067,34 @@ export function CreateEnrollmentForm({
                       setForm((current) => ({
                         ...current,
                         guardianRelationshipType: value,
-                        ...(value === 'FATHER'
-                          ? {
-                              guardianFirst: current.studentFatherName,
-                              guardianLast: current.studentLast,
-                            }
-                          : {}),
+                        guardianRelationshipDescription: '',
+                        guardianFirst: defaults.guardian
+                          ? current.guardianFirst
+                          : value === 'FATHER'
+                            ? current.studentFatherName
+                            : current.guardianRelationshipType && current.guardianRelationshipType !== value
+                              ? ''
+                              : current.guardianFirst,
+                        guardianLast: defaults.guardian
+                          ? current.guardianLast
+                          : value === 'FATHER'
+                            ? current.studentLast
+                            : current.guardianRelationshipType && current.guardianRelationshipType !== value
+                              ? ''
+                              : current.guardianLast,
+                        guardianNationalId: defaults.guardian || !current.guardianRelationshipType
+                          ? current.guardianNationalId
+                          : current.guardianRelationshipType === value
+                            ? current.guardianNationalId
+                            : '',
+                        fatherFirst: value === 'MOTHER' ? current.fatherFirst : '',
+                        fatherLast: value === 'MOTHER' ? current.fatherLast : '',
+                        fatherNationalId: value === 'MOTHER' ? current.fatherNationalId : '',
+                        fatherPhone: value === 'MOTHER' ? current.fatherPhone : '',
+                        motherFirst: value === 'FATHER' ? current.motherFirst : '',
+                        motherLast: value === 'FATHER' ? current.motherLast : '',
+                        motherNationalId: value === 'FATHER' ? current.motherNationalId : '',
+                        motherPhone: value === 'FATHER' ? current.motherPhone : '',
                       }));
                       setFieldErrors((current) => ({
                         ...current,
@@ -1163,6 +1197,11 @@ export function CreateEnrollmentForm({
         {step === 2 && (
           <form noValidate onSubmit={next} className="space-y-6">
             <Section title="نشانی محل سوار شدن">
+              {reusingFamilyProfile && (
+                <p className="mb-4 rounded-xl bg-primary-soft p-3 text-sm font-bold text-primary">
+                  نشانی و اطلاعات خانواده از دانش‌آموز قبلی استفاده می‌شود و در این ثبت‌نام قابل تغییر نیست.
+                </p>
+              )}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {field('addressTitle', 'عنوان نشانی')}
                 {field('province', 'استان')}
@@ -1180,7 +1219,7 @@ export function CreateEnrollmentForm({
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button type="button" size="sm" onClick={useCurrentLocation}>
+                  <Button type="button" size="sm" onClick={useCurrentLocation} disabled={reusingFamilyProfile}>
                     <LocateFixed className="size-4" />
                     دریافت موقعیت من
                   </Button>
@@ -1206,6 +1245,7 @@ export function CreateEnrollmentForm({
                     locationSelected: true,
                   }))
                 }
+                readOnly={reusingFamilyProfile}
               />
               <div className="mt-3 grid gap-3 sm:grid-cols-2" aria-label="ورود دستی مختصات">
                 <label className="text-sm font-bold">
@@ -1217,6 +1257,7 @@ export function CreateEnrollmentForm({
                     step="any"
                     className="mt-1"
                     value={form.latitude}
+                    disabled={reusingFamilyProfile}
                     onChange={(event) => set('latitude', Number(event.target.value))}
                     onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))}
                   />
@@ -1230,13 +1271,14 @@ export function CreateEnrollmentForm({
                     step="any"
                     className="mt-1"
                     value={form.longitude}
+                    disabled={reusingFamilyProfile}
                     onChange={(event) => set('longitude', Number(event.target.value))}
                     onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))}
                   />
                 </label>
               </div>
               <p className="mt-2 text-xs leading-6 text-muted">
-                اگر نقشه با لمس، ماوس یا صفحه‌کلید در دسترس نیست، نشانی و مختصات را دستی وارد کنید.
+                برای دریافت خودکار موقعیت در گوشی، GPS را روشن و اجازه Location مرورگر را تأیید کنید. اگر نقشه در دسترس نیست، نشانی و مختصات را دستی وارد کنید.
               </p>
               {locationError && <p className="mt-2 text-sm text-danger">{locationError}</p>}
             </div>
@@ -1286,7 +1328,20 @@ export function CreateEnrollmentForm({
                   />
                 </label>
                 {form.educationLevel === 'متوسطه دوم' && (
-                  <div>{field('fieldOfStudy', 'رشته تحصیلی')}</div>
+                  <label className="text-sm font-bold">
+                    رشته تحصیلی
+                    <Select
+                      value={form.fieldOfStudy}
+                      onValueChange={(value) => set('fieldOfStudy', value)}
+                      options={[
+                        { value: 'ریاضی فیزیک', label: 'ریاضی فیزیک' },
+                        { value: 'علوم تجربی', label: 'علوم تجربی' },
+                        { value: 'علوم انسانی', label: 'علوم انسانی' },
+                        { value: 'سایر', label: 'سایر' },
+                      ]}
+                      className="mt-2"
+                    />
+                  </label>
                 )}
               </div>
             </Section>
@@ -1405,10 +1460,6 @@ export function CreateEnrollmentForm({
         )}
         {step === 4 && result && !accepted && (
           <div className="space-y-5">
-            <Button type="button" variant="ghost" onClick={() => setStep(3)} disabled={pending}>
-              <ChevronRight className="size-4" />
-              مرحله قبل
-            </Button>
             <div className="flex items-center gap-3">
               <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-soft text-primary">
                 <FileCheck2 />
@@ -1462,6 +1513,16 @@ export function CreateEnrollmentForm({
             >
               پذیرش قرارداد و ادامه
             </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full sm:w-auto"
+              onClick={() => setStep(3)}
+              disabled={pending}
+            >
+              <ChevronRight className="size-4" />
+              مرحله قبل
+            </Button>
             {error && <p className="text-sm text-danger">{error}</p>}
           </div>
         )}
@@ -1480,30 +1541,6 @@ export function CreateEnrollmentForm({
                 ? 'مبلغ باقی‌مانده و تاریخ پرداخت یکجا پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'
                 : 'تعداد، مبلغ و تاریخ اقساط پس از بررسی مسیر توسط مدیریت تعیین و اعلام می‌شود.'}
             </div>
-            {!adminFamilyId && (
-              <fieldset className="mt-5 space-y-3 rounded-2xl border border-border p-4 text-right">
-                <legend className="px-2 text-sm font-black">رضایت اختیاری اطلاع‌رسانی</legend>
-                <p className="text-xs leading-6 text-muted">
-                  مایلم پیام‌های اختیاری درباره تغییرات سرویس و یادآوری‌های غیرالزامی را دریافت کنم.
-                  این انتخاب از پنل قابل تغییر است و پیام‌های ضروری قرارداد، پرداخت و ایمنی را متوقف
-                  نمی‌کند.
-                </p>
-                <label className="flex min-h-11 items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={optionalInAppConsent}
-                    onChange={(event) => setOptionalInAppConsent(event.target.checked)}
-                  />
-                  <span className="text-sm font-bold">داخل سامانه</span>
-                </label>
-                <div className="flex min-h-11 items-center justify-between gap-3 text-muted">
-                  <span className="text-sm font-bold">پیامک</span>
-                  <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold">
-                    فعلاً غیرفعال
-                  </span>
-                </div>
-              </fieldset>
-            )}
             {adminFamilyId ? (
               <div className="mt-6 space-y-4 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
@@ -1562,10 +1599,6 @@ export function CreateEnrollmentForm({
                   setError(undefined);
                   try {
                     await finalizeOnboarding();
-                    await Promise.all([
-                      updateNotificationConsent('IN_APP', optionalInAppConsent, 'ONBOARDING'),
-                      updateNotificationConsent('SMS', false, 'ONBOARDING'),
-                    ]);
                     router.replace('/student/dashboard');
                   } catch (caught) {
                     setError(getApiErrorFeedback(caught).message);

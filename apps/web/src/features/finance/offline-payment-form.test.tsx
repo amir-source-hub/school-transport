@@ -64,14 +64,12 @@ describe('OfflinePaymentForm', () => {
   it('shows the central destination and uploads required receipt evidence before completion', async () => {
     const user = userEvent.setup();
     render(
-      <OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت — ۴٬۹۹۷٬۸۰۰ تومان' }]} />,
+      <OfflinePaymentForm
+        items={[{ id: 'item-1', label: 'پیش‌پرداخت — ۴٬۹۹۷٬۸۰۰ تومان', amount: 4_997_800 }]}
+      />,
     );
     expect(await screen.findByText('6037991234567890')).toBeInTheDocument();
     expect(screen.getByText('123456789001')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('سال'), { target: { value: '1405' } });
-    fireEvent.change(screen.getByLabelText('ماه'), { target: { value: '05' } });
-    fireEvent.change(screen.getByLabelText('روز'), { target: { value: '18' } });
-    await user.type(screen.getByLabelText('شماره پیگیری بانکی'), '123456');
     const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'receipt.jpg', {
       type: 'image/jpeg',
     });
@@ -89,12 +87,8 @@ describe('OfflinePaymentForm', () => {
   it('reuses one receipt authorization after an uncertain storage upload', async () => {
     UploadRequest.statuses = [500, 200];
     const user = userEvent.setup();
-    render(<OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت' }]} />);
+    render(<OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت', amount: 4_997_800 }]} />);
     await screen.findByText('6037991234567890');
-    fireEvent.change(screen.getByLabelText('سال'), { target: { value: '1405' } });
-    fireEvent.change(screen.getByLabelText('ماه'), { target: { value: '05' } });
-    fireEvent.change(screen.getByLabelText('روز'), { target: { value: '18' } });
-    await user.type(screen.getByLabelText('شماره پیگیری بانکی'), '123456');
     const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'receipt.jpg', {
       type: 'image/jpeg',
     });

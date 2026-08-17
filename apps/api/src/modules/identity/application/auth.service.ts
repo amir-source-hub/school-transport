@@ -662,6 +662,7 @@ export class AuthService {
       phoneNumber: string;
       email?: string;
       schoolId: string;
+      password: string;
     },
     actor?: { id: string; ip?: string },
   ) {
@@ -683,7 +684,7 @@ export class AuthService {
         lastName: data.lastName,
         phoneNumber: data.phoneNumber,
         email: data.email || null,
-        passwordHash: await argon2.hash(data.phoneNumber),
+        passwordHash: await argon2.hash(data.password),
         status: 'ACTIVE',
         mustChangeCredentials: true,
       });

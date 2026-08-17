@@ -7,9 +7,7 @@ describe('Iranian national ID contract', () => {
     expect(normalizeIranianDigits('۰۱۲٣٤')).toBe('01234');
   });
 
-  it('accepts numeric national IDs of 1-10 digits including leading zeros', () => {
-    expect(isIranianNationalId('1')).toBe(true);
-    expect(isIranianNationalId('123')).toBe(true);
+  it('accepts numeric national IDs of exactly 10 digits including leading zeros', () => {
     expect(isIranianNationalId('0023518805')).toBe(true);
     expect(isIranianNationalId('۰۰۱۳۵۴۲۴۱۹')).toBe(true);
     expect(isIranianNationalId('0013542419')).toBe(true);
@@ -24,5 +22,7 @@ describe('Iranian national ID contract', () => {
     expect(isIranianNationalId('12345678901234567890')).toBe(false);
     expect(isIranianNationalId('123A')).toBe(false);
     expect(isIranianNationalId('00 23518805')).toBe(false);
+    expect(isIranianNationalId('1')).toBe(false);
+    expect(isIranianNationalId('123')).toBe(false);
   });
 });

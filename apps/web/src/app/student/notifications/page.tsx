@@ -6,8 +6,6 @@ import { Card } from '@/components/ui/card';
 import { MarkAllReadButton, MarkReadButton } from '@/features/notifications/notification-actions';
 import { getNotifications } from '@/features/notifications/notifications-api';
 import { formatJalaliDateTime } from '@/lib/formatters';
-import { NotificationSettingsForm } from '@/features/notifications/notification-settings-form';
-import { getNotificationSettings } from '@/features/notifications/notifications-api';
 import { Suspense } from 'react';
 import { getStudents } from '@/features/students/students-api';
 import { getEnrollments } from '@/features/enrollment/enrollments-api';
@@ -49,9 +47,8 @@ export default async function NotificationsPage({
 }) {
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1);
-  const [list, settings, activityResult] = await Promise.all([
+  const [list, activityResult] = await Promise.all([
     getNotifications(page, 20, params.snapshotAt),
-    getNotificationSettings(),
     Promise.all([getStudents(), getEnrollments()]).catch(() => null),
   ]);
   const { items, total, pageSize } = list;
@@ -80,7 +77,9 @@ export default async function NotificationsPage({
         </div>
         {items.length > 0 && <MarkAllReadButton />}
       </div>
-      <NotificationSettingsForm initial={settings} />
+      <Card padding="md">
+        <p className="text-sm font-bold">اعلان‌های سامانه و پیامک برای همه حساب‌ها فعال است.</p>
+      </Card>
       <Suspense fallback={<NotificationsSkeleton />}>
         {items.length === 0 && accountActivity.length === 0 ? (
           <Card padding="md">

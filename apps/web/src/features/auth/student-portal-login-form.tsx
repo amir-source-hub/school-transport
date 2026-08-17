@@ -24,7 +24,7 @@ import { safePortalPath } from './safe-next';
 
 const parentCredentialsSchema = z.object({
   phoneNumber: z.string().regex(/^09\d{9}$/, 'شماره همراه را با قالب 09xxxxxxxxx وارد کنید.'),
-  nationalId: z.string().regex(/^\d{1,10}$/, 'کد ملی باید فقط عدد و حداکثر ۱۰ رقم باشد.'),
+  nationalId: z.string().regex(/^\d{10}$/, 'کد ملی باید دقیقاً ۱۰ رقم باشد.'),
 });
 
 type ParentCredentials = z.infer<typeof parentCredentialsSchema>;

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, boolean, timestamp, jsonb, doublePrecision } from 'drizzle-orm/pg-core';
 
 export type SchoolEducationOption = {
   level: string;
@@ -19,6 +19,9 @@ export const schools = pgTable('schools', {
   managerPhone: varchar('manager_phone', { length: 20 }),
   openingTime: varchar('opening_time', { length: 5 }).notNull().default('08:00'),
   closingTime: varchar('closing_time', { length: 5 }).notNull().default('14:00'),
+  closingTimes: jsonb('closing_times').$type<string[]>().notNull().default([]),
+  latitude: doublePrecision('latitude'),
+  longitude: doublePrecision('longitude'),
   educationOptions: jsonb('education_options')
     .$type<SchoolEducationOption[]>()
     .notNull()

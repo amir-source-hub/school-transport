@@ -421,6 +421,43 @@ export class StudentPhotosService {
     };
   }
 
+  async getAdminApprovedViewUrl(adminId: string, studentId: string, ip?: string) {
+    const [upload] = await this.db.db
+      .select({
+        id: studentPhotoUploads.id,
+        canonicalKey: studentPhotoUploads.canonicalKey,
+        status: studentPhotoUploads.status,
+      })
+      .from(studentPhotoUploads)
+      .where(
+        and(
+          eq(studentPhotoUploads.studentId, studentId),
+          eq(studentPhotoUploads.status, 'APPROVED'),
+          isNotNull(studentPhotoUploads.canonicalKey),
+        ),
+      )
+      .orderBy(desc(studentPhotoUploads.approvedAt), desc(studentPhotoUploads.id))
+      .limit(1);
+    if (!upload?.canonicalKey) throw new NotFoundError('Student photo');
+    await this.audit.record({
+      actorType: 'ADMIN',
+      actorId: adminId,
+      action: 'STUDENT_PHOTO_VIEWED',
+      entityType: 'STUDENT_PHOTO_UPLOAD',
+      entityId: upload.id,
+      newValues: { studentId, status: upload.status },
+      ipAddress: ip,
+    });
+    return {
+      status: 'APPROVED' as const,
+      viewUrl: this.storage.presignGet(
+        upload.canonicalKey,
+        this.config.studentPhotoViewUrlTtlSeconds,
+      ),
+      expiresInSeconds: this.config.studentPhotoViewUrlTtlSeconds,
+    };
+  }
+
   async listForAdmin(query: AdminPhotoListQueryDto) {
     const filters = [sql`true`];
     if (query.status) filters.push(eq(studentPhotoUploads.status, query.status));

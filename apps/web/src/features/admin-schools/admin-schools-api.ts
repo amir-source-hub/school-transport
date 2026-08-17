@@ -15,6 +15,9 @@ const rawSchoolSchema = z.object({
   managerPhone: z.string().nullable(),
   openingTime: z.string(),
   closingTime: z.string(),
+  closingTimes: z.array(z.string()).default([]),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
   educationOptions: z.array(
     z.object({
       level: z.string(),
@@ -26,7 +29,8 @@ const rawSchoolSchema = z.object({
 
 export const SCHOOL_TYPE_LABELS: Record<string, string> = {
   PUBLIC: 'دولتی',
-  PRIVATE: 'خصوصی',
+  PRIVATE: 'غیرانتفاعی',
+  BOARD_OF_TRUSTEES: 'هیئت امنایی',
   NEMOONE_DOLATI: 'نمونه دولتی',
   GIFTED: 'تیزهوشان',
   SHAHED: 'شاهد',
@@ -58,6 +62,9 @@ export const createSchoolSchema = z.object({
   managerPhone: z.string().regex(/^09\d{9}$/, 'شماره همراه مدیر باید ۱۱ رقم و با ۰۹ شروع شود'),
   openingTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'ساعت شروع مدرسه الزامی است'),
   closingTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'ساعت پایان مدرسه الزامی است'),
+  closingTimes: z.array(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)).min(1),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
   educationOptions: z
     .array(
       z.object({
@@ -92,6 +99,17 @@ export async function getAdminSchools() {
 export async function createSchool(data: CreateSchoolInput) {
   const response = await apiRequest<unknown>('/admin/schools', { method: 'POST', body: data });
   return mapSchool(response.data);
+}
+
+export async function provisionSchoolManager(data: {
+  username: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  schoolId: string;
+}) {
+  await apiRequest('/admin/admins/school-managers', { method: 'POST', body: data });
 }
 
 export async function updateSchool(id: string, data: Partial<CreateSchoolInput>) {
