@@ -343,9 +343,9 @@ export function SchoolFormDialog(props: Props) {
                   افزودن ساعت
                 </Button>
               </div>
-              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {form.closingTimes.map((time, index) => (
-                  <div key={index} className="flex gap-2">
+                  <div key={index} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2">
                     <Input
                       type="time"
                       required
