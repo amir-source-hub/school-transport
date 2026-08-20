@@ -47,6 +47,10 @@ export const GENDER_TYPE_LABELS: Record<string, string> = {
 
 export const schoolSchema = rawSchoolSchema.extend({ status: z.string() });
 export const schoolsSchema = z.array(schoolSchema);
+const schoolTimeSchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'همه ساعت‌های پایان مدرسه را وارد کنید');
+
 export const createSchoolSchema = z.object({
   name: z.string().min(1, 'نام مدرسه الزامی است'),
   schoolType: z.string().min(1, 'نوع مدرسه الزامی است'),
@@ -62,7 +66,7 @@ export const createSchoolSchema = z.object({
   managerPhone: z.string().regex(/^09\d{9}$/, 'شماره همراه مدیر باید ۱۱ رقم و با ۰۹ شروع شود'),
   openingTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'ساعت شروع مدرسه الزامی است'),
   closingTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'ساعت پایان مدرسه الزامی است'),
-  closingTimes: z.array(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)).min(1),
+  closingTimes: z.array(schoolTimeSchema).min(1, 'حداقل یک ساعت پایان مدرسه وارد کنید'),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   educationOptions: z
