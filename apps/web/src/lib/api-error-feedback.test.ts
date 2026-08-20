@@ -64,6 +64,48 @@ describe('API error feedback', () => {
   });
 
   it.each([
+    [
+      'OTP_INVALID',
+      'کد تأیید نادرست است',
+      'کد واردشده درست نیست',
+      'req-otp-1',
+    ],
+    [
+      'OTP_EXPIRED',
+      'کد تأیید منقضی شده است',
+      'کد جدیدی درخواست کنید',
+      'req-otp-2',
+    ],
+    [
+      'OTP_NOT_FOUND',
+      'کد تأیید قابل بررسی نیست',
+      'کد جدیدی درخواست کنید',
+      'req-otp-3',
+    ],
+    [
+      'OTP_TOO_MANY_ATTEMPTS',
+      'تلاش بیش از حد مجاز',
+      'کد جدیدی درخواست کنید',
+      'req-otp-4',
+    ],
+    [
+      'OTP_COOLDOWN',
+      'کد جدید خیلی زود است',
+      'چند ثانیه صبر کنید',
+      'req-otp-5',
+    ],
+  ])('maps %s to Persian form feedback with its tracking ID', (code, title, fragment, requestId) => {
+    const feedback = getApiErrorFeedback(new ApiClientError(400, code, 'raw message', requestId));
+
+    expect(feedback.target).toBe('form');
+    expect(feedback.title).toBe(title);
+    expect(feedback.message).toContain(fragment);
+    expect(feedback.message).not.toContain('raw message');
+    expect(feedback.requestId).toBe(requestId);
+    expect(feedback.canRetry).toBe(false);
+  });
+
+  it.each([
     [new TypeError('fetch failed'), 'اتصال برقرار نیست'],
     [new DOMException('timed out', 'TimeoutError'), 'پاسخ سرویس طول کشید'],
     [new ApiClientError(503, 'QUEUE_UNAVAILABLE', 'technical'), 'صف پردازش موقتاً در دسترس نیست'],
