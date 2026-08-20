@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { Alert } from '@/components/feedback/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,23 +54,37 @@ export function OfflinePaymentForm({
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string>();
+  const [destinationError, setDestinationError] = useState<string>();
+  const [destinationRetry, setDestinationRetry] = useState(0);
   const selectedItem = items.find(({ id }) => id === scheduleItemId);
   useEffect(() => {
     let active = true;
     getOfflineDestination(mode)
-      .then((value) => active && setDestination(value))
-      .catch((caught) => active && setError(getApiErrorFeedback(caught).message));
+      .then((value) => {
+        if (!active) return;
+        setDestination(value);
+        setDestinationError(undefined);
+      })
+      .catch((caught) => {
+        if (!active) return;
+        setDestinationError(
+          caught instanceof ApiClientError && caught.code === 'OFFLINE_DESTINATION_UNAVAILABLE'
+            ? 'اطلاعات کارت و حساب پرداخت هنوز توسط مدیر سامانه ثبت نشده است.'
+            : getApiErrorFeedback(caught).message,
+        );
+      });
     return () => {
       active = false;
     };
-  }, [mode]);
+  }, [destinationRetry, mode]);
   useEffect(
     () => () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     },
     [previewUrl],
   );
-  const disabled = items.length === 0 || !destination;
+  const hasEligibleItem = items.length > 0;
+  const canSubmit = hasEligibleItem && Boolean(destination);
   return (
     <form
       noValidate
@@ -203,7 +218,29 @@ export function OfflinePaymentForm({
           </div>
         </dl>
       )}
-      {disabled && (
+      {destinationError && (
+        <div role="alert" className="rounded-xl border border-warning/30 bg-warning-soft p-4">
+          <p className="text-sm font-bold leading-7">{destinationError}</p>
+          <p className="mt-1 text-xs leading-6 text-muted">
+            انتخاب و پیش‌نمایش تصویر رسید امکان‌پذیر است، اما ارسال نهایی پس از ثبت اطلاعات پرداخت
+            توسط مدیر سامانه فعال می‌شود.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="mt-3"
+            onClick={() => {
+              setDestinationError(undefined);
+              setDestinationRetry((attempt) => attempt + 1);
+            }}
+          >
+            <RefreshCw className="size-4" aria-hidden="true" />
+            تلاش دوباره
+          </Button>
+        </div>
+      )}
+      {!hasEligibleItem && (
         <div className="rounded-xl border border-border bg-surface-muted p-4 text-sm font-bold text-muted">
           قسط قابل ارسال وجود ندارد. اقساط پرداخت‌شده یا دارای رسید در انتظار بررسی، تا زمان رد رسید
           دوباره قابل انتخاب نیستند.
@@ -220,7 +257,7 @@ export function OfflinePaymentForm({
           }}
           options={items.map((item) => ({ value: item.id, label: item.label }))}
           placeholder="قسط را انتخاب کنید"
-          disabled={disabled}
+          disabled={!hasEligibleItem || pending}
         />
       </label>
       {selectedItem && (
@@ -236,7 +273,7 @@ export function OfflinePaymentForm({
       <label className="text-sm font-bold">
         توضیحات (اختیاری)
         <Textarea
-          disabled={disabled}
+          disabled={!hasEligibleItem || pending}
           className="mt-2"
           placeholder="اطلاعات تکمیلی پرداخت"
           value={description}
@@ -250,7 +287,7 @@ export function OfflinePaymentForm({
             type="file"
             accept="image/jpeg,image/png"
             required
-            disabled={disabled}
+            disabled={!hasEligibleItem || pending}
             className="mt-2"
             onChange={(event) => {
               const file = event.target.files?.[0];
@@ -324,7 +361,7 @@ export function OfflinePaymentForm({
           size="lg"
           type="submit"
           loading={pending}
-          disabled={disabled || pending}
+          disabled={!canSubmit || pending}
         >
           ارسال رسید برای بررسی مدیر
         </Button>

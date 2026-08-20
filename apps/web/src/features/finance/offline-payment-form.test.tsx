@@ -96,7 +96,9 @@ describe('OfflinePaymentForm', () => {
   it('reuses one receipt authorization after an uncertain storage upload', async () => {
     UploadRequest.statuses = [500, 200];
     const user = userEvent.setup();
-    render(<OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت', amount: 4_997_800 }]} />);
+    render(
+      <OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت', amount: 4_997_800 }]} />,
+    );
     await screen.findByText('6037991234567890');
     const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'receipt.jpg', {
       type: 'image/jpeg',
@@ -109,5 +111,23 @@ describe('OfflinePaymentForm', () => {
 
     await waitFor(() => expect(api.completeReceiptUpload).toHaveBeenCalled());
     expect(api.authorizeReceiptUpload).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps receipt selection available when payment destination loading fails', async () => {
+    api.getOfflineDestination.mockRejectedValueOnce(new Error('destination unavailable'));
+    const user = userEvent.setup();
+    render(
+      <OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت', amount: 4_997_800 }]} />,
+    );
+
+    const input = screen.getByLabelText('تصویر رسید (JPEG یا PNG)');
+    expect(input).toBeEnabled();
+    const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'receipt.jpg', {
+      type: 'image/jpeg',
+    });
+    await user.upload(input, file);
+
+    expect(screen.getByAltText('پیش‌نمایش رسید پرداخت')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' })).toBeDisabled();
   });
 });
