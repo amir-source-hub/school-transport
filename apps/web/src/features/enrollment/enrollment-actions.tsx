@@ -1473,51 +1473,73 @@ export function CreateEnrollmentForm({
               canAct={false}
               onReviewedPagesChange={setReviewedContractPages}
             />
-            <Button
-              disabled={pending || reviewedContractPages.join(',') !== '1,2,3'}
-              loading={pending}
-              onClick={async () => {
-                if (submissionLockRef.current) return;
-                submissionLockRef.current = true;
-                setPending(true);
-                setError(undefined);
-                try {
-                  if (adminFamilyId) {
-                    await acceptAdminFamilyContract(
-                      result.contractId,
-                      result.contractTemplateHash,
-                      reviewedContractPages,
-                    );
-                  } else {
-                    await acceptGuidedContract(
-                      result.contractId,
-                      result.contractTemplateHash,
-                      reviewedContractPages,
-                      mode,
-                    );
-                  }
-                  setAccepted(true);
-                } catch (caught) {
-                  setError(getApiErrorFeedback(caught).message);
-                } finally {
-                  submissionLockRef.current = false;
-                  setPending(false);
-                }
-              }}
-            >
-              پذیرش قرارداد و ادامه
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full sm:w-auto"
-              onClick={() => setStep(3)}
-              disabled={pending}
-            >
-              <ChevronRight className="size-4" />
-              مرحله قبل
-            </Button>
-            {error && <p className="text-sm text-danger">{error}</p>}
+            <div className="rounded-3xl border border-primary/15 bg-gradient-to-l from-primary-soft/80 to-white p-4 shadow-sm sm:p-5">
+              <div className="mb-4">
+                <p className="font-black text-navy">تأیید نهایی قرارداد</p>
+                <p className="mt-1 text-xs leading-6 text-muted">
+                  {reviewedContractPages.join(',') === '1,2,3'
+                    ? 'همه صفحات مطالعه شده‌اند؛ اکنون می‌توانید قرارداد را بپذیرید.'
+                    : 'برای فعال شدن پذیرش قرارداد، هر سه صفحه را به‌ترتیب مطالعه کنید.'}
+                </p>
+              </div>
+              {error && (
+                <p
+                  role="alert"
+                  className="mb-3 rounded-xl bg-danger-soft p-3 text-sm font-bold text-danger"
+                >
+                  {error}
+                </p>
+              )}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <Button
+                  className="w-full sm:min-w-60 sm:w-auto"
+                  size="lg"
+                  disabled={pending || reviewedContractPages.join(',') !== '1,2,3'}
+                  loading={pending}
+                  onClick={async () => {
+                    if (submissionLockRef.current) return;
+                    submissionLockRef.current = true;
+                    setPending(true);
+                    setError(undefined);
+                    try {
+                      if (adminFamilyId) {
+                        await acceptAdminFamilyContract(
+                          result.contractId,
+                          result.contractTemplateHash,
+                          reviewedContractPages,
+                        );
+                      } else {
+                        await acceptGuidedContract(
+                          result.contractId,
+                          result.contractTemplateHash,
+                          reviewedContractPages,
+                          mode,
+                        );
+                      }
+                      setAccepted(true);
+                    } catch (caught) {
+                      setError(getApiErrorFeedback(caught).message);
+                    } finally {
+                      submissionLockRef.current = false;
+                      setPending(false);
+                    }
+                  }}
+                >
+                  <ShieldCheck className="size-5" aria-hidden="true" />
+                  پذیرش قرارداد و ادامه
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                  onClick={() => setStep(3)}
+                  disabled={pending}
+                >
+                  <ChevronRight className="size-4" />
+                  بازگشت به مرحله انتخاب مدرسه
+                </Button>
+              </div>
+            </div>
           </div>
         )}
         {step === 4 && result && accepted && !paid && (
