@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,11 @@ import {
   provisionSchoolManager,
 } from '@/features/admin-schools/admin-schools-api';
 import type { AdminSchool, CreateSchoolInput } from '@/features/admin-schools/admin-schools-api';
+
+const LocationPicker = dynamic(
+  () => import('@/components/common/location-picker').then((module) => module.LocationPicker),
+  { ssr: false },
+);
 
 const schoolTypes = [
   { value: 'PUBLIC', label: 'دولتی' },
@@ -81,6 +87,9 @@ export function SchoolFormDialog(props: Props) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [locationSelected, setLocationSelected] = useState(
+    initial?.latitude != null && initial?.longitude != null,
+  );
   const [managerUsername, setManagerUsername] = useState('');
   const [managerPassword, setManagerPassword] = useState('');
 
@@ -89,6 +98,10 @@ export function SchoolFormDialog(props: Props) {
   };
 
   const handle = async () => {
+    if (!locationSelected) {
+      setError('موقعیت مدرسه را روی نقشه انتخاب کنید.');
+      return;
+    }
     if (
       !isEdit &&
       (!/^[A-Za-z0-9]{8}$/.test(managerUsername) || !/^[A-Za-z0-9]{8}$/.test(managerPassword))
@@ -375,26 +388,15 @@ export function SchoolFormDialog(props: Props) {
                 ))}
               </div>
             </div>
-            <div>
-              <label className="text-sm font-bold">عرض جغرافیایی *</label>
-              <Input
-                type="number"
-                step="any"
-                dir="ltr"
-                value={form.latitude}
-                onChange={(e) => update('latitude', Number(e.target.value))}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-bold">طول جغرافیایی *</label>
-              <Input
-                type="number"
-                step="any"
-                dir="ltr"
-                value={form.longitude}
-                onChange={(e) => update('longitude', Number(e.target.value))}
-                className="mt-1"
+            <div className="min-w-0 sm:col-span-2">
+              <p className="mb-2 text-sm font-bold">موقعیت مدرسه روی نقشه *</p>
+              <LocationPicker
+                latitude={form.latitude}
+                longitude={form.longitude}
+                onChange={(latitude, longitude) => {
+                  setForm((current) => ({ ...current, latitude, longitude }));
+                  setLocationSelected(true);
+                }}
               />
             </div>
           </div>
