@@ -26,6 +26,12 @@ The dashboard must show outcome rate by bounded category, p95 provider latency, 
 OTP rate-limit spikes, campaign accepted volume, dead letters, and estimated campaign spend from the
 approved campaign records. Do not join metrics to phone- or user-level data.
 
+Student-photo storage exposes `school_transport_student_photo_stale_rows{status}` gauges
+(`AUTHORIZED`, `UPLOADED`, `VALIDATING`). They are refreshed by the worker's
+`cleanup-student-photos` maintenance job, which transitions overdue authorizations to `EXPIRED` and
+marks stalled `UPLOADED`/`VALIDATING` rows as `FAILED`. Alert on sustained non-zero values so a
+stopped or dead worker is caught before the active-upload cap appears exhausted to parents.
+
 ## Incident procedure
 
 1. Disable `FEATURE_SMS_BROADCASTS` first for unexpected campaign volume. Set `SMS_PROVIDER=none`
