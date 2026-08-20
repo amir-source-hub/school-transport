@@ -24,9 +24,15 @@ export function CopyPaymentValue({ value, label }: { value: string; label: strin
     window.setTimeout(() => setCopied(false), 1500);
   }
   return (
-    <Button type="button" size="sm" variant="ghost" aria-label={`کپی ${label}`} onClick={copy}>
+    <Button
+      type="button"
+      size="icon"
+      variant="ghost"
+      aria-label={`کپی ${label}`}
+      onClick={copy}
+      title={copied ? 'کپی شد' : `کپی ${label}`}
+    >
       {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-      {copied ? 'کپی شد' : 'کپی'}
     </Button>
   );
 }

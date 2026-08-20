@@ -10,7 +10,7 @@ import {
   Menu,
   MessageSquareText,
   Monitor,
-  Settings,
+  FileSpreadsheet,
   Sparkles,
 } from 'lucide-react';
 import { BrandMark } from '@/components/brand/brand-mark';
@@ -26,7 +26,8 @@ const links = [
   ['/manager/online-control', 'کنترل آنلاین', Monitor],
   ['/manager/hyperschool', 'هایپرمدرسه', Sparkles],
   ['/manager/feedback', 'انتقادات و پیشنهادات', MessageSquareText],
-  ['/manager/settings', 'تنظیمات', Settings],
+  ['/manager/reports', 'گزارش جامع اکسل', FileSpreadsheet],
+  ['/manager/settings', 'اطلاعات مدرسه', Building2],
 ] as const;
 export function isManagerRouteActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);

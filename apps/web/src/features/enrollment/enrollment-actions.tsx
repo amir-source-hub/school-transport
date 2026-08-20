@@ -110,8 +110,6 @@ export function CreateEnrollmentForm({
   adminFamilyId?: string;
 }) {
   const router = useRouter();
-  const firstSchool = schools[0];
-  const firstLevel = firstSchool?.educationOptions[0];
   const effectiveGuardianPhone =
     guardianPhone ?? (mode === 'onboarding' ? (getOnboardingState().phoneNumber ?? '') : '');
   const onboardingGuardianNationalId =
@@ -413,9 +411,9 @@ export function CreateEnrollmentForm({
         studentNationalId: '',
         birthDate: '',
         gender: '',
-        schoolId: firstSchool?.id ?? '',
-        educationLevel: firstLevel?.level ?? '',
-        grade: firstLevel?.grades[0] ?? '',
+        schoolId: '',
+        educationLevel: '',
+        grade: '',
       }));
       return;
     }
@@ -757,15 +755,33 @@ export function CreateEnrollmentForm({
       ? (['guardianFirst', 'guardianLast', 'guardianNationalId'] as const)
       : []),
   ]);
-  const reusingFamilyProfile = existingStudents.length > 0 && !form.existingStudentId && !adminFamilyId;
+  const reusingFamilyProfile =
+    existingStudents.length > 0 && !form.existingStudentId && !adminFamilyId;
   if (reusingFamilyProfile) {
     for (const key of [
-      'guardianRelationshipType', 'guardianFirst', 'guardianLast', 'guardianNationalId',
-      'fatherFirst', 'fatherLast', 'fatherNationalId', 'fatherPhone',
-      'motherFirst', 'motherLast', 'motherNationalId', 'motherPhone',
-      'addressTitle', 'province', 'city', 'streetAddress', 'postalCode',
-      'emergencyFirst', 'emergencyLast', 'emergencyRelationship', 'emergencyPhone',
-    ] as const) lockedParentFields.add(key);
+      'guardianRelationshipType',
+      'guardianFirst',
+      'guardianLast',
+      'guardianNationalId',
+      'fatherFirst',
+      'fatherLast',
+      'fatherNationalId',
+      'fatherPhone',
+      'motherFirst',
+      'motherLast',
+      'motherNationalId',
+      'motherPhone',
+      'addressTitle',
+      'province',
+      'city',
+      'streetAddress',
+      'postalCode',
+      'emergencyFirst',
+      'emergencyLast',
+      'emergencyRelationship',
+      'emergencyPhone',
+    ] as const)
+      lockedParentFields.add(key);
   }
   if (form.existingStudentId) {
     lockedParentFields.add('studentFirst');
@@ -1072,21 +1088,24 @@ export function CreateEnrollmentForm({
                           ? current.guardianFirst
                           : value === 'FATHER'
                             ? current.studentFatherName
-                            : current.guardianRelationshipType && current.guardianRelationshipType !== value
+                            : current.guardianRelationshipType &&
+                                current.guardianRelationshipType !== value
                               ? ''
                               : current.guardianFirst,
                         guardianLast: defaults.guardian
                           ? current.guardianLast
                           : value === 'FATHER'
                             ? current.studentLast
-                            : current.guardianRelationshipType && current.guardianRelationshipType !== value
+                            : current.guardianRelationshipType &&
+                                current.guardianRelationshipType !== value
                               ? ''
                               : current.guardianLast,
-                        guardianNationalId: defaults.guardian || !current.guardianRelationshipType
-                          ? current.guardianNationalId
-                          : current.guardianRelationshipType === value
+                        guardianNationalId:
+                          defaults.guardian || !current.guardianRelationshipType
                             ? current.guardianNationalId
-                            : '',
+                            : current.guardianRelationshipType === value
+                              ? current.guardianNationalId
+                              : '',
                         fatherFirst: value === 'MOTHER' ? current.fatherFirst : '',
                         fatherLast: value === 'MOTHER' ? current.fatherLast : '',
                         fatherNationalId: value === 'MOTHER' ? current.fatherNationalId : '',
@@ -1199,7 +1218,8 @@ export function CreateEnrollmentForm({
             <Section title="نشانی محل سوار شدن">
               {reusingFamilyProfile && (
                 <p className="mb-4 rounded-xl bg-primary-soft p-3 text-sm font-bold text-primary">
-                  نشانی و اطلاعات خانواده از دانش‌آموز قبلی استفاده می‌شود و در این ثبت‌نام قابل تغییر نیست.
+                  نشانی و اطلاعات خانواده از دانش‌آموز قبلی استفاده می‌شود و در این ثبت‌نام قابل
+                  تغییر نیست.
                 </p>
               )}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1219,7 +1239,12 @@ export function CreateEnrollmentForm({
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button type="button" size="sm" onClick={useCurrentLocation} disabled={reusingFamilyProfile}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={useCurrentLocation}
+                    disabled={reusingFamilyProfile}
+                  >
                     <LocateFixed className="size-4" />
                     دریافت موقعیت من
                   </Button>
@@ -1278,7 +1303,8 @@ export function CreateEnrollmentForm({
                 </label>
               </div>
               <p className="mt-2 text-xs leading-6 text-muted">
-                برای دریافت خودکار موقعیت در گوشی، GPS را روشن و اجازه Location مرورگر را تأیید کنید. اگر نقشه در دسترس نیست، نشانی و مختصات را دستی وارد کنید.
+                برای دریافت خودکار موقعیت در گوشی، GPS را روشن و اجازه Location مرورگر را تأیید
+                کنید. اگر نقشه در دسترس نیست، نشانی و مختصات را دستی وارد کنید.
               </p>
               {locationError && <p className="mt-2 text-sm text-danger">{locationError}</p>}
             </div>
@@ -1304,6 +1330,7 @@ export function CreateEnrollmentForm({
                       value: school.id,
                       label: `${school.name} — ${school.city}`,
                     }))}
+                    placeholder="انتخاب کنید"
                     className="mt-2"
                   />
                 </label>

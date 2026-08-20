@@ -1,8 +1,10 @@
+/* eslint-disable @next/next/no-img-element */
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { LocationDisplay } from '@/components/common/location-display';
 import { getManagerStudent, getManagerStudentPhoto } from '@/features/manager/manager-api';
+import { PrintButton } from '@/features/manager/print-button';
 export const metadata = { title: 'جزئیات دانش‌آموز' };
 export default async function Page({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
@@ -39,7 +41,7 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
             <p className="mt-2 text-sm text-muted">{s.school.name}</p>
           </div>
         </div>
-        <Badge tone={s.isActive ? 'success' : 'neutral'}>{s.isActive ? 'فعال' : 'غیرفعال'}</Badge>
+        <div className="flex items-center gap-2"><PrintButton label="چاپ اطلاعات و تصویر" /><Badge tone={s.isActive ? 'success' : 'neutral'}>{s.isActive ? 'فعال' : 'غیرفعال'}</Badge></div>
       </header>
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
@@ -108,7 +110,43 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
               </div>
             ))}
           </div>
+          {s.emergencyContacts.length > 0 && (
+            <div className="mt-5 border-t border-border pt-4">
+              <h3 className="font-black">تماس اضطراری</h3>
+              {s.emergencyContacts.map((c) => (
+                <div key={c.id} className="mt-3 rounded-xl bg-warning-soft p-3 text-sm">
+                  <p className="font-bold">
+                    {c.name} · {c.relationship}
+                  </p>
+                  <p className="mt-1 font-mono" dir="ltr">
+                    {c.phoneNumber}
+                    {c.secondaryPhoneNumber ? ` · ${c.secondaryPhoneNumber}` : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
+        {photo && (
+          <Card className="lg:col-span-2 print:border-0">
+            <div className="flex items-center justify-between">
+              <h2 className="font-black">عکس دانش‌آموز</h2>
+              <a
+                href={photo.viewUrl}
+                download
+                className="rounded-xl border border-border px-4 py-2 text-sm font-bold print:hidden"
+              >
+                دانلود عکس
+              </a>
+            </div>
+            {/* Private, short-lived API URL cannot use the static Next image optimizer. */}
+            <img
+              src={photo.viewUrl}
+              alt={`عکس ${s.firstName} ${s.lastName}`}
+              className="mt-4 max-h-96 rounded-2xl object-contain"
+            />
+          </Card>
+        )}
         <Card className="lg:col-span-2">
           <h2 className="font-black">نشانی‌ها</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2">

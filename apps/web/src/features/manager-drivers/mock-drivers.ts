@@ -1,89 +1,75 @@
+export type MockDocument = { title: string; pages: string[] };
+export type MockRoute = {
+  title: string; schoolName: string; direction: 'TO_SCHOOL' | 'FROM_SCHOOL';
+  sequenceNumber: number; scheduledStartTime: string; scheduledArrivalTime: string;
+  area: string; students: string[];
+};
 export type MockDriver = {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   phoneNumber: string;
   nationalId: string;
-  licenseNumber: string;
-  experienceYears: number;
-  vehicle: string;
-  color: string;
-  plate: string;
-  capacity: number;
-  assigned: number;
-  route: string;
+  education: string;
+  fatherName: string;
+  gender: string;
+  licenseExpiresAt: string;
+  vehicleType: string;
+  system: string;
   vehicleYear: number;
-  vin: string;
+  plate: string;
+  vehicleStatus: string;
   insuranceExpiresAt: string;
   technicalInspectionExpiresAt: string;
-  profileObjectUrl?: string;
-  documents: Array<{
-    title: string;
-    status: 'تأیید آزمایشی' | 'در انتظار آزمایشی';
-    objectUrl?: string;
-  }>;
+  capacity: number;
+  routes: MockRoute[];
+  driverDocuments: MockDocument[];
+  vehicleDocuments: MockDocument[];
 };
-export const mockDrivers: MockDriver[] = [
-  {
-    id: 'preview-arya',
-    name: 'آریا نیک‌راه',
-    phoneNumber: '09121234567',
-    nationalId: '0013540394',
-    licenseNumber: '1404123456',
-    experienceYears: 8,
-    vehicle: 'ون سپهر مدل ۱۴۰۴',
-    color: 'سفید',
-    plate: 'ایران ۱۱ ـ ۴۲۱ ع ۷۷',
-    capacity: 12,
-    assigned: 9,
-    route: 'محدوده مرکزی',
-    vehicleYear: 1404,
-    vin: 'IRN-SAMPLE-VAN-1404-01',
-    insuranceExpiresAt: '1405/06/31',
-    technicalInspectionExpiresAt: '1405/03/31',
-    documents: [
-      { title: 'گواهی صلاحیت آزمایشی', status: 'تأیید آزمایشی' },
-      { title: 'بیمه‌نامه آزمایشی', status: 'تأیید آزمایشی' },
-    ],
-  },
-  {
-    id: 'preview-sahar',
-    name: 'سحر راهنما',
-    phoneNumber: '09129876543',
-    nationalId: '0084575948',
-    licenseNumber: '1403987654',
-    experienceYears: 11,
-    vehicle: 'مینی‌بوس پارسا مدل ۱۴۰۳',
-    color: 'نقره‌ای',
-    plate: 'ایران ۲۲ ـ ۵۶۳ ب ۴۴',
-    capacity: 18,
-    assigned: 14,
-    route: 'محدوده شمالی',
-    vehicleYear: 1403,
-    vin: 'IRN-SAMPLE-MINI-1403-02',
-    insuranceExpiresAt: '1405/02/15',
-    technicalInspectionExpiresAt: '1404/12/20',
-    documents: [
-      { title: 'گواهی صلاحیت آزمایشی', status: 'تأیید آزمایشی' },
-      { title: 'معاینه فنی آزمایشی', status: 'در انتظار آزمایشی' },
-    ],
-  },
-  {
-    id: 'preview-kian',
-    name: 'کیان هم‌مسیر',
-    phoneNumber: '09125554433',
-    nationalId: '0499370899',
-    licenseNumber: '1404554433',
-    experienceYears: 5,
-    vehicle: 'سواری نمونه مدل ۱۴۰۴',
-    color: 'آبی',
-    plate: 'ایران ۳۳ ـ ۸۱۰ ج ۲۱',
-    capacity: 4,
-    assigned: 3,
-    route: 'محدوده غربی',
-    vehicleYear: 1404,
-    vin: 'IRN-SAMPLE-CAR-1404-03',
-    insuranceExpiresAt: '1405/09/10',
-    technicalInspectionExpiresAt: '1405/05/05',
-    documents: [{ title: 'گواهی صلاحیت آزمایشی', status: 'تأیید آزمایشی' }],
-  },
+const image = '/samin-gasht-logo.png';
+const make = (id: string, firstName: string, lastName: string, offset: number): MockDriver => ({
+  id,
+  firstName,
+  lastName,
+  phoneNumber: `0912123456${offset}`,
+  nationalId: `001354039${offset}`,
+  education: 'دیپلم',
+  fatherName: 'محمد',
+  gender: offset === 1 ? 'زن' : 'مرد',
+  licenseExpiresAt: '۱۴۰۶/۰۶/۳۱',
+  vehicleType: offset === 2 ? 'مینی‌بوس' : 'ون',
+  system: 'تویوتا هایس',
+  vehicleYear: 1402 + offset,
+  plate: `ایران ۱۱ ـ ۴۲${offset} ع ۷۷`,
+  vehicleStatus: 'فعال و تأییدشده',
+  capacity: 4,
+  insuranceExpiresAt: '۱۴۰۵/۰۹/۱۰',
+  technicalInspectionExpiresAt: '۱۴۰۵/۰۵/۰۵',
+  routes: [
+    { title: 'سرویس رفت ۱', schoolName: 'دبستان اندیشه روشن', direction: 'TO_SCHOOL', sequenceNumber: 1, scheduledStartTime: '۰۶:۳۰', scheduledArrivalTime: '۰۶:۵۰', area: 'محدوده مرکزی', students: ['علی احمدی', 'سارا محمدی', 'آرین رضایی', 'نورا کریمی'] },
+    { title: 'سرویس رفت ۲', schoolName: 'دبستان اندیشه روشن', direction: 'TO_SCHOOL', sequenceNumber: 2, scheduledStartTime: '۰۶:۵۰', scheduledArrivalTime: '۰۷:۱۰', area: 'محدوده شمالی', students: ['امیرحسین مرادی', 'یسنا حسینی', 'محمد پارسا', 'هانا اکبری'] },
+    { title: 'سرویس رفت ۳', schoolName: 'دبستان اندیشه روشن', direction: 'TO_SCHOOL', sequenceNumber: 3, scheduledStartTime: '۰۷:۱۰', scheduledArrivalTime: '۰۷:۳۰', area: 'محدوده غربی', students: ['کیانا نوروزی', 'سامیار امینی', 'رها محمودی', 'طاها جعفری'] },
+    { title: 'سرویس برگشت ۱', schoolName: 'دبستان اندیشه روشن', direction: 'FROM_SCHOOL', sequenceNumber: 1, scheduledStartTime: '۱۲:۰۰', scheduledArrivalTime: '۱۲:۲۰', area: 'محدوده مرکزی', students: ['علی احمدی', 'سارا محمدی', 'آرین رضایی', 'نورا کریمی'] },
+    { title: 'سرویس برگشت ۲', schoolName: 'دبستان اندیشه روشن', direction: 'FROM_SCHOOL', sequenceNumber: 2, scheduledStartTime: '۱۳:۰۰', scheduledArrivalTime: '۱۳:۲۰', area: 'محدوده شمالی', students: ['امیرحسین مرادی', 'یسنا حسینی', 'محمد پارسا', 'هانا اکبری'] },
+    { title: 'سرویس برگشت ۳', schoolName: 'دبستان اندیشه روشن', direction: 'FROM_SCHOOL', sequenceNumber: 3, scheduledStartTime: '۱۴:۰۰', scheduledArrivalTime: '۱۴:۲۰', area: 'محدوده غربی', students: ['کیانا نوروزی', 'سامیار امینی', 'رها محمودی', 'طاها جعفری'] },
+  ],
+  driverDocuments: [
+    { title: 'عکس راننده', pages: [image] },
+    { title: 'کارت ملی (پشت و رو)', pages: [image, image] },
+    { title: 'گواهینامه', pages: [image] },
+    { title: 'گواهی سوء پیشینه', pages: [image, image] },
+    { title: 'گواهی عدم اعتیاد', pages: [image] },
+  ],
+  vehicleDocuments: [
+    { title: 'عکس خودرو', pages: [image] },
+    { title: 'کارت ماشین (پشت و رو)', pages: [image, image] },
+    { title: 'برگ سبز', pages: [image] },
+    { title: 'معاینه فنی', pages: [image] },
+    { title: 'بیمه‌نامه', pages: [image, image] },
+  ],
+});
+export const mockDrivers = [
+  make('preview-arya', 'آریا', 'نیک‌راه', 0),
+  make('preview-sahar', 'سحر', 'راهنما', 1),
+  make('preview-kian', 'کیان', 'هم‌مسیر', 2),
 ];

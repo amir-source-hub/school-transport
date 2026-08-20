@@ -11,7 +11,6 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CredentialBanner } from '@/features/manager/credential-banner';
 import { getManagerDashboard } from '@/features/manager/manager-api';
 import { formatJalaliDateTime } from '@/lib/formatters';
 export const metadata = { title: 'داشبورد' };
@@ -34,12 +33,9 @@ export default async function Page() {
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: 'پنل مدیر مدرسه' }, { label: 'داشبورد' }]} />
-      <CredentialBanner required={d.manager.mustChangeCredentials} />
       <header>
         <p className="text-sm font-bold text-primary">{d.school.name}</p>
-        <h1 className="mt-1 text-2xl font-black sm:text-3xl">
-          سلام {d.manager.firstName}، نمای امروز مدرسه
-        </h1>
+        <h1 className="mt-1 text-2xl font-black sm:text-3xl">سلام مدیر محترم، نمای امروز مدرسه</h1>
         <p className="mt-2 text-sm text-muted">آمار واقعی مدرسه و مسیرهای سریع عملیات</p>
       </header>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

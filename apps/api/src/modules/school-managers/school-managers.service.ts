@@ -17,6 +17,7 @@ import { ConfigService } from '../../config/config.service';
 import { DatabaseService } from '../../database/database.service';
 import {
   contracts,
+  emergencyContacts,
   feedbackSubmissions,
   familyAddresses,
   parents,
@@ -197,6 +198,7 @@ export class SchoolManagersService {
     }
     if (query.educationLevel) conditions.push(eq(students.className, query.educationLevel));
     if (query.grade) conditions.push(eq(students.grade, query.grade));
+    if (query.fieldOfStudy) conditions.push(eq(students.fieldOfStudy, query.fieldOfStudy));
 
     const approvedPhotoSubquery = this.db.db
       .select({ id: studentPhotoUploads.id })
@@ -368,7 +370,7 @@ export class SchoolManagersService {
       .limit(1);
     if (!studentRow) throw new AuthorizationError('Access denied.');
 
-    const [parentRows, addressRows, registrationRows, photoRow] = await Promise.all([
+    const [parentRows, addressRows, emergencyRows, registrationRows, photoRow] = await Promise.all([
       this.db.db
         .select({
           id: parents.id,
@@ -390,6 +392,11 @@ export class SchoolManagersService {
         .from(familyAddresses)
         .where(eq(familyAddresses.userId, studentRow.userId))
         .orderBy(desc(familyAddresses.isActive), desc(familyAddresses.createdAt)),
+      this.db.db
+        .select()
+        .from(emergencyContacts)
+        .where(eq(emergencyContacts.userId, studentRow.userId))
+        .orderBy(desc(emergencyContacts.isActive), desc(emergencyContacts.createdAt)),
       this.db.db
         .select()
         .from(serviceRegistrations)
@@ -483,6 +490,14 @@ export class SchoolManagersService {
         relationshipDescription: parent.relationshipDescription,
         isPrimaryContact: parent.isPrimaryContact,
       })),
+      emergencyContacts: emergencyRows.map((contact) => ({
+        id: contact.id,
+        name: `${contact.firstName} ${contact.lastName}`,
+        relationship: contact.relationship,
+        phoneNumber: contact.phoneNumber,
+        secondaryPhoneNumber: contact.secondaryPhoneNumber,
+        isActive: contact.isActive,
+      })),
       addresses: addressRows.map((address) => ({
         id: address.id,
         title: address.title,
@@ -553,6 +568,9 @@ export class SchoolManagersService {
         phoneNumber: school.phoneNumber,
         openingTime: school.openingTime,
         closingTime: school.closingTime,
+        closingTimes: school.closingTimes,
+        latitude: school.latitude,
+        longitude: school.longitude,
         educationLevels: (school.educationOptions ?? []).map((option) => ({
           level: option.level,
           grades: option.grades,

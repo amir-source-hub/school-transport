@@ -1,11 +1,9 @@
 import Link from 'next/link';
-import { Search } from 'lucide-react';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { getManagerStudents } from '@/features/manager/manager-api';
+import { getManagerSettings, getManagerStudents } from '@/features/manager/manager-api';
+import { ManagerStudentFilters } from '@/features/manager/student-filters';
 export const metadata = { title: 'دانش‌آموزان' };
 export default async function Page({
   searchParams,
@@ -17,7 +15,12 @@ export default async function Page({
   for (const [k, v] of Object.entries(raw)) if (typeof v === 'string') p.set(k, v);
   if (!p.has('page')) p.set('page', '1');
   if (!p.has('pageSize')) p.set('pageSize', '20');
-  const { items, total } = await getManagerStudents(p.toString());
+  const [{ items, total }, settings] = await Promise.all([
+    getManagerStudents(p.toString()),
+    getManagerSettings(),
+  ]);
+  const school =
+    settings.schools.find((x) => x.id === settings.primarySchoolId) ?? settings.schools[0];
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -30,62 +33,7 @@ export default async function Page({
         </p>
       </header>
       <Card>
-        <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-          <label className="relative">
-            <span className="sr-only">جست‌وجو</span>
-            <Search className="absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-            <Input
-              name="query"
-              defaultValue={typeof raw.query === 'string' ? raw.query : ''}
-              placeholder="نام، کد دانش‌آموز یا کد ملی"
-              className="pe-10"
-            />
-          </label>
-          <Input
-            name="educationLevel"
-            defaultValue={typeof raw.educationLevel === 'string' ? raw.educationLevel : ''}
-            placeholder="مقطع تحصیلی"
-          />
-          <Input
-            name="grade"
-            defaultValue={typeof raw.grade === 'string' ? raw.grade : ''}
-            placeholder="پایه تحصیلی"
-          />
-          <select
-            name="photoStatus"
-            aria-label="وضعیت عکس دانش‌آموز"
-            defaultValue={typeof raw.photoStatus === 'string' ? raw.photoStatus : 'all'}
-            className="min-h-12 rounded-xl border border-border bg-white px-3"
-          >
-            <option value="all">همه عکس‌ها</option>
-            <option value="with_photo">دارای عکس</option>
-            <option value="without_photo">بدون عکس</option>
-          </select>
-          <select
-            name="sortBy"
-            aria-label="مرتب‌سازی دانش‌آموزان"
-            defaultValue={typeof raw.sortBy === 'string' ? raw.sortBy : 'createdAt'}
-            className="min-h-12 rounded-xl border border-border bg-white px-3"
-          >
-            <option value="createdAt">تاریخ ثبت</option>
-            <option value="name">نام دانش‌آموز</option>
-            <option value="nationalId">کد ملی</option>
-            <option value="studentCode">کد دانش‌آموزی</option>
-            <option value="educationLevel">مقطع تحصیلی</option>
-            <option value="grade">پایه تحصیلی</option>
-            <option value="registrationStatus">وضعیت ثبت‌نام</option>
-          </select>
-          <select
-            name="sortOrder"
-            aria-label="جهت مرتب‌سازی"
-            defaultValue={typeof raw.sortOrder === 'string' ? raw.sortOrder : 'desc'}
-            className="min-h-12 rounded-xl border border-border bg-white px-3"
-          >
-            <option value="asc">صعودی</option>
-            <option value="desc">نزولی</option>
-          </select>
-          <Button>اعمال فیلتر</Button>
-        </form>
+        <ManagerStudentFilters raw={raw} educationOptions={school?.educationLevels ?? []} />
       </Card>
       {items.length === 0 ? (
         <Card>

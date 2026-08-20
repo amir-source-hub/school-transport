@@ -72,7 +72,9 @@ export function SchoolFormDialog(props: Props) {
     managerPhone: initial?.managerPhone ?? '',
     openingTime: initial?.openingTime ?? '',
     closingTime: initial?.closingTime ?? '',
-    closingTimes: initial?.closingTimes?.length ? initial.closingTimes : [initial?.closingTime ?? ''],
+    closingTimes: initial?.closingTimes?.length
+      ? initial.closingTimes
+      : [initial?.closingTime ?? ''],
     latitude: initial?.latitude ?? 35.7219,
     longitude: initial?.longitude ?? 51.3347,
     educationOptions: initial?.educationOptions ?? [],
@@ -87,8 +89,13 @@ export function SchoolFormDialog(props: Props) {
   };
 
   const handle = async () => {
-    if (!isEdit && (managerUsername.length < 3 || managerPassword.length < 8)) {
-      setError('نام کاربری مدیر حداقل ۳ و رمز عبور حداقل ۸ نویسه باشد.');
+    if (
+      !isEdit &&
+      (!/^[A-Za-z0-9]{8}$/.test(managerUsername) || !/^[A-Za-z0-9]{8}$/.test(managerPassword))
+    ) {
+      setError(
+        'نام کاربری و رمز عبور مدیر باید دقیقاً ۸ نویسه و فقط شامل حروف انگلیسی و اعداد باشند.',
+      );
       return;
     }
     const normalized = {
@@ -174,10 +181,45 @@ export function SchoolFormDialog(props: Props) {
                 className="mt-1"
               />
             </div>
-            {!isEdit && <>
-              <div><label htmlFor="school-manager-username" className="text-sm font-bold">نام کاربری پنل مدیر *</label><Input id="school-manager-username" dir="ltr" value={managerUsername} onChange={(e) => setManagerUsername(e.target.value.trim())} className="mt-1" /></div>
-              <div><label htmlFor="school-manager-password" className="text-sm font-bold">رمز عبور پنل مدیر *</label><Input id="school-manager-password" type="password" dir="ltr" value={managerPassword} onChange={(e) => setManagerPassword(e.target.value)} className="mt-1" /></div>
-            </>}
+            {!isEdit && (
+              <>
+                <div>
+                  <label htmlFor="school-manager-username" className="text-sm font-bold">
+                    نام کاربری پنل مدیر *
+                  </label>
+                  <Input
+                    id="school-manager-username"
+                    dir="ltr"
+                    maxLength={8}
+                    pattern="[A-Za-z0-9]{8}"
+                    value={managerUsername}
+                    onChange={(e) =>
+                      setManagerUsername(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 8))
+                    }
+                    className="mt-1"
+                  />
+                  <p className="mt-1 text-xs text-muted">دقیقاً ۸ حرف انگلیسی یا عدد</p>
+                </div>
+                <div>
+                  <label htmlFor="school-manager-password" className="text-sm font-bold">
+                    رمز عبور پنل مدیر *
+                  </label>
+                  <Input
+                    id="school-manager-password"
+                    type="password"
+                    dir="ltr"
+                    maxLength={8}
+                    pattern="[A-Za-z0-9]{8}"
+                    value={managerPassword}
+                    onChange={(e) =>
+                      setManagerPassword(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 8))
+                    }
+                    className="mt-1"
+                  />
+                  <p className="mt-1 text-xs text-muted">دقیقاً ۸ حرف انگلیسی یا عدد</p>
+                </div>
+              </>
+            )}
             <div>
               <label htmlFor="school-type" className="text-sm font-bold">
                 نوع مدرسه *
@@ -290,11 +332,71 @@ export function SchoolFormDialog(props: Props) {
               />
             </div>
             <div className="sm:col-span-2">
-              <div className="flex items-center justify-between"><label className="text-sm font-bold">ساعت‌های پایان مدرسه *</label><Button type="button" size="sm" variant="ghost" onClick={() => update('closingTimes', [...form.closingTimes, ''])}>افزودن ساعت</Button></div>
-              <div className="mt-2 grid gap-2 sm:grid-cols-3">{form.closingTimes.map((time, index) => <div key={index} className="flex gap-2"><Input type="time" required dir="ltr" value={time} onChange={(event) => { const times = [...form.closingTimes]; times[index] = event.target.value; update('closingTimes', times); update('closingTime', times[0] ?? ''); }} /><Button type="button" size="sm" variant="ghost" disabled={form.closingTimes.length === 1} onClick={() => { const times = form.closingTimes.filter((_, i) => i !== index); update('closingTimes', times); update('closingTime', times[0] ?? ''); }}>حذف</Button></div>)}</div>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold">ساعت‌های پایان مدرسه *</label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => update('closingTimes', [...form.closingTimes, ''])}
+                >
+                  افزودن ساعت
+                </Button>
+              </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                {form.closingTimes.map((time, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      type="time"
+                      required
+                      dir="ltr"
+                      value={time}
+                      onChange={(event) => {
+                        const times = [...form.closingTimes];
+                        times[index] = event.target.value;
+                        update('closingTimes', times);
+                        update('closingTime', times[0] ?? '');
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={form.closingTimes.length === 1}
+                      onClick={() => {
+                        const times = form.closingTimes.filter((_, i) => i !== index);
+                        update('closingTimes', times);
+                        update('closingTime', times[0] ?? '');
+                      }}
+                    >
+                      حذف
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div><label className="text-sm font-bold">عرض جغرافیایی *</label><Input type="number" step="any" dir="ltr" value={form.latitude} onChange={(e) => update('latitude', Number(e.target.value))} className="mt-1" /></div>
-            <div><label className="text-sm font-bold">طول جغرافیایی *</label><Input type="number" step="any" dir="ltr" value={form.longitude} onChange={(e) => update('longitude', Number(e.target.value))} className="mt-1" /></div>
+            <div>
+              <label className="text-sm font-bold">عرض جغرافیایی *</label>
+              <Input
+                type="number"
+                step="any"
+                dir="ltr"
+                value={form.latitude}
+                onChange={(e) => update('latitude', Number(e.target.value))}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-bold">طول جغرافیایی *</label>
+              <Input
+                type="number"
+                step="any"
+                dir="ltr"
+                value={form.longitude}
+                onChange={(e) => update('longitude', Number(e.target.value))}
+                className="mt-1"
+              />
+            </div>
           </div>
           <div>
             <label htmlFor="school-address" className="text-sm font-bold">

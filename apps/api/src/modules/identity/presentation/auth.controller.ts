@@ -184,7 +184,7 @@ export class ManagerLoginDto {
 export class ProvisionSchoolManagerDto {
   @Transform(trimmed)
   @IsString()
-  @Length(3, 100)
+  @Matches(/^[A-Za-z0-9]{8}$/)
   username!: string;
 
   @IsString()
@@ -209,7 +209,7 @@ export class ProvisionSchoolManagerDto {
   schoolId!: string;
 
   @IsString()
-  @Length(8, 128)
+  @Matches(/^[A-Za-z0-9]{8}$/)
   password!: string;
 }
 

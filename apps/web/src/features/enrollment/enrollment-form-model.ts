@@ -158,8 +158,6 @@ export function createEnrollmentFormState({
   defaults: EnrollmentDefaults;
   guardianPhone?: string;
 }): EnrollmentFormState {
-  const firstSchool = schools[0];
-  const firstLevel = firstSchool?.educationOptions[0];
   const firstExisting = existingStudents[0];
   const existingSchool = schools.find((school) => school.id === firstExisting?.schoolId);
   const existingLevel =
@@ -205,9 +203,9 @@ export function createEnrollmentFormState({
     locationSelected: Boolean(
       defaults.address?.latitude !== undefined && defaults.address?.longitude !== undefined,
     ),
-    schoolId: firstExisting?.schoolId ?? firstSchool?.id ?? '',
-    educationLevel: existingLevel?.level ?? firstLevel?.level ?? '',
-    grade: firstExisting?.grade ?? existingLevel?.grades[0] ?? firstLevel?.grades[0] ?? '',
+    schoolId: firstExisting?.schoolId ?? '',
+    educationLevel: existingLevel?.level ?? '',
+    grade: firstExisting?.grade ?? '',
     fieldOfStudy: '',
   };
 }

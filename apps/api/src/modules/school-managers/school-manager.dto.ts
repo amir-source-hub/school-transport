@@ -52,6 +52,12 @@ export class ManagerStudentListQueryDto {
   @IsOptional()
   @Transform(blankToUndefined)
   @IsString()
+  @Length(1, 100)
+  fieldOfStudy?: string;
+
+  @IsOptional()
+  @Transform(blankToUndefined)
+  @IsString()
   @Length(1, 20)
   serviceType?: string;
 

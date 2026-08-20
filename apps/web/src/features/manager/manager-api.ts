@@ -66,6 +66,14 @@ export type ManagerStudentDetail = ManagerStudent & {
     relationshipDescription: string | null;
     isPrimaryContact: boolean;
   }>;
+  emergencyContacts: Array<{
+    id: string;
+    name: string;
+    relationship: string;
+    phoneNumber: string;
+    secondaryPhoneNumber: string | null;
+    isActive: boolean;
+  }>;
   addresses: Array<{
     id: string;
     title: string;
@@ -116,6 +124,9 @@ export type ManagerSettings = {
     phoneNumber: string | null;
     openingTime: string | null;
     closingTime: string | null;
+    closingTimes: string[];
+    latitude: number | null;
+    longitude: number | null;
     educationLevels: Array<{ level: string; grades: string[] }>;
     isActive: boolean;
   }>;
