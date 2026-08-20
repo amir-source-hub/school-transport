@@ -2,13 +2,23 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { FamilyProfileForm } from '@/features/family-profile/family-profile-form';
 import { FamilyOnboardingForm } from '@/features/family-profile/family-onboarding-form';
 import { getFamilyProfile } from '@/features/family-profile/family-api';
+import { getStudents } from '@/features/students/students-api';
+import { getMyPhotoUploads, getPhotoViewUrl } from '@/features/student-photos/student-photos-api';
 
 export const metadata = { title: 'اطلاعات خانواده' };
 
 export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage() {
-  const profile = await getFamilyProfile();
+  const [profile, students] = await Promise.all([getFamilyProfile(), getStudents()]);
+  const studentsWithPhotos = await Promise.all(
+    students.map(async (student) => {
+      const uploads = await getMyPhotoUploads(student.id).catch(() => []);
+      const approved = uploads.find((upload) => upload.status === 'APPROVED');
+      const photo = approved ? await getPhotoViewUrl(approved.uploadId).catch(() => null) : null;
+      return { ...student, photoUrl: photo?.viewUrl ?? null };
+    }),
+  );
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -25,7 +35,7 @@ export default async function ProfilePage() {
         </p>
       </div>
       {(profile.guardian || profile.mother || profile.father) && profile.addresses.length > 0 ? (
-        <FamilyProfileForm profile={profile} />
+        <FamilyProfileForm profile={profile} students={studentsWithPhotos} />
       ) : (
         <FamilyOnboardingForm />
       )}

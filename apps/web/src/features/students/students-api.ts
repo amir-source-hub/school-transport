@@ -8,11 +8,14 @@ export const studentSchema = z.object({
   schoolName: z.string(),
   firstName: z.string(),
   lastName: z.string(),
+  fatherName: z.string().nullable().default(null),
   nationalId: z.string(),
   birthDate: z.string().nullable(),
   gender: z.string().nullable(),
   grade: z.string().nullable(),
   className: z.string().nullable(),
+  phoneNumber: z.string().nullable().default(null),
+  fieldOfStudy: z.string().nullable().default(null),
   isActive: z.boolean(),
 });
 
@@ -25,6 +28,9 @@ export type StudentInput = {
   birthDate?: string;
   gender?: string;
   grade: string;
+  fatherName?: string;
+  phoneNumber?: string;
+  fieldOfStudy?: string;
 };
 
 export async function getStudents() {
@@ -44,7 +50,10 @@ export async function createStudent(input: StudentInput) {
 
 export async function updateStudent(
   id: string,
-  input: Pick<StudentInput, 'firstName' | 'lastName' | 'grade'>,
+  input: Pick<StudentInput, 'firstName' | 'lastName' | 'grade'> &
+    Partial<
+      Pick<StudentInput, 'fatherName' | 'birthDate' | 'gender' | 'phoneNumber' | 'fieldOfStudy'>
+    >,
 ) {
   const response = await apiRequest<unknown>(`/students/${id}`, { method: 'PATCH', body: input });
   return studentSchema.parse(response.data);

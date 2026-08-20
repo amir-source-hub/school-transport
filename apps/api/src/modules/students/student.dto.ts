@@ -2,10 +2,12 @@ import { Transform } from 'class-transformer';
 import {
   IsDateString,
   IsNotEmpty,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
   Length,
+  Matches,
   Validate,
   ValidatorConstraint,
   ValidatorConstraintInterface,
@@ -62,6 +64,15 @@ export class CreateStudentDto {
   @IsNotEmpty()
   @Length(1, 100)
   className?: string;
+
+  @IsOptional() @IsString() @Length(1, 100) fatherName?: string;
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? normalizeIranianDigits(value).trim() : value,
+  )
+  @Matches(/^09\d{9}$/)
+  phoneNumber?: string;
+  @IsOptional() @IsString() @Length(1, 100) fieldOfStudy?: string;
 }
 
 export class UpdateStudentDto {
@@ -88,6 +99,17 @@ export class UpdateStudentDto {
   @IsNotEmpty()
   @Length(1, 100)
   className?: string;
+
+  @IsOptional() @IsString() @Length(1, 100) fatherName?: string;
+  @IsOptional() @IsDateString() birthDate?: string;
+  @IsOptional() @IsIn(['MALE', 'FEMALE']) gender?: string;
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? normalizeIranianDigits(value).trim() : value,
+  )
+  @Matches(/^09\d{9}$/)
+  phoneNumber?: string;
+  @IsOptional() @IsString() @Length(1, 100) fieldOfStudy?: string;
 }
 
 export class AdminCreateStudentDto extends CreateStudentDto {

@@ -23,6 +23,7 @@ import {
   AdminUpdateParentDto,
   CompleteFamilyDto,
   EmergencyMutationDto,
+  EmergencyInputDto,
   ParentTypeDto,
   UpdateProfileDto,
 } from './family.dto';
@@ -74,6 +75,11 @@ export class FamiliesController {
   ) {
     await this.familiesService.updateEmergencyContact(contactId, req.user.id, dto);
     return successResponse({ updated: true });
+  }
+
+  @Post('emergency-contacts')
+  async addEmergencyContact(@Req() req: AuthenticatedRequest, @Body() dto: EmergencyInputDto) {
+    return successResponse(await this.familiesService.addEmergencyContact(req.user.id, dto));
   }
 
   @Post('set-primary-phone')

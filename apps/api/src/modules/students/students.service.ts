@@ -75,6 +75,9 @@ export class StudentsService {
       gender?: string;
       grade: string;
       className?: string;
+      fatherName?: string;
+      phoneNumber?: string;
+      fieldOfStudy?: string;
     },
     notifyAdminAddition = false,
   ) {
@@ -105,6 +108,9 @@ export class StudentsService {
         gender: data.gender || null,
         grade: data.grade || null,
         className: data.className || null,
+        fatherName: data.fatherName || null,
+        phoneNumber: data.phoneNumber || null,
+        fieldOfStudy: data.fieldOfStudy || null,
       });
       if (notifyAdminAddition) {
         await this.notifications.enqueueInTransaction(txn, {

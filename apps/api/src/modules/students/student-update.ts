@@ -1,12 +1,27 @@
 import { ValidationError } from '../../common/errors';
 
-const EDITABLE_STUDENT_FIELDS = new Set(['firstName', 'lastName', 'grade', 'className']);
+const EDITABLE_STUDENT_FIELDS = new Set([
+  'firstName',
+  'lastName',
+  'grade',
+  'className',
+  'fatherName',
+  'birthDate',
+  'gender',
+  'phoneNumber',
+  'fieldOfStudy',
+]);
 
 export type EditableStudentFields = Partial<{
   firstName: string;
   lastName: string;
   grade: string;
   className: string;
+  fatherName: string;
+  birthDate: string;
+  gender: string;
+  phoneNumber: string;
+  fieldOfStudy: string;
 }>;
 
 export function parseEditableStudentFields(data: object): EditableStudentFields {

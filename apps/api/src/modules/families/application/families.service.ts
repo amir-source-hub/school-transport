@@ -340,6 +340,15 @@ export class FamiliesService {
     });
   }
 
+  async addEmergencyContact(
+    userId: string,
+    data: { firstName: string; lastName: string; relationship: string; phoneNumber: string },
+  ) {
+    const id = generateId();
+    await this.db.db.insert(emergencyContacts).values({ id, userId, ...data });
+    return { id, ...data, isActive: true };
+  }
+
   async setPrimaryPhone(userId: string, parentType: 'MOTHER' | 'FATHER'): Promise<void> {
     await this.db.db
       .update(parents)

@@ -21,6 +21,9 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
     birthDate: student?.birthDate ?? '',
     gender: student?.gender ?? '',
     grade: student?.grade ?? '',
+    fatherName: student?.fatherName ?? '',
+    phoneNumber: student?.phoneNumber ?? '',
+    fieldOfStudy: student?.fieldOfStudy ?? '',
   });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -38,6 +41,11 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
           firstName: form.firstName,
           lastName: form.lastName,
           grade: form.grade,
+          fatherName: form.fatherName || undefined,
+          birthDate: form.birthDate || undefined,
+          gender: form.gender || undefined,
+          phoneNumber: form.phoneNumber || undefined,
+          fieldOfStudy: form.fieldOfStudy || undefined,
         });
         router.refresh();
       } else {
@@ -99,30 +107,53 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
             onChange={(event) => set('grade', event.target.value)}
           />
         </label>
-        {!student && (
-          <>
-            <label className="text-sm font-bold">
-              تاریخ تولد
-              <JalaliDateInput
-                value={form.birthDate ?? ''}
-                onChange={(value) => set('birthDate', value)}
-                required
-              />
-            </label>
-            <label className="text-sm font-bold">
-              جنسیت
-              <Select
-                value={form.gender}
-                onValueChange={(value) => set('gender', value)}
-                options={[
-                  { value: 'FEMALE', label: 'دختر' },
-                  { value: 'MALE', label: 'پسر' },
-                ]}
-                placeholder="انتخاب کنید"
-              />
-            </label>
-          </>
-        )}
+        <>
+          <label className="text-sm font-bold">
+            تاریخ تولد
+            <JalaliDateInput
+              value={form.birthDate ?? ''}
+              onChange={(value) => set('birthDate', value)}
+              required={!student}
+            />
+          </label>
+          <label className="text-sm font-bold">
+            جنسیت
+            <Select
+              value={form.gender}
+              onValueChange={(value) => set('gender', value)}
+              options={[
+                { value: 'FEMALE', label: 'دختر' },
+                { value: 'MALE', label: 'پسر' },
+              ]}
+              placeholder="انتخاب کنید"
+            />
+          </label>
+        </>
+        <label className="text-sm font-bold">
+          نام پدر (اختیاری)
+          <Input
+            value={form.fatherName ?? ''}
+            onChange={(event) => set('fatherName', event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          شماره همراه دانش‌آموز (اختیاری)
+          <Input
+            dir="ltr"
+            inputMode="numeric"
+            value={form.phoneNumber ?? ''}
+            onChange={(event) =>
+              set('phoneNumber', event.target.value.replace(/\D/g, '').slice(0, 11))
+            }
+          />
+        </label>
+        <label className="text-sm font-bold">
+          رشته تحصیلی (اختیاری)
+          <Input
+            value={form.fieldOfStudy ?? ''}
+            onChange={(event) => set('fieldOfStudy', event.target.value)}
+          />
+        </label>
       </div>
       {error && <p className="text-sm text-danger">{error}</p>}
       <Button type="submit" loading={pending}>

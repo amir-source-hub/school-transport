@@ -4,9 +4,24 @@ import { parseEditableStudentFields } from './student-update';
 
 describe('student update field policy', () => {
   it('keeps only explicitly documented editable profile fields', () => {
-    expect(parseEditableStudentFields({ firstName: 'Sara', grade: '6' })).toEqual({
+    expect(
+      parseEditableStudentFields({
+        firstName: 'Sara',
+        grade: '6',
+        fatherName: 'رضا',
+        birthDate: '2012-04-03',
+        gender: 'FEMALE',
+        phoneNumber: '09123456789',
+        fieldOfStudy: 'ریاضی',
+      }),
+    ).toEqual({
       firstName: 'Sara',
       grade: '6',
+      fatherName: 'رضا',
+      birthDate: '2012-04-03',
+      gender: 'FEMALE',
+      phoneNumber: '09123456789',
+      fieldOfStudy: 'ریاضی',
     });
   });
 

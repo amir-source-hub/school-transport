@@ -17,7 +17,9 @@ const digits = ({ value }: { value: unknown }) =>
 export class ParentInputDto {
   @IsString() @Length(1, 100) firstName!: string;
   @IsString() @Length(1, 100) lastName!: string;
-  @Transform(digits) @Matches(/^\d{10}$/, { message: 'کد ملی باید دقیقاً ۱۰ رقم باشد.' }) nationalId!: string;
+  @Transform(digits)
+  @Matches(/^\d{10}$/, { message: 'کد ملی باید دقیقاً ۱۰ رقم باشد.' })
+  nationalId!: string;
   @Transform(digits) @Matches(/^09\d{9}$/) phoneNumber!: string;
 }
 class AddressInputDto {
@@ -28,7 +30,7 @@ class AddressInputDto {
   @IsString() @Length(1, 500) streetAddress!: string;
   @IsOptional() @Transform(digits) @Matches(/^\d{10}$/) postalCode?: string;
 }
-class EmergencyInputDto {
+export class EmergencyInputDto {
   @IsString() @Length(1, 100) firstName!: string;
   @IsString() @Length(1, 100) lastName!: string;
   @IsString() @Length(1, 50) relationship!: string;
@@ -44,7 +46,10 @@ export class CompleteFamilyDto {
 export class UpdateProfileDto {
   @IsOptional() @IsString() @Length(1, 100) firstName?: string;
   @IsOptional() @IsString() @Length(1, 100) lastName?: string;
-  @IsOptional() @Transform(digits) @Matches(/^\d{10}$/, { message: 'کد ملی باید دقیقاً ۱۰ رقم باشد.' }) nationalId?: string;
+  @IsOptional()
+  @Transform(digits)
+  @Matches(/^\d{10}$/, { message: 'کد ملی باید دقیقاً ۱۰ رقم باشد.' })
+  nationalId?: string;
   @IsOptional() @Transform(digits) @Matches(/^09\d{9}$/) phoneNumber?: string;
   @IsOptional() @IsIn(['MOTHER', 'FATHER']) parentType?: string;
 }

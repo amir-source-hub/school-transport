@@ -54,11 +54,14 @@ export async function updateParent(
 ) {
   await apiRequest('/families/me', { method: 'PATCH', body: { parentType, ...data } });
 }
-export async function updateAddress(id: string, data: Record<string, string>) {
+export async function updateAddress(id: string, data: Record<string, string | number | undefined>) {
   await apiRequest(`/families/addresses/${id}`, { method: 'PATCH', body: data });
 }
 export async function updateEmergencyContact(id: string, data: Record<string, string>) {
   await apiRequest(`/families/emergency-contacts/${id}`, { method: 'PATCH', body: data });
+}
+export async function addEmergencyContact(data: Record<string, string>) {
+  await apiRequest('/families/emergency-contacts', { method: 'POST', body: data });
 }
 export async function completeFamilyRegistration(data: Record<string, unknown>) {
   await apiRequest('/families/complete-registration', { method: 'POST', body: data });
