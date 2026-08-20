@@ -78,6 +78,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
         </div>
         <AdminStudentDialog families={familyOptions} schools={schoolOptions} />
       </div>
+      <AdminLimitRequestSection initialRequests={limitRequests} />
       <Card>
         <AutoSubmitForm method="get" className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr] md:max-w-2xl">
           <label className="text-sm font-bold">
@@ -228,7 +229,6 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
           />
         </>
       )}
-      <AdminLimitRequestSection initialRequests={limitRequests} />
     </div>
   );
 }

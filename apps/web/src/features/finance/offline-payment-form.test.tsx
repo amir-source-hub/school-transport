@@ -79,9 +79,18 @@ describe('OfflinePaymentForm', () => {
       screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' }).closest('form')!,
     );
     await waitFor(() =>
-      expect(api.completeReceiptUpload).toHaveBeenCalledWith('submission-1', 'panel'),
+      expect(api.completeReceiptUpload).toHaveBeenCalledWith(
+        'submission-1',
+        'panel',
+        expect.any(AbortSignal),
+      ),
     );
-    expect(api.authorizeReceiptUpload).toHaveBeenCalledWith('submission-1', file, 'panel');
+    expect(api.authorizeReceiptUpload).toHaveBeenCalledWith(
+      'submission-1',
+      file,
+      'panel',
+      expect.any(AbortSignal),
+    );
   });
 
   it('reuses one receipt authorization after an uncertain storage upload', async () => {

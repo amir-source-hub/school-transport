@@ -83,6 +83,11 @@ export async function getOfflineSubmissions(mode: 'panel' | 'onboarding' = 'pane
         status: z.string(),
         rejectionReason: z.string().nullable(),
         submittedAt: z.coerce.date(),
+        itemType: z.string().optional(),
+        sequenceNumber: z.number().optional(),
+        expectedAmount: z.number().optional(),
+        studentFirstName: z.string().optional(),
+        studentLastName: z.string().optional(),
       }),
     )
     .parse(response.data);
@@ -112,6 +117,7 @@ export async function authorizeReceiptUpload(
   submissionId: string,
   file: File,
   mode: 'panel' | 'onboarding',
+  signal?: AbortSignal,
 ) {
   const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
   const response = await apiRequest<{ uploadUrl: string; expiresInSeconds: number }>(
@@ -119,15 +125,23 @@ export async function authorizeReceiptUpload(
     {
       method: 'POST',
       body: { declaredMime: file.type, declaredSize: file.size },
+      signal,
+      timeoutMs: 20_000,
     },
   );
   return response.data;
 }
 
-export async function completeReceiptUpload(submissionId: string, mode: 'panel' | 'onboarding') {
+export async function completeReceiptUpload(
+  submissionId: string,
+  mode: 'panel' | 'onboarding',
+  signal?: AbortSignal,
+) {
   const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
   await apiRequest(`${prefix}/offline-submissions/${submissionId}/receipt/complete`, {
     method: 'POST',
+    signal,
+    timeoutMs: 30_000,
   });
 }
 

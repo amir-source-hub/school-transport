@@ -282,7 +282,10 @@ export function ConfigureInstallmentsDialog({
             const amountErrors = fieldErrors?.[`items.${index}.amount`] ?? [];
             const dueDateErrors = fieldErrors?.[`items.${index}.dueDate`] ?? [];
             return (
-              <div key={index} className="space-y-2">
+              <div
+                key={index}
+                className="space-y-2 rounded-2xl border border-border bg-surface-paper p-4"
+              >
                 <div className="grid grid-cols-1 items-end gap-3 rounded-xl bg-surface-muted p-3 md:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)]">
                   <span className="text-sm font-black md:pb-3">
                     {fullPayment ? 'باقی‌مانده' : `قسط ${(index + 1).toLocaleString('fa-IR')}`}
@@ -290,6 +293,7 @@ export function ConfigureInstallmentsDialog({
                   <label className="text-xs font-bold">
                     مبلغ (ریال)
                     <Input
+                      className="mt-2 bg-white"
                       inputMode="numeric"
                       value={item.amount}
                       onChange={(event) =>
@@ -314,7 +318,7 @@ export function ConfigureInstallmentsDialog({
               </div>
             );
           })}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 rounded-xl border border-dashed border-border p-3">
             {!fullPayment && items.length < 12 && (
               <Button
                 size="sm"
