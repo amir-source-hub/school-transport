@@ -18,6 +18,7 @@
     "db:migrate:runtime": "node --env-file-if-exists=../../.env --import tsx src/database/migrate.ts",
     "db:seed": "node --env-file-if-exists=../../.env --import tsx src/database/seed.ts",
     "db:bootstrap": "node --env-file-if-exists=../../.env --import tsx src/database/bootstrap-db.ts",
+    "db:create-initial-admin": "node --env-file-if-exists=../../.env --import tsx src/database/create-initial-admin.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },

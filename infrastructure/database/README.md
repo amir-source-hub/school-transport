@@ -55,3 +55,18 @@ Run the non-production CI smoke workflow on migration and operational-script cha
 Quarterly, operators must perform an isolated restore drill, record duration and integrity results,
 verify retention/immutability and key recovery, and resolve any RPO/RTO miss. Backup success alone
 is not recovery evidence.
+
+## Provisioning the first administrator
+
+Keep demo seeding disabled in production. On a brand-new empty database, create only the first
+administrator with this one-time command:
+
+```bash
+docker compose --env-file .env -f docker-compose.production.yml run --rm --no-deps \
+  -e ALLOW_INSECURE_DEMO_ADMIN=true \
+  api node dist/database/create-initial-admin.js
+```
+
+The command refuses to run when any administrator already exists and never creates demo schools,
+students, registrations, or payments. The compatibility credentials are `demo-admin` /
+`demo-admin-password`; change this publicly known password before exposing the service to users.
