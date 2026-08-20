@@ -100,6 +100,26 @@ export type EnrollmentFormState = {
   parentNotes: string;
 };
 
+export function applyGuardianRelationship(
+  current: EnrollmentFormState,
+  relationshipType: string,
+): EnrollmentFormState {
+  return {
+    ...current,
+    guardianRelationshipType: relationshipType,
+    guardianRelationshipDescription:
+      relationshipType === 'OTHER' ? current.guardianRelationshipDescription : '',
+    guardianFirst:
+      relationshipType === 'FATHER'
+        ? current.guardianFirst || current.studentFatherName
+        : current.guardianFirst,
+    guardianLast:
+      relationshipType === 'FATHER'
+        ? current.guardianLast || current.studentLast
+        : current.guardianLast,
+  };
+}
+
 const emptyForm: EnrollmentFormState = {
   existingStudentId: '',
   studentFirst: '',

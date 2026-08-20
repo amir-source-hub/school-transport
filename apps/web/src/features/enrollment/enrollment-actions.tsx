@@ -45,6 +45,7 @@ import {
   type GuidedEnrollmentResult,
 } from './enrollments-api';
 import {
+  applyGuardianRelationship,
   createEnrollmentFormState,
   type EnrollmentDefaults,
   type ExistingStudent,
@@ -1080,41 +1081,7 @@ export function CreateEnrollmentForm({
                     className="mt-2"
                     value={form.guardianRelationshipType}
                     onValueChange={(value) => {
-                      setForm((current) => ({
-                        ...current,
-                        guardianRelationshipType: value,
-                        guardianRelationshipDescription: '',
-                        guardianFirst: defaults.guardian
-                          ? current.guardianFirst
-                          : value === 'FATHER'
-                            ? current.studentFatherName
-                            : current.guardianRelationshipType &&
-                                current.guardianRelationshipType !== value
-                              ? ''
-                              : current.guardianFirst,
-                        guardianLast: defaults.guardian
-                          ? current.guardianLast
-                          : value === 'FATHER'
-                            ? current.studentLast
-                            : current.guardianRelationshipType &&
-                                current.guardianRelationshipType !== value
-                              ? ''
-                              : current.guardianLast,
-                        guardianNationalId:
-                          defaults.guardian || !current.guardianRelationshipType
-                            ? current.guardianNationalId
-                            : current.guardianRelationshipType === value
-                              ? current.guardianNationalId
-                              : '',
-                        fatherFirst: value === 'MOTHER' ? current.fatherFirst : '',
-                        fatherLast: value === 'MOTHER' ? current.fatherLast : '',
-                        fatherNationalId: value === 'MOTHER' ? current.fatherNationalId : '',
-                        fatherPhone: value === 'MOTHER' ? current.fatherPhone : '',
-                        motherFirst: value === 'FATHER' ? current.motherFirst : '',
-                        motherLast: value === 'FATHER' ? current.motherLast : '',
-                        motherNationalId: value === 'FATHER' ? current.motherNationalId : '',
-                        motherPhone: value === 'FATHER' ? current.motherPhone : '',
-                      }));
+                      setForm((current) => applyGuardianRelationship(current, value));
                       setFieldErrors((current) => ({
                         ...current,
                         guardianFirst: undefined,

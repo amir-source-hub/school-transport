@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createEnrollmentFormState } from './enrollment-form-model';
+import { applyGuardianRelationship, createEnrollmentFormState } from './enrollment-form-model';
 
 describe('enrollment form model', () => {
   it('derives school level and grade from an existing student', () => {
@@ -49,5 +49,30 @@ describe('enrollment form model', () => {
     first.city = 'Changed';
 
     expect(second.city).toBe('تهران');
+  });
+
+  it('preserves a locked guardian identity while the relationship changes', () => {
+    const initial = createEnrollmentFormState({
+      schools: [],
+      savedParents: { father: null, mother: null },
+      existingStudents: [],
+      defaults: {},
+      guardianPhone: '09126546078',
+    });
+    initial.guardianFirst = 'مریم';
+    initial.guardianLast = 'احمدی';
+    initial.guardianNationalId = '0013540394';
+    initial.guardianRelationshipType = 'FATHER';
+
+    const other = applyGuardianRelationship(initial, 'OTHER');
+    const mother = applyGuardianRelationship(other, 'MOTHER');
+
+    expect(mother).toMatchObject({
+      guardianFirst: 'مریم',
+      guardianLast: 'احمدی',
+      guardianNationalId: '0013540394',
+      guardianPhone: '09126546078',
+      guardianRelationshipType: 'MOTHER',
+    });
   });
 });
