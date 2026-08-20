@@ -212,37 +212,6 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
     };
   }
 
-  const otpMessages: Record<string, { title: string; message: string }> = {
-    OTP_INVALID: {
-      title: 'کد تأیید نادرست است',
-      message: 'کد واردشده درست نیست. دوباره بررسی کنید.',
-    },
-    OTP_EXPIRED: {
-      title: 'کد تأیید منقضی شده است',
-      message: 'کد تأیید منقضی شده است. کد جدیدی درخواست کنید.',
-    },
-    OTP_NOT_FOUND: {
-      title: 'کد تأیید قابل بررسی نیست',
-      message: 'درخواست کد معتبری یافت نشد. کد جدیدی درخواست کنید.',
-    },
-    OTP_TOO_MANY_ATTEMPTS: {
-      title: 'تلاش بیش از حد مجاز',
-      message: 'تعداد تلاش‌های ناموفق بیش از حد مجاز است. کد جدیدی درخواست کنید.',
-    },
-    OTP_COOLDOWN: {
-      title: 'کد جدید خیلی زود است',
-      message: 'برای دریافت کد جدید، چند ثانیه صبر کنید.',
-    },
-  };
-  if (error.code && otpMessages[error.code]) {
-    return {
-      ...base,
-      target: 'form',
-      ...otpMessages[error.code],
-      canRetry: false,
-    };
-  }
-
   if (error.status === 400 || error.code === 'VALIDATION_ERROR' || error.code === 'HTTP_ERROR') {
     const validationMessages: Array<[string, string]> = [
       ['installment', 'مبلغ و تاریخ شمسی تمام اقساط را بررسی کنید.'],
