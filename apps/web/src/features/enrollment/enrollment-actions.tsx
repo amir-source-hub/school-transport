@@ -133,7 +133,7 @@ export function CreateEnrollmentForm({
   const [reviewedContractPages, setReviewedContractPages] = useState<number[]>([]);
   const [accepted, setAccepted] = useState(false);
   const [paid, setPaid] = useState(false);
-  const [paymentInstructionsAccepted, setPaymentInstructionsAccepted] = useState(false);
+  const [paymentDestinationReady, setPaymentDestinationReady] = useState(false);
   const [photoUploadId, setPhotoUploadId] = useState<string>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -1573,22 +1573,13 @@ export function CreateEnrollmentForm({
             ) : mode === 'onboarding' ? (
               <div className="mt-6 space-y-5 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
-                  مبلغ را به یکی از اطلاعات زیر واریز کنید و تصویر رسید را نگه دارید. پس از ورود به
-                  پنل خانواده، از بخش «پرداخت‌ها» تصویر رسید را برای بررسی مدیریت ارسال می‌کنید.
+                  اطلاعات کارت و حساب پرداخت در همین صفحه نمایش داده می‌شود. مبلغ را واریز و تصویر
+                  رسید را نگه دارید؛ ارسال رسید پس از ورود به پنل خانواده انجام می‌شود.
                 </div>
-                <OfflinePaymentDestinationCard mode="onboarding" />
-                <label className="flex min-h-12 items-start gap-3 rounded-xl border border-border p-4">
-                  <input
-                    className="mt-1"
-                    type="checkbox"
-                    checked={paymentInstructionsAccepted}
-                    onChange={(event) => setPaymentInstructionsAccepted(event.target.checked)}
-                  />
-                  <span className="text-sm font-bold leading-7">
-                    مبلغ، اطلاعات حساب و لزوم نگهداری تصویر رسید را دیدم. پرداخت و ارسال رسید را از
-                    پنل خانواده انجام می‌دهم.
-                  </span>
-                </label>
+                <OfflinePaymentDestinationCard
+                  mode="onboarding"
+                  onReadyChange={setPaymentDestinationReady}
+                />
               </div>
             ) : (
               <div className="mt-6 space-y-5 text-right">
@@ -1607,7 +1598,7 @@ export function CreateEnrollmentForm({
                 className="mt-4 w-full"
                 variant="secondary"
                 loading={pending}
-                disabled={!paymentInstructionsAccepted || pending}
+                disabled={!paymentDestinationReady || pending}
                 onClick={async () => {
                   if (submissionLockRef.current) return;
                   submissionLockRef.current = true;

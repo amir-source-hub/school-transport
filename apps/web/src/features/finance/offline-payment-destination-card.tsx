@@ -1,29 +1,70 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { ApiClientError } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
 import { getOfflineDestination, type OfflineDestination } from './payments-api';
 import { CopyPaymentValue } from './copy-payment-value';
 
 export function OfflinePaymentDestinationCard({
   mode = 'panel',
+  onReadyChange,
 }: {
   mode?: 'panel' | 'onboarding';
+  onReadyChange?: (ready: boolean) => void;
 }) {
   const [destination, setDestination] = useState<OfflineDestination>();
   const [error, setError] = useState<string>();
+  const [retryAttempt, setRetryAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
+    onReadyChange?.(false);
     getOfflineDestination(mode)
-      .then((value) => active && setDestination(value))
-      .catch((caught) => active && setError(getApiErrorFeedback(caught).message));
+      .then((value) => {
+        if (!active) return;
+        setDestination(value);
+        onReadyChange?.(true);
+      })
+      .catch((caught) => {
+        if (!active) return;
+        setError(
+          caught instanceof ApiClientError && caught.code === 'OFFLINE_DESTINATION_UNAVAILABLE'
+            ? 'اطلاعات کارت و حساب پرداخت هنوز توسط مدیر سامانه ثبت نشده است.'
+            : getApiErrorFeedback(caught).message,
+        );
+      });
     return () => {
       active = false;
     };
-  }, [mode]);
+  }, [mode, onReadyChange, retryAttempt]);
 
-  if (error) return <p className="text-sm text-danger">{error}</p>;
+  if (error)
+    return (
+      <div role="alert" className="rounded-2xl border border-warning/30 bg-warning-soft p-4">
+        <p className="text-sm font-bold leading-7 text-foreground">{error}</p>
+        <p className="mt-1 text-xs leading-6 text-muted">
+          مدیر سامانه می‌تواند این اطلاعات را از بخش «پرداخت‌ها» در پنل مدیریت ثبت کند.
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="mt-3"
+          onClick={() => {
+            setError(undefined);
+            setDestination(undefined);
+            onReadyChange?.(false);
+            setRetryAttempt((attempt) => attempt + 1);
+          }}
+        >
+          <RefreshCw className="size-4" aria-hidden="true" />
+          تلاش دوباره
+        </Button>
+      </div>
+    );
   if (!destination) return <p className="text-sm text-muted">در حال دریافت اطلاعات پرداخت…</p>;
 
   return (
