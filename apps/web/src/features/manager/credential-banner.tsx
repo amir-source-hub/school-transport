@@ -9,10 +9,10 @@ export function CredentialBanner({ required }: { required: boolean }) {
     >
       <ShieldAlert className="size-6 shrink-0 text-warning" />
       <p className="flex-1 text-sm font-bold leading-7">
-        برای امنیت اطلاعات دانش‌آموزان، نام کاربری و رمز عبور اولیه خود را همین حالا تغییر دهید.
+        برای بررسی یا تغییر اطلاعات ورود، با مدیر سامانه تماس بگیرید. این پنل فقط برای مشاهده است.
       </p>
-      <ButtonLink href="/manager/settings" size="sm">
-        تغییر اطلاعات ورود
+      <ButtonLink href="/manager/info" size="sm">
+        مشاهده اطلاعات حساب
       </ButtonLink>
     </aside>
   );

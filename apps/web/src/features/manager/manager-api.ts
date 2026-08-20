@@ -101,7 +101,7 @@ export type ManagerStudentDetail = ManagerStudent & {
   };
 };
 
-export type ManagerSettings = {
+export type ManagerInfo = {
   manager: {
     firstName: string;
     lastName: string;
@@ -150,8 +150,8 @@ export async function getManagerStudentPhoto(id: string) {
     )
   ).data;
 }
-export async function getManagerSettings() {
-  return (await apiRequest<ManagerSettings>('/manager/settings')).data;
+export async function getManagerInfo() {
+  return (await apiRequest<ManagerInfo>('/manager/info')).data;
 }
 export async function changeManagerCredentials(body: {
   currentPassword: string;

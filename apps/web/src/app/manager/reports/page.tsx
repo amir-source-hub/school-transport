@@ -1,11 +1,11 @@
 import { FileSpreadsheet } from 'lucide-react';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Card } from '@/components/ui/card';
-import { getManagerSettings } from '@/features/manager/manager-api';
+import { getManagerInfo } from '@/features/manager/manager-api';
 import { ManagerReportButtons } from '@/features/manager/manager-report-buttons';
 export const metadata = { title: 'گزارش جامع اکسل' };
 export default async function Page() {
-  const s = await getManagerSettings();
+  const s = await getManagerInfo();
   const school = s.schools.find((x) => x.id === s.primarySchoolId) ?? s.schools[0];
   return (
     <div className="space-y-6">

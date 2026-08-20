@@ -27,7 +27,7 @@ const links = [
   ['/manager/hyperschool', 'هایپرمدرسه', Sparkles],
   ['/manager/feedback', 'انتقادات و پیشنهادات', MessageSquareText],
   ['/manager/reports', 'گزارش جامع اکسل', FileSpreadsheet],
-  ['/manager/settings', 'اطلاعات مدرسه', Building2],
+  ['/manager/info', 'اطلاعات مدرسه', Building2],
 ] as const;
 export function isManagerRouteActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);

@@ -32,8 +32,8 @@ export class SchoolManagersController {
     return successResponse(await this.service.getStudentDetail(req.user.id, id));
   }
 
-  @Get('settings')
-  async settings(@Req() req: AuthenticatedRequest) {
+  @Get(['info', 'settings'])
+  async info(@Req() req: AuthenticatedRequest) {
     return successResponse(await this.service.getSettings(req.user.id));
   }
 }

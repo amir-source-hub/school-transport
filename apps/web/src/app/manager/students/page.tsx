@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { getManagerSettings, getManagerStudents } from '@/features/manager/manager-api';
+import { getManagerInfo, getManagerStudents } from '@/features/manager/manager-api';
 import { ManagerStudentFilters } from '@/features/manager/student-filters';
 export const metadata = { title: 'دانش‌آموزان' };
 export default async function Page({
@@ -17,7 +17,7 @@ export default async function Page({
   if (!p.has('pageSize')) p.set('pageSize', '20');
   const [{ items, total }, settings] = await Promise.all([
     getManagerStudents(p.toString()),
-    getManagerSettings(),
+    getManagerInfo(),
   ]);
   const school =
     settings.schools.find((x) => x.id === settings.primarySchoolId) ?? settings.schools[0];
