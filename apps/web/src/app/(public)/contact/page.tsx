@@ -3,15 +3,16 @@
 import { Clock, Mail, MapPin, MessageSquare, Phone, Send } from 'lucide-react';
 import Image from 'next/image';
 import { useState, type FormEvent } from 'react';
+import { LocationDisplay } from '@/components/common/location-display';
+import { PageContainer } from '@/components/common/page-container';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PageContainer } from '@/components/common/page-container';
-import { cn } from '@/lib/cn';
 import { createPublicContactMessage } from '@/features/feedback/feedback-api';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { cn } from '@/lib/cn';
 
 const channels = [
   {
@@ -38,6 +39,11 @@ const channels = [
     href: 'https://maps.app.goo.gl/rGetdanWqsAq6SAcA',
   },
 ];
+
+const officeLocation = {
+  latitude: 35.7550815,
+  longitude: 51.5724223,
+};
 
 const topics: SelectOption[] = [
   { value: '', label: 'موضوع را انتخاب کنید' },
@@ -140,6 +146,23 @@ export default function ContactPage() {
                   <p className="mt-1 text-xs text-muted">{ch.desc}</p>
                 </div>
               ))}
+            </div>
+            <div className="mt-8 overflow-hidden rounded-[var(--radius-canvas)] border border-border/60 bg-white p-4 shadow-[var(--shadow-raised)] sm:p-6">
+              <div className="mb-4 flex items-start gap-3">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                  <MapPin aria-hidden="true" className="size-5" />
+                </span>
+                <div>
+                  <h2 className="font-black">موقعیت دفتر روی نقشه</h2>
+                  <p className="mt-1 text-sm leading-7 text-muted">
+                    برای مشاهده مسیر و مسیریابی، دکمه زیر نقشه را انتخاب کنید.
+                  </p>
+                </div>
+              </div>
+              <LocationDisplay
+                latitude={officeLocation.latitude}
+                longitude={officeLocation.longitude}
+              />
             </div>
           </div>
         </PageContainer>

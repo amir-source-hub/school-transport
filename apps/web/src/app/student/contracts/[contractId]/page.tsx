@@ -1,3 +1,4 @@
+import { LocationDisplay } from '@/components/common/location-display';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -178,6 +179,17 @@ function formatContractValue(key: string, value: unknown) {
   return String(value);
 }
 
+function getSnapshotLocation(fields: [string, unknown][]) {
+  const latitude = fields.find(([key]) => key === 'latitude')?.[1];
+  const longitude = fields.find(([key]) => key === 'longitude')?.[1];
+  const parsedLatitude = typeof latitude === 'number' ? latitude : Number(latitude);
+  const parsedLongitude = typeof longitude === 'number' ? longitude : Number(longitude);
+
+  return Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude)
+    ? { latitude: parsedLatitude, longitude: parsedLongitude }
+    : null;
+}
+
 export default async function ContractPage({
   params,
 }: {
@@ -246,33 +258,41 @@ export default async function ContractPage({
           <p className="mt-5 text-sm text-muted">جزئیات قرارداد ثبت نشده است.</p>
         ) : (
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {snapshot.map((group) => (
-              <section
-                key={group.title}
-                className="rounded-xl border border-border bg-surface-muted/50 p-4"
-              >
-                <h3 className="font-black text-primary">{group.title}</h3>
-                <dl className="mt-3 divide-y divide-border/60 text-sm">
-                  {group.fields.map(([key, value]) => (
-                    <div key={key} className="grid grid-cols-[8rem_1fr] gap-3 py-2">
-                      <dt className="text-muted">
-                        {contractLabels[key] ?? (key === 'text' ? 'متن' : 'اطلاعات تکمیلی')}
-                      </dt>
-                      <dd
-                        className="break-words font-bold"
-                        dir={
-                          ['nationalId', 'phoneNumber', 'latitude', 'longitude'].includes(key)
-                            ? 'ltr'
-                            : undefined
-                        }
-                      >
-                        {formatContractValue(key, value)}
-                      </dd>
+            {snapshot.map((group) => {
+              const location = getSnapshotLocation(group.fields);
+              return (
+                <section
+                  key={group.title}
+                  className="rounded-xl border border-border bg-surface-muted/50 p-4"
+                >
+                  <h3 className="font-black text-primary">{group.title}</h3>
+                  <dl className="mt-3 divide-y divide-border/60 text-sm">
+                    {group.fields
+                      .filter(([key]) => key !== 'latitude' && key !== 'longitude')
+                      .map(([key, value]) => (
+                        <div key={key} className="grid grid-cols-[8rem_1fr] gap-3 py-2">
+                          <dt className="text-muted">
+                            {contractLabels[key] ??
+                              (key === 'text' ? 'متن' : 'اطلاعات تکمیلی')}
+                          </dt>
+                          <dd
+                            className="break-words font-bold"
+                            dir={['nationalId', 'phoneNumber'].includes(key) ? 'ltr' : undefined}
+                          >
+                            {formatContractValue(key, value)}
+                          </dd>
+                        </div>
+                      ))}
+                  </dl>
+                  {location && (
+                    <div className="mt-4">
+                      <p className="mb-2 text-sm font-bold">موقعیت ثبت‌شده روی نقشه</p>
+                      <LocationDisplay {...location} />
                     </div>
-                  ))}
-                </dl>
-              </section>
-            ))}
+                  )}
+                </section>
+              );
+            })}
           </div>
         )}
       </Card>
