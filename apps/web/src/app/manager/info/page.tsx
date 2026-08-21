@@ -72,7 +72,7 @@ export default async function Page() {
     return (
       <Card className="text-center">
         <School className="mx-auto size-12 text-muted" />
-        <h1 className="mt-4 text-xl font-black">اطلاعات مدرسه در دسترس نیست</h1>
+        <h2 className="mt-4 text-xl font-black">اطلاعات مدرسه در دسترس نیست</h2>
       </Card>
     );
   }

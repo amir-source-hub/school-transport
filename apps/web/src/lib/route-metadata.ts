@@ -423,7 +423,22 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     audience: 'manager',
     title: 'تنظیمات',
     description: 'اطلاعات حساب و مدرسه.',
-    primaryHeading: 'تنظیمات حساب و مدرسه',
+    primaryHeading: 'اطلاعات مدرسه',
+    redirectTo: '/manager/info',
+  },
+  {
+    path: '/manager/info',
+    audience: 'manager',
+    title: 'اطلاعات مدرسه',
+    description: 'اطلاعات حساب مدیر و مدرسه به‌صورت فقط خواندنی.',
+    primaryHeading: 'اطلاعات مدرسه',
+  },
+  {
+    path: '/manager/reports',
+    audience: 'manager',
+    title: 'گزارش‌های مدرسه',
+    description: 'دریافت گزارش‌های جامع مدرسه.',
+    primaryHeading: 'گزارش جامع اکسل',
   },
 ] as const;
 

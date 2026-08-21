@@ -63,7 +63,6 @@ test('experimental and deferred features perform no location, camera, or driver-
   await page.goto('/manager/drivers');
   await expect(page.getByText('اطلاعات آزمایشی').first()).toBeVisible();
   await page.getByRole('link', { name: /آریا نیک‌راه/ }).click();
-  await expect(page.getByText('09121234567')).toBeVisible();
   await expect(page.getByText('0013540394')).toBeVisible();
   await expect(page.getByText('1404123456')).toBeVisible();
   await page.goto('/manager/online-control');

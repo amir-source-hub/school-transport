@@ -97,6 +97,44 @@ const server = createServer((request, response) => {
       },
     });
   }
+  if (url.pathname === '/api/v1/manager/info') {
+    return send(response, 200, {
+      success: true,
+      data: {
+        manager: {
+          firstName: 'مدیر',
+          lastName: 'آزمایشی',
+          username: 'manager',
+          phoneNumber: '09120000000',
+          email: null,
+          mustChangeCredentials: false,
+          credentialsChangedAt: null,
+          lastLoginAt: '2026-08-09T10:00:00.000Z',
+        },
+        schools: [
+          {
+            id: 'school-1',
+            name: 'مدرسه آزمایشی مدیران',
+            schoolType: 'PUBLIC',
+            genderType: 'GIRLS',
+            province: 'تهران',
+            city: 'تهران',
+            district: 'منطقه ۱',
+            address: 'نشانی مدرسه آزمایشی',
+            phoneNumber: '02122222222',
+            openingTime: '07:00',
+            closingTime: '14:00',
+            closingTimes: ['14:00'],
+            latitude: 35.7219,
+            longitude: 51.3347,
+            educationLevels: [{ level: 'ابتدایی', grades: ['پنجم'] }],
+            isActive: true,
+          },
+        ],
+        primarySchoolId: 'school-1',
+      },
+    });
+  }
   if (url.pathname === '/api/v1/manager/students') {
     return send(response, 200, {
       success: true,
@@ -160,7 +198,16 @@ const server = createServer((request, response) => {
             isPrimaryContact: true,
           },
         ],
+        emergencyContacts: [],
         addresses: [],
+        enrollmentSummary: {
+          registrationStatus: 'SUBMITTED',
+          academicYear: '۱۴۰۵-۱۴۰۶',
+          serviceType: 'ROUND_TRIP',
+          requestedStartDate: null,
+          contract: null,
+          price: null,
+        },
         enrollmentSummary: {
           registrationStatus: 'SUBMITTED',
           academicYear: '۱۴۰۵-۱۴۰۶',
@@ -242,10 +289,7 @@ const server = createServer((request, response) => {
       ],
     });
   }
-  if (
-    url.pathname === '/api/v1/families/me' &&
-    request.headers.cookie?.includes('e2e-enrollment=1')
-  ) {
+  if (url.pathname === '/api/v1/families/me') {
     return send(response, 200, {
       success: true,
       data: {

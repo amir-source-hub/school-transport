@@ -505,11 +505,7 @@ export function CreateEnrollmentForm({
         form.gender,
       ];
       if (!reusingFamilyProfile) {
-        requiredNames.push(
-          form.guardianRelationshipType,
-          form.guardianFirst,
-          form.guardianLast,
-        );
+        requiredNames.push(form.guardianRelationshipType, form.guardianFirst, form.guardianLast);
       }
       if (requiredNames.some((value) => !value.trim()))
         return 'تمام مشخصات فردی ضروری را تکمیل کنید.';
@@ -518,9 +514,7 @@ export function CreateEnrollmentForm({
     }
     const ids = [
       { key: 'کد ملی دانش‌آموز', value: form.studentNationalId },
-      ...(!reusingFamilyProfile
-        ? [{ key: 'کد ملی سرپرست', value: form.guardianNationalId }]
-        : []),
+      ...(!reusingFamilyProfile ? [{ key: 'کد ملی سرپرست', value: form.guardianNationalId }] : []),
     ];
     if (currentStep === 1 || currentStep === 4) {
       for (const { key, value } of ids) {
@@ -558,12 +552,16 @@ export function CreateEnrollmentForm({
           nationalId: form.studentNationalId,
           phone: form.studentPhone ? composeMobileNumber(form.studentPhone) : '',
         },
-        ...(!reusingFamilyProfile ? [{
-          label: 'سرپرست',
-          name: `${form.guardianFirst} ${form.guardianLast}`,
-          nationalId: form.guardianNationalId,
-          phone: form.guardianPhone,
-        }] : []),
+        ...(!reusingFamilyProfile
+          ? [
+              {
+                label: 'سرپرست',
+                name: `${form.guardianFirst} ${form.guardianLast}`,
+                nationalId: form.guardianNationalId,
+                phone: form.guardianPhone,
+              },
+            ]
+          : []),
         ...(form.guardianRelationshipType === 'MOTHER' && sectionStarted('father')
           ? [
               {
@@ -782,9 +780,6 @@ export function CreateEnrollmentForm({
     ...(savedParents.mother
       ? (['motherFirst', 'motherLast', 'motherNationalId', 'motherPhone'] as const)
       : []),
-    ...(defaults.guardian
-      ? (['guardianFirst', 'guardianLast', 'guardianNationalId'] as const)
-      : []),
   ]);
   const reusingFamilyProfile =
     existingStudents.length > 0 && !form.existingStudentId && !adminFamilyId;
@@ -825,10 +820,6 @@ export function CreateEnrollmentForm({
   }
   if (mode === 'onboarding' && onboardingGuardianNationalId) {
     lockedParentFields.add('guardianNationalId');
-  }
-  if (form.guardianRelationshipType === 'FATHER') {
-    lockedParentFields.add('guardianFirst');
-    lockedParentFields.add('guardianLast');
   }
   const optionalSectionKeys = new Set<keyof typeof form>([
     ...fatherKeys,

@@ -27,6 +27,7 @@ describe('AuthController OTP client IP', () => {
       '0084575948',
       expect.objectContaining({ ipAddress: '203.0.113.8' }),
       false,
+      undefined,
     );
   });
 
