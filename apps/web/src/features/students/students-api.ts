@@ -28,6 +28,7 @@ export type StudentInput = {
   birthDate?: string;
   gender?: string;
   grade: string;
+  className?: string;
   fatherName?: string;
   phoneNumber?: string;
   fieldOfStudy?: string;
@@ -50,17 +51,13 @@ export async function createStudent(input: StudentInput) {
 
 export async function updateStudent(
   id: string,
-  input: Pick<StudentInput, 'firstName' | 'lastName' | 'grade'> &
+  input: Pick<StudentInput, 'firstName' | 'lastName' | 'grade' | 'schoolId'> &
     Partial<
-      Pick<StudentInput, 'fatherName' | 'birthDate' | 'gender' | 'phoneNumber' | 'fieldOfStudy'>
+      Pick<StudentInput, 'className' | 'fatherName' | 'birthDate' | 'gender' | 'phoneNumber' | 'fieldOfStudy'>
     >,
 ) {
   const response = await apiRequest<unknown>(`/students/${id}`, { method: 'PATCH', body: input });
   return studentSchema.parse(response.data);
-}
-
-export async function archiveStudent(id: string) {
-  await apiRequest(`/students/${id}`, { method: 'DELETE' });
 }
 
 export const studentCapacitySchema = z.object({

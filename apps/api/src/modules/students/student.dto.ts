@@ -77,6 +77,10 @@ export class CreateStudentDto {
 
 export class UpdateStudentDto {
   @IsOptional()
+  @IsUUID()
+  schoolId?: string;
+
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @Length(1, 100)

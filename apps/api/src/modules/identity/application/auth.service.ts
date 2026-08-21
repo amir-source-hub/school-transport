@@ -289,6 +289,20 @@ export class AuthService {
   ): Promise<ParentCredentialResult> {
     const genericError = () => new AuthenticationError('شماره همراه سرپرست یا کد ملی صحیح نیست.');
     const account = await this.findAccountByPhone(phoneNumber, 'PARENT');
+    const [nationalIdOwner] = await this.db.db
+      .select({ userId: parents.userId, status: users.accountStatus })
+      .from(parents)
+      .innerJoin(users, eq(users.id, parents.userId))
+      .where(eq(parents.nationalId, nationalId))
+      .limit(1);
+    // A finalized family identity is unique by both phone number and national ID.
+    // Matching only one of them must never create or resume a different account.
+    if (
+      nationalIdOwner?.status === 'ACTIVE' &&
+      (!account || account.id !== nationalIdOwner.userId)
+    ) {
+      throw genericError();
+    }
     const needsOnboarding =
       !account || account.status === 'PENDING' || account.status === 'EXPIRED';
 

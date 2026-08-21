@@ -130,8 +130,15 @@ export class StudentsService {
   }
 
   async update(studentId: string, userId: string, data: EditableStudentFields) {
-    await this.getById(studentId, userId);
+    const current = await this.getById(studentId, userId);
     const editableFields = parseEditableStudentFields(data);
+    if (
+      editableFields.schoolId !== undefined ||
+      editableFields.className !== undefined ||
+      editableFields.grade !== undefined
+    ) {
+      await this.assertValidSchoolProgram(editableFields, current);
+    }
     await this.db.db
       .update(students)
       .set({ ...editableFields, updatedAt: new Date() })

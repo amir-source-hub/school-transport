@@ -52,7 +52,6 @@ export default async function Page({ params }: { params: Promise<{ driverId: str
     ['کد ملی', d.nationalId],
     ['تحصیلات', d.education],
     ['جنسیت', d.gender],
-    ['تلفن همراه', d.phoneNumber],
     ['انقضای گواهینامه', d.licenseExpiresAt],
   ];
   const car = [

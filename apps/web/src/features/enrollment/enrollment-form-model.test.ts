@@ -51,7 +51,7 @@ describe('enrollment form model', () => {
     expect(second.city).toBe('تهران');
   });
 
-  it('preserves a locked guardian identity while the relationship changes', () => {
+  it('clears guardian identity when the relationship changes', () => {
     const initial = createEnrollmentFormState({
       schools: [],
       savedParents: { father: null, mother: null },
@@ -68,10 +68,10 @@ describe('enrollment form model', () => {
     const mother = applyGuardianRelationship(other, 'MOTHER');
 
     expect(mother).toMatchObject({
-      guardianFirst: 'مریم',
-      guardianLast: 'احمدی',
-      guardianNationalId: '0013540394',
-      guardianPhone: '09126546078',
+      guardianFirst: '',
+      guardianLast: '',
+      guardianNationalId: '',
+      guardianPhone: '',
       guardianRelationshipType: 'MOTHER',
     });
   });

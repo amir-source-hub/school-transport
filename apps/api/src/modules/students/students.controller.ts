@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Patch,
-  Delete,
   Body,
   Param,
   Query,
@@ -85,14 +84,6 @@ export class StudentsController {
     return successResponse(student);
   }
 
-  @Delete(':studentId')
-  async archive(
-    @Req() req: AuthenticatedRequest,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
-  ) {
-    await this.studentsService.archive(studentId, req.user.id);
-    return successResponse({ archived: true });
-  }
 }
 
 @UseGuards(AuthGuard, RolesGuard)

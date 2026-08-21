@@ -3,6 +3,7 @@ import { ValidationError } from '../../common/errors';
 const EDITABLE_STUDENT_FIELDS = new Set([
   'firstName',
   'lastName',
+  'schoolId',
   'grade',
   'className',
   'fatherName',
@@ -15,6 +16,7 @@ const EDITABLE_STUDENT_FIELDS = new Set([
 export type EditableStudentFields = Partial<{
   firstName: string;
   lastName: string;
+  schoolId: string;
   grade: string;
   className: string;
   fatherName: string;

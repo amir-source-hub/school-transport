@@ -55,9 +55,9 @@ const make = (id: string, firstName: string, lastName: string, offset: number): 
   ],
   driverDocuments: [
     { title: 'عکس راننده', pages: [image] },
-    { title: 'کارت ملی (پشت و رو)', pages: [image, image] },
-    { title: 'گواهینامه', pages: [image] },
-    { title: 'گواهی سوء پیشینه', pages: [image, image] },
+    { title: 'کارت ملی', pages: [image] },
+    { title: 'گواهینامه (پشت و رو)', pages: [image, image] },
+    { title: 'گواهی سوء پیشینه', pages: [image] },
     { title: 'گواهی عدم اعتیاد', pages: [image] },
   ],
   vehicleDocuments: [
@@ -65,7 +65,7 @@ const make = (id: string, firstName: string, lastName: string, offset: number): 
     { title: 'کارت ماشین (پشت و رو)', pages: [image, image] },
     { title: 'برگ سبز', pages: [image] },
     { title: 'معاینه فنی', pages: [image] },
-    { title: 'بیمه‌نامه', pages: [image, image] },
+    { title: 'بیمه‌نامه', pages: [image] },
   ],
 });
 export const mockDrivers = [
