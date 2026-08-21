@@ -109,14 +109,10 @@ export function applyGuardianRelationship(
     guardianRelationshipType: relationshipType,
     guardianRelationshipDescription:
       relationshipType === 'OTHER' ? current.guardianRelationshipDescription : '',
-    guardianFirst:
-      relationshipType === 'FATHER'
-        ? current.guardianFirst || current.studentFatherName
-        : current.guardianFirst,
-    guardianLast:
-      relationshipType === 'FATHER'
-        ? current.guardianLast || current.studentLast
-        : current.guardianLast,
+    guardianFirst: '',
+    guardianLast: '',
+    guardianNationalId: '',
+    guardianPhone: '',
   };
 }
 

@@ -47,14 +47,14 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
 
   const otpMessages: Record<string, { title: string; message: string; canRetry: boolean }> = {
     OTP_INVALID: {
-      title: 'کد تأیید صحیح نیست',
-      message: 'کد تأیید واردشده صحیح نیست. دوباره بررسی کنید.',
-      canRetry: true,
+      title: 'کد تأیید نادرست است',
+      message: 'کد واردشده درست نیست. دوباره بررسی کنید.',
+      canRetry: false,
     },
     OTP_EXPIRED: {
-      title: 'مهلت کد به پایان رسیده است',
-      message: 'زمان اعتبار کد تأیید به پایان رسیده است. کد جدید دریافت کنید.',
-      canRetry: true,
+      title: 'کد تأیید منقضی شده است',
+      message: 'زمان اعتبار کد تمام شده است. کد جدیدی درخواست کنید.',
+      canRetry: false,
     },
     OTP_REQUEST_MISSING: {
       title: 'درخواست کد معتبر نیست',
@@ -76,6 +76,21 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
       message: 'کمی صبر کنید و سپس کد جدید درخواست کنید.',
       canRetry: true,
     },
+  };
+  otpMessages.OTP_NOT_FOUND = {
+    title: 'کد تأیید قابل بررسی نیست',
+    message: 'این درخواست معتبر نیست. کد جدیدی درخواست کنید.',
+    canRetry: false,
+  };
+  otpMessages.OTP_TOO_MANY_ATTEMPTS = {
+    title: 'تلاش بیش از حد مجاز',
+    message: 'کد فعلی غیرفعال شد. کد جدیدی درخواست کنید.',
+    canRetry: false,
+  };
+  otpMessages.OTP_COOLDOWN = {
+    title: 'کد جدید خیلی زود است',
+    message: 'چند ثانیه صبر کنید و دوباره درخواست دهید.',
+    canRetry: false,
   };
   const otpFeedback = otpMessages[error.code];
   if (otpFeedback) return { ...base, target: 'form', ...otpFeedback };

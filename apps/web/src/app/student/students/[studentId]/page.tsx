@@ -1,6 +1,5 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Card } from '@/components/ui/card';
-import { ArchiveStudentButton } from '@/features/students/archive-student-button';
 import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
 import { getMyPhotoUploads } from '@/features/student-photos/student-photos-api';
 import { StudentForm } from '@/features/students/student-form';
@@ -8,16 +7,18 @@ import { getStudent } from '@/features/students/students-api';
 import { metadataFor } from '@/lib/route-metadata';
 import { getFamilyProfile } from '@/features/family-profile/family-api';
 import { LocationDisplay } from '@/components/common/location-display';
+import { getSchools } from '@/features/schools/schools-api';
 
 export const metadata = metadataFor('/student/students/[studentId]');
 export const dynamic = 'force-dynamic';
 
 export default async function StudentPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
-  const [student, photos, family] = await Promise.all([
+  const [student, photos, family, schoolsResult] = await Promise.all([
     getStudent(studentId),
     getMyPhotoUploads(studentId),
     getFamilyProfile(),
+    getSchools(),
   ]);
   return (
     <div className="space-y-6">
@@ -38,7 +39,7 @@ export default async function StudentPage({ params }: { params: Promise<{ studen
       <Card>
         <StudentForm
           student={student}
-          schools={[{ id: student.schoolId, name: student.schoolName }]}
+          schools={schoolsResult.schools}
         />
       </Card>
       <Card>
@@ -57,9 +58,6 @@ export default async function StudentPage({ params }: { params: Promise<{ studen
           )}
         </Card>
       ))}
-      <div className="flex justify-end">
-        <ArchiveStudentButton id={student.id} />
-      </div>
     </div>
   );
 }

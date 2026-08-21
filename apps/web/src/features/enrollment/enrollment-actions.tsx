@@ -354,8 +354,29 @@ export function CreateEnrollmentForm({
         : currentStep === 2
           ? ['addressTitle', 'province', 'city', 'streetAddress', 'postalCode']
           : [];
+    const inheritedFamilyFields = new Set<keyof typeof form>([
+      'studentFatherName',
+      'guardianRelationshipType',
+      'guardianRelationshipDescription',
+      'guardianFirst',
+      'guardianLast',
+      'guardianNationalId',
+      'guardianPhone',
+      'homePhone',
+      ...fatherKeys,
+      ...motherKeys,
+      ...emergencyKeys,
+      'addressTitle',
+      'province',
+      'city',
+      'streetAddress',
+      'postalCode',
+    ]);
+    const visibleKeys = reusingFamilyProfile
+      ? keys.filter((key) => !inheritedFamilyFields.has(key))
+      : keys;
     const checkedErrors = Object.fromEntries(
-      keys.map((key) => [key, validateField(key, form[key])]),
+      visibleKeys.map((key) => [key, validateField(key, form[key])]),
     );
     const nextErrors = Object.fromEntries(
       Object.entries(checkedErrors).filter(([, message]) => message),
@@ -481,10 +502,11 @@ export function CreateEnrollmentForm({
         form.studentFirst,
         form.studentLast,
         form.studentFatherName,
-        form.guardianRelationshipType,
         form.gender,
       ];
-      requiredNames.push(form.guardianFirst, form.guardianLast);
+      if (!reusingFamilyProfile) {
+        requiredNames.push(form.guardianRelationshipType, form.guardianFirst, form.guardianLast);
+      }
       if (requiredNames.some((value) => !value.trim()))
         return 'تمام مشخصات فردی ضروری را تکمیل کنید.';
       if (!form.existingStudentId && !photoUploadId)
@@ -492,7 +514,7 @@ export function CreateEnrollmentForm({
     }
     const ids = [
       { key: 'کد ملی دانش‌آموز', value: form.studentNationalId },
-      { key: 'کد ملی سرپرست', value: form.guardianNationalId },
+      ...(!reusingFamilyProfile ? [{ key: 'کد ملی سرپرست', value: form.guardianNationalId }] : []),
     ];
     if (currentStep === 1 || currentStep === 4) {
       for (const { key, value } of ids) {
@@ -501,6 +523,7 @@ export function CreateEnrollmentForm({
         }
       }
       if (
+        !reusingFamilyProfile &&
         form.guardianRelationshipType === 'OTHER' &&
         !form.guardianRelationshipDescription.trim()
       ) {
@@ -529,12 +552,16 @@ export function CreateEnrollmentForm({
           nationalId: form.studentNationalId,
           phone: form.studentPhone ? composeMobileNumber(form.studentPhone) : '',
         },
-        {
-          label: 'سرپرست',
-          name: `${form.guardianFirst} ${form.guardianLast}`,
-          nationalId: form.guardianNationalId,
-          phone: form.guardianPhone,
-        },
+        ...(!reusingFamilyProfile
+          ? [
+              {
+                label: 'سرپرست',
+                name: `${form.guardianFirst} ${form.guardianLast}`,
+                nationalId: form.guardianNationalId,
+                phone: form.guardianPhone,
+              },
+            ]
+          : []),
         ...(form.guardianRelationshipType === 'MOTHER' && sectionStarted('father')
           ? [
               {
@@ -592,6 +619,7 @@ export function CreateEnrollmentForm({
     }
     if (
       currentStep === 2 &&
+      !reusingFamilyProfile &&
       (!form.streetAddress.trim() ||
         !/^\d{10}$/.test(normalizeDigits(form.postalCode)) ||
         !form.locationSelected)
@@ -752,18 +780,19 @@ export function CreateEnrollmentForm({
     ...(savedParents.mother
       ? (['motherFirst', 'motherLast', 'motherNationalId', 'motherPhone'] as const)
       : []),
-    ...(defaults.guardian
-      ? (['guardianFirst', 'guardianLast', 'guardianNationalId'] as const)
-      : []),
   ]);
   const reusingFamilyProfile =
     existingStudents.length > 0 && !form.existingStudentId && !adminFamilyId;
   if (reusingFamilyProfile) {
     for (const key of [
+      'studentFatherName',
       'guardianRelationshipType',
+      'guardianRelationshipDescription',
       'guardianFirst',
       'guardianLast',
       'guardianNationalId',
+      'guardianPhone',
+      'homePhone',
       'fatherFirst',
       'fatherLast',
       'fatherNationalId',
@@ -791,10 +820,6 @@ export function CreateEnrollmentForm({
   }
   if (mode === 'onboarding' && onboardingGuardianNationalId) {
     lockedParentFields.add('guardianNationalId');
-  }
-  if (form.guardianRelationshipType === 'FATHER') {
-    lockedParentFields.add('guardianFirst');
-    lockedParentFields.add('guardianLast');
   }
   const optionalSectionKeys = new Set<keyof typeof form>([
     ...fatherKeys,
@@ -1020,7 +1045,7 @@ export function CreateEnrollmentForm({
                 {field('studentFirst', 'نام دانش‌آموز')}
                 {field('studentLast', 'نام خانوادگی')}
                 {field('studentFatherName', 'نام پدر')}
-                {field('studentNationalId', 'کد ملی', 'tel')}
+                {field('studentNationalId', 'کد ملی دانش‌آموز', 'tel')}
                 {prefixField('studentPhone', 'شماره همراه دانش‌آموز', '09', 9)}
                 <div className="text-sm font-bold">
                   <span>تاریخ تولد (شمسی)</span>

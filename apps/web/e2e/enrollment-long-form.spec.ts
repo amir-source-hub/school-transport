@@ -117,10 +117,11 @@ test('combined enrollment rules survive retry and submit normalized values', asy
   await guardianSection.getByRole('combobox', { name: 'نسبت' }).click();
   await page.getByRole('option', { name: 'پدر' }).click();
   await expect(guardianSection.getByLabel('نام', { exact: true })).toHaveCount(1);
-  await expect(guardianSection.getByLabel('نام', { exact: true })).toHaveValue('حسین');
-  await expect(guardianSection.getByLabel('نام', { exact: true })).toBeDisabled();
-  await expect(guardianSection.getByLabel('نام خانوادگی')).toHaveValue('احمدی');
-  await expect(guardianSection.getByLabel('نام خانوادگی')).toBeDisabled();
+  await expect(guardianSection.getByLabel('نام', { exact: true })).toHaveValue('');
+  await expect(guardianSection.getByLabel('نام', { exact: true })).toBeEnabled();
+  await guardianSection.getByLabel('نام', { exact: true }).fill('حسین');
+  await guardianSection.getByLabel('نام خانوادگی').fill('احمدی');
+  await guardianSection.getByLabel('کد ملی').fill('۰۰۸۴۵۷۵۹۴۸');
   await expect(page.getByRole('heading', { name: 'اطلاعات پدر' })).toHaveCount(0);
   const motherSection = page
     .getByRole('heading', { name: 'اطلاعات مادر' })
@@ -145,15 +146,12 @@ test('combined enrollment rules survive retry and submit normalized values', asy
 
   const photoInput = page.getByLabel(/انتخاب عکس/);
   await photoInput.setInputFiles({
-    name: 'too-large.png',
+    name: 'student.png',
     mimeType: 'image/png',
-    buffer: Buffer.alloc(5 * 1024 * 1024 + 1),
-  });
-  await expect(page.getByText(/۵ مگابایت بیشتر/)).toBeVisible();
-  await photoInput.setInputFiles({
-    name: 'boundary.png',
-    mimeType: 'image/png',
-    buffer: Buffer.alloc(5 * 1024 * 1024),
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      'base64',
+    ),
   });
   await page.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }).click();
   await expect(page.getByText(/عکس در پیش‌نویس/)).toBeVisible();

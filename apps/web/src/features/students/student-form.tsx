@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/select';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { createStudent, updateStudent, type Student, type StudentInput } from './students-api';
 
-type SchoolOption = { id: string; name: string };
+type SchoolOption = { id: string; name: string; educationOptions?: { level: string; grades: string[] }[] };
 
 export function StudentForm({ schools, student }: { schools: SchoolOption[]; student?: Student }) {
   const router = useRouter();
@@ -21,6 +21,7 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
     birthDate: student?.birthDate ?? '',
     gender: student?.gender ?? '',
     grade: student?.grade ?? '',
+    className: student?.className ?? '',
     fatherName: student?.fatherName ?? '',
     phoneNumber: student?.phoneNumber ?? '',
     fieldOfStudy: student?.fieldOfStudy ?? '',
@@ -40,6 +41,8 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
         await updateStudent(student.id, {
           firstName: form.firstName,
           lastName: form.lastName,
+          schoolId: form.schoolId,
+          className: form.className,
           grade: form.grade,
           fatherName: form.fatherName || undefined,
           birthDate: form.birthDate || undefined,
@@ -92,19 +95,40 @@ export function StudentForm({ schools, student }: { schools: SchoolOption[]; stu
         <label className="text-sm font-bold">
           مدرسه
           <Select
-            disabled={Boolean(student)}
             value={form.schoolId}
-            onValueChange={(value) => set('schoolId', value)}
+            onValueChange={(value) => {
+              const school = schools.find((item) => item.id === value);
+              setForm((current) => ({
+                ...current,
+                schoolId: value,
+                className: school?.educationOptions?.[0]?.level ?? '',
+                grade: school?.educationOptions?.[0]?.grades[0] ?? '',
+              }));
+            }}
             options={schools.map((school) => ({ value: school.id, label: school.name }))}
             placeholder="مدرسه را انتخاب کنید"
           />
         </label>
         <label className="text-sm font-bold">
+          مقطع تحصیلی
+          <Select
+            value={form.className ?? ''}
+            onValueChange={(value) => {
+              const school = schools.find((item) => item.id === form.schoolId);
+              const level = school?.educationOptions?.find((item) => item.level === value);
+              setForm((current) => ({ ...current, className: value, grade: level?.grades[0] ?? '' }));
+            }}
+            options={(schools.find((item) => item.id === form.schoolId)?.educationOptions ?? []).map((item) => ({ value: item.level, label: item.level }))}
+            placeholder="انتخاب کنید"
+          />
+        </label>
+        <label className="text-sm font-bold">
           پایه
-          <Input
-            required
+          <Select
             value={form.grade}
-            onChange={(event) => set('grade', event.target.value)}
+            onValueChange={(value) => set('grade', value)}
+            options={(schools.find((item) => item.id === form.schoolId)?.educationOptions?.find((item) => item.level === form.className)?.grades ?? []).map((grade) => ({ value: grade, label: grade }))}
+            placeholder="انتخاب کنید"
           />
         </label>
         <>

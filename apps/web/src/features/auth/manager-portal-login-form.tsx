@@ -18,8 +18,16 @@ import { setAuthSession } from './auth-session';
 import { safePortalPath } from './safe-next';
 
 const managerCredentialsSchema = z.object({
-  username: z.string().min(3, 'نام کاربری باید حداقل ۳ نویسه باشد.'),
-  password: z.string().min(1, 'رمز عبور را وارد کنید.'),
+  username: z
+    .string()
+    .min(3, 'نام کاربری باید حداقل ۳ نویسه باشد.')
+    .max(8, 'نام کاربری حداکثر ۸ نویسه است.')
+    .regex(/^[A-Za-z0-9]+$/, 'نام کاربری فقط باید شامل حروف انگلیسی و عدد باشد.'),
+  password: z
+    .string()
+    .min(1, 'رمز عبور را وارد کنید.')
+    .max(8, 'رمز عبور حداکثر ۸ نویسه است.')
+    .regex(/^[A-Za-z0-9]+$/, 'رمز عبور فقط باید شامل حروف انگلیسی و عدد باشد.'),
 });
 
 type ManagerCredentials = z.infer<typeof managerCredentialsSchema>;
@@ -70,6 +78,7 @@ export function ManagerPortalLoginForm({ nextPath }: { nextPath?: string }) {
           id="manager-username"
           dir="ltr"
           autoComplete="username"
+          maxLength={8}
           autoFocus
           {...form.register('username')}
         />
@@ -87,6 +96,7 @@ export function ManagerPortalLoginForm({ nextPath }: { nextPath?: string }) {
             dir="ltr"
             className="pl-11"
             autoComplete="current-password"
+            maxLength={8}
             aria-describedby="manager-capslock-hint"
             {...form.register('password')}
             onKeyDown={(event) => setCapsLockOn(event.getModifierState?.('CapsLock') ?? false)}

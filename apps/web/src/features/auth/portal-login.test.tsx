@@ -50,18 +50,23 @@ describe('manager portal login', () => {
     });
     const user = userEvent.setup();
     render(<ManagerPortalLoginForm />);
-    await user.type(usernameField(), '09120000000');
-    await user.type(passwordField(), 'temporary');
+    await user.type(usernameField(), 'mgr12345');
+    await user.type(passwordField(), 'pass1234');
     await user.click(screen.getByRole('button', { name: 'ورود به پنل مدرسه' }));
 
-    expect(authApi.loginManager).toHaveBeenCalledWith('09120000000', 'temporary', false);
+    expect(authApi.loginManager).toHaveBeenCalledWith('mgr12345', 'pass1234', false);
     expect(navigation.replace).toHaveBeenCalledWith('/manager/dashboard');
   });
 
   it('honors a validated next path after login', async () => {
     authApi.loginManager.mockResolvedValue({
       data: {
-        user: { id: 'manager-1', username: 'm', phoneNumber: '09120000000', role: 'SCHOOL_MANAGER' },
+        user: {
+          id: 'manager-1',
+          username: 'm',
+          phoneNumber: '09120000000',
+          role: 'SCHOOL_MANAGER',
+        },
         accessToken: 'token',
       },
     });

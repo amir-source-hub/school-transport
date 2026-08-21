@@ -25,7 +25,7 @@ describe('student update field policy', () => {
     });
   });
 
-  it.each(['schoolId', 'nationalId', 'userId', 'isActive', 'registrationStatus'])(
+  it.each(['nationalId', 'userId', 'isActive', 'registrationStatus'])(
     'rejects protected or ownership field %s',
     (field) => {
       expect(() => parseEditableStudentFields({ [field]: 'attacker-value' })).toThrow(

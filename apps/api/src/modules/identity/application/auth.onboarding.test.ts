@@ -138,6 +138,69 @@ function buildOnboarding(db: any) {
 }
 
 describe('first-time onboarding after OTP', () => {
+  it('replaces corrected credentials on an unfinished fixed-credential registration', async () => {
+    const memory = memoryDatabase();
+    memory.rows(users).push({
+      id: 'user-1',
+      username: '09123456789:0013542419',
+      phoneNumber: '09123456789',
+      status: 'PENDING',
+      accountStatus: 'PENDING',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    memory.rows(onboardingSessions).push({
+      id: 'onboarding-1',
+      phoneNumber: '09123456789',
+      userId: 'user-1',
+      status: 'PENDING',
+      onboardingTokenHash: createHash('sha256').update('existing-token').digest('hex'),
+      verifiedAt: new Date(Date.now() - 1000),
+      expiresAt: new Date(Date.now() + 1000),
+      currentStep: null,
+      completedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const service = buildAuth(memory.db);
+
+    const corrected = await service.authenticateParent(
+      '09123456789',
+      '0084575948',
+      undefined,
+      false,
+      'existing-token',
+    );
+
+    expect(corrected.user).toBeNull();
+    expect(memory.rows(users)).toHaveLength(1);
+    expect(memory.rows(users)[0]).toMatchObject({
+      username: '09123456789:0084575948',
+      accountStatus: 'PENDING',
+    });
+    expect(memory.rows(onboardingSessions)).toHaveLength(1);
+    expect(memory.rows(onboardingSessions)[0].onboardingTokenHash).not.toBe(
+      createHash('sha256').update('existing-token').digest('hex'),
+    );
+    expect(memory.rows(authSessions)).toHaveLength(0);
+  });
+
+  it('does not expose a pending draft when corrected credentials lack its token', async () => {
+    const memory = memoryDatabase();
+    memory.rows(users).push({
+      id: 'user-1',
+      username: '09123456789:0013542419',
+      phoneNumber: '09123456789',
+      status: 'PENDING',
+      accountStatus: 'PENDING',
+    });
+    const service = buildAuth(memory.db);
+
+    await expect(
+      service.authenticateParent('09123456789', '0084575948'),
+    ).rejects.toThrow('شماره همراه سرپرست یا کد ملی صحیح نیست.');
+  });
+
   it('creates a PENDING account and a restricted onboarding session for an unknown phone', async () => {
     const memory = memoryDatabase();
     memory.rows(otpRequests).push(verifiedOtpRow(await argon2.hash('123456')));

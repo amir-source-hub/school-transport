@@ -285,9 +285,24 @@ export class AuthService {
     nationalId: string,
     context?: SessionContext,
     rememberMe = false,
+    onboardingToken?: string,
   ): Promise<ParentCredentialResult> {
     const genericError = () => new AuthenticationError('شماره همراه سرپرست یا کد ملی صحیح نیست.');
     const account = await this.findAccountByPhone(phoneNumber, 'PARENT');
+    const [nationalIdOwner] = await this.db.db
+      .select({ userId: parents.userId, status: users.accountStatus })
+      .from(parents)
+      .innerJoin(users, eq(users.id, parents.userId))
+      .where(eq(parents.nationalId, nationalId))
+      .limit(1);
+    // A finalized family identity is unique by both phone number and national ID.
+    // Matching only one of them must never create or resume a different account.
+    if (
+      nationalIdOwner?.status === 'ACTIVE' &&
+      (!account || account.id !== nationalIdOwner.userId)
+    ) {
+      throw genericError();
+    }
     const needsOnboarding =
       !account || account.status === 'PENDING' || account.status === 'EXPIRED';
 
@@ -304,10 +319,25 @@ export class AuthService {
           accountStatus: 'PENDING',
         });
       } else {
-        if (account?.username !== pendingUsername) throw genericError();
+        const existingOnboarding =
+          onboardingToken && this.onboarding
+            ? await this.onboarding.resolve(onboardingToken)
+            : undefined;
+        const ownsPendingDraft =
+          account?.username === pendingUsername ||
+          (existingOnboarding?.userId === userId && existingOnboarding.phoneNumber === phoneNumber);
+        if (!ownsPendingDraft) throw genericError();
+        // A PENDING row is only a restricted draft owner, not a completed account.
+        // Its credentials may be corrected only by the browser that owns the draft.
+        // ACTIVE accounts still follow the strict parent match below.
         await this.db.db
           .update(users)
-          .set({ accountStatus: 'PENDING', phoneNumber, updatedAt: new Date() })
+          .set({
+            username: pendingUsername,
+            accountStatus: 'PENDING',
+            phoneNumber,
+            updatedAt: new Date(),
+          })
           .where(eq(users.id, userId));
       }
       if (!this.onboarding) throw new AuthenticationError('Onboarding is not configured.');

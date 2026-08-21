@@ -1,5 +1,5 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
@@ -31,6 +31,9 @@ import { StudentPhotosModule } from './modules/student-images/student-photos.mod
 import { MetricsModule } from './infrastructure/metrics/metrics.module';
 import { MutationAuditInterceptor } from './common/mutation-audit.interceptor';
 import { HttpMetricsInterceptor } from './infrastructure/metrics/http-metrics.interceptor';
+import { HttpActivityInterceptor } from './common/http-activity.interceptor';
+import { HttpActivityService } from './common/http-activity.service';
+import { IdentityAwareThrottlerGuard } from './common/identity-aware-throttler.guard';
 
 @Module({
   imports: [
@@ -62,10 +65,12 @@ import { HttpMetricsInterceptor } from './infrastructure/metrics/http-metrics.in
     ReportsModule,
   ],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: IdentityAwareThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseMetadataInterceptor },
     { provide: APP_INTERCEPTOR, useClass: MutationAuditInterceptor },
     { provide: APP_INTERCEPTOR, useClass: HttpMetricsInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: HttpActivityInterceptor },
+    HttpActivityService,
     GracefulShutdownService,
   ],
 })

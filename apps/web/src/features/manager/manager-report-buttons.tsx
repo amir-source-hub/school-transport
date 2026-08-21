@@ -1,5 +1,6 @@
 'use client';
 import { Download } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { apiRequest } from '@/lib/api-client';
 import { mockDrivers } from '@/features/manager-drivers/mock-drivers';
@@ -27,6 +28,9 @@ export function ManagerReportButtons({
   schoolName: string;
   username: string;
 }) {
+  const [studentSort, setStudentSort] = useState('name');
+  const [driverSort, setDriverSort] = useState('name');
+  const [routeSort, setRouteSort] = useState('time');
   async function students() {
     const all: ManagerStudent[] = [];
     let page = 1;
@@ -41,7 +45,11 @@ export function ManagerReportButtons({
     save(
       'students.xls',
       ['مدرسه', 'نام کاربری مدیر', 'نام', 'نام خانوادگی', 'کد ملی', 'مقطع', 'پایه', 'سرپرست'],
-      all.map((x) => [
+      [...all].sort((a, b) => {
+        if (studentSort === 'nationalId') return (a.nationalId ?? '').localeCompare(b.nationalId ?? '', 'fa');
+        if (studentSort === 'grade') return (a.grade ?? '').localeCompare(b.grade ?? '', 'fa');
+        return `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`, 'fa');
+      }).map((x) => [
         schoolName,
         username,
         x.firstName,
@@ -68,7 +76,9 @@ export function ManagerReportButtons({
         'خودرو',
         'پلاک',
       ],
-      mockDrivers.map((d) => [
+      [...mockDrivers].sort((a, b) => driverSort === 'license'
+        ? a.licenseExpiresAt.localeCompare(b.licenseExpiresAt, 'fa')
+        : `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`, 'fa')).map((d) => [
         schoolName,
         d.firstName,
         d.lastName,
@@ -99,23 +109,23 @@ export function ManagerReportButtons({
             s,
           ]),
         ),
-      ),
+      ).sort((a, b) => String(routeSort === 'driver' ? a[6] : routeSort === 'title' ? a[1] : a[3]).localeCompare(String(routeSort === 'driver' ? b[6] : routeSort === 'title' ? b[1] : b[3]), 'fa')),
     );
   }
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <Button onClick={students}>
+      <div className="space-y-2"><select className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" value={studentSort} onChange={(event) => setStudentSort(event.target.value)}><option value="name">مرتب‌سازی: نام</option><option value="nationalId">کد ملی</option><option value="grade">پایه</option></select><Button className="w-full" onClick={students}>
         <Download className="size-4" />
         گزارش دانش‌آموزان
-      </Button>
-      <Button onClick={drivers}>
+      </Button></div>
+      <div className="space-y-2"><select className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" value={driverSort} onChange={(event) => setDriverSort(event.target.value)}><option value="name">مرتب‌سازی: نام</option><option value="license">انقضای گواهینامه</option></select><Button className="w-full" onClick={drivers}>
         <Download className="size-4" />
         گزارش رانندگان
-      </Button>
-      <Button onClick={routes}>
+      </Button></div>
+      <div className="space-y-2"><select className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" value={routeSort} onChange={(event) => setRouteSort(event.target.value)}><option value="time">مرتب‌سازی: زمان</option><option value="title">مسیر</option><option value="driver">راننده</option></select><Button className="w-full" onClick={routes}>
         <Download className="size-4" />
         گزارش مسیرها
-      </Button>
+      </Button></div>
     </div>
   );
 }

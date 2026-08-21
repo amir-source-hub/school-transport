@@ -391,6 +391,7 @@ export class AuthController {
       dto.nationalId,
       context,
       dto.rememberMe ?? false,
+      (req as FastifyRequest & { cookies?: Record<string, string> }).cookies?.onboarding_token,
     );
     if (result.user === null) {
       this.setOnboardingCookie(reply, result.onboarding.token, result.onboarding.expiresAt);
