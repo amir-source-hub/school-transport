@@ -823,6 +823,77 @@ export class AuthService {
     return records[0];
   }
 
+  async updateSchoolManagerByAdmin(
+    managerId: string,
+    data: Partial<{
+      username: string;
+      firstName: string;
+      lastName: string;
+      phoneNumber: string;
+      password: string;
+    }>,
+    actor: { id: string; ip?: string },
+  ) {
+    const current = await this.getManagerAccount(managerId);
+    const username = data.username
+      ? this.normalizeManagerUsername(data.username)
+      : current.username;
+    const phoneNumber = data.phoneNumber ?? current.phoneNumber;
+    if (!/^[A-Za-z0-9]{8}$/.test(username)) {
+      throw new ValidationError('نام کاربری مدیر باید دقیقاً ۸ حرف انگلیسی یا عدد باشد.');
+    }
+    if (data.password !== undefined && !/^[A-Za-z0-9]{8}$/.test(data.password)) {
+      throw new ValidationError('رمز عبور مدیر باید دقیقاً ۸ حرف انگلیسی یا عدد باشد.');
+    }
+    await this.ensureSchoolManagerIdentityIsUnique(username, phoneNumber, managerId);
+
+    const credentialsChanged = username !== current.username || data.password !== undefined;
+    await this.db.db
+      .update(schoolManagerUsers)
+      .set({
+        username,
+        firstName: data.firstName ?? current.firstName,
+        lastName: data.lastName ?? current.lastName,
+        phoneNumber,
+        ...(data.password
+          ? {
+              passwordHash: await argon2.hash(data.password),
+              mustChangeCredentials: true,
+              credentialsChangedAt: new Date(),
+            }
+          : {}),
+        failedLoginCount: 0,
+        lockedUntil: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(schoolManagerUsers.id, managerId));
+    if (credentialsChanged || phoneNumber !== current.phoneNumber) {
+      await this.revokeAllSessions(managerId, 'SCHOOL_MANAGER', 'ADMIN_CREDENTIALS_RESET');
+    }
+    await this.audit.record({
+      actorType: 'ADMIN',
+      actorId: actor.id,
+      entityType: 'SCHOOL_MANAGER',
+      entityId: managerId,
+      action: 'SCHOOL_MANAGER_UPDATED_BY_ADMIN',
+      previousValues: {
+        username: current.username,
+        firstName: current.firstName,
+        lastName: current.lastName,
+        phoneNumber: current.phoneNumber,
+      },
+      newValues: {
+        username,
+        firstName: data.firstName ?? current.firstName,
+        lastName: data.lastName ?? current.lastName,
+        phoneNumber,
+        passwordReset: Boolean(data.password),
+      },
+      ipAddress: actor.ip,
+    });
+    return this.getManagerAccount(managerId);
+  }
+
   async getPrincipal(reqUser: { id: string; role: UserRole; sessionId: string }) {
     const principal: Record<string, unknown> = { ...reqUser };
     if (reqUser.role === 'SCHOOL_MANAGER') {

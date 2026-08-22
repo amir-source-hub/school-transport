@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { schools } from '../../database/schemas';
+import { schoolManagerAssignments, schoolManagerUsers, schools } from '../../database/schemas';
 import { and, asc, eq } from 'drizzle-orm';
 import { NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -14,11 +14,32 @@ export class SchoolsService {
 
   async getAll(includeInactive = false) {
     if (includeInactive) {
-      return this.db.db
-        .select()
+      const rows = await this.db.db
+        .select({
+          school: schools,
+          managerId: schoolManagerUsers.id,
+          managerUsername: schoolManagerUsers.username,
+          managerFirstName: schoolManagerUsers.firstName,
+          managerLastName: schoolManagerUsers.lastName,
+          managerAccountPhone: schoolManagerUsers.phoneNumber,
+          managerStatus: schoolManagerUsers.status,
+        })
         .from(schools)
+        .leftJoin(
+          schoolManagerAssignments,
+          and(
+            eq(schoolManagerAssignments.schoolId, schools.id),
+            eq(schoolManagerAssignments.status, 'ACTIVE'),
+            eq(schoolManagerAssignments.isPrimary, true),
+          ),
+        )
+        .leftJoin(
+          schoolManagerUsers,
+          eq(schoolManagerUsers.id, schoolManagerAssignments.managerUserId),
+        )
         .orderBy(asc(schools.name), asc(schools.id))
         .limit(SCHOOL_LIST_LIMIT);
+      return rows.map(({ school, ...manager }) => ({ ...school, ...manager }));
     }
     return this.db.db
       .select({

@@ -13,6 +13,7 @@ import {
   createSchool,
   createSchoolSchema,
   updateSchool,
+  updateSchoolManager,
   provisionSchoolManager,
 } from '@/features/admin-schools/admin-schools-api';
 import type { AdminSchool, CreateSchoolInput } from '@/features/admin-schools/admin-schools-api';
@@ -90,7 +91,7 @@ export function SchoolFormDialog(props: Props) {
   const [locationSelected, setLocationSelected] = useState(
     initial?.latitude != null && initial?.longitude != null,
   );
-  const [managerUsername, setManagerUsername] = useState('');
+  const [managerUsername, setManagerUsername] = useState(initial?.managerUsername ?? '');
   const [managerPassword, setManagerPassword] = useState('');
 
   const update = <K extends keyof CreateSchoolInput>(key: K, value: CreateSchoolInput[K]) => {
@@ -102,9 +103,13 @@ export function SchoolFormDialog(props: Props) {
       setError('موقعیت مدرسه را روی نقشه انتخاب کنید.');
       return;
     }
+    const needsInitialPassword = !isEdit || !initial?.managerId;
     if (
-      !isEdit &&
-      (!/^[A-Za-z0-9]{8}$/.test(managerUsername) || !/^[A-Za-z0-9]{8}$/.test(managerPassword))
+      !/^[A-Za-z0-9]{8}$/.test(managerUsername) ||
+      (needsInitialPassword && !/^[A-Za-z0-9]{8}$/.test(managerPassword)) ||
+      (!needsInitialPassword &&
+        managerPassword.length > 0 &&
+        !/^[A-Za-z0-9]{8}$/.test(managerPassword))
     ) {
       setError(
         'نام کاربری و رمز عبور مدیر باید دقیقاً ۸ نویسه و فقط شامل حروف انگلیسی و اعداد باشند.',
@@ -131,17 +136,30 @@ export function SchoolFormDialog(props: Props) {
     setError(null);
     try {
       const payload = checked.data;
+      const managerParts = payload.managerName.trim().split(/\s+/);
+      const managerData = {
+        username: managerUsername,
+        firstName: managerParts[0] ?? payload.managerName,
+        lastName: managerParts.slice(1).join(' ') || 'مدیر',
+        phoneNumber: payload.managerPhone,
+        ...(managerPassword ? { password: managerPassword } : {}),
+      };
       if (isEdit) {
         await updateSchool(props.school.id, payload);
+        if (props.school.managerId) {
+          await updateSchoolManager(props.school.managerId, managerData);
+        } else {
+          await provisionSchoolManager({
+            ...managerData,
+            password: managerPassword,
+            schoolId: props.school.id,
+          });
+        }
       } else {
         const school = await createSchool(payload);
-        const managerParts = payload.managerName.trim().split(/\s+/);
         await provisionSchoolManager({
-          username: managerUsername,
+          ...managerData,
           password: managerPassword,
-          firstName: managerParts[0] ?? payload.managerName,
-          lastName: managerParts.slice(1).join(' ') || 'مدیر',
-          phoneNumber: payload.managerPhone,
           schoolId: school.id,
         });
       }
@@ -194,45 +212,48 @@ export function SchoolFormDialog(props: Props) {
                 className="mt-1"
               />
             </div>
-            {!isEdit && (
-              <>
-                <div>
-                  <label htmlFor="school-manager-username" className="text-sm font-bold">
-                    نام کاربری پنل مدیر *
-                  </label>
-                  <Input
-                    id="school-manager-username"
-                    dir="ltr"
-                    maxLength={8}
-                    pattern="[A-Za-z0-9]{8}"
-                    value={managerUsername}
-                    onChange={(e) =>
-                      setManagerUsername(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 8))
-                    }
-                    className="mt-1"
-                  />
-                  <p className="mt-1 text-xs text-muted">دقیقاً ۸ حرف انگلیسی یا عدد</p>
-                </div>
-                <div>
-                  <label htmlFor="school-manager-password" className="text-sm font-bold">
-                    رمز عبور پنل مدیر *
-                  </label>
-                  <Input
-                    id="school-manager-password"
-                    type="password"
-                    dir="ltr"
-                    maxLength={8}
-                    pattern="[A-Za-z0-9]{8}"
-                    value={managerPassword}
-                    onChange={(e) =>
-                      setManagerPassword(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 8))
-                    }
-                    className="mt-1"
-                  />
-                  <p className="mt-1 text-xs text-muted">دقیقاً ۸ حرف انگلیسی یا عدد</p>
-                </div>
-              </>
-            )}
+            <>
+              <div>
+                <label htmlFor="school-manager-username" className="text-sm font-bold">
+                  نام کاربری پنل مدیر *
+                </label>
+                <Input
+                  id="school-manager-username"
+                  dir="ltr"
+                  maxLength={8}
+                  pattern="[A-Za-z0-9]{8}"
+                  value={managerUsername}
+                  onChange={(e) =>
+                    setManagerUsername(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 8))
+                  }
+                  className="mt-1"
+                />
+                <p className="mt-1 text-xs text-muted">دقیقاً ۸ حرف انگلیسی یا عدد</p>
+              </div>
+              <div>
+                <label htmlFor="school-manager-password" className="text-sm font-bold">
+                  {isEdit ? 'رمز عبور جدید مدیر' : 'رمز عبور پنل مدیر *'}
+                </label>
+                <Input
+                  id="school-manager-password"
+                  type="password"
+                  dir="ltr"
+                  maxLength={8}
+                  pattern="[A-Za-z0-9]{8}"
+                  value={managerPassword}
+                  placeholder={isEdit ? 'برای حفظ رمز فعلی خالی بگذارید' : undefined}
+                  onChange={(e) =>
+                    setManagerPassword(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 8))
+                  }
+                  className="mt-1"
+                />
+                <p className="mt-1 text-xs text-muted">
+                  {isEdit
+                    ? 'رمز فعلی به‌صورت امن ذخیره شده و قابل نمایش نیست؛ برای تغییر، رمز جدید ۸ نویسه‌ای وارد کنید.'
+                    : 'دقیقاً ۸ حرف انگلیسی یا عدد'}
+                </p>
+              </div>
+            </>
             <div>
               <label htmlFor="school-type" className="text-sm font-bold">
                 نوع مدرسه *

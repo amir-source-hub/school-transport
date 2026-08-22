@@ -13,6 +13,12 @@ const rawSchoolSchema = z.object({
   phoneNumber: z.string().nullable(),
   managerName: z.string().nullable(),
   managerPhone: z.string().nullable(),
+  managerId: z.string().nullable().optional(),
+  managerUsername: z.string().nullable().optional(),
+  managerFirstName: z.string().nullable().optional(),
+  managerLastName: z.string().nullable().optional(),
+  managerAccountPhone: z.string().nullable().optional(),
+  managerStatus: z.string().nullable().optional(),
   openingTime: z.string(),
   closingTime: z.string(),
   closingTimes: z.array(z.string()).default([]),
@@ -114,6 +120,22 @@ export async function provisionSchoolManager(data: {
   schoolId: string;
 }) {
   await apiRequest('/admin/admins/school-managers', { method: 'POST', body: data });
+}
+
+export async function updateSchoolManager(
+  managerId: string,
+  data: {
+    username: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    password?: string;
+  },
+) {
+  await apiRequest(`/admin/admins/school-managers/${managerId}`, {
+    method: 'PATCH',
+    body: data,
+  });
 }
 
 export async function updateSchool(id: string, data: Partial<CreateSchoolInput>) {

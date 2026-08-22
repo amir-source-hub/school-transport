@@ -10,6 +10,7 @@ describe('SchoolsService list bounds', () => {
       const ordered = { limit };
       const chain: Record<string, unknown> = {};
       chain.where = vi.fn(() => chain);
+      chain.leftJoin = vi.fn(() => chain);
       chain.orderBy = vi.fn(() => ordered);
       const database = {
         db: { select: vi.fn(() => ({ from: () => chain })) },

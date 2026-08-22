@@ -1,6 +1,7 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { LocationDisplay } from '@/components/common/location-display';
 import {
   getAdminSchools,
   GENDER_TYPE_LABELS,
@@ -60,6 +61,48 @@ export default async function SchoolsPage() {
                   </span>
                 )}
               </p>
+            )}
+            <dl className="mt-4 grid gap-3 rounded-2xl bg-surface-muted p-4 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted">نام کاربری مدیر</dt>
+                <dd className="mt-1 font-mono font-bold" dir="ltr">
+                  {school.managerUsername ?? '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted">وضعیت حساب مدیر</dt>
+                <dd className="mt-1 font-bold">
+                  {school.managerStatus === 'ACTIVE' ? 'فعال' : (school.managerStatus ?? '—')}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted">ساعت شروع</dt>
+                <dd className="mt-1 font-bold" dir="ltr">
+                  {school.openingTime}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted">ساعت‌های پایان</dt>
+                <dd className="mt-1 font-bold" dir="ltr">
+                  {school.closingTimes.join('، ') || school.closingTime}
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-muted">مقطع‌ها و پایه‌های قابل ثبت‌نام</dt>
+                <dd className="mt-2 flex flex-wrap gap-2">
+                  {school.educationOptions.map((option) => (
+                    <Badge key={option.level} tone="info">
+                      {option.level}: {option.grades.join('، ')}
+                    </Badge>
+                  ))}
+                </dd>
+              </div>
+            </dl>
+            {school.latitude != null && school.longitude != null && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-bold">موقعیت مدرسه</p>
+                <LocationDisplay latitude={school.latitude} longitude={school.longitude} />
+              </div>
             )}
             <div className="mt-4 flex gap-2 border-t border-border pt-4">
               <SchoolFormDialog mode="edit" school={school} />

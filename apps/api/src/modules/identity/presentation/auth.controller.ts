@@ -213,6 +213,22 @@ export class ProvisionSchoolManagerDto {
   password!: string;
 }
 
+export class AdminUpdateSchoolManagerDto {
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z0-9]{8}$/)
+  username?: string;
+
+  @IsOptional() @IsString() @Length(1, 100) @Transform(trimmed) firstName?: string;
+  @IsOptional() @IsString() @Length(1, 100) @Transform(trimmed) lastName?: string;
+  @IsOptional() @Transform(digits) @Matches(/^09\d{9}$/) phoneNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z0-9]{8}$/)
+  password?: string;
+}
+
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')
 @Controller('admin/admins')
@@ -252,6 +268,20 @@ export class AdminIdentityController {
         },
         { id: req.user.id, ip: req.ip },
       ),
+    );
+  }
+
+  @Patch('school-managers/:managerId')
+  async updateSchoolManager(
+    @Req() req: AuthenticatedRequest,
+    @Param('managerId', new ParseUUIDPipe()) managerId: string,
+    @Body() dto: AdminUpdateSchoolManagerDto,
+  ) {
+    return successResponse(
+      await this.authService.updateSchoolManagerByAdmin(managerId, dto, {
+        id: req.user.id,
+        ip: req.ip,
+      }),
     );
   }
 
