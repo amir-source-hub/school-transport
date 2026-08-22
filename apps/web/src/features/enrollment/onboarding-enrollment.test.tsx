@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CreateEnrollmentForm } from './enrollment-actions';
+import { clearOnboardingState, setOnboardingState } from '@/features/auth/onboarding-session';
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
 const enrollmentApi = vi.hoisted(() => ({
@@ -115,6 +116,7 @@ async function fillBirthDate(user: ReturnType<typeof userEvent.setup>) {
 describe('onboarding guided enrollment funnel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearOnboardingState();
     enrollmentApi.finalizeOnboarding.mockRejectedValue(new Error('ثبت‌نام هنوز آماده پنل نیست'));
     enrollmentApi.createGuidedEnrollment.mockResolvedValue({
       registrationId: 'reg-1',
@@ -136,6 +138,30 @@ describe('onboarding guided enrollment funnel', () => {
       accountNumber: null,
       instructions: 'پس از واریز، رسید را ثبت کنید.',
     });
+  });
+
+  it('shows and preserves the locked registration identity when relationship changes', async () => {
+    setOnboardingState({
+      sessionId: 'onboarding-1',
+      phoneNumber: '09126546078',
+      nationalId: '0499370899',
+      expiresAt: '2026-09-01T00:00:00.000Z',
+      currentStep: null,
+    });
+    const user = userEvent.setup();
+    renderOnboarding();
+    const guardian = within(section('سرپرست'));
+
+    expect(guardian.getByLabelText('کد ملی')).toHaveValue('0499370899');
+    expect(guardian.getByLabelText('کد ملی')).toBeDisabled();
+    expect(guardian.getByLabelText('شماره همراه سرپرست')).toHaveValue('09126546078');
+
+    await user.click(guardian.getByRole('combobox', { name: 'نسبت' }));
+    await user.click(await screen.findByRole('option', { name: 'مادر' }));
+
+    expect(guardian.getByLabelText('کد ملی')).toHaveValue('0499370899');
+    expect(guardian.getByLabelText('شماره همراه سرپرست')).toHaveValue('09126546078');
+    expect(guardian.getByLabelText('نام', { exact: true })).toHaveValue('');
   });
 
   it('drives a new account through enrollment and contract to the offline receipt step', async () => {

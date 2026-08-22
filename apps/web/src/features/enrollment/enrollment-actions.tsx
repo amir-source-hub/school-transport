@@ -1106,7 +1106,15 @@ export function CreateEnrollmentForm({
                     className="mt-2"
                     value={form.guardianRelationshipType}
                     onValueChange={(value) => {
-                      setForm((current) => applyGuardianRelationship(current, value));
+                      setForm((current) => {
+                        const next = applyGuardianRelationship(current, value);
+                        if (mode !== 'onboarding') return next;
+                        return {
+                          ...next,
+                          guardianNationalId: onboardingGuardianNationalId,
+                          guardianPhone: effectiveGuardianPhone,
+                        };
+                      });
                       setFieldErrors((current) => ({
                         ...current,
                         guardianFirst: undefined,

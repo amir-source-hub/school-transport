@@ -75,4 +75,19 @@ describe('enrollment form model', () => {
       guardianRelationshipType: 'MOTHER',
     });
   });
+
+  it('does not erase guardian identity when the same relationship is selected again', () => {
+    const initial = createEnrollmentFormState({
+      schools: [],
+      savedParents: { father: null, mother: null },
+      existingStudents: [],
+      defaults: {},
+      guardianPhone: '09126546078',
+    });
+    initial.guardianFirst = 'حسین';
+    initial.guardianNationalId = '0499370899';
+    initial.guardianRelationshipType = 'FATHER';
+
+    expect(applyGuardianRelationship(initial, 'FATHER')).toBe(initial);
+  });
 });

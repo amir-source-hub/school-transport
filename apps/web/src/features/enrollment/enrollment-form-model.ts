@@ -104,6 +104,7 @@ export function applyGuardianRelationship(
   current: EnrollmentFormState,
   relationshipType: string,
 ): EnrollmentFormState {
+  if (current.guardianRelationshipType === relationshipType) return current;
   return {
     ...current,
     guardianRelationshipType: relationshipType,
