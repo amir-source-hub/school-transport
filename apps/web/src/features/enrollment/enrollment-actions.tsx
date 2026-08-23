@@ -135,6 +135,7 @@ export function CreateEnrollmentForm({
   const [paid, setPaid] = useState(false);
   const [paymentDestinationReady, setPaymentDestinationReady] = useState(false);
   const [photoUploadId, setPhotoUploadId] = useState<string>();
+  const [photoCardGeneration, setPhotoCardGeneration] = useState(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const [locationError, setLocationError] = useState<string>();
@@ -1077,6 +1078,7 @@ export function CreateEnrollmentForm({
             </Section>
             <Section title="عکس پرسنلی دانش‌آموز برای صدور کارت سرویس">
               <PhotoUploadCard
+                key={`${form.existingStudentId || 'new'}-${photoCardGeneration}`}
                 showHeading={false}
                 studentId={form.existingStudentId || undefined}
                 initialItems={[]}
@@ -1670,6 +1672,8 @@ export function CreateEnrollmentForm({
                 setResult(undefined);
                 setAccepted(false);
                 setPaid(false);
+                setPhotoUploadId(undefined);
+                setPhotoCardGeneration((current) => current + 1);
                 setForm(createInitialForm());
               }}
             >

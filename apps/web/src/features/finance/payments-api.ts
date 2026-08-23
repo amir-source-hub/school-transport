@@ -96,8 +96,8 @@ export async function getOfflineSubmissions(mode: 'panel' | 'onboarding' = 'pane
 export async function submitOfflinePayment(
   scheduleItemId: string,
   input: {
-    paidAt: string;
-    referenceNumber: string;
+    paidAt?: string;
+    referenceNumber?: string;
     description?: string;
     payerName?: string;
     sourceCardLastFour?: string;

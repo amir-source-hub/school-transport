@@ -34,13 +34,15 @@ export class VerifyOnlinePaymentDto {
 }
 
 export class OfflinePaymentDto {
+  @IsOptional()
   @Transform(digits)
   @IsDateString({ strict: true })
-  paidAt!: string;
+  paidAt?: string;
+  @IsOptional()
   @Transform(digits)
   @IsString()
   @Length(1, 100)
-  referenceNumber!: string;
+  referenceNumber?: string;
   @IsOptional()
   @IsString()
   @Length(1, 500)

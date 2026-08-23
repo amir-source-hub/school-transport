@@ -1,7 +1,8 @@
-import { forwardRef, Injectable, Inject } from '@nestjs/common';
+import { forwardRef, Injectable, Inject, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import {
   contracts,
+  authSessions,
   emergencyContacts,
   familyAddresses,
   parents,
@@ -11,6 +12,7 @@ import {
   schools,
   serviceRegistrations,
   studentLimitRequests,
+  studentPhotoUploads,
   students,
   users,
 } from '../../database/schemas';
@@ -26,6 +28,7 @@ import {
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import { assertStudentCapacity, getStudentCapacity } from '../../database/student-capacity';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
+import { S3_CLIENT, type S3Storage } from '../../infrastructure/s3/s3-storage.port';
 import type { AdminStudentListQueryDto } from './student-list.dto';
 import type { AdminUpdateStudentDto } from './student.dto';
 import { buildAdminStudentArchiveWhere, buildAdminStudentOrderBy } from './student-list.sort';
@@ -41,6 +44,7 @@ export class StudentsService {
     @Inject(forwardRef(() => InAppNotificationService))
     private readonly notifications: InAppNotificationService,
     @Inject(AUDIT_PORT) private readonly auditService: AuditPort,
+    @Optional() @Inject(S3_CLIENT) private readonly storage?: S3Storage,
   ) {}
 
   async getAllByFamily(userId: string) {
@@ -238,6 +242,8 @@ export class StudentsService {
         .where(eq(serviceRegistrations.studentId, studentId))
         .orderBy(desc(serviceRegistrations.createdAt)),
     ]);
+    const primaryParent =
+      parentRows.find((parent) => parent.isPrimaryContact) ?? parentRows[0];
 
     const latestRegistration = registrationRows[0] ?? null;
     let enrollmentSummary: unknown = null;
@@ -329,6 +335,9 @@ export class StudentsService {
 
     return {
       ...student,
+      familyName: primaryParent
+        ? `${primaryParent.firstName} ${primaryParent.lastName}`
+        : 'بدون سرپرست',
       schoolType: schoolRow?.schoolType ?? null,
       parents: parentRows.map((parent) => ({
         id: parent.id,
@@ -724,5 +733,54 @@ export class StudentsService {
       });
     });
     return this.getById(studentId);
+  }
+
+  async permanentlyDeleteByAdmin(
+    studentId: string,
+    context: { adminId: string; ipAddress?: string },
+  ) {
+    const student = await this.getById(studentId);
+    const familyStudents = await this.db.db
+      .select({ id: students.id })
+      .from(students)
+      .where(eq(students.userId, student.userId));
+    const deleteFamily = familyStudents.length === 1;
+    const photoRows = await this.db.db
+      .select({ rawKey: studentPhotoUploads.rawKey, canonicalKey: studentPhotoUploads.canonicalKey })
+      .from(studentPhotoUploads)
+      .where(
+        deleteFamily
+          ? eq(studentPhotoUploads.accountUserId, student.userId)
+          : eq(studentPhotoUploads.studentId, studentId),
+      );
+
+    await this.db.db.transaction(async (txn) => {
+      await this.auditService.recordInTransaction(txn, {
+        actorType: 'ADMIN',
+        actorId: context.adminId,
+        action: deleteFamily ? 'FAMILY_PERMANENTLY_DELETED' : 'STUDENT_PERMANENTLY_DELETED',
+        entityType: deleteFamily ? 'FAMILY' : 'STUDENT',
+        entityId: deleteFamily ? student.userId : studentId,
+        previousValues: { studentId, familyStudentCount: familyStudents.length },
+        newValues: { permanentlyDeleted: true },
+        ipAddress: context.ipAddress,
+      });
+      if (deleteFamily) {
+        // Sessions are polymorphic and intentionally have no database FK.
+        await txn.delete(authSessions).where(eq(authSessions.subjectId, student.userId));
+        await txn.delete(users).where(eq(users.id, student.userId));
+      } else {
+        await txn.delete(students).where(eq(students.id, studentId));
+      }
+    });
+
+    await Promise.all(
+      photoRows.flatMap(({ rawKey, canonicalKey }) =>
+        [rawKey, canonicalKey]
+          .filter((key): key is string => Boolean(key))
+          .map((key) => this.storage?.deleteObject(key).catch(() => undefined)),
+      ),
+    );
+    return { deleted: true, familyDeleted: deleteFamily };
   }
 }

@@ -91,6 +91,9 @@ export class StudentPhotosService {
             ne(studentPhotoUploads.status, 'AUTHORIZED'),
             gt(studentPhotoUploads.uploadAuthorizationExpiry, now),
           ),
+          input.studentId
+            ? eq(studentPhotoUploads.studentId, input.studentId)
+            : isNull(studentPhotoUploads.studentId),
         ),
       );
     if (Number(active[0].count) >= this.config.studentPhotoMaxActiveUploads) {

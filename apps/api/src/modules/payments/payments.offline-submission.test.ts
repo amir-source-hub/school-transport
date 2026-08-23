@@ -83,7 +83,6 @@ describe('offline payment payer submission', () => {
   it.each([
     [{ ...valid, paidAt: 'not-a-date' }, 'VALIDATION_ERROR'],
     [{ ...valid, paidAt: '2999-01-01T00:00:00.000Z' }, 'VALIDATION_ERROR'],
-    [{ ...valid, referenceNumber: '   ' }, 'VALIDATION_ERROR'],
     [{ ...valid, sourceCardLastFour: '12x4' }, 'VALIDATION_ERROR'],
   ])('rejects invalid payment metadata before insertion', async (input, code) => {
     const { service, insertedValues } = createHarness();
@@ -91,6 +90,19 @@ describe('offline payment payer submission', () => {
       code,
     });
     expect(insertedValues).toEqual([]);
+  });
+
+  it('accepts receipt-only submissions without hidden payment metadata', async () => {
+    const { service, insertedValues } = createHarness();
+    await service.createOfflineSubmission('item-1', 'user-1', {
+      description: 'توضیح اختیاری',
+      idempotencyKey: 'receipt-only-key',
+    });
+    expect(insertedValues[0]).toMatchObject({
+      note: 'توضیح اختیاری',
+      referenceNumber: 'RECEIPT-receipt-only-key',
+    });
+    expect(insertedValues[0]).toEqual(expect.objectContaining({ paidAt: expect.any(Date) }));
   });
 
   it('returns the same owned submission for an identical idempotent replay', async () => {

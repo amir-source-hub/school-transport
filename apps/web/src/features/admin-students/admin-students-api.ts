@@ -221,6 +221,16 @@ export async function setAdminStudentActive(
   });
 }
 
+export async function permanentlyDeleteAdminStudent(
+  id: string,
+): Promise<{ deleted: boolean; familyDeleted: boolean }> {
+  const response = await apiRequest<{ deleted: boolean; familyDeleted: boolean }>(
+    `/admin/students/${id}`,
+    { method: 'DELETE', timeoutMs: 15_000 },
+  );
+  return response.data;
+}
+
 export const adminLimitRequestSchema = z.object({
   id: z.string(),
   userId: z.string(),

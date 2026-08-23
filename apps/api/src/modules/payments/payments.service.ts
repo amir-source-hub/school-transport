@@ -411,8 +411,8 @@ export class PaymentsService {
     scheduleItemId: string,
     userId: string,
     data: {
-      paidAt: string;
-      referenceNumber: string;
+      paidAt?: string;
+      referenceNumber?: string;
       description?: string;
       payerName?: string;
       sourceCardLastFour?: string;
@@ -424,11 +424,11 @@ export class PaymentsService {
       throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Already paid.');
     }
     const destination = await this.getActiveOfflineDestination();
-    const paidAt = new Date(data.paidAt);
+    // The receipt image is the evidence. Legacy metadata is optional and must
+    // not prevent a family from submitting an otherwise valid receipt.
+    const paidAt = data.paidAt ? new Date(data.paidAt) : new Date();
     if (Number.isNaN(paidAt.getTime())) throw new ValidationError('تاریخ پرداخت معتبر نیست.');
     if (paidAt > new Date()) throw new ValidationError('تاریخ پرداخت نمی‌تواند در آینده باشد.');
-    if (!data.referenceNumber.trim())
-      throw new ValidationError('شماره پیگیری یا مرجع پرداخت الزامی است.');
     if (data.sourceCardLastFour && !/^\d{4}$/.test(data.sourceCardLastFour)) {
       throw new ValidationError('چهار رقم آخر کارت مبدأ باید دقیقاً چهار رقم باشد.');
     }
@@ -453,7 +453,7 @@ export class PaymentsService {
         paidAt,
         payerName: data.payerName?.trim() ?? null,
         sourceCardLastFour: data.sourceCardLastFour ?? null,
-        referenceNumber: data.referenceNumber.trim(),
+        referenceNumber: data.referenceNumber?.trim() || `RECEIPT-${data.idempotencyKey}`,
         note: data.description?.trim() ?? null,
         idempotencyKey: data.idempotencyKey,
         status: 'DRAFT',
@@ -504,8 +504,8 @@ export class PaymentsService {
     scheduleItemId: string,
     adminId: string,
     data: {
-      paidAt: string;
-      referenceNumber: string;
+      paidAt?: string;
+      referenceNumber?: string;
       description?: string;
       payerName?: string;
       sourceCardLastFour?: string;

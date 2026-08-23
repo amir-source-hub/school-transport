@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
   createAdminStudent,
+  permanentlyDeleteAdminStudent,
   setAdminStudentActive,
   updateAdminStudent,
   type AdminStudent,
@@ -99,6 +100,68 @@ export function ArchiveStudentDialog({
             </Button>
             <Button variant={active ? 'danger' : 'primary'} loading={loading} onClick={handle}>
               {active ? 'تأیید بایگانی' : 'تأیید بازیابی'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function DeleteStudentDialog({
+  studentId,
+  studentName,
+}: {
+  studentId: string;
+  studentName: string;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const [error, setError] = useState<string>();
+
+  async function remove() {
+    if (!confirmed) return;
+    setLoading(true);
+    setError(undefined);
+    try {
+      await permanentlyDeleteAdminStudent(studentId);
+      setOpen(false);
+      router.replace('/admin/students');
+      router.refresh();
+    } catch (caught) {
+      setError(getApiErrorFeedback(caught).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="danger" size="sm">حذف دائم</Button>
+      </DialogTrigger>
+      <DialogContent title="حذف دائم دانش‌آموز">
+        <div className="space-y-4 text-sm">
+          <p>
+            دانش‌آموز «{studentName}» و تمام عکس‌ها، ثبت‌نام، قرارداد، سرویس و سوابق مالی او
+            بدون امکان بازیابی حذف می‌شود. اگر این تنها دانش‌آموز حساب باشد، حساب خانواده و
+            تمام اطلاعات سرپرست نیز حذف می‌شود.
+          </p>
+          <label className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 p-3 font-bold">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.target.checked)}
+            />
+            می‌دانم که این عملیات قابل بازگشت نیست.
+          </label>
+          {error && <p className="text-danger">{error}</p>}
+          <div className="flex gap-3">
+            <Button variant="ghost" onClick={() => setOpen(false)}>انصراف</Button>
+            <Button variant="danger" disabled={!confirmed} loading={loading} onClick={remove}>
+              حذف دائم
             </Button>
           </div>
         </div>

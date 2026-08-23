@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -146,6 +147,19 @@ export class AdminStudentsController {
   ) {
     return successResponse(
       await this.studentsService.updateByAdmin(studentId, dto, {
+        adminId: req.user.id,
+        ipAddress: req.ip,
+      }),
+    );
+  }
+
+  @Delete(':studentId')
+  async permanentlyDelete(
+    @Req() req: AuthenticatedRequest,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+  ) {
+    return successResponse(
+      await this.studentsService.permanentlyDeleteByAdmin(studentId, {
         adminId: req.user.id,
         ipAddress: req.ip,
       }),

@@ -13,6 +13,7 @@ import { AdminLimitRequestSection } from '@/features/admin-students/admin-limit-
 import {
   AdminStudentDialog,
   ArchiveStudentDialog,
+  DeleteStudentDialog,
 } from '@/features/admin-students/student-actions';
 import { StudentEditDialog } from '@/features/admin-students/student-edit-dialog';
 import { getAdminFamilies } from '@/features/admin-families/admin-families-api';
@@ -157,6 +158,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                     studentName={`${student.firstName} ${student.lastName}`}
                     active={student.isActive}
                   />
+                  <DeleteStudentDialog
+                    studentId={student.id}
+                    studentName={`${student.firstName} ${student.lastName}`}
+                  />
                 </div>
               </Card>
             ))}
@@ -214,6 +219,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                           studentId={student.id}
                           studentName={`${student.firstName} ${student.lastName}`}
                           active={student.isActive}
+                        />
+                        <DeleteStudentDialog
+                          studentId={student.id}
+                          studentName={`${student.firstName} ${student.lastName}`}
                         />
                       </div>
                     </td>

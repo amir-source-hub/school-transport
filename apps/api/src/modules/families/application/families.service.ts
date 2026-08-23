@@ -641,12 +641,12 @@ export class FamiliesService {
       .where(and(eq(parents.id, parentId), eq(parents.userId, userId)))
       .limit(1);
     if (!existing) throw new NotFoundError('Parent', parentId);
-    await this.db.db.delete(parents).where(eq(parents.id, parentId));
     const [replacement] = await this.db.db
       .select()
       .from(parents)
-      .where(eq(parents.userId, userId))
+      .where(and(eq(parents.userId, userId), ne(parents.id, parentId)))
       .limit(1);
+    await this.db.db.delete(parents).where(eq(parents.id, parentId));
     if (existing.isPrimaryContact && replacement) {
       await this.setPrimaryPhone(userId, replacement.parentType as 'MOTHER' | 'FATHER');
     }

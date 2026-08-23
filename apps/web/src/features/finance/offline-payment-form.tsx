@@ -114,8 +114,6 @@ export function OfflinePaymentForm({
             (await submitOfflinePayment(
               scheduleItemId,
               {
-                paidAt: new Date().toISOString(),
-                referenceNumber: `RECEIPT-${idempotencyKey.current}`,
                 description: description || undefined,
               },
               mode,
