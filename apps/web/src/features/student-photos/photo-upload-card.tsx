@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { UploadCompletionNotice } from '@/components/forms/upload-completion-notice';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { DirectUploadError, DIRECT_UPLOAD_RETRY_MESSAGE } from '@/lib/direct-object-upload';
 import {
@@ -280,9 +281,13 @@ export function PhotoUploadCard({
           <span className="text-sm font-black">
             {pending ? 'در حال بارگذاری و بررسی…' : 'انتخاب عکس'}
           </span>
-          <span className="text-xs text-muted">فرمت JPG، PNG یا عکس HEIC/HEIF آیفون، حداکثر ۵ مگابایت پس از تبدیل</span>
+          <span className="text-xs text-muted">
+            فرمت JPG، PNG یا عکس HEIC/HEIF آیفون، حداکثر ۵ مگابایت پس از تبدیل
+          </span>
         </label>
       )}
+
+      {!hasCompletedUpload && <UploadCompletionNotice />}
 
       <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-slate-700">
         <p className="font-black text-sky-900">شرایط قابل قبول عکس دانش‌آموز</p>
@@ -305,7 +310,9 @@ export function PhotoUploadCard({
             className="aspect-[3/4] w-full rounded-lg object-cover"
           />
           <div className="space-y-3">
-            <p dir="ltr" className="break-all text-left text-sm font-bold">{selected.file.name}</p>
+            <p dir="ltr" className="break-all text-left text-sm font-bold">
+              {selected.file.name}
+            </p>
             {pending && (
               <div>
                 <div

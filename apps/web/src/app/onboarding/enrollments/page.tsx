@@ -24,6 +24,7 @@ export default async function OnboardingEnrollmentsPage() {
           id: school.id,
           name: school.name,
           city: school.city,
+          schoolType: school.schoolType,
           educationOptions: school.educationOptions,
         }))}
         savedParents={{ father: null, mother: null }}

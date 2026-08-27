@@ -123,6 +123,8 @@ export class AdminRegistrationsController {
       contractTemplateHash: result.contractTemplateHash,
       contractPages: result.contractPages,
       status: result.status,
+      requiresContract: result.requiresContract,
+      requiresPayment: result.requiresPayment,
       parentActionRequired: result.status === 'CONTRACT_READY',
     });
   }

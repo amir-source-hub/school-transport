@@ -27,12 +27,20 @@ export async function getManagerFeedback() {
   });
   return z.array(feedbackSchema).parse(r.data);
 }
-export async function getAdminFeedback() {
-  const r = await apiRequest<unknown>('/admin/feedback?page=1&pageSize=50', { cache: 'no-store' });
+export async function getAdminFeedback(
+  params: { q?: string; status?: string; senderType?: string } = {},
+) {
+  const query = new URLSearchParams({ page: '1', pageSize: '50' });
+  if (params.q) query.set('q', params.q);
+  if (params.status) query.set('status', params.status);
+  if (params.senderType) query.set('senderType', params.senderType);
+  const r = await apiRequest<unknown>(`/admin/feedback?${query}`, { cache: 'no-store' });
   return z.array(feedbackSchema).parse(r.data);
 }
-export async function getPublicContactMessages() {
-  const r = await apiRequest<unknown>('/admin/feedback?page=1&pageSize=50&senderType=PUBLIC', {
+export async function getPublicContactMessages(q?: string) {
+  const query = new URLSearchParams({ page: '1', pageSize: '50', senderType: 'PUBLIC' });
+  if (q) query.set('q', q);
+  const r = await apiRequest<unknown>(`/admin/feedback?${query}`, {
     cache: 'no-store',
   });
   return z.array(feedbackSchema).parse(r.data);

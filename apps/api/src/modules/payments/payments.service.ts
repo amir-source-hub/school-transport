@@ -11,7 +11,7 @@ import {
   offlinePaymentDestinations,
   offlinePaymentSubmissions,
 } from '../../database/schemas';
-import { eq, and, count, inArray, desc, max, ne } from 'drizzle-orm';
+import { eq, and, count, ilike, inArray, desc, max, ne, or, sql } from 'drizzle-orm';
 import { AppError, NotFoundError, ConflictError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
@@ -475,6 +475,18 @@ export class PaymentsService {
         )
         .limit(1);
       if (replay?.paymentScheduleItemId === scheduleItemId) return replay.id;
+      const [recoverableDraft] = await this.db.db
+        .select({ id: offlinePaymentSubmissions.id })
+        .from(offlinePaymentSubmissions)
+        .where(
+          and(
+            eq(offlinePaymentSubmissions.payerUserId, userId),
+            eq(offlinePaymentSubmissions.paymentScheduleItemId, scheduleItemId),
+            eq(offlinePaymentSubmissions.status, 'DRAFT'),
+          ),
+        )
+        .limit(1);
+      if (recoverableDraft) return recoverableDraft.id;
       throw new ConflictError(
         'OFFLINE_PAYMENT_PENDING',
         'An offline payment receipt is already awaiting admin review for this installment.',
@@ -597,6 +609,9 @@ export class PaymentsService {
           eq(offlinePaymentSubmissions.status, 'DRAFT'),
         ),
       );
+    if (submission.receiptObjectKey && submission.receiptObjectKey !== key) {
+      await this.storage.deleteObject(submission.receiptObjectKey).catch(() => undefined);
+    }
     return {
       uploadUrl,
       expiresInSeconds: this.config.studentPhotoUploadUrlTtlSeconds,
@@ -945,6 +960,110 @@ export class PaymentsService {
     return { rejected: true };
   }
 
+  async resetOfflinePaymentForResubmission(submissionId: string, adminId: string, version: number) {
+    const keys = await this.db.db.transaction(async (txn) => {
+      const [submission] = await txn
+        .select()
+        .from(offlinePaymentSubmissions)
+        .where(eq(offlinePaymentSubmissions.id, submissionId))
+        .for('update')
+        .limit(1);
+      if (!submission) throw new NotFoundError('Offline payment submission');
+      if (submission.version !== version) {
+        throw new ConflictError(
+          'OFFLINE_PAYMENT_CHANGED',
+          'وضعیت رسید تغییر کرده است. صفحه را تازه کنید.',
+        );
+      }
+      const [item] = await txn
+        .select()
+        .from(paymentScheduleItems)
+        .where(eq(paymentScheduleItems.id, submission.paymentScheduleItemId))
+        .for('update')
+        .limit(1);
+      if (!item) throw new NotFoundError('Schedule item');
+
+      await this.audit?.recordInTransaction(txn, {
+        actorType: 'ADMIN',
+        actorId: adminId,
+        action: 'OFFLINE_PAYMENT_RESET_FOR_RESUBMISSION',
+        entityType: 'OFFLINE_PAYMENT_SUBMISSION',
+        entityId: submissionId,
+        previousValues: {
+          status: submission.status,
+          version: submission.version,
+          transactionId: submission.transactionId,
+        },
+        newValues: { resetForResubmission: true },
+      });
+
+      await txn
+        .delete(offlinePaymentSubmissions)
+        .where(eq(offlinePaymentSubmissions.id, submissionId));
+      if (submission.transactionId) {
+        await txn
+          .delete(paymentTransactions)
+          .where(eq(paymentTransactions.id, submission.transactionId));
+        await txn
+          .update(paymentScheduleItems)
+          .set({ itemStatus: 'PENDING', paidAmount: 0, paidAt: null, updatedAt: new Date() })
+          .where(eq(paymentScheduleItems.id, submission.paymentScheduleItemId));
+
+        const planItems = await txn
+          .select()
+          .from(paymentScheduleItems)
+          .where(eq(paymentScheduleItems.paymentPlanId, submission.paymentPlanId));
+        const prepaymentPaid = planItems.some(
+          (candidate) => candidate.itemType === 'PREPAYMENT' && candidate.itemStatus === 'PAID',
+        );
+        const allPaid =
+          planItems.length > 0 && planItems.every((candidate) => candidate.itemStatus === 'PAID');
+        await txn
+          .update(paymentPlans)
+          .set({
+            planStatus: allPaid ? 'COMPLETED' : prepaymentPaid ? 'ACTIVE' : 'PENDING',
+            activatedAt: prepaymentPaid ? new Date() : null,
+            completedAt: allPaid ? new Date() : null,
+            updatedAt: new Date(),
+          })
+          .where(eq(paymentPlans.id, submission.paymentPlanId));
+        if (item.itemType === 'PREPAYMENT') {
+          const [registration] = await txn
+            .select({ id: serviceRegistrations.id })
+            .from(paymentPlans)
+            .innerJoin(
+              registrationPrices,
+              eq(registrationPrices.id, paymentPlans.registrationPriceId),
+            )
+            .innerJoin(
+              serviceRegistrations,
+              eq(serviceRegistrations.id, registrationPrices.registrationId),
+            )
+            .where(eq(paymentPlans.id, submission.paymentPlanId))
+            .limit(1);
+          if (registration) {
+            await txn
+              .update(serviceRegistrations)
+              .set({ registrationStatus: 'CONTRACT_ACCEPTED', updatedAt: new Date() })
+              .where(eq(serviceRegistrations.id, registration.id));
+          }
+        }
+      }
+      await this.notifications.enqueueInTransaction(txn, {
+        eventId: `PAYMENT_RESUBMISSION_REQUESTED:${submissionId}:${submission.payerUserId}`,
+        userId: submission.payerUserId,
+        notificationType: 'OFFLINE_PAYMENT_CORRECTION_REQUIRED',
+        title: 'ارسال دوباره رسید پرداخت',
+        message: 'رسید قبلی توسط مدیریت بازنشانی شد. اکنون می‌توانید رسید جدیدی ارسال کنید.',
+        relatedEntityType: 'PAYMENT_SCHEDULE_ITEM',
+        relatedEntityId: submission.paymentScheduleItemId,
+      });
+      return [submission.receiptObjectKey].filter((key): key is string => Boolean(key));
+    });
+    await Promise.all(keys.map((key) => this.storage?.deleteObject(key).catch(() => undefined)));
+    return { reset: true };
+  }
+
   async listOfflineSubmissions(userId: string) {
     return this.db.db
       .select({
@@ -975,17 +1094,30 @@ export class PaymentsService {
 
   async listOfflineSubmissionsForAdmin(
     query: {
-      status?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+      status?: 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
       itemType?: 'PREPAYMENT' | 'INSTALLMENT';
       page?: number;
       pageSize?: number;
+      q?: string;
     } = {},
   ) {
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(50, Math.max(1, query.pageSize ?? 20));
-    const filters = [ne(offlinePaymentSubmissions.status, 'DRAFT')];
+    const filters = [];
     if (query.status) filters.push(eq(offlinePaymentSubmissions.status, query.status));
     if (query.itemType) filters.push(eq(paymentScheduleItems.itemType, query.itemType));
+    if (query.q?.trim()) {
+      const pattern = `%${query.q.trim()}%`;
+      filters.push(
+        or(
+          ilike(students.firstName, pattern),
+          ilike(students.lastName, pattern),
+          ilike(students.nationalId, pattern),
+          ilike(offlinePaymentSubmissions.referenceNumber, pattern),
+          ilike(sql<string>`${students.firstName} || ' ' || ${students.lastName}`, pattern),
+        )!,
+      );
+    }
     const where = and(...filters);
     const rows = await this.db.db
       .select({
@@ -1021,6 +1153,13 @@ export class PaymentsService {
         paymentScheduleItems,
         eq(paymentScheduleItems.id, offlinePaymentSubmissions.paymentScheduleItemId),
       )
+      .innerJoin(paymentPlans, eq(paymentPlans.id, offlinePaymentSubmissions.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
       .where(where);
     const payerIds = [...new Set(rows.map(({ submission }) => submission.payerUserId))];
     const familyRows = payerIds.length
@@ -1180,7 +1319,9 @@ export class PaymentsService {
                     ? 'تأییدشده'
                     : latestSubmission.status === 'REJECTED'
                       ? 'ردشده'
-                      : 'در انتظار بررسی',
+                      : latestSubmission.status === 'DRAFT'
+                        ? 'ارسال ناقص'
+                        : 'در انتظار بررسی',
               }
             : null;
           return {

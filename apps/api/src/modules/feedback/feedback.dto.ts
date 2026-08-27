@@ -43,6 +43,7 @@ export class FeedbackQueryDto {
   @IsOptional() @IsIn(FEEDBACK_CATEGORIES) category?: string;
   @IsOptional() @IsIn(['PARENT', 'SCHOOL_MANAGER', 'PUBLIC']) senderType?: string;
   @IsOptional() @IsDateString({ strict: true }) snapshotAt?: string;
+  @IsOptional() @IsString() @Length(1, 120) q?: string;
 }
 export class AssignFeedbackDto {
   @IsUUID() assigneeId!: string;

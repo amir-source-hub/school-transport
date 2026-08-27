@@ -5,7 +5,12 @@ import { AppError, ConflictError, NotFoundError, ValidationError } from '../../c
 import { generateId } from '../../common/utils';
 import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { DatabaseService } from '../../database/database.service';
-import { schoolManagerAssignments, students, studentPhotoUploads } from '../../database/schemas';
+import {
+  schoolManagerAssignments,
+  students,
+  studentPhotoUploads,
+  users,
+} from '../../database/schemas';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import {
   getObjectAfterWrite,
@@ -478,14 +483,16 @@ export class StudentPhotosService {
       })
       .from(studentPhotoUploads)
       .leftJoin(students, eq(students.id, studentPhotoUploads.studentId))
-      .where(where)
+      .innerJoin(users, eq(users.id, studentPhotoUploads.accountUserId))
+      .where(and(where, eq(users.accountStatus, 'ACTIVE')))
       .orderBy(desc(studentPhotoUploads.createdAt))
       .limit(query.pageSize)
       .offset((query.page - 1) * query.pageSize);
     const [{ value }] = await this.db.db
       .select({ value: count() })
       .from(studentPhotoUploads)
-      .where(where);
+      .innerJoin(users, eq(users.id, studentPhotoUploads.accountUserId))
+      .where(and(where, eq(users.accountStatus, 'ACTIVE')));
     return {
       items: rows.map(({ upload, student }) => ({
         ...this.toAdminView(upload),

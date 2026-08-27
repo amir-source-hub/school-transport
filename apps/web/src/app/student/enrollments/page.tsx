@@ -83,6 +83,7 @@ export default async function EnrollmentsPage() {
             id: school.id,
             name: school.name,
             city: school.city,
+            schoolType: school.schoolType,
             educationOptions: school.educationOptions,
           }))}
           savedParents={{ father: family.father, mother: family.mother }}

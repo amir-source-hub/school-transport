@@ -34,12 +34,15 @@ export type { GuidedEnrollmentInput };
 const guidedResultSchema = z.object({
   registrationId: z.string(),
   studentId: z.string(),
-  contractId: z.string(),
-  scheduleItemId: z.string(),
+  contractId: z.string().nullable(),
+  scheduleItemId: z.string().nullable(),
   prepaymentAmount: z.number(),
-  contractText: z.string(),
-  contractTemplateHash: z.string(),
-  contractPages: z.array(z.array(z.string())).length(3),
+  contractText: z.string().nullable(),
+  contractTemplateHash: z.string().nullable(),
+  contractPages: z.array(z.array(z.string())),
+  status: z.string(),
+  requiresContract: z.boolean(),
+  requiresPayment: z.boolean(),
 });
 
 export type GuidedEnrollmentResult = z.infer<typeof guidedResultSchema>;

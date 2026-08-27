@@ -167,7 +167,8 @@ export class StudentsService {
       })
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
-      .innerJoin(users, eq(users.id, students.userId));
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(eq(users.accountStatus, 'ACTIVE'));
 
     const parentRows = await this.db.db.select().from(parents);
 
@@ -190,7 +191,8 @@ export class StudentsService {
     const [countRow] = await this.db.db
       .select({ total: sql<number>`count(*)::int` })
       .from(students)
-      .where(archiveFilter);
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(and(archiveFilter, eq(users.accountStatus, 'ACTIVE')));
 
     const rows = await this.db.db
       .select({
@@ -201,7 +203,7 @@ export class StudentsService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(archiveFilter)
+      .where(and(archiveFilter, eq(users.accountStatus, 'ACTIVE')))
       .orderBy(...buildAdminStudentOrderBy(sort, direction))
       .offset((page - 1) * pageSize)
       .limit(pageSize);
@@ -242,8 +244,7 @@ export class StudentsService {
         .where(eq(serviceRegistrations.studentId, studentId))
         .orderBy(desc(serviceRegistrations.createdAt)),
     ]);
-    const primaryParent =
-      parentRows.find((parent) => parent.isPrimaryContact) ?? parentRows[0];
+    const primaryParent = parentRows.find((parent) => parent.isPrimaryContact) ?? parentRows[0];
 
     const latestRegistration = registrationRows[0] ?? null;
     let enrollmentSummary: unknown = null;
@@ -746,7 +747,10 @@ export class StudentsService {
       .where(eq(students.userId, student.userId));
     const deleteFamily = familyStudents.length === 1;
     const photoRows = await this.db.db
-      .select({ rawKey: studentPhotoUploads.rawKey, canonicalKey: studentPhotoUploads.canonicalKey })
+      .select({
+        rawKey: studentPhotoUploads.rawKey,
+        canonicalKey: studentPhotoUploads.canonicalKey,
+      })
       .from(studentPhotoUploads)
       .where(
         deleteFamily

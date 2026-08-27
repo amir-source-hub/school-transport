@@ -71,7 +71,7 @@ export type AdminOfflineDestination = z.infer<typeof offlineDestinationSchema>;
 
 const offlineSubmissionSchema = z.object({
   id: z.string(),
-  status: z.enum(['PENDING_REVIEW', 'APPROVED', 'REJECTED']),
+  status: z.enum(['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED']),
   version: z.number(),
   submittedAmount: z.number(),
   expectedAmount: z.number(),
@@ -110,12 +110,14 @@ export async function getAdminOfflineSubmissions(params: {
   itemType?: string;
   page?: number;
   pageSize?: number;
+  q?: string;
 }) {
   const query = new URLSearchParams();
   if (params.status) query.set('status', params.status);
   if (params.itemType) query.set('itemType', params.itemType);
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(params.pageSize));
+  if (params.q) query.set('q', params.q);
   const response = await apiRequest<unknown>(`/admin/payments/offline-submissions?${query}`, {
     cache: 'no-store',
   });
@@ -175,6 +177,17 @@ export async function rejectPayment(
     method: 'POST',
     body: { version, reason },
     timeoutMs: 5_000,
+  });
+}
+
+export async function resetPaymentForResubmission(
+  submissionId: string,
+  version: number,
+): Promise<void> {
+  await apiRequest(`/admin/payments/offline-submissions/${submissionId}/reset`, {
+    method: 'POST',
+    body: { version },
+    timeoutMs: 8_000,
   });
 }
 

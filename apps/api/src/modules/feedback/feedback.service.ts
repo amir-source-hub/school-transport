@@ -1,5 +1,5 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, lte, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, lte, or, sql } from 'drizzle-orm';
 import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { ConflictError, NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -129,6 +129,17 @@ export class FeedbackService {
     if (query.status) filters.push(eq(feedbackSubmissions.status, query.status));
     if (query.category) filters.push(eq(feedbackSubmissions.category, query.category));
     if (query.senderType) filters.push(eq(feedbackSubmissions.senderType, query.senderType));
+    if (query.q?.trim()) {
+      const pattern = `%${query.q.trim()}%`;
+      filters.push(
+        or(
+          ilike(feedbackSubmissions.contactName, pattern),
+          ilike(feedbackSubmissions.subject, pattern),
+          ilike(feedbackSubmissions.message, pattern),
+          ilike(feedbackSubmissions.response, pattern),
+        )!,
+      );
+    }
     const where = filters.length ? and(...filters) : sql`true`;
     const items = await this.db.db
       .select()

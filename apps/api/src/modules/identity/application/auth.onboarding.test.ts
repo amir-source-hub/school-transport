@@ -59,10 +59,16 @@ function memoryDatabase() {
       },
     }),
   });
+  const remove = (table: unknown) => ({
+    where: async () => {
+      rows(table).splice(0);
+    },
+  });
   const txn = {
     select,
     insert,
     update,
+    delete: remove,
     execute: async () => {},
   };
   const dbObj = {
@@ -70,6 +76,7 @@ function memoryDatabase() {
       select,
       insert,
       update,
+      delete: remove,
       transaction: async (work: (inner: any) => Promise<unknown>) => work(txn),
     },
   };
@@ -134,7 +141,14 @@ function buildAuth(db: any) {
 }
 
 function buildOnboarding(db: any) {
-  return new OnboardingService(db as never, config() as never, notifications as never);
+  return new OnboardingService(
+    db as never,
+    config() as never,
+    notifications as never,
+    {
+      deleteObject: vi.fn().mockResolvedValue(undefined),
+    } as never,
+  );
 }
 
 describe('first-time onboarding after OTP', () => {
@@ -185,7 +199,7 @@ describe('first-time onboarding after OTP', () => {
     expect(memory.rows(authSessions)).toHaveLength(0);
   });
 
-  it('does not expose a pending draft when corrected credentials lack its token', async () => {
+  it('restarts a pending draft when corrected credentials lack its token', async () => {
     const memory = memoryDatabase();
     memory.rows(users).push({
       id: 'user-1',
@@ -196,9 +210,11 @@ describe('first-time onboarding after OTP', () => {
     });
     const service = buildAuth(memory.db);
 
-    await expect(
-      service.authenticateParent('09123456789', '0084575948'),
-    ).rejects.toThrow('شماره همراه سرپرست یا کد ملی صحیح نیست.');
+    const result = await service.authenticateParent('09123456789', '0084575948');
+    expect(result.user).toBeNull();
+    if (result.user !== null) return;
+    expect(result.onboarding.nationalId).toBe('0084575948');
+    expect(memory.rows(onboardingSessions)).toHaveLength(1);
   });
 
   it('creates a PENDING account and a restricted onboarding session for an unknown phone', async () => {

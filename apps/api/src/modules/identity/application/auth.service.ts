@@ -324,9 +324,10 @@ export class AuthService {
             ? await this.onboarding.resolve(onboardingToken)
             : undefined;
         const ownsPendingDraft =
-          account?.username === pendingUsername ||
-          (existingOnboarding?.userId === userId && existingOnboarding.phoneNumber === phoneNumber);
-        if (!ownsPendingDraft) throw genericError();
+          existingOnboarding?.userId === userId && existingOnboarding.phoneNumber === phoneNumber;
+        if (!ownsPendingDraft) {
+          await this.onboarding?.restartPendingDraft(userId);
+        }
         // A PENDING row is only a restricted draft owner, not a completed account.
         // Its credentials may be corrected only by the browser that owns the draft.
         // ACTIVE accounts still follow the strict parent match below.

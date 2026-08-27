@@ -23,11 +23,17 @@ export const dynamic = 'force-dynamic';
 export default async function AdminPaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ receiptStatus?: string; itemType?: string; receiptPage?: string }>;
+  searchParams: Promise<{
+    receiptStatus?: string;
+    itemType?: string;
+    receiptPage?: string;
+    q?: string;
+  }>;
 }) {
   const params = await searchParams;
+  const q = params.q?.trim() || undefined;
   const receiptPage = Math.max(1, Number.parseInt(params.receiptPage ?? '1', 10) || 1);
-  const receiptStatus = ['PENDING_REVIEW', 'APPROVED', 'REJECTED'].includes(
+  const receiptStatus = ['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED'].includes(
     params.receiptStatus ?? '',
   )
     ? params.receiptStatus
@@ -42,7 +48,7 @@ export default async function AdminPaymentsPage({
   const [{ payments }, destination, submissions] = await Promise.all([
     getAdminPayments(),
     getAdminOfflineDestination(),
-    getAdminOfflineSubmissions({ ...receiptFilters, page: receiptPage, pageSize: 20 }),
+    getAdminOfflineSubmissions({ ...receiptFilters, q, page: receiptPage, pageSize: 20 }),
   ]);
   const allItems = payments.flatMap((payment) => [payment.prepayment, ...payment.installments]);
   const awaitingReview = allItems.filter(
@@ -90,7 +96,19 @@ export default async function AdminPaymentsPage({
           </p>
         </div>
         <Card>
-          <form className="grid gap-3 sm:grid-cols-3" aria-label="پالایش رسیدهای پرداخت">
+          <form
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            aria-label="پالایش رسیدهای پرداخت"
+          >
+            <label className="text-sm font-bold">
+              جست‌وجو
+              <input
+                name="q"
+                defaultValue={q ?? ''}
+                placeholder="نام، نام خانوادگی، کد ملی یا مرجع"
+                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-white px-3"
+              />
+            </label>
             <label className="text-sm font-bold">
               وضعیت
               <select
@@ -99,6 +117,7 @@ export default async function AdminPaymentsPage({
                 className="mt-2 min-h-11 w-full rounded-xl border border-border bg-white px-3"
               >
                 <option value="">همه وضعیت‌ها</option>
+                <option value="DRAFT">ارسال ناقص</option>
                 <option value="PENDING_REVIEW">در انتظار بررسی</option>
                 <option value="APPROVED">تأییدشده</option>
                 <option value="REJECTED">نیازمند اصلاح</option>
@@ -146,7 +165,7 @@ export default async function AdminPaymentsPage({
           {receiptPage > 1 ? (
             <ButtonLink
               variant="secondary"
-              href={`/admin/payments?${new URLSearchParams({ ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), receiptPage: String(receiptPage - 1) })}`}
+              href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), receiptPage: String(receiptPage - 1) })}`}
             >
               قبلی
             </ButtonLink>
@@ -157,7 +176,7 @@ export default async function AdminPaymentsPage({
           {receiptPage * submissions.pageSize < submissions.total ? (
             <ButtonLink
               variant="secondary"
-              href={`/admin/payments?${new URLSearchParams({ ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), receiptPage: String(receiptPage + 1) })}`}
+              href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), receiptPage: String(receiptPage + 1) })}`}
             >
               بعدی
             </ButtonLink>

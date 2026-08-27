@@ -2,6 +2,7 @@ export type SchoolOption = {
   id: string;
   name: string;
   city: string;
+  schoolType?: string;
   educationOptions: { level: string; grades: string[] }[];
 };
 

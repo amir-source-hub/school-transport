@@ -139,8 +139,8 @@ export class AuthorizeReceiptUploadDto {
 
 export class AdminOfflinePaymentListQueryDto {
   @IsOptional()
-  @IsIn(['PENDING_REVIEW', 'APPROVED', 'REJECTED'])
-  status?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+  @IsIn(['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED'])
+  status?: 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
   @IsOptional()
   @IsIn(['PREPAYMENT', 'INSTALLMENT'])
   itemType?: 'PREPAYMENT' | 'INSTALLMENT';
@@ -155,6 +155,10 @@ export class AdminOfflinePaymentListQueryDto {
   @Min(1)
   @Max(50)
   pageSize = 20;
+  @IsOptional()
+  @IsString()
+  @Length(1, 120)
+  q?: string;
 }
 
 @Injectable()

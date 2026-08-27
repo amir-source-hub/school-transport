@@ -299,4 +299,19 @@ export class AdminPaymentsController {
       ),
     );
   }
+
+  @Post('offline-submissions/:submissionId/reset')
+  async resetForResubmission(
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ReviewPaymentDto,
+  ) {
+    return successResponse(
+      await this.paymentsService.resetOfflinePaymentForResubmission(
+        submissionId,
+        req.user.id,
+        dto.version,
+      ),
+    );
+  }
 }

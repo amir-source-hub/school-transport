@@ -18,6 +18,7 @@ function selectQuery(rows: unknown[]) {
 function createHarness(
   createdRows: unknown[] = [{ id: 'submission-1' }],
   replayRows: unknown[] = [],
+  recoveryRows: unknown[] = [],
 ) {
   const insertedValues: unknown[] = [];
   const insert = vi.fn(() => ({
@@ -28,7 +29,10 @@ function createHarness(
       };
     }),
   }));
-  const select = vi.fn(() => selectQuery(replayRows));
+  const select = vi
+    .fn()
+    .mockImplementationOnce(() => selectQuery(replayRows))
+    .mockImplementation(() => selectQuery(recoveryRows));
   const service = new PaymentsService(
     { db: { insert, select } } as unknown as DatabaseService,
     {} as never,
@@ -112,6 +116,13 @@ describe('offline payment payer submission', () => {
     );
     await expect(service.createOfflineSubmission('item-1', 'user-1', valid)).resolves.toBe(
       'submission-existing',
+    );
+  });
+
+  it('recovers an unfinished draft for the same payment after browser state is lost', async () => {
+    const { service } = createHarness([], [], [{ id: 'recoverable-draft' }]);
+    await expect(service.createOfflineSubmission('item-1', 'user-1', valid)).resolves.toBe(
+      'recoverable-draft',
     );
   });
 

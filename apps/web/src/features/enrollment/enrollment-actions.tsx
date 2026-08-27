@@ -722,6 +722,15 @@ export function CreateEnrollmentForm({
         ? (await createAdminFamilyEnrollment(adminFamilyId, enrollmentInput)).data
         : await createGuidedEnrollment(enrollmentInput, mode);
       setResult(created);
+      if (created.requiresContract === false) {
+        if (mode === 'onboarding') {
+          await finalizeOnboarding();
+          router.replace('/student/dashboard');
+        } else {
+          setAccepted(true);
+          setPaid(true);
+        }
+      }
     } catch (caught) {
       const feedback = getApiErrorFeedback(caught);
       const pathToField: Record<string, keyof typeof form> = {
@@ -1435,41 +1444,48 @@ export function CreateEnrollmentForm({
                 </p>
               </div>
             )}
-            <Section title="روش پرداخت مبلغ باقی‌مانده">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {[
-                  {
-                    value: 'FULL',
-                    title: 'پرداخت یکجا',
-                    description:
-                      'مدیریت مبلغ باقی‌مانده و یک سررسید را پس از بررسی مسیر تعیین می‌کند.',
-                  },
-                  {
-                    value: 'INSTALLMENTS',
-                    title: 'پرداخت اقساطی',
-                    description:
-                      'مدیریت تعداد اقساط، مبلغ هر قسط و تاریخ‌های شمسی را جداگانه تعیین می‌کند.',
-                  },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => set('paymentPlanType', option.value)}
-                    className={`rounded-2xl border-2 p-5 text-right transition hover:-translate-y-0.5 hover:shadow-md ${
-                      form.paymentPlanType === option.value
-                        ? 'border-primary bg-primary-soft'
-                        : 'border-border bg-white'
-                    }`}
-                  >
-                    <p className="font-black">{option.title}</p>
-                    <p className="mt-2 text-sm leading-7 text-muted">{option.description}</p>
-                  </button>
-                ))}
+            {selectedSchool?.schoolType !== 'SPECIAL' && (
+              <Section title="روش پرداخت مبلغ باقی‌مانده">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {[
+                    {
+                      value: 'FULL',
+                      title: 'پرداخت یکجا',
+                      description:
+                        'مدیریت مبلغ باقی‌مانده و یک سررسید را پس از بررسی مسیر تعیین می‌کند.',
+                    },
+                    {
+                      value: 'INSTALLMENTS',
+                      title: 'پرداخت اقساطی',
+                      description:
+                        'مدیریت تعداد اقساط، مبلغ هر قسط و تاریخ‌های شمسی را جداگانه تعیین می‌کند.',
+                    },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => set('paymentPlanType', option.value)}
+                      className={`rounded-2xl border-2 p-5 text-right transition hover:-translate-y-0.5 hover:shadow-md ${
+                        form.paymentPlanType === option.value
+                          ? 'border-primary bg-primary-soft'
+                          : 'border-border bg-white'
+                      }`}
+                    >
+                      <p className="font-black">{option.title}</p>
+                      <p className="mt-2 text-sm leading-7 text-muted">{option.description}</p>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-sm text-muted">
+                  پیش‌پرداخت ثابت ۴٬۹۹۷٬۸۰۰ تومان در هر دو روش همین حالا پرداخت می‌شود.
+                </p>
+              </Section>
+            )}
+            {selectedSchool?.schoolType === 'SPECIAL' && (
+              <div className="rounded-2xl border border-success/30 bg-success-soft p-5 text-sm leading-7 text-success">
+                برای مدارس استثنائی، قرارداد، پیش‌پرداخت، اقساط و انتخاب روش پرداخت لازم نیست.
               </div>
-              <p className="mt-3 text-sm text-muted">
-                پیش‌پرداخت ثابت ۴٬۹۹۷٬۸۰۰ تومان در هر دو روش همین حالا پرداخت می‌شود.
-              </p>
-            </Section>
+            )}
             <label className="text-sm font-bold">
               توضیحات
               <Textarea
@@ -1480,14 +1496,16 @@ export function CreateEnrollmentForm({
             </label>
             <WizardFooter
               onBack={() => setStep(3)}
-              submitLabel="مشاهده قرارداد"
+              submitLabel={
+                selectedSchool?.schoolType === 'SPECIAL' ? 'تکمیل ثبت‌نام' : 'مشاهده قرارداد'
+              }
               pending={pending}
               error={error}
               onExit={() => router.push(mode === 'onboarding' ? '/' : '/student/dashboard')}
             />
           </form>
         )}
-        {step === 4 && result && !accepted && (
+        {step === 4 && result && result.requiresContract !== false && !accepted && (
           <div className="space-y-5">
             <div className="flex items-center gap-3">
               <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-soft text-primary">
@@ -1501,9 +1519,9 @@ export function CreateEnrollmentForm({
               </div>
             </div>
             <ContractReview
-              contractId={result.contractId}
+              contractId={result.contractId!}
               version={1}
-              templateHash={result.contractTemplateHash}
+              templateHash={result.contractTemplateHash!}
               pages={result.contractPages}
               canAct={false}
               onReviewedPagesChange={setReviewedContractPages}
@@ -1539,14 +1557,14 @@ export function CreateEnrollmentForm({
                     try {
                       if (adminFamilyId) {
                         await acceptAdminFamilyContract(
-                          result.contractId,
-                          result.contractTemplateHash,
+                          result.contractId!,
+                          result.contractTemplateHash!,
                           reviewedContractPages,
                         );
                       } else {
                         await acceptGuidedContract(
-                          result.contractId,
-                          result.contractTemplateHash,
+                          result.contractId!,
+                          result.contractTemplateHash!,
                           reviewedContractPages,
                           mode,
                         );
@@ -1577,7 +1595,7 @@ export function CreateEnrollmentForm({
             </div>
           </div>
         )}
-        {step === 4 && result && accepted && !paid && (
+        {step === 4 && result && result.requiresPayment !== false && accepted && !paid && (
           <div className="mx-auto max-w-xl text-center">
             <span className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-sun text-navy">
               <WalletCards className="size-7" />
@@ -1600,7 +1618,7 @@ export function CreateEnrollmentForm({
                 </div>
                 <OfflinePaymentDestinationCard />
                 <RecordPaymentOnBehalfDialog
-                  scheduleItemId={result.scheduleItemId}
+                  scheduleItemId={result.scheduleItemId!}
                   label="پیش‌پرداخت"
                   onCompleted={() => setPaid(true)}
                 />

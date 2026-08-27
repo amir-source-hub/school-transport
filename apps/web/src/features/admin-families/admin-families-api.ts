@@ -132,14 +132,16 @@ export type AdminEnrollmentActions = {
 export type AdminFamilyEnrollmentResult = {
   registrationId: string;
   studentId: string;
-  contractId: string;
-  scheduleItemId: string;
+  contractId: string | null;
+  scheduleItemId: string | null;
   prepaymentAmount: number;
   status: 'CONTRACT_READY' | 'CONTRACT_ACCEPTED' | 'ENROLLED';
   parentActionRequired: boolean;
-  contractText: string;
-  contractTemplateHash: string;
+  contractText: string | null;
+  contractTemplateHash: string | null;
   contractPages: string[][];
+  requiresContract: boolean;
+  requiresPayment: boolean;
 };
 
 export async function createAdminFamilyEnrollment(

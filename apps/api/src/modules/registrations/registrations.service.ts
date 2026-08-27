@@ -87,6 +87,7 @@ export class RegistrationsService {
       .select({
         id: schools.id,
         name: schools.name,
+        schoolType: schools.schoolType,
         educationOptions: schools.educationOptions,
       })
       .from(schools)
@@ -358,6 +359,7 @@ export class RegistrationsService {
           }
         }
         const registrationId = generateId();
+        const isSpecialSchool = school.schoolType === 'SPECIAL';
         await txn.insert(serviceRegistrations).values({
           id: registrationId,
           studentId,
@@ -365,9 +367,44 @@ export class RegistrationsService {
           serviceType: data.service.serviceType,
           selectedAddressId: addressId,
           parentNotes: data.service.parentNotes || null,
-          registrationStatus: 'CONTRACT_READY',
+          registrationStatus: isSpecialSchool ? 'ENROLLED' : 'CONTRACT_READY',
           submittedAt: new Date(),
         });
+        if (isSpecialSchool) {
+          if (adminAudit) {
+            await this.auditService.recordInTransaction(txn, {
+              actorType: 'ADMIN',
+              actorId: adminAudit.adminId,
+              action: 'ADMIN_FAMILY_ENROLLMENT_CREATED',
+              entityType: 'REGISTRATION',
+              entityId: registrationId,
+              newValues: { familyId: userId, studentId, status: 'ENROLLED', specialSchool: true },
+              ipAddress: adminAudit.ipAddress,
+            });
+          }
+          await this.notifications.enqueueInTransaction(txn, {
+            eventId: `ENROLLMENT_CREATED:${registrationId}:${userId}`,
+            userId,
+            notificationType: 'ENROLLMENT_CREATED',
+            title: 'ثبت‌نام دانش‌آموز انجام شد',
+            message: `ثبت‌نام دانش‌آموز ${data.student.firstName} ${data.student.lastName} در مدرسه استثنائی تکمیل شد. برای این مدرسه قرارداد و پرداخت لازم نیست.`,
+            relatedEntityType: 'REGISTRATION',
+            relatedEntityId: registrationId,
+          });
+          return {
+            registrationId,
+            studentId,
+            contractId: null,
+            scheduleItemId: null,
+            prepaymentAmount: 0,
+            contractText: null,
+            contractTemplateHash: null,
+            contractPages: [],
+            status: 'ENROLLED',
+            requiresContract: false,
+            requiresPayment: false,
+          };
+        }
         const priceId = generateId();
         const prepaymentAmount = OFFLINE_PREPAYMENT_AMOUNT_IRR;
         await txn.insert(registrationPrices).values({
@@ -611,6 +648,8 @@ export class RegistrationsService {
           contractTemplateHash: snapshot.templateHash,
           contractPages: snapshot.pages,
           status: finalStatus,
+          requiresContract: true,
+          requiresPayment: true,
         };
       }),
     );
@@ -698,7 +737,9 @@ export class RegistrationsService {
       })
       .from(serviceRegistrations)
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .innerJoin(users, eq(users.id, students.userId))
       .innerJoin(schools, eq(schools.id, students.schoolId))
+      .where(eq(users.accountStatus, 'ACTIVE'))
       .orderBy(desc(serviceRegistrations.createdAt), desc(serviceRegistrations.id))
       .limit(ADMIN_ENROLLMENT_MATERIALIZATION_LIMIT + 1);
     if (rows.length > ADMIN_ENROLLMENT_MATERIALIZATION_LIMIT) {

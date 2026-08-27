@@ -7,6 +7,7 @@ import { RefreshCw } from 'lucide-react';
 import { Alert } from '@/components/feedback/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { UploadCompletionNotice } from '@/components/forms/upload-completion-notice';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -300,6 +301,7 @@ export function OfflinePaymentForm({
           />
         </label>
       )}
+      {!submitted && <UploadCompletionNotice />}
       {!submitted && previewUrl && (
         <div className="rounded-xl border border-border p-3">
           <Image

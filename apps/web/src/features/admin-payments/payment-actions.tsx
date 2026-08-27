@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { UploadCompletionNotice } from '@/components/forms/upload-completion-notice';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { ApiClientError } from '@/lib/api-client';
@@ -87,6 +88,7 @@ export function RecordPaymentOnBehalfDialog({
               <JalaliDateInput required value={paidAt} onChange={setPaidAt} />
             </div>
           </label>
+          <UploadCompletionNotice />
           <label className="block text-sm font-bold">
             شماره رسید / مرجع پرداخت *
             <Input
