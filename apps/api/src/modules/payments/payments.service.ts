@@ -1094,7 +1094,7 @@ export class PaymentsService {
 
   async listOfflineSubmissionsForAdmin(
     query: {
-      status?: 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+      status?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
       itemType?: 'PREPAYMENT' | 'INSTALLMENT';
       page?: number;
       pageSize?: number;
@@ -1103,7 +1103,7 @@ export class PaymentsService {
   ) {
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(50, Math.max(1, query.pageSize ?? 20));
-    const filters = [];
+    const filters = [ne(offlinePaymentSubmissions.status, 'DRAFT')];
     if (query.status) filters.push(eq(offlinePaymentSubmissions.status, query.status));
     if (query.itemType) filters.push(eq(paymentScheduleItems.itemType, query.itemType));
     if (query.q?.trim()) {
@@ -1293,7 +1293,10 @@ export class PaymentsService {
         if (!prepayment) return null;
         const mapItem = (item: typeof paymentScheduleItems.$inferSelect) => {
           const itemSubmissions = submissions
-            .filter((submission) => submission.paymentScheduleItemId === item.id)
+            .filter(
+              (submission) =>
+                submission.paymentScheduleItemId === item.id && submission.status !== 'DRAFT',
+            )
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
           const latestSubmission = itemSubmissions[0];
           const itemTransactions = transactions
@@ -1319,9 +1322,7 @@ export class PaymentsService {
                     ? 'تأییدشده'
                     : latestSubmission.status === 'REJECTED'
                       ? 'ردشده'
-                      : latestSubmission.status === 'DRAFT'
-                        ? 'ارسال ناقص'
-                        : 'در انتظار بررسی',
+                      : 'در انتظار بررسی',
               }
             : null;
           return {

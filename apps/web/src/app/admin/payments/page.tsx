@@ -33,7 +33,7 @@ export default async function AdminPaymentsPage({
   const params = await searchParams;
   const q = params.q?.trim() || undefined;
   const receiptPage = Math.max(1, Number.parseInt(params.receiptPage ?? '1', 10) || 1);
-  const receiptStatus = ['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED'].includes(
+  const receiptStatus = ['PENDING_REVIEW', 'APPROVED', 'REJECTED'].includes(
     params.receiptStatus ?? '',
   )
     ? params.receiptStatus
@@ -50,7 +50,17 @@ export default async function AdminPaymentsPage({
     getAdminOfflineDestination(),
     getAdminOfflineSubmissions({ ...receiptFilters, q, page: receiptPage, pageSize: 20 }),
   ]);
-  const allItems = payments.flatMap((payment) => [payment.prepayment, ...payment.installments]);
+  const visiblePayments = q
+    ? payments.filter((payment) =>
+        `${payment.studentName} ${payment.familyName}`
+          .toLocaleLowerCase('fa-IR')
+          .includes(q.toLocaleLowerCase('fa-IR')),
+      )
+    : payments;
+  const allItems = visiblePayments.flatMap((payment) => [
+    payment.prepayment,
+    ...payment.installments,
+  ]);
   const awaitingReview = allItems.filter(
     (item) => item.transaction?.status === 'در انتظار بررسی',
   ).length;
@@ -68,7 +78,7 @@ export default async function AdminPaymentsPage({
       <section className="grid gap-4 sm:grid-cols-3" aria-label="خلاصه پرداخت‌ها">
         <Card>
           <p className="text-sm text-muted">دانش‌آموزان دارای پرداخت</p>
-          <p className="mt-2 text-2xl font-black">{payments.length}</p>
+          <p className="mt-2 text-2xl font-black">{visiblePayments.length}</p>
         </Card>
         <Card>
           <p className="text-sm text-muted">در انتظار بررسی</p>
@@ -117,7 +127,6 @@ export default async function AdminPaymentsPage({
                 className="mt-2 min-h-11 w-full rounded-xl border border-border bg-white px-3"
               >
                 <option value="">همه وضعیت‌ها</option>
-                <option value="DRAFT">ارسال ناقص</option>
                 <option value="PENDING_REVIEW">در انتظار بررسی</option>
                 <option value="APPROVED">تأییدشده</option>
                 <option value="REJECTED">نیازمند اصلاح</option>
@@ -196,7 +205,7 @@ export default async function AdminPaymentsPage({
           </p>
         </div>
         <div className="grid gap-4">
-          {payments.map((payment) => {
+          {visiblePayments.map((payment) => {
             const prepaymentStatus = payment.prepayment.transaction?.status ?? 'پرداخت نشده';
             const canConfigure = payment.prepayment.paid && !payment.planConfigured;
             return (

@@ -71,7 +71,7 @@ export type AdminOfflineDestination = z.infer<typeof offlineDestinationSchema>;
 
 const offlineSubmissionSchema = z.object({
   id: z.string(),
-  status: z.enum(['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED']),
+  status: z.enum(['PENDING_REVIEW', 'APPROVED', 'REJECTED']),
   version: z.number(),
   submittedAmount: z.number(),
   expectedAmount: z.number(),

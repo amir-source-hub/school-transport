@@ -139,6 +139,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <AutoSubmitForm
             action="/admin/registrations"
             method="get"
+            showSubmit={false}
             className="ms-auto hidden w-full max-w-xs lg:block"
           >
             <label>

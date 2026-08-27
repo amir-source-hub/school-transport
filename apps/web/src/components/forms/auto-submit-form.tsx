@@ -1,13 +1,19 @@
 import type { FormHTMLAttributes } from 'react';
 import { Button } from '@/components/ui/button';
 
-export function AutoSubmitForm({ children, ...props }: FormHTMLAttributes<HTMLFormElement>) {
+export function AutoSubmitForm({
+  children,
+  showSubmit = true,
+  ...props
+}: FormHTMLAttributes<HTMLFormElement> & { showSubmit?: boolean }) {
   return (
     <form {...props}>
       {children}
-      <Button type="submit" className="self-end">
-        اعمال فیلتر
-      </Button>
+      {showSubmit && (
+        <Button type="submit" className="self-end">
+          اعمال فیلتر
+        </Button>
+      )}
     </form>
   );
 }

@@ -24,7 +24,7 @@ function ResetReceiptDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="secondary">
+        <Button size="sm" variant="danger">
           ارسال دوباره رسید
         </Button>
       </DialogTrigger>
@@ -87,18 +87,14 @@ export function OfflineSubmissionList({
                   ? 'success'
                   : submission.status === 'REJECTED'
                     ? 'danger'
-                    : submission.status === 'DRAFT'
-                      ? 'neutral'
-                      : 'warning'
+                    : 'warning'
               }
             >
               {submission.status === 'APPROVED'
                 ? 'تأییدشده'
                 : submission.status === 'REJECTED'
                   ? 'نیازمند اصلاح'
-                  : submission.status === 'DRAFT'
-                    ? 'ارسال ناقص'
-                    : 'در انتظار بررسی'}
+                  : 'در انتظار بررسی'}
             </Badge>
           </div>
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
@@ -137,7 +133,7 @@ export function OfflineSubmissionList({
             </p>
           )}
           <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
-            {submission.status !== 'DRAFT' && <ReceiptPreviewDialog submissionId={submission.id} />}
+            <ReceiptPreviewDialog submissionId={submission.id} />
             <ResetReceiptDialog
               submission={submission}
               onReset={() =>
