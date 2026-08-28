@@ -759,6 +759,7 @@ export class StudentsService {
       );
 
     await this.db.db.transaction(async (txn) => {
+      await txn.execute(sql`select set_config('app.family_erasure', 'on', true)`);
       await this.auditService.recordInTransaction(txn, {
         actorType: 'ADMIN',
         actorId: context.adminId,

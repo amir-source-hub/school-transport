@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, lt, inArray } from 'drizzle-orm';
+import { and, eq, lt, inArray, sql } from 'drizzle-orm';
 import { addSeconds, isPast } from 'date-fns';
 import { createHash, randomBytes } from 'node:crypto';
 import { ConfigService } from '../../../config/config.service';
@@ -47,6 +47,7 @@ export class OnboardingService {
       .from(studentPhotoUploads)
       .where(eq(studentPhotoUploads.accountUserId, userId));
     await this.db.db.transaction(async (txn) => {
+      await txn.execute(sql`select set_config('app.family_erasure', 'on', true)`);
       await txn.delete(students).where(eq(students.userId, userId));
       await txn.delete(studentPhotoUploads).where(eq(studentPhotoUploads.accountUserId, userId));
       await txn.delete(parents).where(eq(parents.userId, userId));

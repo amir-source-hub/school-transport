@@ -281,6 +281,13 @@
       "when": 1787418000000,
       "tag": "0039_family_erasure_cascades",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1787850000000,
+      "tag": "0040_authorized_family_erasure",
+      "breakpoints": true
     }
   ]
 }
