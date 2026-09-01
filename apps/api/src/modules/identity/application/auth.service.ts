@@ -840,7 +840,9 @@ export class AuthService {
       ? this.normalizeManagerUsername(data.username)
       : current.username;
     const phoneNumber = data.phoneNumber ?? current.phoneNumber;
-    if (!/^[A-Za-z0-9]{8}$/.test(username)) {
+    // Existing accounts may predate the current eight-character policy. Do not
+    // block unrelated school/manager edits unless the admin changes the username.
+    if (data.username !== undefined && !/^[A-Za-z0-9]{8}$/.test(username)) {
       throw new ValidationError('نام کاربری مدیر باید دقیقاً ۸ حرف انگلیسی یا عدد باشد.');
     }
     if (data.password !== undefined && !/^[A-Za-z0-9]{8}$/.test(data.password)) {

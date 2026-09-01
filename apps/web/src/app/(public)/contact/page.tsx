@@ -57,6 +57,7 @@ const topics: SelectOption[] = [
 export default function ContactPage() {
   const [topic, setTopic] = useState('');
   const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [message, setMessage] = useState('');
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; message: string }>();
@@ -64,14 +65,23 @@ export default function ContactPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFeedback(undefined);
-    if (!name.trim() || !topic || message.trim().length < 10) {
-      setFeedback({ kind: 'error', message: 'نام، موضوع و پیام حداقل ۱۰ حرفی را کامل کنید.' });
+    if (!name.trim() || !/^09\d{9}$/.test(phoneNumber) || !topic || message.trim().length < 10) {
+      setFeedback({
+        kind: 'error',
+        message: 'نام، شماره همراه معتبر، موضوع و پیام حداقل ۱۰ حرفی را کامل کنید.',
+      });
       return;
     }
     setPending(true);
     try {
-      await createPublicContactMessage({ name: name.trim(), topic, message: message.trim() });
+      await createPublicContactMessage({
+        name: name.trim(),
+        phoneNumber,
+        topic,
+        message: message.trim(),
+      });
       setName('');
+      setPhoneNumber('');
       setTopic('');
       setMessage('');
       setFeedback({ kind: 'success', message: 'پیام شما با موفقیت برای مدیریت ارسال شد.' });
@@ -191,6 +201,25 @@ export default function ContactPage() {
                       required
                       minLength={2}
                       maxLength={120}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="contact-phone" className="mb-1.5 block text-sm font-bold">
+                      شماره همراه
+                    </label>
+                    <Input
+                      id="contact-phone"
+                      type="tel"
+                      dir="ltr"
+                      inputMode="numeric"
+                      placeholder="09123456789"
+                      value={phoneNumber}
+                      onChange={(event) =>
+                        setPhoneNumber(event.target.value.replace(/\D/g, '').slice(0, 11))
+                      }
+                      required
+                      pattern="09[0-9]{9}"
+                      maxLength={11}
                     />
                   </div>
                   <div>

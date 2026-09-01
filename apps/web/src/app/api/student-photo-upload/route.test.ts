@@ -48,4 +48,42 @@ describe('student photo same-site upload fallback', () => {
     expect(response.status).toBe(403);
     expect(upstream).not.toHaveBeenCalled();
   });
+
+  it('allows the configured loopback MinIO origin in local development', async () => {
+    process.env.NEXT_PUBLIC_PRIVATE_UPLOAD_ORIGIN = 'http://127.0.0.1:9000';
+    const upstream = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', upstream);
+    const target =
+      'http://127.0.0.1:9000/school-transport-local/student-photo.jpg?X-Amz-Signature=signature';
+
+    const response = await PUT(
+      new Request('http://localhost:3000/api/student-photo-upload', {
+        method: 'PUT',
+        body: new Uint8Array([1, 2, 3]),
+        headers: { 'Content-Type': 'image/jpeg', 'X-Upload-Target': target },
+      }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(upstream).toHaveBeenCalledOnce();
+  });
+
+  it('allows a loopback target without upload-origin configuration outside production', async () => {
+    const upstream = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', upstream);
+
+    const response = await PUT(
+      new Request('http://localhost:3000/api/student-photo-upload', {
+        method: 'PUT',
+        body: new Uint8Array([1]),
+        headers: {
+          'Content-Type': 'image/png',
+          'X-Upload-Target': 'http://localhost:9000/local/photo.png?X-Amz-Signature=signature',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(upstream).toHaveBeenCalledOnce();
+  });
 });

@@ -25,6 +25,7 @@ export const adminStudentsSchema = z.array(rawAdminStudentSchema);
 export type AdminStudent = z.infer<typeof adminStudentSchema>;
 
 export type AdminStudentListParams = {
+  q?: string;
   archive?: 'all' | 'active' | 'archived';
   sort?: 'studentName' | 'schoolName' | 'createdAt';
   direction?: 'asc' | 'desc';
@@ -43,6 +44,7 @@ export async function getAdminStudents(
   params: AdminStudentListParams = {},
 ): Promise<{ students: AdminStudent[]; pagination: AdminStudentListPagination }> {
   const search = new URLSearchParams();
+  if (params.q) search.set('q', params.q);
   if (params.archive && params.archive !== 'all') search.set('archive', params.archive);
   if (params.sort && params.sort !== 'createdAt') search.set('sort', params.sort);
   if (params.direction && params.direction !== 'desc') search.set('direction', params.direction);
@@ -202,10 +204,13 @@ export async function getAdminStudentDetail(id: string): Promise<AdminStudentDet
 }
 
 export async function getAdminStudentPhoto(id: string) {
-  const response = await apiRequest<{ status: 'APPROVED'; viewUrl: string; expiresInSeconds: number }>(
-    `/admin/student-photos/students/${id}/photo`,
-    { cache: 'no-store', timeoutMs: 8_000 },
-  );
+  const response = await apiRequest<{
+    uploadId: string;
+    status: 'APPROVED';
+    version: number;
+    viewUrl: string;
+    expiresInSeconds: number;
+  }>(`/admin/student-photos/students/${id}/photo`, { cache: 'no-store', timeoutMs: 8_000 });
   return response.data;
 }
 

@@ -24,12 +24,13 @@ export type AdminPhoto = z.infer<typeof adminPhotoSchema>;
 
 const listSchema = z.array(adminPhotoSchema);
 
-export async function getAdminPhotos(params: { page?: number; status?: string } = {}) {
+export async function getAdminPhotos(params: { page?: number; status?: string; q?: string } = {}) {
   const query = new URLSearchParams({
     page: String(params.page ?? 1),
     pageSize: '10',
   });
   if (params.status) query.set('status', params.status);
+  if (params.q) query.set('q', params.q);
   const response = await apiRequest<unknown>(`/admin/student-photos?${query}`, {
     cache: 'no-store',
   });

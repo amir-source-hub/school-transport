@@ -16,7 +16,7 @@ import {
   students,
   users,
 } from '../../database/schemas';
-import { eq, and, sql, desc, inArray } from 'drizzle-orm';
+import { eq, and, sql, desc, ilike, inArray, or } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -188,11 +188,25 @@ export class StudentsService {
   async getStudentsForAdminPage(query: AdminStudentListQueryDto) {
     const { archive, sort, direction, page, pageSize } = query;
     const archiveFilter = buildAdminStudentArchiveWhere(archive) ?? sql`1 = 1`;
+    const search = query.q?.trim();
+    const searchFilter = search
+      ? or(
+          ilike(students.firstName, `%${search}%`),
+          ilike(students.lastName, `%${search}%`),
+          ilike(sql`${students.firstName} || ' ' || ${students.lastName}`, `%${search}%`),
+          ilike(students.nationalId, `%${search}%`),
+          ilike(students.studentCode, `%${search}%`),
+          ilike(users.username, `%${search}%`),
+          ilike(users.phoneNumber, `%${search}%`),
+          ilike(schools.name, `%${search}%`),
+        )
+      : sql`true`;
     const [countRow] = await this.db.db
       .select({ total: sql<number>`count(*)::int` })
       .from(students)
+      .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(and(archiveFilter, eq(users.accountStatus, 'ACTIVE')));
+      .where(and(archiveFilter, searchFilter, eq(users.accountStatus, 'ACTIVE')));
 
     const rows = await this.db.db
       .select({
@@ -203,7 +217,7 @@ export class StudentsService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(and(archiveFilter, eq(users.accountStatus, 'ACTIVE')))
+      .where(and(archiveFilter, searchFilter, eq(users.accountStatus, 'ACTIVE')))
       .orderBy(...buildAdminStudentOrderBy(sort, direction))
       .offset((page - 1) * pageSize)
       .limit(pageSize);
