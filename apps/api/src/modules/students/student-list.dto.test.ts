@@ -24,11 +24,13 @@ describe('AdminStudentListQueryDto', () => {
       direction: 'asc',
       page: '3',
       pageSize: '50',
+      q: 'علی رضایی',
     });
 
     expect(await validate(dto)).toHaveLength(0);
     expect(dto.page).toBe(3);
     expect(dto.pageSize).toBe(50);
+    expect(dto.q).toBe('علی رضایی');
   });
 
   it('rejects unknown archive, sort, and direction values', async () => {

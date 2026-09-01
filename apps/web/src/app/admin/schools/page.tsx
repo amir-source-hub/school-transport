@@ -75,6 +75,15 @@ export default async function SchoolsPage() {
                   {school.managerStatus === 'ACTIVE' ? 'فعال' : (school.managerStatus ?? '—')}
                 </dd>
               </div>
+              <div className="sm:col-span-2">
+                <dt className="text-muted">رمز عبور مدیر</dt>
+                <dd className="mt-1 text-sm font-bold">
+                  به‌صورت رمزنگاری یک‌طرفه ذخیره شده و قابل نمایش نیست.
+                </dd>
+                <p className="mt-1 text-xs leading-6 text-muted">
+                  برای تعیین رمز جدید، «ویرایش» را انتخاب کنید و رمز ۸ نویسه‌ای جدید را وارد کنید.
+                </p>
+              </div>
               <div>
                 <dt className="text-muted">ساعت شروع</dt>
                 <dd className="mt-1 font-bold" dir="ltr">

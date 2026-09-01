@@ -114,16 +114,6 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
       })
       .onConflictDoNothing();
     await db
-      .insert(schoolManagerAssignments)
-      .values({
-        id: ids.managerAssignment,
-        managerUserId: ids.manager,
-        schoolId: ids.school,
-        isPrimary: true,
-        status: 'ACTIVE',
-      })
-      .onConflictDoNothing();
-    await db
       .insert(offlinePaymentDestinations)
       .values({
         id: ids.offlineDestination,
@@ -182,6 +172,16 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           ],
         },
       ])
+      .onConflictDoNothing();
+    await db
+      .insert(schoolManagerAssignments)
+      .values({
+        id: ids.managerAssignment,
+        managerUserId: ids.manager,
+        schoolId: ids.school,
+        isPrimary: true,
+        status: 'ACTIVE',
+      })
       .onConflictDoNothing();
     await db
       .insert(parents)

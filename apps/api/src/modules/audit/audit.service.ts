@@ -39,6 +39,12 @@ const ALLOWED_VALUE_FIELDS = new Set([
   'channel',
   'purpose',
   'granted',
+  'changedFields',
+  'documentType',
+  'vehicleId',
+  'vehicleType',
+  'ownershipType',
+  'usageType',
 ]);
 
 @Injectable()

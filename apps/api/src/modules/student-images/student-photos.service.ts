@@ -1,5 +1,19 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { ConfigService } from '../../config/config.service';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -435,6 +449,7 @@ export class StudentPhotosService {
         id: studentPhotoUploads.id,
         canonicalKey: studentPhotoUploads.canonicalKey,
         status: studentPhotoUploads.status,
+        version: studentPhotoUploads.version,
       })
       .from(studentPhotoUploads)
       .where(
@@ -457,7 +472,9 @@ export class StudentPhotosService {
       ipAddress: ip,
     });
     return {
+      uploadId: upload.id,
       status: 'APPROVED' as const,
+      version: upload.version,
       viewUrl: this.storage.presignGet(
         upload.canonicalKey,
         this.config.studentPhotoViewUrlTtlSeconds,
@@ -471,6 +488,17 @@ export class StudentPhotosService {
     if (query.status) filters.push(eq(studentPhotoUploads.status, query.status));
     if (query.status === 'PENDING_REVIEW') {
       filters.push(isNotNull(studentPhotoUploads.studentId));
+    }
+    if (query.q?.trim()) {
+      const pattern = `%${query.q.trim()}%`;
+      filters.push(
+        or(
+          ilike(students.firstName, pattern),
+          ilike(students.lastName, pattern),
+          ilike(students.nationalId, pattern),
+          ilike(students.studentCode, pattern),
+        )!,
+      );
     }
     const where = and(...filters);
     const rows = await this.db.db
@@ -491,6 +519,7 @@ export class StudentPhotosService {
     const [{ value }] = await this.db.db
       .select({ value: count() })
       .from(studentPhotoUploads)
+      .leftJoin(students, eq(students.id, studentPhotoUploads.studentId))
       .innerJoin(users, eq(users.id, studentPhotoUploads.accountUserId))
       .where(and(where, eq(users.accountStatus, 'ACTIVE')));
     return {
@@ -572,7 +601,7 @@ export class StudentPhotosService {
         .where(
           and(
             eq(studentPhotoUploads.id, upload.id),
-            eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
+            eq(studentPhotoUploads.status, upload.status),
             eq(studentPhotoUploads.version, upload.version),
           ),
         )
@@ -626,7 +655,7 @@ export class StudentPhotosService {
         .where(
           and(
             eq(studentPhotoUploads.id, upload.id),
-            eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
+            eq(studentPhotoUploads.status, upload.status),
             eq(studentPhotoUploads.version, input.version),
           ),
         )
@@ -637,7 +666,8 @@ export class StudentPhotosService {
         userId: upload.accountUserId,
         notificationType: 'STUDENT_PHOTO_REJECTED',
         title: 'بررسی مجدد عکس کارت سرویس',
-        message: 'عکس کارت سرویس دانش‌آموز نیازمند بارگذاری مجدد است. جزئیات در پنل شما نیست.',
+        message:
+          'عکس کارت سرویس دانش‌آموز رد شده است. از بخش دانش‌آموزان، عکس جدید را بارگذاری و تا پایان ارسال منتظر بمانید.',
         relatedEntityType: 'STUDENT_PHOTO',
         relatedEntityId: upload.id,
       });
@@ -835,6 +865,7 @@ export class StudentPhotosService {
       rejectionCode: row.rejectionCode,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      version: row.version,
     };
   }
 

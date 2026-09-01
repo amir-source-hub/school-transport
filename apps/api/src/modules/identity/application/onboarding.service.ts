@@ -17,6 +17,7 @@ import {
   studentPhotoUploads,
   notifications,
   notificationOutbox,
+  drivers,
 } from '../../../database/schemas';
 import { generateId } from '../../../common/utils';
 import { OnboardingSessionResult } from '../domain/auth.types';
@@ -155,6 +156,8 @@ export class OnboardingService {
   }
 
   async isPanelReady(userId: string): Promise<boolean> {
+    const [driver] = await this.db.db.select({ id: drivers.id }).from(drivers).where(eq(drivers.userId, userId)).limit(1);
+    if (driver) return true;
     const [row] = await this.db.db
       .select({ id: contracts.id })
       .from(contracts)

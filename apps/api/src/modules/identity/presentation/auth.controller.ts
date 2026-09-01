@@ -441,6 +441,29 @@ export class AuthController {
   }
 
   @Public()
+  @Post('driver/credentials')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(TrustedOriginGuard)
+  async driverCredentials(
+    @Req() req: FastifyRequest,
+    @Body() dto: ParentCredentialsDto,
+    @Res({ passthrough: true }) reply: CookieReply,
+  ) {
+    const result = await this.authService.authenticateDriver(dto.phoneNumber, dto.nationalId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      deviceName: req.headers['user-agent']?.slice(0, 255),
+    }, dto.rememberMe ?? false, (req as FastifyRequest & { cookies?: Record<string, string> }).cookies?.onboarding_token);
+    if (result.user === null) {
+      this.setOnboardingCookie(reply, result.onboarding.token, result.onboarding.expiresAt);
+      return successResponse({ user: null, onboarding: { sessionId: result.onboarding.sessionId, expiresAt: result.onboarding.expiresAt, currentStep: result.onboarding.currentStep, nationalId: result.onboarding.nationalId } });
+    }
+    this.setRefreshCookie(reply, result.refreshToken, false, dto.rememberMe ?? false);
+    this.setAccessCookie(reply, result.accessToken, false);
+    return successResponse({ user: result.user, accessToken: result.accessToken });
+  }
+
+  @Public()
   @Post('admin/login')
   @HttpCode(HttpStatus.OK)
   @UseGuards(TrustedOriginGuard)

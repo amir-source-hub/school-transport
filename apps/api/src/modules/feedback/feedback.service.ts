@@ -4,7 +4,15 @@ import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { ConflictError, NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { DatabaseService } from '../../database/database.service';
-import { adminUsers, feedbackSubmissions, students } from '../../database/schemas';
+import {
+  adminUsers,
+  feedbackSubmissions,
+  parents,
+  schoolManagerUsers,
+  schools,
+  students,
+  users,
+} from '../../database/schemas';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import type { CreateFeedbackDto, CreatePublicContactDto, FeedbackQueryDto } from './feedback.dto';
 
@@ -31,6 +39,7 @@ export class FeedbackService {
         id: generateId(),
         senderType: 'PUBLIC',
         contactName: input.name.trim(),
+        contactPhone: input.phoneNumber,
         category: topic.category,
         subject: topic.subject,
         message: input.message.trim(),
@@ -134,6 +143,16 @@ export class FeedbackService {
       filters.push(
         or(
           ilike(feedbackSubmissions.contactName, pattern),
+          ilike(feedbackSubmissions.contactPhone, pattern),
+          ilike(parents.firstName, pattern),
+          ilike(parents.lastName, pattern),
+          ilike(users.phoneNumber, pattern),
+          ilike(schoolManagerUsers.firstName, pattern),
+          ilike(schoolManagerUsers.lastName, pattern),
+          ilike(schoolManagerUsers.phoneNumber, pattern),
+          ilike(schools.name, pattern),
+          ilike(students.firstName, pattern),
+          ilike(students.lastName, pattern),
           ilike(feedbackSubmissions.subject, pattern),
           ilike(feedbackSubmissions.message, pattern),
           ilike(feedbackSubmissions.response, pattern),
@@ -142,8 +161,29 @@ export class FeedbackService {
     }
     const where = filters.length ? and(...filters) : sql`true`;
     const items = await this.db.db
-      .select()
+      .select({
+        feedback: feedbackSubmissions,
+        parentFirstName: parents.firstName,
+        parentLastName: parents.lastName,
+        parentPhone: users.phoneNumber,
+        parentUsername: users.username,
+        managerFirstName: schoolManagerUsers.firstName,
+        managerLastName: schoolManagerUsers.lastName,
+        managerPhone: schoolManagerUsers.phoneNumber,
+        managerUsername: schoolManagerUsers.username,
+        schoolName: schools.name,
+        studentFirstName: students.firstName,
+        studentLastName: students.lastName,
+      })
       .from(feedbackSubmissions)
+      .leftJoin(users, eq(users.id, feedbackSubmissions.userId))
+      .leftJoin(
+        parents,
+        and(eq(parents.userId, feedbackSubmissions.userId), eq(parents.isPrimaryContact, true)),
+      )
+      .leftJoin(schoolManagerUsers, eq(schoolManagerUsers.id, feedbackSubmissions.managerUserId))
+      .leftJoin(schools, eq(schools.id, feedbackSubmissions.schoolId))
+      .leftJoin(students, eq(students.id, feedbackSubmissions.studentId))
       .where(where)
       .orderBy(desc(feedbackSubmissions.createdAt), desc(feedbackSubmissions.id))
       .limit(query.pageSize)
@@ -151,6 +191,14 @@ export class FeedbackService {
     const [{ value }] = await this.db.db
       .select({ value: count() })
       .from(feedbackSubmissions)
+      .leftJoin(users, eq(users.id, feedbackSubmissions.userId))
+      .leftJoin(
+        parents,
+        and(eq(parents.userId, feedbackSubmissions.userId), eq(parents.isPrimaryContact, true)),
+      )
+      .leftJoin(schoolManagerUsers, eq(schoolManagerUsers.id, feedbackSubmissions.managerUserId))
+      .leftJoin(schools, eq(schools.id, feedbackSubmissions.schoolId))
+      .leftJoin(students, eq(students.id, feedbackSubmissions.studentId))
       .where(where);
     await this.audit.record({
       actorType: 'ADMIN',
@@ -159,7 +207,25 @@ export class FeedbackService {
       entityType: 'FEEDBACK',
       ipAddress: ip,
     });
-    return { items, total: Number(value), snapshotAt: snapshotAt.toISOString() };
+    return {
+      items: items.map((item) => ({
+        ...item.feedback,
+        senderName:
+          item.feedback.senderType === 'SCHOOL_MANAGER'
+            ? [item.managerFirstName, item.managerLastName].filter(Boolean).join(' ')
+            : [item.parentFirstName, item.parentLastName].filter(Boolean).join(' '),
+        senderPhone:
+          item.feedback.senderType === 'SCHOOL_MANAGER' ? item.managerPhone : item.parentPhone,
+        senderUsername:
+          item.feedback.senderType === 'SCHOOL_MANAGER'
+            ? item.managerUsername
+            : item.parentUsername,
+        schoolName: item.schoolName,
+        studentName: [item.studentFirstName, item.studentLastName].filter(Boolean).join(' '),
+      })),
+      total: Number(value),
+      snapshotAt: snapshotAt.toISOString(),
+    };
   }
   async markRead(id: string, adminId: string, version: number, ip?: string) {
     return this.transition(

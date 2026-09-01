@@ -16,6 +16,7 @@ import {
   schoolManagerUsers,
   schoolManagerAssignments,
   schools,
+  drivers,
 } from '../../../database/schemas';
 import { AppError, AuthenticationError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
@@ -379,6 +380,23 @@ export class AuthService {
     };
   }
 
+  async authenticateDriver(
+    phoneNumber: string,
+    nationalId: string,
+    context?: SessionContext,
+    rememberMe = false,
+    onboardingToken?: string,
+  ): Promise<ParentCredentialResult> {
+    const account = await this.findAccountByPhone(phoneNumber);
+    if (!account || account.status === 'PENDING' || account.status === 'EXPIRED') {
+      return this.authenticateParent(phoneNumber, nationalId, context, rememberMe, onboardingToken);
+    }
+    const [driver] = await this.db.db.select({ id: drivers.id }).from(drivers).where(and(eq(drivers.userId, account.id), eq(drivers.phoneNumber, phoneNumber), eq(drivers.nationalId, nationalId))).limit(1);
+    if (!driver || account.status !== 'ACTIVE') throw new AuthenticationError('شماره همراه راننده یا کد ملی صحیح نیست.');
+    const tokens = await this.generateTokens(account.id, 'DRIVER', context, undefined, rememberMe);
+    return { user: { id: account.id, username: account.username, phoneNumber, role: 'DRIVER' }, ...tokens };
+  }
+
   async verifyAuthOtp(
     phoneNumber: string,
     code: string,
@@ -486,9 +504,11 @@ export class AuthService {
       .update(users)
       .set({ username: session.phoneNumber, updatedAt: new Date() })
       .where(eq(users.id, session.userId));
+    const [driver] = await this.db.db.select({ id: drivers.id }).from(drivers).where(eq(drivers.userId, session.userId)).limit(1);
+    const role: UserRole = driver ? 'DRIVER' : 'PARENT';
     const tokens = await this.generateTokens(
       session.userId,
-      'PARENT',
+      role,
       context,
       undefined,
       rememberMe,
@@ -499,7 +519,7 @@ export class AuthService {
         id: session.userId,
         username: session.phoneNumber,
         phoneNumber: session.phoneNumber,
-        role: 'PARENT',
+        role,
       },
       ...tokens,
     };
@@ -840,7 +860,9 @@ export class AuthService {
       ? this.normalizeManagerUsername(data.username)
       : current.username;
     const phoneNumber = data.phoneNumber ?? current.phoneNumber;
-    if (!/^[A-Za-z0-9]{8}$/.test(username)) {
+    // Existing accounts may predate the current eight-character policy. Do not
+    // block unrelated school/manager edits unless the admin changes the username.
+    if (data.username !== undefined && !/^[A-Za-z0-9]{8}$/.test(username)) {
       throw new ValidationError('نام کاربری مدیر باید دقیقاً ۸ حرف انگلیسی یا عدد باشد.');
     }
     if (data.password !== undefined && !/^[A-Za-z0-9]{8}$/.test(data.password)) {
@@ -1046,7 +1068,7 @@ export class AuthService {
 
   async refreshTokens(
     refreshToken: string,
-  ): Promise<AuthTokens & { role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER'; remembered: boolean }> {
+  ): Promise<AuthTokens & { role: UserRole; remembered: boolean }> {
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
         secret: this.config.jwtSecret,
@@ -1054,7 +1076,7 @@ export class AuthService {
 
       if (
         payload.type !== 'refresh' ||
-        !['PARENT', 'ADMIN', 'SCHOOL_MANAGER'].includes(payload.role)
+        !['PARENT', 'ADMIN', 'SCHOOL_MANAGER', 'DRIVER'].includes(payload.role)
       ) {
         throw new AuthenticationError('Invalid refresh token.');
       }
@@ -1338,7 +1360,7 @@ export class AuthService {
     return legacy[0];
   }
 
-  private async findAccountById(userId: string, role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER') {
+  private async findAccountById(userId: string, role: UserRole) {
     if (role === 'ADMIN') {
       return (
         await this.db.db
@@ -1368,7 +1390,7 @@ export class AuthService {
 
   private async generateTokens(
     userId: string,
-    role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER',
+    role: UserRole,
     context?: SessionContext,
     replacedSessionId?: string,
     rememberMe = false,
@@ -1442,7 +1464,7 @@ export class AuthService {
 
   private async revokeAllSessions(
     subjectId: string,
-    role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER',
+    role: UserRole,
     reason: string,
   ): Promise<void> {
     await this.db.db

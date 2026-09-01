@@ -1,14 +1,15 @@
 import { apiRequest } from '@/lib/api-client';
 
-export type AuthRole = 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER';
+export type AuthRole = 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER' | 'DRIVER';
 
 export const PORTAL_PATH_BY_ROLE: Record<AuthRole, string> = {
   PARENT: '/student/dashboard',
   ADMIN: '/admin/dashboard',
   SCHOOL_MANAGER: '/manager/dashboard',
+  DRIVER: '/driver/dashboard',
 };
 
-export type UiRoleIdentifier = 'STUDENT_PORTAL' | 'SCHOOL_MANAGER' | 'DRIVER_COMING_SOON';
+export type UiRoleIdentifier = 'STUDENT_PORTAL' | 'SCHOOL_MANAGER' | 'DRIVER_PORTAL';
 
 type AuthUser = {
   id: string;
@@ -40,6 +41,12 @@ export function loginOrRegisterParent(phoneNumber: string, nationalId: string, r
     method: 'POST',
     body: { phoneNumber, nationalId, rememberMe },
     timeoutMs: 10_000,
+  });
+}
+
+export function loginOrRegisterDriver(phoneNumber: string, nationalId: string, rememberMe = false) {
+  return apiRequest<VerifyParentOtpResponse>('/auth/driver/credentials', {
+    method: 'POST', body: { phoneNumber, nationalId, rememberMe }, timeoutMs: 10_000,
   });
 }
 

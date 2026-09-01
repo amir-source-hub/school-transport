@@ -4,7 +4,6 @@ import { useId, useRef } from 'react';
 import { GraduationCap, School, BusFront } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { SharedIndicator } from '@/components/motion/shared-indicator';
-import { Badge } from '@/components/ui/badge';
 import type { UiRoleIdentifier } from './auth-api';
 
 type RoleOption = {
@@ -29,11 +28,10 @@ const options: RoleOption[] = [
     icon: School,
   },
   {
-    id: 'DRIVER_COMING_SOON',
+    id: 'DRIVER_PORTAL',
     title: 'پنل راننده',
-    description: 'در حال آماده‌سازی',
+    description: 'ورود و ثبت‌نام با شماره همراه و کد ملی',
     icon: BusFront,
-    disabled: true,
   },
 ];
 
@@ -100,8 +98,8 @@ export function PortalRoleSelector({
                   'grid size-11 shrink-0 place-items-center rounded-xl',
                   option.id === 'SCHOOL_MANAGER' && isSelected
                     ? 'bg-navy text-sun'
-                    : option.id === 'DRIVER_COMING_SOON'
-                      ? 'bg-slate-100 text-slate-400'
+                    : option.id === 'DRIVER_PORTAL'
+                      ? 'bg-coral text-white'
                       : isSelected
                         ? 'bg-transit-blue text-white'
                         : 'bg-sky text-primary',
@@ -118,11 +116,6 @@ export function PortalRoleSelector({
                   )}
                 >
                   {option.title}
-                  {option.disabled && (
-                    <Badge tone="neutral" className="min-h-5 px-2 py-0 text-[10px] text-foreground">
-                      به‌زودی
-                    </Badge>
-                  )}
                 </span>
                 <span
                   id={`${groupId}-${option.id}-description`}

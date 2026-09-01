@@ -569,6 +569,44 @@ describe('StudentPhotosService reject', () => {
       code: 'PHOTO_CHANGED',
     });
   });
+
+  it('revokes an approved photo and notifies the family to upload a replacement', async () => {
+    const approved = baseRow({
+      status: 'APPROVED',
+      canonicalKey: 'canonical/approved.jpg',
+      version: 4,
+    });
+    const rejected = { ...approved, status: 'REJECTED', version: 5 };
+    const txn = {
+      select: vi.fn(() => selectLimit([approved])),
+      update: vi.fn(() => updateReturning([rejected])),
+    };
+    const db = {
+      db: { transaction: vi.fn(async (cb: (t: unknown) => unknown) => cb(txn)) },
+    } as unknown as DatabaseService;
+    const notice = notifications();
+    const auditLog = audit();
+    const service = new StudentPhotosService(db, config(), notice, storage(), auditLog);
+
+    await expect(
+      service.reject('admin-1', 'upload-1', {
+        reason: 'LOW_QUALITY',
+        detail: 'عکس جدید بارگذاری شود.',
+        version: 4,
+      }),
+    ).resolves.toMatchObject({ status: 'REJECTED', version: 5 });
+    expect(notice.enqueueInTransaction).toHaveBeenCalledWith(
+      txn,
+      expect.objectContaining({
+        userId: 'user-1',
+        notificationType: 'STUDENT_PHOTO_REJECTED',
+      }),
+    );
+    expect(auditLog.recordInTransaction).toHaveBeenCalledWith(
+      txn,
+      expect.objectContaining({ action: 'STUDENT_PHOTO_REJECTED' }),
+    );
+  });
 });
 
 describe('StudentPhotosService cleanupExpired', () => {

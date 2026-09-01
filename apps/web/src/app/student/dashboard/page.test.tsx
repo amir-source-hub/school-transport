@@ -1,13 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import StudentDashboardPage from './page';
-import { getStudents } from '@/features/students/students-api';
+import { getStudentDriverAssignments, getStudents } from '@/features/students/students-api';
 import { getEnrollments } from '@/features/enrollment/enrollments-api';
 import { getContracts } from '@/features/finance/contracts-api';
 import { getOfflineSubmissions, getPayments } from '@/features/finance/payments-api';
 import { getNotifications } from '@/features/notifications/notifications-api';
 
-vi.mock('@/features/students/students-api', () => ({ getStudents: vi.fn() }));
+vi.mock('@/features/students/students-api', () => ({ getStudents: vi.fn(), getStudentDriverAssignments: vi.fn() }));
 vi.mock('@/features/enrollment/enrollments-api', () => ({ getEnrollments: vi.fn() }));
 vi.mock('@/features/finance/contracts-api', () => ({ getContracts: vi.fn() }));
 vi.mock('@/features/finance/payments-api', () => ({
@@ -36,6 +36,7 @@ describe('family dashboard prepayment lifecycle', () => {
         grade: 'اول',
       } as never,
     ]);
+    vi.mocked(getStudentDriverAssignments).mockResolvedValue([]);
     vi.mocked(getEnrollments).mockResolvedValue([
       {
         id: 'registration-1',

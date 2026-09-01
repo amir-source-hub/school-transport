@@ -5,17 +5,24 @@ import { AdminPhotoReviewQueue } from '@/features/student-photos/admin-photo-rev
 import { getAdminPhotos } from '@/features/student-photos/admin-student-photos-api';
 
 export const metadata = { title: 'بررسی عکس کارت سرویس' };
+export const dynamic = 'force-dynamic';
 
 export default async function AdminStudentPhotosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
   const status = params.status || 'PENDING_REVIEW';
-  const list = await getAdminPhotos({ page, status });
+  const q = params.q?.trim() ?? '';
+  const list = await getAdminPhotos({ page, status, q: q || undefined });
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
+  const pageHref = (nextPage: number) => {
+    const query = new URLSearchParams({ status, page: String(nextPage) });
+    if (q) query.set('q', q);
+    return `/admin/student-photos?${query}`;
+  };
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -26,6 +33,16 @@ export default async function AdminStudentPhotosPage({
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">بررسی عکس کارت سرویس</h1>
       </div>
       <form className="flex flex-wrap items-end gap-3">
+        <label className="min-w-64 flex-1 text-sm font-bold">
+          جست‌وجوی دانش‌آموز
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="نام، نام خانوادگی، کد ملی یا کد دانش‌آموزی"
+            className="mt-1 block min-h-11 w-full rounded-xl border border-border bg-surface px-3"
+          />
+        </label>
         <label className="text-sm font-bold">
           وضعیت
           <select
@@ -52,24 +69,18 @@ export default async function AdminStudentPhotosPage({
       <AdminPhotoReviewQueue items={list.items} />
       {totalPages > 1 && (
         <nav aria-label="صفحه‌بندی عکس‌ها" className="flex justify-between">
-          {page > 1 ? (
-            <ButtonLink
-              variant="secondary"
-              href={`/admin/student-photos?status=${status}&page=${page - 1}`}
-            >
+          {list.page > 1 ? (
+            <ButtonLink variant="secondary" href={pageHref(list.page - 1)}>
               قبلی
             </ButtonLink>
           ) : (
             <span />
           )}
           <span className="text-sm text-muted">
-            صفحه {page} از {totalPages}
+            صفحه {list.page} از {totalPages}
           </span>
-          {page < totalPages ? (
-            <ButtonLink
-              variant="secondary"
-              href={`/admin/student-photos?status=${status}&page=${page + 1}`}
-            >
+          {list.page < totalPages ? (
+            <ButtonLink variant="secondary" href={pageHref(list.page + 1)}>
               بعدی
             </ButtonLink>
           ) : (

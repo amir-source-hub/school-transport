@@ -13,7 +13,6 @@ import {
 } from 'drizzle-orm';
 import { normalizeIranianDigits } from '../../common/iranian-national-id';
 import { AuthorizationError } from '../../common/errors';
-import { ConfigService } from '../../config/config.service';
 import { DatabaseService } from '../../database/database.service';
 import {
   contracts,
@@ -27,6 +26,10 @@ import {
   serviceRegistrations,
   studentPhotoUploads,
   students,
+  drivers,
+  vehicles,
+  transportServiceRuns,
+  transportServiceRunStudents,
 } from '../../database/schemas';
 import { SchoolManagerScopeService } from '../access-control/school-manager-scope.service';
 import type { ManagerStudentListQueryDto } from './school-manager.dto';
@@ -46,7 +49,6 @@ export function mapEducationLevel(className: string | null): string | null {
 export class SchoolManagersService {
   constructor(
     @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
-    @Inject(forwardRef(() => ConfigService)) private readonly config: ConfigService,
     private readonly scope: SchoolManagerScopeService,
   ) {}
 
@@ -172,8 +174,8 @@ export class SchoolManagersService {
       unansweredFeedback: unansweredFeedbackRow?.count ?? 0,
       onlineControlStatus: 'PREPARING',
       driverPreview: {
-        available: this.config.featureManagerDriverPreview,
-        experimental: true,
+        available: true,
+        experimental: false,
       },
     };
   }
@@ -370,7 +372,7 @@ export class SchoolManagersService {
       .limit(1);
     if (!studentRow) throw new AuthorizationError('Access denied.');
 
-    const [parentRows, addressRows, emergencyRows, registrationRows, photoRow] = await Promise.all([
+    const [parentRows, addressRows, emergencyRows, registrationRows, photoRow, assignmentRows] = await Promise.all([
       this.db.db
         .select({
           id: parents.id,
@@ -412,6 +414,17 @@ export class SchoolManagersService {
           ),
         )
         .limit(1),
+      this.db.db.select({
+        runId: transportServiceRuns.id, direction: transportServiceRuns.direction, title: transportServiceRuns.title,
+        scheduledStartTime: transportServiceRuns.scheduledStartTime, scheduledArrivalTime: transportServiceRuns.scheduledArrivalTime,
+        pickupOrder: transportServiceRunStudents.pickupOrder, driverId: drivers.id,
+        driverFirstName: drivers.firstName, driverLastName: drivers.lastName, driverPhoneNumber: drivers.phoneNumber,
+        vehicleType: vehicles.vehicleType, vehicleSystem: vehicles.system, plateNumber: vehicles.plateNumber,
+      }).from(transportServiceRunStudents)
+        .innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId))
+        .innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
+        .innerJoin(vehicles, eq(vehicles.id, transportServiceRuns.vehicleId))
+        .where(and(eq(transportServiceRunStudents.studentId, studentId), eq(transportServiceRunStudents.isActive, true), eq(transportServiceRuns.isActive, true), inArray(transportServiceRuns.schoolId, schoolIds))),
     ]);
 
     const latestRegistration = registrationRows[0] ?? null;
@@ -512,7 +525,57 @@ export class SchoolManagersService {
       })),
       hasApprovedPhoto: Boolean(photoRow[0]),
       enrollmentSummary,
+      transportAssignments: assignmentRows,
     };
+  }
+
+  async getDrivers(managerId: string) {
+    const schoolIds = await this.scope.getActiveSchoolIds(managerId);
+    if (!schoolIds.length) throw new AuthorizationError('مدیر مدرسه به هیچ مدرسه‌ای متصل نیست.');
+    const rows = await this.db.db.select({
+      id: drivers.id, firstName: drivers.firstName, lastName: drivers.lastName, phoneNumber: drivers.phoneNumber,
+      status: drivers.status, vehicleType: vehicles.vehicleType, vehicleSystem: vehicles.system,
+      plateNumber: vehicles.plateNumber, capacity: vehicles.capacity, runId: transportServiceRuns.id,
+      direction: transportServiceRuns.direction, schoolName: schools.name,
+    }).from(transportServiceRuns).innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
+      .innerJoin(vehicles, eq(vehicles.id, transportServiceRuns.vehicleId)).innerJoin(schools, eq(schools.id, transportServiceRuns.schoolId))
+      .where(and(inArray(transportServiceRuns.schoolId, schoolIds), eq(transportServiceRuns.isActive, true)))
+      .orderBy(desc(transportServiceRuns.createdAt));
+    const grouped = new Map<string, any>();
+    for (const row of rows) {
+      const item = grouped.get(row.id) ?? { id: row.id, firstName: row.firstName, lastName: row.lastName, phoneNumber: row.phoneNumber, status: row.status, vehicleType: row.vehicleType, vehicleSystem: row.vehicleSystem, plateNumber: row.plateNumber, capacity: row.capacity, runs: [] };
+      item.runs.push({ id: row.runId, direction: row.direction, schoolName: row.schoolName });
+      grouped.set(row.id, item);
+    }
+    return [...grouped.values()];
+  }
+
+  async getDriverDetail(managerId: string, driverId: string) {
+    const schoolIds = await this.scope.getActiveSchoolIds(managerId);
+    const [allowed] = await this.db.db.select({ id: transportServiceRuns.id }).from(transportServiceRuns)
+      .where(and(eq(transportServiceRuns.driverId, driverId), inArray(transportServiceRuns.schoolId, schoolIds), eq(transportServiceRuns.isActive, true))).limit(1);
+    if (!allowed) throw new AuthorizationError('Access denied.');
+    const [driver] = await this.db.db.select().from(drivers).where(eq(drivers.id, driverId)).limit(1);
+    const [vehicle] = await this.db.db.select().from(vehicles).where(eq(vehicles.driverId, driverId)).orderBy(desc(vehicles.createdAt)).limit(1);
+    const rows = await this.db.db.select({
+      id: transportServiceRuns.id, title: transportServiceRuns.title, direction: transportServiceRuns.direction,
+      academicYear: transportServiceRuns.academicYear, scheduledStartTime: transportServiceRuns.scheduledStartTime,
+      scheduledArrivalTime: transportServiceRuns.scheduledArrivalTime, activeWeekdays: transportServiceRuns.activeWeekdays,
+      areaDescription: transportServiceRuns.areaDescription, schoolName: schools.name,
+      studentId: students.id, studentFirstName: students.firstName, studentLastName: students.lastName,
+      pickupOrder: transportServiceRunStudents.pickupOrder,
+    }).from(transportServiceRuns).innerJoin(schools, eq(schools.id, transportServiceRuns.schoolId))
+      .leftJoin(transportServiceRunStudents, and(eq(transportServiceRunStudents.serviceRunId, transportServiceRuns.id), eq(transportServiceRunStudents.isActive, true)))
+      .leftJoin(students, eq(students.id, transportServiceRunStudents.studentId))
+      .where(and(eq(transportServiceRuns.driverId, driverId), inArray(transportServiceRuns.schoolId, schoolIds), eq(transportServiceRuns.isActive, true)))
+      .orderBy(transportServiceRuns.sequenceNumber, transportServiceRunStudents.pickupOrder);
+    const grouped = new Map<string, any>();
+    for (const row of rows) {
+      const run = grouped.get(row.id) ?? { id: row.id, title: row.title, direction: row.direction, academicYear: row.academicYear, scheduledStartTime: row.scheduledStartTime, scheduledArrivalTime: row.scheduledArrivalTime, activeWeekdays: row.activeWeekdays, areaDescription: row.areaDescription, schoolName: row.schoolName, students: [] };
+      if (row.studentId) run.students.push({ id: row.studentId, firstName: row.studentFirstName, lastName: row.studentLastName, pickupOrder: row.pickupOrder });
+      grouped.set(row.id, run);
+    }
+    return { driver, vehicle: vehicle ?? null, runs: [...grouped.values()] };
   }
 
   async getSettings(managerId: string) {

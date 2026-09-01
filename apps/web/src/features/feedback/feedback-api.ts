@@ -4,6 +4,12 @@ export const feedbackSchema = z.object({
   id: z.string(),
   senderType: z.string().optional(),
   contactName: z.string().nullable().optional(),
+  contactPhone: z.string().nullable().optional(),
+  senderName: z.string().nullable().optional(),
+  senderPhone: z.string().nullable().optional(),
+  senderUsername: z.string().nullable().optional(),
+  schoolName: z.string().nullable().optional(),
+  studentName: z.string().nullable().optional(),
   studentId: z.string().nullable(),
   category: z.string(),
   subject: z.string(),
@@ -47,6 +53,7 @@ export async function getPublicContactMessages(q?: string) {
 }
 export async function createPublicContactMessage(body: {
   name: string;
+  phoneNumber: string;
   topic: string;
   message: string;
 }) {

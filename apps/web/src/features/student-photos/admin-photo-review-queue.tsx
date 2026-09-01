@@ -151,16 +151,18 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
               >
                 نمایش ایمن عکس
               </Button>
-              {item.status === 'PENDING_REVIEW' && (
+              {(item.status === 'PENDING_REVIEW' || item.status === 'APPROVED') && (
                 <div className="space-y-3 border-t border-border pt-4">
-                  <Button
-                    size="sm"
-                    disabled={Boolean(pending) || !item.studentId}
-                    onClick={() => act(item, 'approve')}
-                  >
-                    تأیید عکس
-                  </Button>
-                  {!item.studentId && (
+                  {item.status === 'PENDING_REVIEW' && (
+                    <Button
+                      size="sm"
+                      disabled={Boolean(pending) || !item.studentId}
+                      onClick={() => act(item, 'approve')}
+                    >
+                      تأیید عکس
+                    </Button>
+                  )}
+                  {item.status === 'PENDING_REVIEW' && !item.studentId && (
                     <p className="text-xs text-danger">
                       عکس بدون اتصال به دانش‌آموز قابل تأیید نیست.
                     </p>
@@ -187,7 +189,7 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
                     disabled={Boolean(pending) || !reason[item.uploadId]}
                     onClick={() => act(item, 'reject')}
                   >
-                    رد عکس
+                    {item.status === 'APPROVED' ? 'لغو تأیید و درخواست عکس جدید' : 'رد عکس'}
                   </Button>
                 </div>
               )}

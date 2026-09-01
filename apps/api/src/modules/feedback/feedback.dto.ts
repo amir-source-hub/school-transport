@@ -26,6 +26,7 @@ const CONTACT_TOPICS = ['registration', 'payment', 'contract', 'technical', 'oth
 
 export class CreatePublicContactDto {
   @IsString() @Length(2, 120) @Matches(PLAIN_TEXT) name!: string;
+  @IsString() @Matches(/^09\d{9}$/) phoneNumber!: string;
   @IsIn(CONTACT_TOPICS) topic!: (typeof CONTACT_TOPICS)[number];
   @IsString() @Length(10, 2000) @Matches(PLAIN_TEXT) message!: string;
 }

@@ -109,7 +109,8 @@ export class AdminStudentPhotosController {
     @Param('familyId', new ParseUUIDPipe()) familyId: string,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
-    return successResponse(await this.service.completeUpload(familyId, id, req.ip));
+    const completed = await this.service.completeUpload(familyId, id, req.ip);
+    return successResponse(await this.service.approve(req.user.id, id, completed.version, req.ip));
   }
 
   @Get()

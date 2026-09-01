@@ -10,7 +10,7 @@ import { safePortalPath } from './safe-next';
 import { ApiClientError } from '@/lib/api-client';
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn() }));
-const authApi = vi.hoisted(() => ({ loginManager: vi.fn() }));
+const authApi = vi.hoisted(() => ({ loginManager: vi.fn(), loginOrRegisterDriver: vi.fn(), loginOrRegisterParent: vi.fn() }));
 
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
 vi.mock('./auth-api', () => authApi);
@@ -32,6 +32,8 @@ function passwordField() {
 beforeEach(() => {
   navigation.replace.mockReset();
   authApi.loginManager.mockReset();
+  authApi.loginOrRegisterDriver.mockReset();
+  authApi.loginOrRegisterParent.mockReset();
 });
 
 describe('manager portal login', () => {
@@ -91,33 +93,29 @@ describe('manager portal login', () => {
   });
 });
 
-describe('driver coming-soon form', () => {
-  it('keeps fields disabled and never submits a request', async () => {
+describe('driver login form', () => {
+  it('uses verified driver credentials', async () => {
     const user = userEvent.setup();
     render(<DriverComingSoonForm />);
-    const username = usernameField();
-    const password = passwordField();
-    const submit = screen.getByRole('button', { name: 'ورود به پنل راننده' });
-
-    expect(username).toBeDisabled();
-    expect(password).toBeDisabled();
-    expect(submit).toBeDisabled();
-    expect(screen.getByText(/در حال آماده‌سازی/)).toBeInTheDocument();
-
+    const phone = screen.getByLabelText(/شماره همراه راننده/);
+    const nationalId = screen.getByLabelText(/کد ملی راننده/);
+    const submit = screen.getByRole('button', { name: 'ورود یا ثبت‌نام و ادامه' });
+    await user.type(phone, '123456789');
+    await user.type(nationalId, '0084575948');
     await user.click(submit);
-    expect(authApi.loginManager).not.toHaveBeenCalled();
+    expect(authApi.loginOrRegisterDriver).toHaveBeenCalledWith(expect.stringMatching(/^09\d{9}$/), '0084575948', false);
   });
 });
 
 describe('portal role selector', () => {
   function StatefulSelector() {
     const [selected, setSelected] = useState<
-      'STUDENT_PORTAL' | 'SCHOOL_MANAGER' | 'DRIVER_COMING_SOON'
+      'STUDENT_PORTAL' | 'SCHOOL_MANAGER' | 'DRIVER_PORTAL'
     >('STUDENT_PORTAL');
     return <PortalRoleSelector selected={selected} onSelect={setSelected} />;
   }
 
-  it('selects roles with keyboard and marks driver as coming soon', async () => {
+  it('selects roles with keyboard including the driver portal', async () => {
     const user = userEvent.setup();
     render(<StatefulSelector />);
 
@@ -134,12 +132,12 @@ describe('portal role selector', () => {
     expect(student).toHaveAttribute('tabindex', '-1');
   });
 
-  it('does not select the disabled driver role', async () => {
+  it('selects the driver role', async () => {
     const onSelect = vi.fn();
     render(<PortalRoleSelector selected="STUDENT_PORTAL" onSelect={onSelect} />);
     const driver = screen.getByRole('radio', { name: /پنل راننده/ });
     await userEvent.click(driver);
-    expect(onSelect).not.toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledWith('DRIVER_PORTAL');
   });
 
   it('moves selection with arrow keys', async () => {

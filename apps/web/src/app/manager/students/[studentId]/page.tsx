@@ -178,7 +178,7 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
         <Card className="lg:col-span-2">
           <div className="flex justify-between">
             <h2 className="font-black">وضعیت سرویس</h2>
-            <Badge tone="warning">اطلاعات راننده آزمایشی است</Badge>
+            <Badge tone={s.transportAssignments.length ? 'success' : 'neutral'}>{s.transportAssignments.length ? 'راننده متصل است' : 'بدون راننده'}</Badge>
           </div>
           {s.enrollmentSummary ? (
             <dl className="mt-4 grid gap-4 sm:grid-cols-3 text-sm">
@@ -198,6 +198,9 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
           ) : (
             <p className="mt-4 text-sm text-muted">برای این دانش‌آموز سرویس فعالی ثبت نشده است.</p>
           )}
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {s.transportAssignments.map((assignment) => <div key={assignment.runId} className="rounded-xl bg-primary-soft p-4 text-sm"><p className="font-black">{assignment.driverFirstName} {assignment.driverLastName} · {assignment.direction === 'TO_SCHOOL' ? 'سرویس رفت' : 'سرویس برگشت'}</p><p className="mt-2 text-muted">{assignment.vehicleSystem} · پلاک {assignment.plateNumber}</p><p className="mt-1 text-muted">{assignment.scheduledStartTime} تا {assignment.scheduledArrivalTime} · ترتیب {assignment.pickupOrder.toLocaleString('fa-IR')}</p><p className="mt-1 font-mono">{assignment.driverPhoneNumber}</p></div>)}
+          </div>
         </Card>
       </div>
     </div>

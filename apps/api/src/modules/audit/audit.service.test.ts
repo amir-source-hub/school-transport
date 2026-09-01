@@ -34,6 +34,26 @@ describe('audit value allowlist', () => {
     expect(serialized).toBe('{"grade":"سوم"}');
   });
 
+  it('keeps non-sensitive driver trace metadata and drops driver PII', () => {
+    expect(
+      allowlistedAuditValues({
+        nationalId: '0499370899',
+        phoneNumber: '09123456789',
+        changedFields: ['homePhoneNumber', 'city'],
+        documentType: 'DRIVER_PHOTO',
+        vehicleType: 'CAR',
+        ownershipType: 'SELF',
+        usageType: 'PERSONAL',
+      }),
+    ).toEqual({
+      changedFields: ['homePhoneNumber', 'city'],
+      documentType: 'DRIVER_PHOTO',
+      vehicleType: 'CAR',
+      ownershipType: 'SELF',
+      usageType: 'PERSONAL',
+    });
+  });
+
   it('returns undefined for non-object values', () => {
     expect(allowlistedAuditValues('string')).toBeUndefined();
     expect(allowlistedAuditValues([{ firstName: 'علی' }])).toBeUndefined();

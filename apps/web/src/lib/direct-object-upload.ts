@@ -38,7 +38,10 @@ export async function putFileDirectly(
     };
     request.onload = () => {
       cleanup();
-      if (request.status >= 200 && request.status < 300) resolve();
+      if (request.status >= 200 && request.status < 300) {
+        options.onProgress?.(100);
+        resolve();
+      }
       else reject(new DirectUploadError('http', request.status));
     };
     request.onerror = () => {

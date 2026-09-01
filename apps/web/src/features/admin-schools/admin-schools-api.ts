@@ -125,7 +125,7 @@ export async function provisionSchoolManager(data: {
 export async function updateSchoolManager(
   managerId: string,
   data: {
-    username: string;
+    username?: string;
     firstName: string;
     lastName: string;
     phoneNumber: string;

@@ -288,6 +288,27 @@
       "when": 1787850000000,
       "tag": "0040_authorized_family_erasure",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1788062400000,
+      "tag": "0041_driver_enrollment",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1788235200000,
+      "tag": "0042_driver_location",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1788242400000,
+      "tag": "0043_public_contact_phone",
+      "breakpoints": true
     }
   ]
 }

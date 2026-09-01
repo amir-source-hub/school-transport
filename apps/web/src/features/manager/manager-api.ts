@@ -24,7 +24,7 @@ export type ManagerDashboard = {
   }>;
   unansweredFeedback: number;
   onlineControlStatus: 'PREPARING';
-  driverPreview: { available: boolean; experimental: true };
+  driverPreview: { available: boolean; experimental: boolean };
 };
 
 export type ManagerStudent = {
@@ -99,7 +99,11 @@ export type ManagerStudentDetail = ManagerStudent & {
       priceStatus: string;
     };
   };
+  transportAssignments: Array<{ runId: string; direction: string; title: string; scheduledStartTime: string; scheduledArrivalTime: string; pickupOrder: number; driverId: string; driverFirstName: string; driverLastName: string; driverPhoneNumber: string; vehicleType: string; vehicleSystem: string; plateNumber: string }>;
 };
+
+export type ManagerDriver = { id: string; firstName: string; lastName: string; phoneNumber: string; status: string; vehicleType: string; vehicleSystem: string; plateNumber: string; capacity: number; runs: Array<{ id: string; direction: string; schoolName: string }> };
+export type ManagerDriverDetail = { driver: Record<string, string | number | null>; vehicle: null | Record<string, string | number | null>; runs: Array<{ id: string; title: string; direction: string; academicYear: string; scheduledStartTime: string; scheduledArrivalTime: string; activeWeekdays: number[]; areaDescription: string | null; schoolName: string; students: Array<{ id: string; firstName: string; lastName: string; pickupOrder: number }> }> };
 
 export type ManagerInfo = {
   manager: {
@@ -143,6 +147,8 @@ export async function getManagerStudents(query: string) {
 export async function getManagerStudent(id: string) {
   return (await apiRequest<ManagerStudentDetail>(`/manager/students/${id}`)).data;
 }
+export async function getManagerDrivers() { return (await apiRequest<ManagerDriver[]>('/manager/drivers')).data; }
+export async function getManagerDriver(id: string) { return (await apiRequest<ManagerDriverDetail>(`/manager/drivers/${id}`)).data; }
 export async function getManagerStudentPhoto(id: string) {
   return (
     await apiRequest<{ status: 'APPROVED'; viewUrl: string; expiresInSeconds: number }>(

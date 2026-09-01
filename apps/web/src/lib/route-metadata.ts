@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const SITE_NAME = 'ثمین گشت مهر ایران';
 export const SITE_URL = new URL('https://samingasht.ir');
 
-export type RouteAudience = 'public' | 'auth' | 'parent' | 'admin' | 'manager' | 'onboarding';
+export type RouteAudience = 'public' | 'auth' | 'parent' | 'admin' | 'manager' | 'driver' | 'onboarding';
 
 export type RouteDocumentPolicy = {
   path: string;
@@ -363,6 +363,37 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     redirectTo: '/manager/dashboard',
   },
   {
+    path: '/admin/drivers', audience: 'admin', title: 'رانندگان', description: 'مشاهده پرونده رانندگان و سرویس‌های متصل.', primaryHeading: 'رانندگان ثبت‌شده',
+  },
+  {
+    path: '/admin/drivers/[driverId]', audience: 'admin', title: 'پرونده راننده', description: 'مشاهده اطلاعات کامل راننده، خودرو، مسیر و دانش‌آموزان.', primaryHeading: 'پرونده راننده',
+  },
+  {
+    path: '/onboarding/driver-enrollment',
+    audience: 'onboarding',
+    title: 'ثبت‌نام راننده',
+    description: 'تکمیل مشخصات، خودرو، تصاویر و قرارداد راننده.',
+    primaryHeading: 'تکمیل ثبت‌نام راننده',
+  },
+  {
+    path: '/driver', audience: 'driver', title: 'پنل راننده', description: 'ورود به داشبورد راننده.', primaryHeading: 'داشبورد راننده', redirectTo: '/driver/dashboard',
+  },
+  {
+    path: '/driver/dashboard', audience: 'driver', title: 'داشبورد', description: 'نمای برنامه و وضعیت راننده.', primaryHeading: 'برنامه و وضعیت سرویس‌های شما',
+  },
+  {
+    path: '/driver/service-runs', audience: 'driver', title: 'سرویس‌های من', description: 'نوبت‌ها و ترتیب دانش‌آموزان سرویس.', primaryHeading: 'سرویس‌های من',
+  },
+  {
+    path: '/driver/students', audience: 'driver', title: 'دانش‌آموزان', description: 'دانش‌آموزان فعال اختصاص‌یافته به راننده.', primaryHeading: 'دانش‌آموزان سرویس من',
+  },
+  {
+    path: '/driver/profile', audience: 'driver', title: 'اطلاعات من و خودرو', description: 'پروفایل راننده و مشخصات خودرو.', primaryHeading: 'اطلاعات من و خودرو',
+  },
+  {
+    path: '/driver/documents', audience: 'driver', title: 'تصاویر من', description: 'مشاهده و جایگزینی تصاویر راننده و خودرو.', primaryHeading: 'مشاهده و ویرایش تصاویر',
+  },
+  {
     path: '/manager/dashboard',
     audience: 'manager',
     title: 'داشبورد',
@@ -387,14 +418,14 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     path: '/manager/drivers',
     audience: 'manager',
     title: 'رانندگان',
-    description: 'پیش‌نمایش آزمایشی رانندگان.',
+    description: 'رانندگان متصل به دانش‌آموزان مدرسه.',
     primaryHeading: 'رانندگان',
   },
   {
     path: '/manager/drivers/[driverId]',
     audience: 'manager',
     title: 'جزئیات راننده',
-    description: 'پرونده آزمایشی راننده.',
+    description: 'پرونده واقعی راننده، خودرو، مسیرها و دانش‌آموزان مدرسه.',
     primaryHeading: 'راننده',
   },
   {

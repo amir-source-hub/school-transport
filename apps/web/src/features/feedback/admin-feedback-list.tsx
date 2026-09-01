@@ -57,6 +57,23 @@ export function AdminFeedbackList({ items }: { items: Feedback[] }) {
               {x.status}
             </span>
           </div>
+          <div className="mt-3 grid gap-2 rounded-xl bg-surface-muted p-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <p>
+              <span className="text-muted">فرستنده:</span>{' '}
+              <strong>{x.senderName || 'نام ثبت نشده'}</strong>
+            </p>
+            <p>
+              <span className="text-muted">تلفن:</span>{' '}
+              <strong dir="ltr">{x.senderPhone || '—'}</strong>
+            </p>
+            <p>
+              <span className="text-muted">حساب:</span> <strong>{x.senderUsername || '—'}</strong>
+            </p>
+            <p>
+              <span className="text-muted">مدرسه/دانش‌آموز:</span>{' '}
+              <strong>{[x.schoolName, x.studentName].filter(Boolean).join(' · ') || '—'}</strong>
+            </p>
+          </div>
           <p className="mt-2 break-words whitespace-pre-wrap text-sm leading-7">{x.message}</p>
           {x.response && (
             <div className="mt-4 rounded-xl border border-success/20 bg-success-soft p-4">

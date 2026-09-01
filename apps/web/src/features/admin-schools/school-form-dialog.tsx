@@ -104,16 +104,20 @@ export function SchoolFormDialog(props: Props) {
       return;
     }
     const needsInitialPassword = !isEdit || !initial?.managerId;
+    const managerUsernameChanged = managerUsername !== (initial?.managerUsername ?? '');
     if (
-      !/^[A-Za-z0-9]{8}$/.test(managerUsername) ||
-      (needsInitialPassword && !/^[A-Za-z0-9]{8}$/.test(managerPassword)) ||
-      (!needsInitialPassword &&
-        managerPassword.length > 0 &&
-        !/^[A-Za-z0-9]{8}$/.test(managerPassword))
+      (needsInitialPassword || managerUsernameChanged) &&
+      !/^[A-Za-z0-9]{8}$/.test(managerUsername)
     ) {
-      setError(
-        'نام کاربری و رمز عبور مدیر باید دقیقاً ۸ نویسه و فقط شامل حروف انگلیسی و اعداد باشند.',
-      );
+      setError('نام کاربری مدیر باید دقیقاً ۸ نویسه و فقط شامل حروف انگلیسی و اعداد باشد.');
+      return;
+    }
+    if (needsInitialPassword && !/^[A-Za-z0-9]{8}$/.test(managerPassword)) {
+      setError('رمز عبور مدیر باید دقیقاً ۸ نویسه و فقط شامل حروف انگلیسی و اعداد باشد.');
+      return;
+    }
+    if (!needsInitialPassword && managerPassword && !/^[A-Za-z0-9]{8}$/.test(managerPassword)) {
+      setError('رمز عبور جدید مدیر باید دقیقاً ۸ نویسه و فقط شامل حروف انگلیسی و اعداد باشد.');
       return;
     }
     const normalized = {
@@ -125,7 +129,7 @@ export function SchoolFormDialog(props: Props) {
       phoneNumber: normalizeDigits(form.phoneNumber ?? '').replace(/\D/g, ''),
       managerName: form.managerName?.trim() ?? '',
       managerPhone: normalizeDigits(form.managerPhone ?? '').replace(/\D/g, ''),
-      district: undefined,
+      district: form.district?.trim() || undefined,
     };
     const checked = createSchoolSchema.safeParse(normalized);
     if (!checked.success) {
@@ -138,7 +142,9 @@ export function SchoolFormDialog(props: Props) {
       const payload = checked.data;
       const managerParts = payload.managerName.trim().split(/\s+/);
       const managerData = {
-        username: managerUsername,
+        ...(!isEdit || !initial?.managerId || managerUsernameChanged
+          ? { username: managerUsername }
+          : {}),
         firstName: managerParts[0] ?? payload.managerName,
         lastName: managerParts.slice(1).join(' ') || 'مدیر',
         phoneNumber: payload.managerPhone,
@@ -151,6 +157,7 @@ export function SchoolFormDialog(props: Props) {
         } else {
           await provisionSchoolManager({
             ...managerData,
+            username: managerUsername,
             password: managerPassword,
             schoolId: props.school.id,
           });
@@ -159,6 +166,7 @@ export function SchoolFormDialog(props: Props) {
         const school = await createSchool(payload);
         await provisionSchoolManager({
           ...managerData,
+          username: managerUsername,
           password: managerPassword,
           schoolId: school.id,
         });

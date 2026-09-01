@@ -94,6 +94,12 @@ export default async function Page({
                   }).format(item.createdAt)}
                 </time>
               </div>
+              <p className="mt-2 text-sm text-muted">
+                شماره تماس:{' '}
+                <strong dir="ltr" className="text-foreground">
+                  {item.contactPhone ?? 'ثبت نشده'}
+                </strong>
+              </p>
               <p className="mt-3 whitespace-pre-wrap leading-8">{item.message}</p>
             </article>
           ))

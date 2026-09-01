@@ -19,7 +19,7 @@ const transitions: Record<StudentPhotoStatus, readonly StudentPhotoStatus[]> = {
   UPLOADED: ['VALIDATING', 'FAILED', 'EXPIRED'],
   VALIDATING: ['PENDING_REVIEW', 'FAILED'],
   PENDING_REVIEW: ['APPROVED', 'REJECTED'],
-  APPROVED: ['SUPERSEDED'],
+  APPROVED: ['REJECTED', 'SUPERSEDED'],
   REJECTED: [],
   FAILED: [],
   EXPIRED: [],

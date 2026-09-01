@@ -34,6 +34,7 @@ import { HttpMetricsInterceptor } from './infrastructure/metrics/http-metrics.in
 import { HttpActivityInterceptor } from './common/http-activity.interceptor';
 import { HttpActivityService } from './common/http-activity.service';
 import { IdentityAwareThrottlerGuard } from './common/identity-aware-throttler.guard';
+import { DriverEnrollmentModule } from './modules/driver-enrollment/driver-enrollment.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { IdentityAwareThrottlerGuard } from './common/identity-aware-throttler.g
     FeedbackModule,
     SchoolManagersModule,
     StudentPhotosModule,
+    DriverEnrollmentModule,
     HealthModule,
     QueueModule,
     ReportsModule,

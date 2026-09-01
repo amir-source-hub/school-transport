@@ -79,11 +79,11 @@ export async function acceptGuidedContract(
 }
 
 export async function finalizeOnboarding() {
-  const response = await apiRequest<{ accessToken: string }>('/auth/onboarding/finalize', {
+  const response = await apiRequest<{ accessToken: string; user: { role: 'PARENT' | 'DRIVER' } }>('/auth/onboarding/finalize', {
     method: 'POST',
     body: { rememberMe: false },
   });
-  setAuthSession(response.data.accessToken, 'PARENT');
+  setAuthSession(response.data.accessToken, response.data.user.role);
 }
 
 export async function getEnrollments() {

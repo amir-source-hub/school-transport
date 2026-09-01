@@ -33,6 +33,7 @@ export type StudentDashboard = {
   paymentSummary: string;
   nextPayment: string;
   notifications: readonly string[];
+  driverAssignments: Array<{ runId: string; direction: string; title: string; scheduledStartTime: string; scheduledArrivalTime: string; driverFirstName: string; driverLastName: string; driverPhoneNumber: string; vehicleSystem: string; plateNumber: string }>;
 };
 
 const journeySteps = [
@@ -412,6 +413,11 @@ export function StudentDashboard({ students }: { students: readonly StudentDashb
           </dl>
         </div>
         <EventTimeline notifications={selectedStudent.notifications} />
+      </div>
+      <div className="rounded-[var(--radius-card)] border border-border/60 bg-surface-paper p-5 shadow-[var(--shadow-raised)]">
+        <div className="flex items-center gap-2"><Route className="size-4 text-primary" /><h2 className="font-black">راننده و سرویس‌های فعال</h2></div>
+        {!selectedStudent.driverAssignments.length && <p className="mt-3 text-sm text-muted">هنوز راننده‌ای برای این دانش‌آموز تعیین نشده است.</p>}
+        <div className="mt-4 grid gap-3 md:grid-cols-2">{selectedStudent.driverAssignments.map((assignment) => <div key={assignment.runId} className="rounded-xl bg-primary-soft p-4 text-sm"><p className="font-black">{assignment.driverFirstName} {assignment.driverLastName}</p><p className="mt-1">{assignment.direction === 'TO_SCHOOL' ? 'سرویس رفت' : 'سرویس برگشت'} · {assignment.scheduledStartTime} تا {assignment.scheduledArrivalTime}</p><p className="mt-1 text-muted">{assignment.vehicleSystem} · پلاک {assignment.plateNumber}</p><p className="mt-1 font-mono">{assignment.driverPhoneNumber}</p></div>)}</div>
       </div>
     </div>
   );

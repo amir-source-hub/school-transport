@@ -17,7 +17,7 @@ import {
 } from '@/features/enrollment/input-normalizers';
 import { normalizeDigits } from '@/features/enrollment/national-id';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
-import { loginOrRegisterParent } from './auth-api';
+import { loginOrRegisterDriver, loginOrRegisterParent } from './auth-api';
 import { setAuthSession } from './auth-session';
 import { setOnboardingState } from './onboarding-session';
 import { safePortalPath } from './safe-next';
@@ -42,7 +42,7 @@ function FormError({ error }: { error: unknown }) {
   );
 }
 
-export function StudentPortalLoginForm({ nextPath }: { nextPath?: string }) {
+export function StudentPortalLoginForm({ nextPath, enrollmentPath = '/onboarding/enrollments', audience = 'family' }: { nextPath?: string; enrollmentPath?: string; audience?: 'family' | 'driver' }) {
   const router = useRouter();
   const [error, setError] = useState<unknown>();
   const [rememberMe, setRememberMe] = useState(false);
@@ -53,7 +53,7 @@ export function StudentPortalLoginForm({ nextPath }: { nextPath?: string }) {
   const submit = form.handleSubmit(async ({ phoneNumber, nationalId }) => {
     setError(undefined);
     try {
-      const response = await loginOrRegisterParent(phoneNumber, nationalId, rememberMe);
+      const response = await (audience === 'driver' ? loginOrRegisterDriver : loginOrRegisterParent)(phoneNumber, nationalId, rememberMe);
       if (response.data.user === null) {
         setOnboardingState({
           sessionId: response.data.onboarding.sessionId,
@@ -62,11 +62,11 @@ export function StudentPortalLoginForm({ nextPath }: { nextPath?: string }) {
           expiresAt: response.data.onboarding.expiresAt,
           currentStep: response.data.onboarding.currentStep,
         });
-        router.replace('/onboarding/enrollments');
+        router.replace(enrollmentPath);
         return;
       }
       setAuthSession(response.data.accessToken, response.data.user.role);
-      router.replace(safePortalPath(nextPath, '/student/dashboard'));
+      router.replace(safePortalPath(nextPath, audience === 'driver' ? '/driver/dashboard' : '/student/dashboard'));
     } catch (caught) {
       setError(caught);
     }
@@ -74,13 +74,12 @@ export function StudentPortalLoginForm({ nextPath }: { nextPath?: string }) {
 
   return (
     <form className="space-y-5" onSubmit={submit} noValidate>
-      <Alert tone="info" title="ورود و ثبت‌نام خانواده">
-        شماره همراه و کد ملی سرپرست، مشخصات ثابت ورود خانواده هستند و برای همه دانش‌آموزان این حساب
-        استفاده می‌شوند.
+      <Alert tone="info" title={audience === 'driver' ? 'ورود و ثبت‌نام راننده' : 'ورود و ثبت‌نام خانواده'}>
+        {audience === 'driver' ? 'شماره همراه و کد ملی راننده پس از احراز، در فرم ثبت‌نام ثابت و غیرقابل تغییر هستند.' : 'شماره همراه و کد ملی سرپرست، مشخصات ثابت ورود خانواده هستند و برای همه دانش‌آموزان این حساب استفاده می‌شوند.'}
       </Alert>
       <FormError error={error} />
       <Field
-        label="شماره همراه سرپرست"
+        label={audience === 'driver' ? 'شماره همراه راننده' : 'شماره همراه سرپرست'}
         htmlFor="auth-phone"
         required
         error={form.formState.errors.phoneNumber?.message}
@@ -102,7 +101,7 @@ export function StudentPortalLoginForm({ nextPath }: { nextPath?: string }) {
         />
       </Field>
       <Field
-        label="کد ملی سرپرست"
+        label={audience === 'driver' ? 'کد ملی راننده' : 'کد ملی سرپرست'}
         htmlFor="auth-national-id"
         required
         error={form.formState.errors.nationalId?.message}

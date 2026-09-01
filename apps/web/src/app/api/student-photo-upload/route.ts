@@ -9,7 +9,7 @@ export async function PUT(request: Request) {
   const declaredLength = Number(request.headers.get('content-length') ?? Number.NaN);
   const configuredOrigin = process.env.NEXT_PUBLIC_PRIVATE_UPLOAD_ORIGIN;
 
-  if (!targetValue || !configuredOrigin || !contentType || !ACCEPTED_TYPES.has(contentType)) {
+  if (!targetValue || !contentType || !ACCEPTED_TYPES.has(contentType)) {
     return NextResponse.json({ error: 'Invalid upload request.' }, { status: 400 });
   }
 
@@ -17,12 +17,18 @@ export async function PUT(request: Request) {
   let allowedOrigin: string;
   try {
     target = new URL(targetValue);
-    allowedOrigin = new URL(configuredOrigin).origin;
+    const targetIsLocal = ['localhost', '127.0.0.1', '::1'].includes(target.hostname);
+    allowedOrigin = configuredOrigin
+      ? new URL(configuredOrigin).origin
+      : process.env.NODE_ENV !== 'production' && targetIsLocal
+        ? target.origin
+        : '';
   } catch {
     return NextResponse.json({ error: 'Invalid upload target.' }, { status: 400 });
   }
 
-  if (target.protocol !== 'https:' || target.origin !== allowedOrigin || !target.searchParams.has('X-Amz-Signature')) {
+  const targetIsLoopback = ['localhost', '127.0.0.1', '::1'].includes(target.hostname);
+  if ((target.protocol !== 'https:' && !targetIsLoopback) || target.origin !== allowedOrigin || !target.searchParams.has('X-Amz-Signature')) {
     return NextResponse.json({ error: 'Upload target is not allowed.' }, { status: 403 });
   }
   if (Number.isFinite(declaredLength) && declaredLength > MAX_PHOTO_BYTES) {
