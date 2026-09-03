@@ -7,8 +7,6 @@ import {
   getAdminStudentDetail,
   getAdminStudentPhoto,
 } from '@/features/admin-students/admin-students-api';
-import { DriverAssignmentForm } from '@/features/admin-drivers/driver-assignment-form';
-import { getAdminDrivers, getStudentDriverAssignments } from '@/features/admin-drivers/admin-drivers-api';
 
 export const metadata = { title: 'جزئیات دانش‌آموز' };
 export const dynamic = 'force-dynamic';
@@ -20,7 +18,7 @@ export default async function AdminStudentPage({
 }) {
   const { studentId } = await params;
   const student = await getAdminStudentDetail(studentId);
-  const [photo, drivers, assignments] = await Promise.all([getAdminStudentPhoto(studentId).catch(() => null), getAdminDrivers(), getStudentDriverAssignments(studentId)]);
+  const photo = await getAdminStudentPhoto(studentId).catch(() => null);
 
   return (
     <div className="space-y-6">
@@ -145,10 +143,6 @@ export default async function AdminStudentPage({
             </dl>
           </Card>
         )}
-        <Card className="lg:col-span-2">
-          <h2 className="font-black">راننده و سرویس دانش‌آموز</h2>
-          <div className="mt-4 grid gap-5 lg:grid-cols-2"><div className="space-y-3">{assignments.length ? assignments.map((assignment) => <div key={assignment.membershipId} className="rounded-xl bg-primary-soft p-3 text-sm"><p className="font-black">{assignment.driverFirstName} {assignment.driverLastName} · {assignment.direction === 'TO_SCHOOL' ? 'رفت' : 'برگشت'}</p><p className="mt-1 text-muted">{assignment.vehicleSystem} · پلاک {assignment.plateNumber} · {assignment.scheduledStartTime} تا {assignment.scheduledArrivalTime}</p></div>) : <p className="text-sm text-muted">هنوز راننده‌ای متصل نشده است.</p>}</div><DriverAssignmentForm studentId={student.id} drivers={drivers} academicYear={student.enrollmentSummary?.academicYear ?? ''} /></div>
-        </Card>
       </div>
     </div>
   );
