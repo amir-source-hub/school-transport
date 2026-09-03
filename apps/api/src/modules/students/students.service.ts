@@ -659,7 +659,22 @@ export class StudentsService {
 
     const saved = await this.db.db.transaction(async (txn) => {
       const conditions = [eq(students.id, studentId)];
-      if (expectedUpdatedAt) conditions.push(eq(students.updatedAt, expectedUpdatedAt));
+      if (expectedUpdatedAt) {
+        // PostgreSQL retains microseconds, while the API's Date values retain only
+        // milliseconds. Compare the serialized precision under a row lock instead
+        // of comparing a truncated client timestamp directly in SQL.
+        const [locked] = await txn
+          .select({ updatedAt: students.updatedAt })
+          .from(students)
+          .where(eq(students.id, studentId))
+          .for('update');
+        if (!locked || locked.updatedAt.toISOString() !== expectedUpdatedAt.toISOString()) {
+          throw new ConflictError(
+            'STUDENT_CONCURRENT_MODIFIED',
+            'This student was modified by another admin. Refresh the page and try again.',
+          );
+        }
+      }
       const updated = await txn
         .update(students)
         .set({ ...editable, updatedAt: new Date() })
