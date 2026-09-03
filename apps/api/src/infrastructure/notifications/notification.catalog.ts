@@ -27,6 +27,8 @@ export type NotificationType =
   | 'ADDRESS_UPDATED'
   | 'EMERGENCY_CONTACT_UPDATED'
   | 'ADMIN_STUDENT_ADDED'
+  | 'STUDENT_DRIVER_ASSIGNED'
+  | 'DRIVER_STUDENT_ASSIGNED'
   | 'LIMIT_REQUEST_CREATED'
   | 'LIMIT_REQUEST_APPROVED'
   | 'LIMIT_REQUEST_REJECTED'
@@ -62,6 +64,7 @@ const FINANCE = '/student/payments';
 const CONTRACTS = '/student/contracts';
 const STUDENTS = '/student/students';
 const NOTIFICATIONS = '/student/notifications';
+const DRIVER_DASHBOARD = '/driver/dashboard';
 
 const studentRoute = (_context: NotificationContext) => STUDENT;
 
@@ -131,6 +134,18 @@ export const notificationCatalog: Record<NotificationType, NotificationCatalogEn
     relatedEntityType: 'STUDENT',
     route: studentRoute,
     exactlyOnce: false,
+  },
+  STUDENT_DRIVER_ASSIGNED: {
+    audience: 'STUDENT_ACCOUNT', purpose: 'SERVICE_NOTICE', channels: ['IN_APP', 'SMS'],
+    smsMessage: 'ثمین گشت: راننده سرویس دانش‌آموز شما تعیین شد. جزئیات را در پنل مشاهده کنید.',
+    inAppTitle: 'راننده سرویس تعیین شد', inAppMessage: 'اطلاعات راننده و سرویس در داشبورد دانش‌آموز قابل مشاهده است.',
+    relatedEntityType: 'STUDENT', route: studentRoute, exactlyOnce: false,
+  },
+  DRIVER_STUDENT_ASSIGNED: {
+    audience: 'STUDENT_ACCOUNT', purpose: 'SERVICE_NOTICE', channels: ['IN_APP', 'SMS'],
+    smsMessage: 'ثمین گشت: دانش‌آموز جدیدی به سرویس شما افزوده شد. جزئیات را در پنل راننده مشاهده کنید.',
+    inAppTitle: 'دانش‌آموز جدید سرویس', inAppMessage: 'دانش‌آموز جدیدی به سرویس رفت‌وبرگشت شما افزوده شد.',
+    relatedEntityType: 'STUDENT', route: () => DRIVER_DASHBOARD, exactlyOnce: false,
   },
   LIMIT_REQUEST_CREATED: {
     audience: 'STUDENT_ACCOUNT',

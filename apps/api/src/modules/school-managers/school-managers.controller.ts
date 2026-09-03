@@ -32,6 +32,16 @@ export class SchoolManagersController {
     return successResponse(await this.service.getStudentDetail(req.user.id, id));
   }
 
+  @Get('drivers')
+  async drivers(@Req() req: AuthenticatedRequest) {
+    return successResponse(await this.service.getDrivers(req.user.id));
+  }
+
+  @Get('drivers/:id')
+  async driverDetail(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
+    return successResponse(await this.service.getDriverDetail(req.user.id, id));
+  }
+
   @Get(['info', 'settings'])
   async info(@Req() req: AuthenticatedRequest) {
     return successResponse(await this.service.getSettings(req.user.id));

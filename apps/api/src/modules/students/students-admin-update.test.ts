@@ -33,10 +33,13 @@ function updateReturningChain(rows: unknown[]) {
   return chain;
 }
 
-function makeService(selectResults: unknown[][]) {
+function makeService(selectResults: unknown[][], lockedUpdatedAt = currentStudent.updatedAt) {
   const select = vi.fn(() => buildChain(selectResults.shift() ?? []));
   const transaction = vi.fn(async (callback: (txn: unknown) => Promise<unknown>) =>
-    callback({ update: vi.fn(() => updateReturningChain([{ id: 'student-1' }])) }),
+    callback({
+      select: vi.fn(() => buildChain([{ updatedAt: lockedUpdatedAt }])),
+      update: vi.fn(() => updateReturningChain([{ id: 'student-1' }])),
+    }),
   );
   const notifications = { enqueueInTransaction: vi.fn() };
   const audit = { recordInTransaction: vi.fn() };
@@ -71,6 +74,18 @@ const currentStudent = {
 };
 
 describe('updateByAdmin', () => {
+  it('rejects changes made between the initial read and acquiring the row lock', async () => {
+    const { service, audit } = makeService(
+      [[currentStudent]],
+      new Date('2026-08-08T10:00:01.000Z'),
+    );
+    await expect(service.updateByAdmin('student-1', {
+      firstName: 'سارا',
+      expectedUpdatedAt: currentStudent.updatedAt.toISOString(),
+    }, { adminId: 'admin-1' })).rejects.toMatchObject({ code: 'STUDENT_CONCURRENT_MODIFIED' });
+    expect(audit.recordInTransaction).not.toHaveBeenCalled();
+  });
+
   it('updates editable fields and audits masked before/after values', async () => {
     const { service, audit, transaction } = makeService([[currentStudent], [currentStudent]]);
 
@@ -167,7 +182,12 @@ describe('updateByAdmin', () => {
 
     await service.updateByAdmin(
       'student-1',
-      { educationLevel: 'متوسطه', grade: 'هفتم' },
+      {
+        schoolId: 'school-1',
+        educationLevel: 'متوسطه',
+        grade: 'هفتم',
+        expectedUpdatedAt: currentStudent.updatedAt.toISOString(),
+      },
       { adminId: 'admin-1' },
     );
 

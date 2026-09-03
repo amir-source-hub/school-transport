@@ -295,6 +295,41 @@
       "when": 1788242400000,
       "tag": "0041_public_contact_phone",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1788328800000,
+      "tag": "0042_driver_enrollment",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1788332400000,
+      "tag": "0043_driver_location",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1788505200000,
+      "tag": "0044_driver_routes_and_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1788591600000,
+      "tag": "0045_transport_assignment_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1788678000000,
+      "tag": "0046_cross_school_transport",
+      "breakpoints": true
     }
   ]
 }

@@ -14,7 +14,7 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type AuditableRequest = FastifyRequest & {
-  user?: { id: string; role: 'PARENT' | 'ADMIN' };
+  user?: { id: string; role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER' | 'DRIVER' };
   onboarding?: { userId: string };
   params?: Record<string, unknown>;
 };

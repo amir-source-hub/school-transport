@@ -11,7 +11,7 @@ import { RequestContext } from './request-context';
 import { HttpActivityService } from './http-activity.service';
 
 type ActivityRequest = FastifyRequest & {
-  user?: { id: string; role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER' };
+  user?: { id: string; role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER' | 'DRIVER' };
   onboarding?: { userId: string };
 };
 

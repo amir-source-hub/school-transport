@@ -33,4 +33,5 @@ export {
   transportServiceRuns,
   transportServiceRunStudents,
   transportDocuments,
+  driverDocumentUploads,
 } from './transport-operations.schema';

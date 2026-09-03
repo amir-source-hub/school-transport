@@ -44,6 +44,11 @@ export async function getStudent(id: string) {
   return studentSchema.parse(response.data);
 }
 
+export type StudentDriverAssignment = { runId: string; direction: string; title: string; scheduledStartTime: string; scheduledArrivalTime: string; pickupOrder: number; driverId: string; driverFirstName: string; driverLastName: string; driverPhoneNumber: string; vehicleType: string; vehicleSystem: string; plateNumber: string };
+export async function getStudentDriverAssignments(id: string) {
+  return (await apiRequest<StudentDriverAssignment[]>(`/students/${id}/driver-assignments`, { cache: 'no-store' })).data;
+}
+
 export async function createStudent(input: StudentInput) {
   const response = await apiRequest<unknown>('/students', { method: 'POST', body: input });
   return studentSchema.parse(response.data);

@@ -1,26 +1,80 @@
 'use client';
+
 import { Download } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { apiRequest } from '@/lib/api-client';
-import { mockDrivers } from '@/features/manager-drivers/mock-drivers';
-import type { ManagerStudent } from './manager-api';
+import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import type { ManagerDriver, ManagerDriverDetail, ManagerStudent } from './manager-api';
 
-const escape = (x: unknown) =>
-  String(x ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;');
-function save(name: string, headers: string[], rows: unknown[][]) {
-  const table = `<html dir="rtl"><meta charset="utf-8"><table border="1"><tr>${headers.map((x) => `<th>${escape(x)}</th>`).join('')}</tr>${rows.map((r) => `<tr>${r.map((x) => `<td>${escape(x)}</td>`).join('')}</tr>`).join('')}</table></html>`;
-  const url = URL.createObjectURL(
-    new Blob(['\ufeff', table], { type: 'application/vnd.ms-excel;charset=utf-8' }),
-  );
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+type ReportColumn = { key: string; header: string; width?: number };
+type ReportRow = Record<string, unknown>;
+
+function safeCell(value: unknown) {
+  if (typeof value !== 'string') return value ?? '';
+  return /^[=+\-@]/.test(value) ? `'${value}` : value;
 }
+
+async function saveWorkbook(
+  filename: string,
+  sheetName: string,
+  columns: ReportColumn[],
+  rows: ReportRow[],
+) {
+  const ExcelJS = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'سامانه سرویس مدرسه';
+  workbook.created = new Date();
+  const sheet = workbook.addWorksheet(sheetName, {
+    views: [{ state: 'frozen', ySplit: 1, rightToLeft: true }],
+    properties: { defaultRowHeight: 22 },
+  });
+
+  sheet.columns = columns.map(({ key, header, width }) => ({
+    key,
+    header,
+    width: width ?? Math.min(42, Math.max(14, header.length + 5)),
+  }));
+  sheet.addRows(
+    rows.map((row) =>
+      Object.fromEntries(Object.entries(row).map(([key, value]) => [key, safeCell(value)])),
+    ),
+  );
+  sheet.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: Math.max(1, sheet.rowCount), column: columns.length },
+  };
+  sheet.getRow(1).height = 28;
+  sheet.getRow(1).eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF163A5F' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+    row.alignment = { vertical: 'top', readingOrder: 'rtl' };
+    if (rowNumber % 2 === 0) {
+      row.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F6FA' } };
+      });
+    }
+  });
+
+  const output = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([new Uint8Array(output)], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = 'none';
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+}
+
 export function ManagerReportButtons({
   schoolName,
   username,
@@ -28,104 +82,155 @@ export function ManagerReportButtons({
   schoolName: string;
   username: string;
 }) {
-  const [studentSort, setStudentSort] = useState('name');
-  const [driverSort, setDriverSort] = useState('name');
-  const [routeSort, setRouteSort] = useState('time');
+  const [loading, setLoading] = useState<string>();
+  const [error, setError] = useState<string>();
+
+  async function run(name: string, action: () => Promise<void>) {
+    setLoading(name);
+    setError(undefined);
+    try {
+      await action();
+    } catch (caught) {
+      setError(getApiErrorFeedback(caught).message);
+    } finally {
+      setLoading(undefined);
+    }
+  }
+
   async function students() {
     const all: ManagerStudent[] = [];
     let page = 1;
     let total = 1;
     while (all.length < total) {
-      const r = await apiRequest<ManagerStudent[]>(`/manager/students?page=${page}&pageSize=100`);
-      all.push(...r.data);
-      total = Number(r.pagination?.totalItems ?? all.length);
-      if (r.data.length === 0) break;
+      const response = await apiRequest<ManagerStudent[]>(
+        `/manager/students?page=${page}&pageSize=100`,
+      );
+      all.push(...response.data);
+      total = Number(response.pagination?.totalItems ?? all.length);
+      if (response.data.length === 0) break;
       page += 1;
     }
-    save(
-      'students.xls',
-      ['مدرسه', 'نام کاربری مدیر', 'نام', 'نام خانوادگی', 'کد ملی', 'مقطع', 'پایه', 'سرپرست'],
-      [...all].sort((a, b) => {
-        if (studentSort === 'nationalId') return (a.nationalId ?? '').localeCompare(b.nationalId ?? '', 'fa');
-        if (studentSort === 'grade') return (a.grade ?? '').localeCompare(b.grade ?? '', 'fa');
-        return `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`, 'fa');
-      }).map((x) => [
-        schoolName,
-        username,
-        x.firstName,
-        x.lastName,
-        x.nationalId,
-        x.educationLevel,
-        x.grade,
-        x.guardianName,
-      ]),
-    );
-  }
-  function drivers() {
-    save(
-      'drivers.xls',
+    await saveWorkbook(
+      'students.xlsx',
+      'دانش‌آموزان',
       [
-        'مدرسه',
-        'نام',
-        'نام خانوادگی',
-        'کد ملی',
-        'تحصیلات',
-        'نام پدر',
-        'جنسیت',
-        'انقضای گواهینامه',
-        'خودرو',
-        'پلاک',
+        { key: 'school', header: 'مدرسه' },
+        { key: 'manager', header: 'نام کاربری مدیر' },
+        { key: 'firstName', header: 'نام' },
+        { key: 'lastName', header: 'نام خانوادگی' },
+        { key: 'nationalId', header: 'کد ملی' },
+        { key: 'educationLevel', header: 'مقطع' },
+        { key: 'grade', header: 'پایه' },
+        { key: 'guardian', header: 'سرپرست' },
       ],
-      [...mockDrivers].sort((a, b) => driverSort === 'license'
-        ? a.licenseExpiresAt.localeCompare(b.licenseExpiresAt, 'fa')
-        : `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`, 'fa')).map((d) => [
-        schoolName,
-        d.firstName,
-        d.lastName,
-        d.nationalId,
-        d.education,
-        d.fatherName,
-        d.gender,
-        d.licenseExpiresAt,
-        `${d.vehicleType} ${d.system}`,
-        d.plate,
-      ]),
+      all.map((student) => ({
+        school: schoolName,
+        manager: username,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        nationalId: student.nationalId,
+        educationLevel: student.educationLevel,
+        grade: student.grade,
+        guardian: student.guardianName,
+      })),
     );
   }
-  function routes() {
-    save(
-      'routes.xls',
-      ['مدرسه', 'نوبت سرویس', 'جهت', 'زمان شروع', 'زمان رسیدن', 'محدوده', 'راننده', 'دانش‌آموز'],
-      mockDrivers.flatMap((d) =>
-        d.routes.flatMap((r) =>
-          r.students.map((s) => [
-            schoolName,
-            r.title,
-            r.direction === 'TO_SCHOOL' ? 'رفت به مدرسه' : 'برگشت از مدرسه',
-            r.scheduledStartTime,
-            r.scheduledArrivalTime,
-            r.area,
-            `${d.firstName} ${d.lastName}`,
-            s,
-          ]),
+
+  async function drivers() {
+    const list = (await apiRequest<ManagerDriver[]>('/manager/drivers')).data;
+    const details = await Promise.all(list.map((driver) => apiRequest<ManagerDriverDetail>(`/manager/drivers/${driver.id}`).then((response) => response.data)));
+    await saveWorkbook(
+      'drivers.xlsx',
+      'رانندگان',
+      [
+        { key: 'school', header: 'مدرسه' },
+        { key: 'firstName', header: 'نام' },
+        { key: 'lastName', header: 'نام خانوادگی' },
+        { key: 'nationalId', header: 'کد ملی' },
+        { key: 'education', header: 'تحصیلات' },
+        { key: 'fatherName', header: 'نام پدر' },
+        { key: 'gender', header: 'جنسیت' },
+        { key: 'licenseExpiresAt', header: 'انقضای گواهینامه' },
+        { key: 'vehicle', header: 'خودرو' },
+        { key: 'plate', header: 'پلاک' },
+      ],
+      details.map(({ driver, vehicle }) => ({
+        school: schoolName,
+        firstName: driver.firstName,
+        lastName: driver.lastName,
+        nationalId: driver.nationalId,
+        education: driver.education,
+        fatherName: driver.fatherName,
+        gender: driver.gender,
+        licenseExpiresAt: driver.licenseExpiresAt,
+        vehicle: `${vehicle?.vehicleType ?? ''} ${vehicle?.system ?? ''}`,
+        plate: vehicle?.plateNumber,
+      })),
+    );
+  }
+
+  async function routes() {
+    const list = (await apiRequest<ManagerDriver[]>('/manager/drivers')).data;
+    const details = await Promise.all(list.map((driver) => apiRequest<ManagerDriverDetail>(`/manager/drivers/${driver.id}`).then((response) => response.data)));
+    await saveWorkbook(
+      'routes.xlsx',
+      'مسیرها',
+      [
+        { key: 'school', header: 'مدرسه' },
+        { key: 'title', header: 'نوبت سرویس' },
+        { key: 'direction', header: 'جهت' },
+        { key: 'startTime', header: 'زمان شروع' },
+        { key: 'arrivalTime', header: 'زمان رسیدن' },
+        { key: 'area', header: 'محدوده' },
+        { key: 'driver', header: 'راننده' },
+        { key: 'student', header: 'دانش‌آموز' },
+      ],
+      details.flatMap(({ driver, runs }) =>
+        runs.flatMap((route) =>
+          route.students.map((student) => ({
+            school: schoolName,
+            title: route.title,
+            direction: route.direction === 'TO_SCHOOL' ? 'رفت به مدرسه' : 'برگشت از مدرسه',
+            startTime: route.scheduledStartTime,
+            arrivalTime: route.scheduledArrivalTime,
+            area: route.areaDescription,
+            driver: `${driver.firstName} ${driver.lastName}`,
+            student: `${student.firstName} ${student.lastName}`,
+          })),
         ),
-      ).sort((a, b) => String(routeSort === 'driver' ? a[6] : routeSort === 'title' ? a[1] : a[3]).localeCompare(String(routeSort === 'driver' ? b[6] : routeSort === 'title' ? b[1] : b[3]), 'fa')),
+      ),
     );
   }
+
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      <div className="space-y-2"><select className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" value={studentSort} onChange={(event) => setStudentSort(event.target.value)}><option value="name">مرتب‌سازی: نام</option><option value="nationalId">کد ملی</option><option value="grade">پایه</option></select><Button className="w-full" onClick={students}>
-        <Download className="size-4" />
-        گزارش دانش‌آموزان
-      </Button></div>
-      <div className="space-y-2"><select className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" value={driverSort} onChange={(event) => setDriverSort(event.target.value)}><option value="name">مرتب‌سازی: نام</option><option value="license">انقضای گواهینامه</option></select><Button className="w-full" onClick={drivers}>
-        <Download className="size-4" />
-        گزارش رانندگان
-      </Button></div>
-      <div className="space-y-2"><select className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" value={routeSort} onChange={(event) => setRouteSort(event.target.value)}><option value="time">مرتب‌سازی: زمان</option><option value="title">مسیر</option><option value="driver">راننده</option></select><Button className="w-full" onClick={routes}>
-        <Download className="size-4" />
-        گزارش مسیرها
-      </Button></div>
+    <div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Button
+          className="w-full"
+          loading={loading === 'students'}
+          onClick={() => run('students', students)}
+        >
+          <Download className="size-4" />
+          گزارش دانش‌آموزان
+        </Button>
+        <Button
+          className="w-full"
+          loading={loading === 'drivers'}
+          onClick={() => run('drivers', drivers)}
+        >
+          <Download className="size-4" />
+          گزارش رانندگان
+        </Button>
+        <Button
+          className="w-full"
+          loading={loading === 'routes'}
+          onClick={() => run('routes', routes)}
+        >
+          <Download className="size-4" />
+          گزارش مسیرها
+        </Button>
+      </div>
+      {error && <p className="mt-3 text-sm text-danger">{error}</p>}
     </div>
   );
 }

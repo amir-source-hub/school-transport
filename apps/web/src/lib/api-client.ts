@@ -152,7 +152,15 @@ async function performApiRequest<T>(
 async function fetchWithStartupRetry(url: string, init: RequestInit) {
   const method = (init.method ?? 'GET').toUpperCase();
   const canRetry = method === 'GET' || method === 'HEAD';
-  const delays = canRetry ? [0, 200, 500] : [0];
+  const isLocalDevelopmentServerRequest =
+    typeof window === 'undefined' &&
+    process.env.NODE_ENV === 'development' &&
+    /^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?\//.test(url);
+  const delays = !canRetry
+    ? [0]
+    : isLocalDevelopmentServerRequest
+      ? [0, 250, 500, 1_000, 1_500, 2_000, 2_500, 3_000, 4_000]
+      : [0, 200, 500];
 
   for (let attempt = 0; attempt < delays.length; attempt += 1) {
     if (delays[attempt] > 0) {

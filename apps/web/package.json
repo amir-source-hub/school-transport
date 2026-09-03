@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev-with-root-env.mjs dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -29,6 +29,7 @@
     "@radix-ui/react-tabs": "^1.1.18",
     "@tanstack/react-query": "^5.101.4",
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.25.0",
     "motion": "^12.42.2",

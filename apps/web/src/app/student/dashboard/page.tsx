@@ -6,7 +6,7 @@ import {
   StudentDashboard,
   type StudentDashboard as StudentDashboardModel,
 } from '@/features/student-dashboard/student-dashboard';
-import { getStudents } from '@/features/students/students-api';
+import { getStudentDriverAssignments, getStudents } from '@/features/students/students-api';
 import { formatIrr, formatJalaliDate } from '@/lib/formatters';
 
 export const metadata = { title: 'نمای کلی خانواده' };
@@ -114,7 +114,10 @@ export default async function StudentDashboardPage() {
           ? 'تسویه‌شده'
           : 'پس از پذیرش قرارداد مشخص می‌شود',
       notifications: recentEvents.slice(0, 5),
+      driverAssignments: [],
     };
   });
+  const assignmentGroups = await Promise.all(students.map((student) => getStudentDriverAssignments(student.id)));
+  dashboards.forEach((dashboard, index) => { dashboard.driverAssignments = assignmentGroups[index]; });
   return <StudentDashboard students={dashboards} />;
 }

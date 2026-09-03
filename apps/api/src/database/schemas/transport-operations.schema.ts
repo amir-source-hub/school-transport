@@ -2,6 +2,7 @@ import {
   boolean,
   check,
   date,
+  doublePrecision,
   index,
   integer,
   pgTable,
@@ -15,17 +16,33 @@ import {
 import { sql } from 'drizzle-orm';
 import { schools } from './schools.schema';
 import { students } from './students.schema';
+import { users } from './auth.schema';
 
 export const drivers = pgTable('drivers', {
   id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull().unique().references(() => users.id),
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
-  fatherName: varchar('father_name', { length: 100 }),
+  fatherName: varchar('father_name', { length: 100 }).notNull(),
   nationalId: varchar('national_id', { length: 10 }).notNull().unique(),
-  phoneNumber: varchar('phone_number', { length: 20 }).notNull(),
-  gender: varchar('gender', { length: 10 }),
-  education: varchar('education', { length: 100 }),
-  licenseExpiresAt: date('license_expires_at'),
+  phoneNumber: varchar('phone_number', { length: 20 }).notNull().unique(),
+  secondaryPhoneNumber: varchar('secondary_phone_number', { length: 20 }),
+  homePhoneNumber: varchar('home_phone_number', { length: 20 }),
+  emergencyPhoneNumber: varchar('emergency_phone_number', { length: 20 }).notNull(),
+  gender: varchar('gender', { length: 10 }).notNull(),
+  education: varchar('education', { length: 100 }).notNull(),
+  licenseExpiresAt: date('license_expires_at').notNull(),
+  streetAddress: text('street_address').notNull(),
+  postalCode: varchar('postal_code', { length: 10 }).notNull(),
+  province: varchar('province', { length: 100 }).notNull(),
+  city: varchar('city', { length: 100 }).notNull(),
+  municipalityDistrict: varchar('municipality_district', { length: 50 }).notNull(),
+  latitude: doublePrecision('latitude').notNull(),
+  longitude: doublePrecision('longitude').notNull(),
+  referrerName: varchar('referrer_name', { length: 200 }),
+  referrerPhoneNumber: varchar('referrer_phone_number', { length: 20 }),
+  contractVersion: varchar('contract_version', { length: 30 }).notNull(),
+  contractAcceptedAt: timestamp('contract_accepted_at', { withTimezone: true }).notNull(),
   status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -41,6 +58,8 @@ export const vehicles = pgTable(
     modelYear: integer('model_year').notNull(),
     plateNumber: varchar('plate_number', { length: 30 }).notNull(),
     capacity: integer('capacity').notNull(),
+    usageType: varchar('usage_type', { length: 20 }).notNull(),
+    ownershipType: varchar('ownership_type', { length: 20 }).notNull(),
     status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
     technicalInspectionExpiresAt: date('technical_inspection_expires_at'),
     insuranceExpiresAt: date('insurance_expires_at'),
@@ -102,6 +121,7 @@ export const transportServiceRunStudents = pgTable(
     serviceRunId: uuid('service_run_id').notNull().references(() => transportServiceRuns.id),
     studentId: uuid('student_id').notNull().references(() => students.id),
     pickupOrder: integer('pickup_order').notNull(),
+    scheduledStopTime: time('scheduled_stop_time'),
     notes: text('notes'),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -146,5 +166,22 @@ export const transportDocuments = pgTable(
       'transport_documents_page_number_positive',
       sql`${table.pageNumber} > 0`,
     ),
+  }),
+);
+
+export const driverDocumentUploads = pgTable(
+  'driver_document_uploads',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull(),
+    documentType: varchar('document_type', { length: 30 }).notNull(),
+    objectKey: varchar('object_key', { length: 500 }).notNull().unique(),
+    mimeType: varchar('mime_type', { length: 100 }).notNull(),
+    declaredSize: integer('declared_size').notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('AUTHORIZED'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    ownerIdx: index('idx_driver_document_uploads_owner').on(table.userId, table.status),
   }),
 );

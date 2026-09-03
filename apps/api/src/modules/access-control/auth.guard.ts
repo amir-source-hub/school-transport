@@ -42,7 +42,7 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('Invalid token type.');
       }
 
-      if (!payload.sid || !['PARENT', 'ADMIN', 'SCHOOL_MANAGER'].includes(payload.role)) {
+      if (!payload.sid || !['PARENT', 'ADMIN', 'SCHOOL_MANAGER', 'DRIVER'].includes(payload.role)) {
         throw new UnauthorizedException('Invalid token.');
       }
       const [session] = await this.database.db

@@ -14,6 +14,9 @@ import {
   studentLimitRequests,
   studentPhotoUploads,
   students,
+  transportServiceRuns,
+  transportServiceRunStudents,
+  drivers,
   users,
 } from '../../database/schemas';
 import { eq, and, sql, desc, ilike, inArray, or } from 'drizzle-orm';
@@ -659,7 +662,37 @@ export class StudentsService {
 
     const saved = await this.db.db.transaction(async (txn) => {
       const conditions = [eq(students.id, studentId)];
-      if (expectedUpdatedAt) conditions.push(eq(students.updatedAt, expectedUpdatedAt));
+      if (expectedUpdatedAt) {
+        // PostgreSQL retains microseconds, while the API's Date values retain only
+        // milliseconds. Compare the serialized precision under a row lock instead
+        // of comparing a truncated client timestamp directly in SQL.
+        const [locked] = await txn
+          .select({ updatedAt: students.updatedAt })
+          .from(students)
+          .where(eq(students.id, studentId))
+          .for('update');
+        if (!locked || locked.updatedAt.toISOString() !== expectedUpdatedAt.toISOString()) {
+          throw new ConflictError(
+            'STUDENT_CONCURRENT_MODIFIED',
+            'This student was modified by another admin. Refresh the page and try again.',
+          );
+        }
+      }
+      if (editable.schoolId && editable.schoolId !== current.schoolId) {
+        const oldAssignments = await txn.select({ id: transportServiceRunStudents.id, driverUserId: drivers.userId })
+          .from(transportServiceRunStudents)
+          .innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId))
+          .innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
+          .where(and(eq(transportServiceRunStudents.studentId, studentId), eq(transportServiceRunStudents.isActive, true)));
+        // Detach before changing schools: the assignment trigger checks school consistency.
+        if (oldAssignments.length) {
+          await txn.update(transportServiceRunStudents).set({ isActive: false }).where(inArray(transportServiceRunStudents.id, oldAssignments.map(a => a.id)));
+          const eventId = generateId();
+          for (const userId of new Set([current.userId, ...oldAssignments.map(a => a.driverUserId)])) {
+            await this.notifications.enqueueInTransaction(txn, { eventId: `STUDENT_SCHOOL_CHANGED:${eventId}:${userId}`, userId, notificationType: 'STUDENT_DRIVER_ASSIGNED', title: 'مدرسه دانش‌آموز تغییر کرد', message: 'مدرسه دانش‌آموز تغییر کرد و ارتباط مسیرهای قبلی پایان یافت. مسیر جدید باید توسط مدیریت تعیین شود.', relatedEntityType: 'STUDENT', relatedEntityId: studentId });
+          }
+        }
+      }
       const updated = await txn
         .update(students)
         .set({ ...editable, updatedAt: new Date() })

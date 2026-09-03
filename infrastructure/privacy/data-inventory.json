@@ -87,6 +87,24 @@
       "deletion": "Raw/failed/superseded cleanup is enforced; archived/current approved retention awaits policy and card template."
     },
     {
+      "name": "driver-enrollment-and-vehicle",
+      "tables": ["drivers", "vehicles", "transport_documents", "driver_document_uploads"],
+      "subjects": ["driver", "vehicle-owner", "referrer"],
+      "dataClasses": [
+        "identity",
+        "contact",
+        "address",
+        "license",
+        "vehicle",
+        "contract-evidence",
+        "image"
+      ],
+      "purpose": "Driver eligibility onboarding, vehicle safety documentation, contract acceptance, and transport operations.",
+      "access": "Verified onboarding identity and driver owner; private object keys are converted to short-lived URLs for authorized access only.",
+      "retention": "driver-service-contract-and-safety-period-pending-legal-approval",
+      "deletion": "Drivers may replace current images; superseded image and statutory contract retention await approved policy."
+    },
+    {
       "name": "notifications-and-consent",
       "tables": ["notification_consents", "notifications", "notification_outbox"],
       "subjects": ["parent", "administrator"],
@@ -109,8 +127,14 @@
     {
       "name": "feedback",
       "tables": ["feedback_submissions"],
-      "subjects": ["parent", "administrator"],
-      "dataClasses": ["support-content", "safety-report", "response-metadata"],
+      "subjects": ["public-contact", "parent", "school-manager", "administrator"],
+      "dataClasses": [
+        "support-content",
+        "contact-name",
+        "contact-phone",
+        "safety-report",
+        "response-metadata"
+      ],
       "purpose": "Support, safety escalation, response, and service improvement.",
       "access": "Submitter-scoped history and restricted administrator queue; response content is excluded from audit snapshots.",
       "retention": "support-and-safety-period-pending-legal-approval",

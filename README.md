@@ -97,13 +97,22 @@ When the services are ready:
 
 Seeded development accounts:
 
-| Role   | Username      | Phone number  | Password              |
-| ------ | ------------- | ------------- | --------------------- |
-| Parent | `demo-parent` | `09121111111` | —                     |
-| Admin  | `demo-admin`  | `09120000000` | `demo-admin-password` |
+| Role    | Login             | National ID  | Password                |
+| ------- | ----------------- | ------------ | ----------------------- |
+| Parent  | `09121111111`     | `0084575948` | —                       |
+| Parent  | `09121111112`     | `0845760009` | —                       |
+| Parent  | `09121111113`     | `0845760041` | —                       |
+| Driver  | `09124444444`     | `0084575964` | —                       |
+| Driver  | `09124444445`     | `0845760076` | —                       |
+| Driver  | `09124444446`     | `0845760084` | —                       |
+| Manager | `09120000001`     | —            | `demo-manager-password` |
+| Manager | `09120000002`     | —            | `demo-manager-password` |
+| Manager | `09120000003`     | —            | `demo-manager-password` |
+| Manager | `09120000004`     | —            | `demo-manager-password` |
+| Admin   | `demo-admin`      | —            | `demo-admin-password`   |
 
-Set `SEED_ADMIN_PASSWORD` before seeding to use a different local admin password. Re-running the
-seed fills a missing demo-admin password but does not overwrite a password that was already set.
+Set `SEED_ADMIN_PASSWORD` or `SEED_MANAGER_PASSWORD` before seeding to change the corresponding
+local passwords. Re-running the seed is idempotent and does not duplicate demo records.
 
 The local stack uses the console OTP provider. To see generated OTP codes and follow startup:
 

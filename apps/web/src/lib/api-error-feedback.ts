@@ -174,6 +174,9 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
 
   if (error.status === 409) {
     const conflictMessages: Record<string, string> = {
+      STUDENT_CONCURRENT_MODIFIED: 'اطلاعات دانش‌آموز پس از باز شدن فرم تغییر کرده است. فرم را ببندید و دوباره باز کنید.',
+      INVALID_SCHOOL: 'مدرسه انتخاب‌شده فعال نیست. مدرسه دیگری انتخاب کنید.',
+      VEHICLE_CAPACITY_REACHED: 'ظرفیت یکی از مسیرها تکمیل است. مسیر دیگری انتخاب کنید.',
       INVALID_NATIONAL_ID: 'کد ملی باید دقیقاً ۱۰ رقم باشد.',
       INVALID_PHONE_NUMBER: 'شماره همراه واردشده معتبر نیست. باید با ۰۹ شروع شود.',
       INVALID_BIRTH_DATE: 'تاریخ تولد باید یک تاریخ شمسی واقعی، غیرآینده و در بازه مجاز باشد.',

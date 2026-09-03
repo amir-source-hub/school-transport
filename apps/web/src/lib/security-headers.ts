@@ -47,7 +47,8 @@ const createContentSecurityPolicy = ({
   ];
 
   if (!production) {
-    connectSources.push('ws:', 'wss:');
+    connectSources.push('http://localhost:9000', 'http://127.0.0.1:9000', 'ws:', 'wss:');
+    imageSources.push('http://localhost:9000', 'http://127.0.0.1:9000');
   }
 
   const scriptSources = ["'self'", "'unsafe-inline'"];
