@@ -54,7 +54,7 @@ describe('student photo same-site upload fallback', () => {
     const upstream = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
     vi.stubGlobal('fetch', upstream);
     const target =
-      'http://127.0.0.1:9000/school-transport-local/driver.jpg?X-Amz-Signature=signature';
+      'http://127.0.0.1:9000/school-transport-local/student-photo.jpg?X-Amz-Signature=signature';
 
     const response = await PUT(
       new Request('http://localhost:3000/api/student-photo-upload', {
