@@ -76,4 +76,12 @@ export class ReportsController {
       throw error;
     }
   }
+
+  @Get('drivers.xlsx')
+  async downloadDriversReport(@Res() reply: FastifyReply, @Req() req: FastifyRequest & { user?: { id?: string } }) {
+    const report = await this.reportsService.createDriversWorkbook();
+    await this.auditService.record({ actorType: 'ADMIN', actorId: req.user?.id ?? 'unknown', action: 'DRIVER_REPORT_EXPORTED', entityType: 'REPORT', ipAddress: req.ip });
+    const date = new Date().toISOString().slice(0, 10);
+    reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').header('Content-Disposition', `attachment; filename="drivers-${date}.xlsx"`).header('Cache-Control', 'private, no-store').send(report);
+  }
 }

@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileImage, GraduationCap, Home, LayoutDashboard, Menu, Route, UserRound } from 'lucide-react';
+import { Building2, CarFront, FileBadge, GraduationCap, Home, LayoutDashboard, Menu, Route, UserRound } from 'lucide-react';
 
 import { BrandMark } from '@/components/brand/brand-mark';
 import { Button, ButtonLink } from '@/components/ui/button';
@@ -16,15 +16,17 @@ const navGroups = [
     group: 'امروز',
     items: [
       { href: '/driver/dashboard', label: 'نمای کلی', icon: LayoutDashboard },
-      { href: '/driver/service-runs', label: 'سرویس‌های من', icon: Route },
+      { href: '/driver/service-runs', label: 'سرویس من', icon: Route },
     ],
   },
   {
     group: 'مدیریت',
     items: [
       { href: '/driver/students', label: 'دانش‌آموزان', icon: GraduationCap },
+      { href: '/driver/schools', label: 'مدارس من', icon: Building2 },
       { href: '/driver/profile', label: 'اطلاعات من و خودرو', icon: UserRound },
-      { href: '/driver/documents', label: 'تصاویر من', icon: FileImage },
+      { href: '/driver/personal-documents', label: 'مدارک شخصی من', icon: FileBadge },
+      { href: '/driver/vehicle-documents', label: 'مدارک خودروی من', icon: CarFront },
     ],
   },
 ] as const;

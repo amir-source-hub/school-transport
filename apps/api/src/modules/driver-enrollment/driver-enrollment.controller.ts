@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Roles } from '../../common/decorators';
 import type { AuthenticatedRequest } from '../../common/http-request';
 import { AuthGuard } from '../access-control/auth.guard';
@@ -6,7 +6,7 @@ import { RolesGuard } from '../access-control/roles.guard';
 import { successResponse } from '../../common/response';
 import type { OnboardingRequest } from '../../common/http-request';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
-import { AssignDriverToStudentDto, DriverDocumentUploadDto, DriverEnrollmentDto, UpdateDriverProfileDto } from './driver-enrollment.dto';
+import { AddStudentToTransportRouteDto, AssignDriverToStudentDto, CreateTransportRouteDto, DriverDocumentUploadDto, DriverEnrollmentDto, UpdateDriverProfileDto } from './driver-enrollment.dto';
 import { DriverEnrollmentService } from './driver-enrollment.service';
 
 @UseGuards(OnboardingGuard)
@@ -54,6 +54,7 @@ export class DriverPortalController {
   @Patch('me') update(@Req() req: AuthenticatedRequest, @Body() body: UpdateDriverProfileDto) { return this.service.updateProfile(req.user.id, body, req.ip).then(successResponse); }
   @Get('service-runs') runs(@Req() req: AuthenticatedRequest) { return this.service.getServiceRuns(req.user.id).then(successResponse); }
   @Get('students') students(@Req() req: AuthenticatedRequest) { return this.service.getStudents(req.user.id).then(successResponse); }
+  @Get('schools') schools(@Req() req: AuthenticatedRequest) { return this.service.getSchools(req.user.id).then(successResponse); }
 }
 
 @UseGuards(AuthGuard, RolesGuard)
@@ -75,6 +76,29 @@ export class AdminDriversController {
   @Get('students/:studentId/driver-assignment')
   assignments(@Param('studentId', new ParseUUIDPipe()) studentId: string) {
     return this.service.getStudentAssignments(studentId).then(successResponse);
+  }
+  @Get('transport-routes') routes() {
+    return this.service.getAdminRoutes().then(successResponse);
+  }
+  @Post('transport-routes') createRoute(@Req() req: AuthenticatedRequest, @Body() body: CreateTransportRouteDto) {
+    return this.service.createAdminRoute(body, req.user.id, req.ip).then(successResponse);
+  }
+  @Post('transport-routes/:routeId/students') addStudent(
+    @Req() req: AuthenticatedRequest,
+    @Param('routeId', new ParseUUIDPipe()) routeId: string,
+    @Body() body: AddStudentToTransportRouteDto,
+  ) {
+    return this.service.addStudentToRoute(routeId, body, req.user.id, req.ip).then(successResponse);
+  }
+  @Delete('transport-routes/:routeId/students/:studentId') removeStudent(
+    @Req() req: AuthenticatedRequest,
+    @Param('routeId', new ParseUUIDPipe()) routeId: string,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+  ) {
+    return this.service.removeStudentFromRoute(routeId, studentId, req.user.id, req.ip).then(successResponse);
+  }
+  @Post('transport-routes/:routeId/archive') archiveRoute(@Req() req: AuthenticatedRequest, @Param('routeId', new ParseUUIDPipe()) routeId: string) {
+    return this.service.archiveRoute(routeId, req.user.id, req.ip).then(successResponse);
   }
 }
 

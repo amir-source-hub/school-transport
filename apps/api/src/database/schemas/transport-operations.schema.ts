@@ -121,6 +121,7 @@ export const transportServiceRunStudents = pgTable(
     serviceRunId: uuid('service_run_id').notNull().references(() => transportServiceRuns.id),
     studentId: uuid('student_id').notNull().references(() => students.id),
     pickupOrder: integer('pickup_order').notNull(),
+    scheduledStopTime: time('scheduled_stop_time'),
     notes: text('notes'),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

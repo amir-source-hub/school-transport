@@ -309,6 +309,13 @@
       "when": 1788332400000,
       "tag": "0043_driver_location",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1788505200000,
+      "tag": "0044_driver_routes_and_documents",
+      "breakpoints": true
     }
   ]
 }

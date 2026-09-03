@@ -23,7 +23,25 @@ const persianName = /^[\u0600-\u06FF\s‌-]+$/;
 const persianText = /^[\u0600-\u06FF\u200c\s\d۰-۹٠-٩،؛,.()\-/]+$/;
 
 export class DriverDocumentUploadDto {
-  @IsIn(['DRIVER_PHOTO', 'VEHICLE_PHOTO']) documentType!: 'DRIVER_PHOTO' | 'VEHICLE_PHOTO';
+  @IsIn([
+    'DRIVER_PHOTO',
+    'VEHICLE_PHOTO',
+    'NATIONAL_CARD_FRONT',
+    'BIRTH_CERTIFICATE_PAGE_1',
+    'BIRTH_CERTIFICATE_PAGE_2',
+    'DRIVER_LICENSE_FRONT',
+    'DRIVER_LICENSE_BACK',
+    'CRIMINAL_RECORD_CERTIFICATE',
+    'ADDICTION_TEST_CERTIFICATE',
+    'COMMITMENT_LETTER_RETURNED',
+    'ADDICTION_LETTER_RETURNED',
+    'VEHICLE_CARD_FRONT',
+    'VEHICLE_CARD_BACK',
+    'VEHICLE_TITLE_DOCUMENT',
+    'TECHNICAL_INSPECTION_DOCUMENT',
+    'INSURANCE_POLICY_DOCUMENT',
+  ])
+  documentType!: string;
   @IsIn(['image/jpeg', 'image/png']) mimeType!: 'image/jpeg' | 'image/png';
   @Type(() => Number) @IsInt() @Min(1) @Max(5 * 1024 * 1024) size!: number;
 }
@@ -84,4 +102,23 @@ export class AssignDriverToStudentDto {
   @Matches(/^\d{2}:\d{2}$/) fromSchoolStartTime!: string;
   @Matches(/^\d{2}:\d{2}$/) fromSchoolArrivalTime!: string;
   @IsInt({ each: true }) @Min(0, { each: true }) @Max(6, { each: true }) activeWeekdays!: number[];
+}
+
+export class CreateTransportRouteDto {
+  @IsUUID() driverId!: string;
+  @IsUUID() schoolId!: string;
+  @Transform(clean) @IsString() @Length(2, 100) title!: string;
+  @Transform(clean) @IsString() @Length(4, 20) academicYear!: string;
+  @IsIn(['TO_SCHOOL', 'FROM_SCHOOL']) direction!: 'TO_SCHOOL' | 'FROM_SCHOOL';
+  @Matches(/^\d{2}:\d{2}$/) scheduledStartTime!: string;
+  @Matches(/^\d{2}:\d{2}$/) scheduledArrivalTime!: string;
+  @Transform(clean) @IsOptional() @IsString() @Length(0, 500) areaDescription?: string;
+  @IsInt({ each: true }) @Min(0, { each: true }) @Max(6, { each: true }) activeWeekdays!: number[];
+}
+
+export class AddStudentToTransportRouteDto {
+  @IsUUID() studentId!: string;
+  @Matches(/^\d{2}:\d{2}$/) scheduledStopTime!: string;
+  @IsInt() @Min(1) pickupOrder!: number;
+  @Transform(clean) @IsOptional() @IsString() @Length(0, 500) notes?: string;
 }

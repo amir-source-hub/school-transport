@@ -17,6 +17,7 @@ import {
   Settings,
   Shield,
   WalletCards,
+  Route,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -34,6 +35,7 @@ const navigation = [
   { href: '/admin/dashboard', label: 'داشبورد', icon: LayoutDashboard },
   { href: '/admin/registrations', label: 'ثبت‌نام‌ها', icon: ClipboardCheck },
   { href: '/admin/students', label: 'دانش‌آموزان', icon: GraduationCap },
+  { href: '/admin/transport-routes', label: 'مسیرها و تخصیص‌ها', icon: Route },
   { href: '/admin/drivers', label: 'رانندگان', icon: Bus },
   { href: '/admin/student-photos', label: 'بررسی عکس‌ها', icon: Images },
   { href: '/admin/schools', label: 'مدارس ما', icon: Building2 },

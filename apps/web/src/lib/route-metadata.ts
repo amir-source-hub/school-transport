@@ -369,6 +369,9 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     path: '/admin/drivers/[driverId]', audience: 'admin', title: 'پرونده راننده', description: 'مشاهده اطلاعات کامل راننده، خودرو، مسیر و دانش‌آموزان.', primaryHeading: 'پرونده راننده',
   },
   {
+    path: '/admin/transport-routes', audience: 'admin', title: 'مسیرها و تخصیص‌ها', description: 'تعریف مسیر و اتصال دانش‌آموزان به راننده با کنترل ظرفیت.', primaryHeading: 'مسیرها و ارتباط راننده–دانش‌آموز',
+  },
+  {
     path: '/onboarding/driver-enrollment',
     audience: 'onboarding',
     title: 'ثبت‌نام راننده',
@@ -382,16 +385,28 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     path: '/driver/dashboard', audience: 'driver', title: 'داشبورد', description: 'نمای برنامه و وضعیت راننده.', primaryHeading: 'برنامه و وضعیت سرویس‌های شما',
   },
   {
-    path: '/driver/service-runs', audience: 'driver', title: 'سرویس‌های من', description: 'نوبت‌ها و ترتیب دانش‌آموزان سرویس.', primaryHeading: 'سرویس‌های من',
+    path: '/driver/service-runs', audience: 'driver', title: 'سرویس من', description: 'مسیرها، زمان توقف و اطلاعات دانش‌آموزان سرویس.', primaryHeading: 'سرویس من',
   },
   {
-    path: '/driver/students', audience: 'driver', title: 'دانش‌آموزان', description: 'دانش‌آموزان فعال اختصاص‌یافته به راننده.', primaryHeading: 'دانش‌آموزان سرویس من',
+    path: '/driver/students', audience: 'driver', title: 'دانش‌آموزان من', description: 'اطلاعات کامل دانش‌آموزان فعال اختصاص‌یافته به راننده.', primaryHeading: 'دانش‌آموزان من',
   },
   {
     path: '/driver/profile', audience: 'driver', title: 'اطلاعات من و خودرو', description: 'پروفایل راننده و مشخصات خودرو.', primaryHeading: 'اطلاعات من و خودرو',
   },
   {
-    path: '/driver/documents', audience: 'driver', title: 'تصاویر من', description: 'مشاهده و جایگزینی تصاویر راننده و خودرو.', primaryHeading: 'مشاهده و ویرایش تصاویر',
+    path: '/driver/schools', audience: 'driver', title: 'مدارس من', description: 'اطلاعات مدارس متصل به مسیرهای راننده.', primaryHeading: 'مدارس من',
+  },
+  {
+    path: '/driver/personal-documents', audience: 'driver', title: 'مدارک شخصی من', description: 'مدارک هویتی، صلاحیت و نامه‌های قابل چاپ راننده.', primaryHeading: 'مدارک شخصی من',
+  },
+  {
+    path: '/driver/documents', audience: 'driver', title: 'انتقال به مدارک شخصی', description: 'انتقال مسیر قدیمی تصاویر به مدارک شخصی راننده.', primaryHeading: 'مدارک شخصی من', redirectTo: '/driver/personal-documents',
+  },
+  {
+    path: '/driver/personal-documents/letters/[letterType]', audience: 'driver', title: 'نامه قابل چاپ راننده', description: 'نسخه قابل چاپ نامه‌های اداری راننده با اطلاعات تکمیل‌شده.', primaryHeading: 'نامه راننده',
+  },
+  {
+    path: '/driver/vehicle-documents', audience: 'driver', title: 'مدارک خودروی من', description: 'کارت، سند، معاینه فنی و بیمه‌نامه خودرو.', primaryHeading: 'مدارک خودروی من',
   },
   {
     path: '/manager/dashboard',

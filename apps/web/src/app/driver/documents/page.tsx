@@ -1,3 +1,2 @@
-import { Breadcrumbs } from '@/components/navigation/breadcrumbs';import { DriverDocuments } from '@/features/driver/driver-documents';import { getDriverDocuments } from '@/features/driver/driver-api';
-export const metadata={title:'تصاویر من'};
-export default async function Page(){const documents=await getDriverDocuments();return <div className="space-y-6"><Breadcrumbs items={[{label:'پنل راننده',href:'/driver/dashboard'},{label:'تصاویر من'}]}/><header><p className="text-sm font-bold text-coral">مدارک تصویری</p><h1 className="text-2xl font-black">مشاهده و ویرایش تصاویر</h1><p className="mt-2 text-sm text-muted">عکس راننده و خودرو مستقیماً در فضای خصوصی ذخیره می‌شوند و هر زمان قابل جایگزینی‌اند.</p></header><DriverDocuments documents={documents}/></div>}
+import { redirect } from 'next/navigation';
+export default function Page() { redirect('/driver/personal-documents'); }

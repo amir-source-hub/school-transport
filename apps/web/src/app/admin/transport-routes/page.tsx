@@ -1,0 +1,8 @@
+import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
+import { RouteManagement } from '@/features/admin-drivers/route-management';
+import { getAdminDrivers, getAdminTransportRoutes } from '@/features/admin-drivers/admin-drivers-api';
+import { getAdminSchools } from '@/features/admin-schools/admin-schools-api';
+import { getAdminStudents } from '@/features/admin-students/admin-students-api';
+
+export const metadata={title:'مدیریت مسیرها'};export const dynamic='force-dynamic';
+export default async function Page(){const [routes,drivers,{schools},{students}]=await Promise.all([getAdminTransportRoutes(),getAdminDrivers(),getAdminSchools(),getAdminStudents({archive:'active',pageSize:100})]);return <div className="space-y-6"><Breadcrumbs items={[{label:'پنل مدیریت',href:'/admin/dashboard'},{label:'مدیریت مسیرها'}]}/><header><p className="text-sm font-bold text-primary">تخصیص هوشمند سرویس</p><h1 className="text-2xl font-black">مسیرها و ارتباط راننده–دانش‌آموز</h1><p className="mt-2 max-w-3xl text-sm leading-7 text-muted">ابتدا مسیر راننده و مدرسه را تعریف کنید، سپس فقط دانش‌آموزان همان مدرسه را با زمان توقف و ترتیب سوارشدن اضافه کنید. ظرفیت خودرو در هر مسیر کنترل می‌شود.</p></header><RouteManagement routes={routes} drivers={drivers} schools={schools} students={students}/></div>}
