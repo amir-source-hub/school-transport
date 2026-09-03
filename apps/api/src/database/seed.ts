@@ -162,7 +162,8 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
       emergencyPhoneNumber: '09126666666',
       gender: 'MALE',
       education: 'DIPLOMA',
-      licenseExpiresAt: '1410-06-31',
+      // Dates are persisted as Gregorian ISO values; the UI renders them in Jalali.
+      licenseExpiresAt: '2031-09-22', // 1410/06/31
       streetAddress: 'تهران، سعادت‌آباد، خیابان سرو غربی',
       postalCode: '1998877665',
       province: 'تهران',
@@ -183,8 +184,8 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
       capacity: 10,
       usageType: 'PERSONAL',
       ownershipType: 'SELF',
-      insuranceExpiresAt: '1406-12-29',
-      technicalInspectionExpiresAt: '1406-09-30',
+      insuranceExpiresAt: '2028-03-19', // 1406/12/29
+      technicalInspectionExpiresAt: '2027-12-21', // 1406/09/30
     }).onConflictDoNothing();
     await db
       .insert(schools)
