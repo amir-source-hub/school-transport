@@ -2,6 +2,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { and, eq, isNull } from 'drizzle-orm';
 import * as argon2 from 'argon2';
 import { Pool } from 'pg';
+import { seedRouteAssignments } from './seed-route-assignments';
 import {
   adminUsers,
   contracts,
@@ -23,7 +24,6 @@ import {
   drivers,
   vehicles,
   transportServiceRuns,
-  transportServiceRunStudents,
 } from './schemas';
 
 export const SEED_CREDENTIALS = {
@@ -423,7 +423,9 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           closingTimes: ['12:30', '13:30'],
           latitude: 35.7804,
           longitude: 51.3672,
-          educationOptions: [{ level: 'ابتدایی', grades: ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم'] }],
+          educationOptions: [
+            { level: 'ابتدایی', grades: ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم'] },
+          ],
         },
         {
           id: ids.school2,
@@ -961,69 +963,66 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         },
       ])
       .onConflictDoNothing();
-    await db
-      .insert(transportServiceRunStudents)
-      .values([
-        {
-          id: ids.routeMemberToSchool,
-          serviceRunId: ids.routeToSchool,
-          studentId: ids.student,
-          pickupOrder: 1,
-          scheduledStopTime: '07:10',
-          notes: 'پنج دقیقه پیش از رسیدن تماس گرفته شود.',
-        },
-        {
-          id: ids.routeMemberFromSchool,
-          serviceRunId: ids.routeFromSchool,
-          studentId: ids.student,
-          pickupOrder: 1,
-          scheduledStopTime: '13:50',
-        },
-        {
-          id: ids.routeMember4To,
-          serviceRunId: ids.routeSchool2To,
-          studentId: ids.student4,
-          pickupOrder: 1,
-          scheduledStopTime: '07:00',
-        },
-        {
-          id: ids.routeMember5To,
-          serviceRunId: ids.routeSchool2To,
-          studentId: ids.student5,
-          pickupOrder: 2,
-          scheduledStopTime: '07:08',
-          notes: 'دانش‌آموزان یک خانواده هستند.',
-        },
-        {
-          id: ids.routeMember4From,
-          serviceRunId: ids.routeSchool2From,
-          studentId: ids.student4,
-          pickupOrder: 1,
-          scheduledStopTime: '14:18',
-        },
-        {
-          id: ids.routeMember5From,
-          serviceRunId: ids.routeSchool2From,
-          studentId: ids.student5,
-          pickupOrder: 2,
-          scheduledStopTime: '14:20',
-        },
-        {
-          id: ids.routeMember6To,
-          serviceRunId: ids.routeSchool3To,
-          studentId: ids.student6,
-          pickupOrder: 1,
-          scheduledStopTime: '07:02',
-        },
-        {
-          id: ids.routeMember6From,
-          serviceRunId: ids.routeSchool3From,
-          studentId: ids.student6,
-          pickupOrder: 1,
-          scheduledStopTime: '14:25',
-        },
-      ])
-      .onConflictDoNothing();
+    await seedRouteAssignments(db, [
+      {
+        id: ids.routeMemberToSchool,
+        serviceRunId: ids.routeToSchool,
+        studentId: ids.student,
+        pickupOrder: 1,
+        scheduledStopTime: '07:10',
+        notes: 'پنج دقیقه پیش از رسیدن تماس گرفته شود.',
+      },
+      {
+        id: ids.routeMemberFromSchool,
+        serviceRunId: ids.routeFromSchool,
+        studentId: ids.student,
+        pickupOrder: 1,
+        scheduledStopTime: '13:50',
+      },
+      {
+        id: ids.routeMember4To,
+        serviceRunId: ids.routeSchool2To,
+        studentId: ids.student4,
+        pickupOrder: 1,
+        scheduledStopTime: '07:00',
+      },
+      {
+        id: ids.routeMember5To,
+        serviceRunId: ids.routeSchool2To,
+        studentId: ids.student5,
+        pickupOrder: 2,
+        scheduledStopTime: '07:08',
+        notes: 'دانش‌آموزان یک خانواده هستند.',
+      },
+      {
+        id: ids.routeMember4From,
+        serviceRunId: ids.routeSchool2From,
+        studentId: ids.student4,
+        pickupOrder: 1,
+        scheduledStopTime: '14:18',
+      },
+      {
+        id: ids.routeMember5From,
+        serviceRunId: ids.routeSchool2From,
+        studentId: ids.student5,
+        pickupOrder: 2,
+        scheduledStopTime: '14:20',
+      },
+      {
+        id: ids.routeMember6To,
+        serviceRunId: ids.routeSchool3To,
+        studentId: ids.student6,
+        pickupOrder: 1,
+        scheduledStopTime: '07:02',
+      },
+      {
+        id: ids.routeMember6From,
+        serviceRunId: ids.routeSchool3From,
+        studentId: ids.student6,
+        pickupOrder: 1,
+        scheduledStopTime: '14:25',
+      },
+    ]);
     await db
       .insert(serviceRegistrations)
       .values([
