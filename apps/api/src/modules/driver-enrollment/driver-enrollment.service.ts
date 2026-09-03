@@ -176,7 +176,11 @@ export class DriverEnrollmentService {
       latitude: schools.latitude,
       longitude: schools.longitude,
     }).from(transportServiceRuns)
-      .innerJoin(schools, eq(schools.id, transportServiceRuns.schoolId))
+      .innerJoin(schools, or(eq(schools.id, transportServiceRuns.schoolId), sql`exists (
+        select 1 from transport_service_run_students m join students s on s.id = m.student_id
+        where m.service_run_id = ${transportServiceRuns.id} and m.is_active and s.is_active
+          and s.school_id = ${schools.id}
+      )`))
       .where(and(eq(transportServiceRuns.driverId, driver.id), eq(transportServiceRuns.isActive, true)))
       .orderBy(asc(schools.name));
     return rows.filter((school, index, all) => all.findIndex((item) => item.id === school.id) === index);
@@ -323,8 +327,8 @@ export class DriverEnrollmentService {
       if (!outbound || !inbound || !outbound.isActive || !inbound.isActive || outbound.direction !== 'TO_SCHOOL' || inbound.direction !== 'FROM_SCHOOL') {
         throw new ValidationError('یک مسیر رفت و یک مسیر برگشت فعال انتخاب کنید.');
       }
-      if (outbound.driverId !== inbound.driverId || outbound.academicYear !== inbound.academicYear || selected.some(r => r.schoolId !== student.schoolId)) {
-        throw new ValidationError('هر دو مسیر باید متعلق به یک راننده، مدرسه دانش‌آموز و یک سال تحصیلی باشند.');
+      if (outbound.driverId !== inbound.driverId || outbound.academicYear !== inbound.academicYear) {
+        throw new ValidationError('هر دو مسیر باید متعلق به یک راننده و یک سال تحصیلی باشند.');
       }
       const [driver] = await txn.select().from(drivers).where(and(eq(drivers.id, outbound.driverId), eq(drivers.status, 'ACTIVE')));
       if (!driver) throw new ValidationError('راننده فعال نیست.');
@@ -367,7 +371,6 @@ export class DriverEnrollmentService {
     ]);
     if (!route) throw new NotFoundError('Transport route', routeId);
     if (!student) throw new NotFoundError('Student', input.studentId);
-    if (student.schoolId !== route.schoolId) throw new ValidationError('مدرسه دانش‌آموز با مدرسه مسیر یکسان نیست.');
     if (input.scheduledStopTime < route.scheduledStartTime || input.scheduledStopTime > route.scheduledArrivalTime) throw new ValidationError('زمان توقف دانش‌آموز باید در بازه شروع و پایان مسیر باشد.');
     const [vehicle, activeMembers, driver] = await Promise.all([
       this.database.db.select().from(vehicles).where(eq(vehicles.id, route.vehicleId)).limit(1).then((rows) => rows[0]),

@@ -63,8 +63,8 @@ describe('paired route assignment', () => {
     expect(h.insert).not.toHaveBeenCalled();
     expect(h.update).not.toHaveBeenCalled();
   });
-  it('rejects a different school', async () => {
-    const h = harness([[student], [to, { ...from, schoolId: 'other' }]]);
+  it('rejects different academic years', async () => {
+    const h = harness([[student], [to, { ...from, academicYear: 'other' }]]);
     await expect(h.service.assignStudentRoutes(input, 'admin')).rejects.toThrow();
     expect(h.insert).not.toHaveBeenCalled();
   });
@@ -83,9 +83,9 @@ describe('paired route assignment', () => {
     expect(h.insert).not.toHaveBeenCalled();
     expect(h.update).not.toHaveBeenCalled();
   });
-  it('saves both memberships and notifies family and driver', async () => {
+  it('allows different schools and notifies family and driver', async () => {
     const h = harness([
-      [student],
+      [{ ...student, schoolId: 'another-school' }],
       [to, from],
       [driver],
       [{ id: 'vehicle', status: 'ACTIVE', capacity: 4 }],

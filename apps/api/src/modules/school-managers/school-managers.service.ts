@@ -424,7 +424,7 @@ export class SchoolManagersService {
         .innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId))
         .innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
         .innerJoin(vehicles, eq(vehicles.id, transportServiceRuns.vehicleId))
-        .where(and(eq(transportServiceRunStudents.studentId, studentId), eq(transportServiceRunStudents.isActive, true), eq(transportServiceRuns.isActive, true), inArray(transportServiceRuns.schoolId, schoolIds))),
+        .where(and(eq(transportServiceRunStudents.studentId, studentId), eq(transportServiceRunStudents.isActive, true), eq(transportServiceRuns.isActive, true))),
     ]);
 
     const latestRegistration = registrationRows[0] ?? null;
@@ -539,12 +539,12 @@ export class SchoolManagersService {
       direction: transportServiceRuns.direction, schoolName: schools.name,
     }).from(transportServiceRuns).innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
       .innerJoin(vehicles, eq(vehicles.id, transportServiceRuns.vehicleId)).innerJoin(schools, eq(schools.id, transportServiceRuns.schoolId))
-      .where(and(inArray(transportServiceRuns.schoolId, schoolIds), eq(transportServiceRuns.isActive, true), sql`exists (
+      .where(and(eq(transportServiceRuns.isActive, true), sql`exists (
         select 1 from transport_service_run_students membership
         join students pupil on pupil.id = membership.student_id
         where membership.service_run_id = ${transportServiceRuns.id}
           and membership.is_active = true and pupil.is_active = true
-          and pupil.school_id = ${transportServiceRuns.schoolId}
+          and pupil.school_id in (${sql.join(schoolIds.map(id => sql`${id}::uuid`), sql`, `)})
       )`))
       .orderBy(desc(transportServiceRuns.createdAt));
     const grouped = new Map<string, any>();
@@ -558,8 +558,11 @@ export class SchoolManagersService {
 
   async getDriverDetail(managerId: string, driverId: string) {
     const schoolIds = await this.scope.getActiveSchoolIds(managerId);
+    if (!schoolIds.length) throw new AuthorizationError('Access denied.');
     const [allowed] = await this.db.db.select({ id: transportServiceRuns.id }).from(transportServiceRuns)
-      .where(and(eq(transportServiceRuns.driverId, driverId), inArray(transportServiceRuns.schoolId, schoolIds), eq(transportServiceRuns.isActive, true))).limit(1);
+      .innerJoin(transportServiceRunStudents, eq(transportServiceRunStudents.serviceRunId, transportServiceRuns.id))
+      .innerJoin(students, eq(students.id, transportServiceRunStudents.studentId))
+      .where(and(eq(transportServiceRuns.driverId, driverId), inArray(students.schoolId, schoolIds), eq(students.isActive, true), eq(transportServiceRunStudents.isActive, true), eq(transportServiceRuns.isActive, true))).limit(1);
     if (!allowed) throw new AuthorizationError('Access denied.');
     const [driver] = await this.db.db.select().from(drivers).where(eq(drivers.id, driverId)).limit(1);
     const [vehicle] = await this.db.db.select().from(vehicles).where(eq(vehicles.driverId, driverId)).orderBy(desc(vehicles.createdAt)).limit(1);
@@ -573,7 +576,7 @@ export class SchoolManagersService {
     }).from(transportServiceRuns).innerJoin(schools, eq(schools.id, transportServiceRuns.schoolId))
       .leftJoin(transportServiceRunStudents, and(eq(transportServiceRunStudents.serviceRunId, transportServiceRuns.id), eq(transportServiceRunStudents.isActive, true)))
       .leftJoin(students, eq(students.id, transportServiceRunStudents.studentId))
-      .where(and(eq(transportServiceRuns.driverId, driverId), inArray(transportServiceRuns.schoolId, schoolIds), eq(transportServiceRuns.isActive, true)))
+      .where(and(eq(transportServiceRuns.driverId, driverId), inArray(students.schoolId, schoolIds), eq(students.isActive, true), eq(transportServiceRuns.isActive, true)))
       .orderBy(transportServiceRuns.sequenceNumber, transportServiceRunStudents.pickupOrder);
     const grouped = new Map<string, any>();
     for (const row of rows) {

@@ -10,6 +10,7 @@ import {
 } from '../../database/schemas';
 import { StudentsService } from './students.service';
 import { DriverEnrollmentService } from '../driver-enrollment/driver-enrollment.service';
+import { SchoolManagersService } from '../school-managers/school-managers.service';
 
 // Explicit opt-in: reuse local fixtures inside a transaction that always rolls back.
 it.skipIf(process.env.TEST_LOCAL_SCHOOL_CHANGE !== '1')(
@@ -108,7 +109,7 @@ it.skipIf(process.env.TEST_LOCAL_SCHOOL_CHANGE !== '1')(
           const [pupil] = await txn
             .select()
             .from(students)
-            .where(and(eq(students.schoolId, to!.schoolId), eq(students.isActive, true)))
+            .where(and(ne(students.schoolId, to!.schoolId), eq(students.isActive, true)))
             .limit(1);
           expect(pupil).toBeDefined();
           const service = new DriverEnrollmentService(
@@ -138,6 +139,25 @@ it.skipIf(process.env.TEST_LOCAL_SCHOOL_CHANGE !== '1')(
             );
           expect(assigned.map((m) => m.serviceRunId)).toEqual(
             expect.arrayContaining([to!.id, from.id]),
+          );
+          const manager = new SchoolManagersService(
+            { db: txn } as never,
+            {
+              getActiveSchoolIds: async () => [pupil.schoolId],
+            } as never,
+          );
+          expect((await manager.getDrivers('manager')).some((d) => d.id === to!.driverId)).toBe(
+            true,
+          );
+          const detail = await manager.getDriverDetail('manager', to!.driverId);
+          const visible = detail.runs.flatMap((r: { students: { id: string }[] }) => r.students);
+          expect(visible.some((s: { id: string }) => s.id === pupil.id)).toBe(true);
+          const allowed = await txn
+            .select({ id: students.id })
+            .from(students)
+            .where(eq(students.schoolId, pupil.schoolId));
+          expect(visible.every((s: { id: string }) => allowed.some((a) => a.id === s.id))).toBe(
+            true,
           );
           verified = true;
           throw rollback;

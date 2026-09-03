@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { SearchPicker } from '@/components/ui/search-picker';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -28,20 +29,15 @@ export function RouteManagement({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const [query, setQuery] = useState('');
-  const [routeQuery, setRouteQuery] = useState('');
   const [choices, setChoices] = useState(students);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(students.length === 100);
-  const [searchQuery, setSearchQuery] = useState('');
   const [studentId, setStudentId] = useState('');
   const [toId, setToId] = useState('');
   const [fromId, setFromId] = useState('');
   const student = choices.find((s) => s.id === studentId);
   const outbound = routes.find((r) => r.id === toId);
-  const eligible = routes.filter((r) => r.school.id === student?.schoolId);
+  const eligible = routes;
   const label = (r: AdminTransportRoute) =>
-    `${r.title} · ${r.driver?.firstName ?? ''} ${r.driver?.lastName ?? ''} · ${r.students.length}/${r.driver?.capacity ?? 0}`;
+    `${r.title} · ${r.driver?.firstName ?? ''} ${r.driver?.lastName ?? ''} · ${r.school.name} · ${r.students.length}/${r.driver?.capacity ?? 0}`;
   const full = (r: AdminTransportRoute) =>
     !r.students.some((s) => s.id === studentId) && r.students.length >= (r.driver?.capacity ?? 0);
   async function perform(action: () => Promise<unknown>, success: string) {
@@ -57,23 +53,20 @@ export function RouteManagement({
       setBusy(false);
     }
   }
-  async function search(nextPage = 1, q = query) {
-    await perform(async () => {
-      const result = await getAdminStudents({
-        q,
-        page: nextPage,
-        archive: 'active',
-        pageSize: 100,
-      });
-      setChoices(result.students);
-      setPage(nextPage);
-      setHasMore(nextPage < result.pagination.totalPages);
-      setSearchQuery(q);
-      setStudentId('');
-      setToId('');
-      setFromId('');
-    }, 'نتایج جست‌وجو به‌روز شد.');
-  }
+  const searchStudents = useCallback(async (q: string) => {
+    const result = await getAdminStudents({ q, archive: 'active', pageSize: 100 });
+    const rows = [...result.students];
+    for (let page = 2; page <= result.pagination.totalPages; page++) {
+      rows.push(
+        ...(await getAdminStudents({ q, page, archive: 'active', pageSize: 100 })).students,
+      );
+    }
+    setChoices((current) => [...new Map([...current, ...rows].map((s) => [s.id, s])).values()]);
+    return rows.map((s) => ({
+      value: s.id,
+      label: `${s.firstName} ${s.lastName} · ${s.schoolName ?? ''}`,
+    }));
+  }, []);
   async function create(data: FormData) {
     await perform(
       () =>
@@ -176,39 +169,9 @@ export function RouteManagement({
       <Card>
         <h2 className="text-lg font-black">۲. اتصال رفت و برگشت دانش‌آموز</h2>
         <p className="mt-2 text-sm text-muted">
-          هر دو مسیر باید متعلق به یک راننده و مدرسه دانش‌آموز باشند. ذخیره، ارتباط قبلی همان سال را
-          جایگزین می‌کند.
+          هر دو مسیر باید متعلق به یک راننده باشند؛ انتخاب مسیر مدارس دیگر نیز مجاز است. ذخیره،
+          ارتباط قبلی همان سال را جایگزین می‌کند.
         </p>
-        <div className="mt-5 flex gap-3">
-          <Input
-            aria-label="جست‌وجوی دانش‌آموز"
-            placeholder="نام یا کد ملی دانش‌آموز"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <Button type="button" disabled={busy} onClick={() => void search()}>
-            جست‌وجو
-          </Button>
-        </div>
-        {(page > 1 || hasMore) && (
-          <div className="mt-3 flex items-center gap-3 text-sm">
-            <Button
-              type="button"
-              disabled={busy || page <= 1}
-              onClick={() => void search(page - 1, searchQuery)}
-            >
-              قبلی
-            </Button>
-            <span>صفحه {page.toLocaleString('fa-IR')}</span>
-            <Button
-              type="button"
-              disabled={busy || !hasMore}
-              onClick={() => void search(page + 1, searchQuery)}
-            >
-              بعدی
-            </Button>
-          </div>
-        )}
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -216,52 +179,55 @@ export function RouteManagement({
           }}
           className="mt-4 grid gap-4 md:grid-cols-2"
         >
-          <Field label="دانش‌آموز">
-            <Picker
-              value={studentId}
-              onChange={(v) => {
-                setStudentId(v);
-                setToId('');
-                setFromId('');
-              }}
-              options={choices.map((s) => ({
-                value: s.id,
-                label: `${s.firstName} ${s.lastName} · ${s.schoolName ?? ''}`,
+          <SearchPicker
+            label="دانش‌آموز"
+            loadOptions={searchStudents}
+            value={studentId}
+            onChange={(v) => {
+              setStudentId(v);
+              setToId('');
+              setFromId('');
+            }}
+            options={choices.map((s) => ({
+              value: s.id,
+              label: `${s.firstName} ${s.lastName} · ${s.schoolName ?? ''}`,
+            }))}
+          />
+          <SearchPicker
+            label="مسیر رفت"
+            value={toId}
+            onChange={(v) => {
+              setToId(v);
+              setFromId('');
+            }}
+            options={eligible
+              .filter((r) => r.direction === 'TO_SCHOOL')
+              .map((r) => ({
+                value: r.id,
+                label: label(r),
+                disabled: full(r),
+                reason: full(r) ? 'ظرفیت تکمیل' : undefined,
               }))}
-            />
-          </Field>
-          <Field label="جست‌وجوی مسیر یا راننده">
-            <Input value={routeQuery} onChange={(e) => setRouteQuery(e.target.value)} />
-          </Field>
-          <Field label="مسیر رفت">
-            <Picker
-              value={toId}
-              onChange={(v) => {
-                setToId(v);
-                setFromId('');
-              }}
-              options={eligible
-                .filter(
-                  (r) =>
-                    r.direction === 'TO_SCHOOL' && (r.id === toId || label(r).includes(routeQuery)),
-                )
-                .map((r) => ({ value: r.id, label: label(r), disabled: full(r) }))}
-            />
-          </Field>
-          <Field label="مسیر برگشت همان راننده">
-            <Picker
-              value={fromId}
-              onChange={setFromId}
-              options={eligible
-                .filter(
-                  (r) =>
-                    r.direction === 'FROM_SCHOOL' &&
-                    r.driver?.id === outbound?.driver?.id &&
-                    r.academicYear === outbound?.academicYear,
-                )
-                .map((r) => ({ value: r.id, label: label(r), disabled: full(r) }))}
-            />
-          </Field>
+          />
+          <SearchPicker
+            label="مسیر برگشت همان راننده"
+            value={fromId}
+            onChange={setFromId}
+            options={eligible
+              .filter(
+                (r) =>
+                  r.direction === 'FROM_SCHOOL' &&
+                  (!outbound ||
+                    (r.driver?.id === outbound.driver?.id &&
+                      r.academicYear === outbound.academicYear)),
+              )
+              .map((r) => ({
+                value: r.id,
+                label: label(r),
+                disabled: full(r),
+                reason: full(r) ? 'ظرفیت تکمیل' : undefined,
+              }))}
+          />
           <Field label="زمان سوار شدن در رفت">
             <Input
               key={toId}
