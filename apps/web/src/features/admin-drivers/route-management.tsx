@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useState } from 'react';
 import { SearchPicker } from '@/components/ui/search-picker';
+import { RouteCatalog } from './route-catalog';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -152,19 +153,7 @@ export function RouteManagement({
             ایجاد مسیر
           </Button>
         </form>
-        <details className="mt-5 border-t border-border pt-4">
-          <summary className="cursor-pointer font-bold">
-            مسیرهای تعریف‌شده ({routes.length.toLocaleString('fa-IR')})
-          </summary>
-          <ul className="mt-3 space-y-2 text-sm">
-            {routes.map((r) => (
-              <li key={r.id}>
-                {label(r)} · {r.school.name} · {r.direction === 'TO_SCHOOL' ? 'رفت' : 'برگشت'} ·{' '}
-                {r.scheduledStartTime} تا {r.scheduledArrivalTime}
-              </li>
-            ))}
-          </ul>
-        </details>
+        <RouteCatalog routes={routes} />
       </Card>
       <Card>
         <h2 className="text-lg font-black">۲. اتصال رفت و برگشت دانش‌آموز</h2>
