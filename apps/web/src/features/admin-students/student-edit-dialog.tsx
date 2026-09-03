@@ -132,16 +132,28 @@ function StudentEditBody({ studentId, schools }: { studentId: string; schools: S
 }
 
 function StudentEditForm({
-  detail,
+  detail: initialDetail,
   schools,
 }: {
   detail: AdminStudentDetail;
   schools: SchoolOption[];
 }) {
+  const [detail, setDetail] = useState(initialDetail);
   const [latestUpdatedAt, setLatestUpdatedAt] = useState(detail.updatedAt);
   const router = useRouter();
 
-  const refresh = () => router.refresh();
+  const refresh = () => {
+    router.refresh();
+    // Refresh the dialog too: router.refresh does not replace its local snapshot.
+    void getAdminStudentDetail(detail.id)
+      .then((updated) => {
+        setDetail(updated);
+        setLatestUpdatedAt(updated.updatedAt);
+      })
+      .catch(() => {
+        /* Keep the successful save and its returned revision. */
+      });
+  };
 
   return (
     <Tabs
@@ -405,6 +417,12 @@ function SchoolTab({
       <Button type="submit" loading={pending}>
         ذخیره مدرسه
       </Button>
+      {schoolId !== detail.schoolId && (
+        <p className="text-sm text-muted">
+          با تغییر مدرسه، ارتباط مسیرهای قبلی پایان می‌یابد. مسیر رفت و برگشت جدید را در بخش مسیرها
+          و تخصیص‌ها تعیین کنید.
+        </p>
+      )}
     </form>
   );
 }

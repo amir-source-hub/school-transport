@@ -539,7 +539,13 @@ export class SchoolManagersService {
       direction: transportServiceRuns.direction, schoolName: schools.name,
     }).from(transportServiceRuns).innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
       .innerJoin(vehicles, eq(vehicles.id, transportServiceRuns.vehicleId)).innerJoin(schools, eq(schools.id, transportServiceRuns.schoolId))
-      .where(and(inArray(transportServiceRuns.schoolId, schoolIds), eq(transportServiceRuns.isActive, true)))
+      .where(and(inArray(transportServiceRuns.schoolId, schoolIds), eq(transportServiceRuns.isActive, true), sql`exists (
+        select 1 from transport_service_run_students membership
+        join students pupil on pupil.id = membership.student_id
+        where membership.service_run_id = ${transportServiceRuns.id}
+          and membership.is_active = true and pupil.is_active = true
+          and pupil.school_id = ${transportServiceRuns.schoolId}
+      )`))
       .orderBy(desc(transportServiceRuns.createdAt));
     const grouped = new Map<string, any>();
     for (const row of rows) {

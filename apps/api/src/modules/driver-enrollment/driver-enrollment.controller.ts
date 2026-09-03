@@ -8,6 +8,7 @@ import type { OnboardingRequest } from '../../common/http-request';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
 import { AddStudentToTransportRouteDto, AssignDriverToStudentDto, CreateTransportRouteDto, DriverDocumentUploadDto, DriverEnrollmentDto, UpdateDriverProfileDto } from './driver-enrollment.dto';
 import { DriverEnrollmentService } from './driver-enrollment.service';
+import { AssignStudentRoutesDto } from './driver-enrollment.dto';
 
 @UseGuards(OnboardingGuard)
 @Controller('onboarding/driver-enrollment')
@@ -62,6 +63,11 @@ export class DriverPortalController {
 @Controller('admin')
 export class AdminDriversController {
   constructor(private readonly service: DriverEnrollmentService) {}
+
+  @Post('transport-assignments')
+  assignRoutes(@Req() req: AuthenticatedRequest, @Body() body: AssignStudentRoutesDto) {
+    return this.service.assignStudentRoutes(body, req.user.id, req.ip).then(successResponse);
+  }
 
   @Get('drivers') list() { return this.service.getAdminDrivers().then(successResponse); }
   @Get('drivers/:id') detail(@Param('id', new ParseUUIDPipe()) id: string) { return this.service.getAdminDriver(id).then(successResponse); }

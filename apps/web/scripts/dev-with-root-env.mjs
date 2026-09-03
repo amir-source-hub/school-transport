@@ -27,4 +27,36 @@ if (
   process.env.API_INTERNAL_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 }
 
+// Host development must not start serving SSR pages before Nest is listening.
+// This launcher is not used by production builds or starts.
+if (process.argv.includes('dev')) {
+  const apiUrl = new URL(
+    process.env.API_INTERNAL_BASE_URL ??
+      process.env.NEXT_PUBLIC_API_BASE_URL ??
+      'http://127.0.0.1:5000/api/v1',
+  );
+  if (['localhost', '127.0.0.1', '[::1]'].includes(apiUrl.hostname)) {
+    apiUrl.hostname = '127.0.0.1';
+    process.env.API_INTERNAL_BASE_URL = apiUrl.toString().replace(/\/$/, '');
+    const healthUrl = `${process.env.API_INTERNAL_BASE_URL}/health`;
+    console.log('Waiting for the local API before starting Next.js...');
+    let ready = false;
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      try {
+        const response = await fetch(healthUrl, { signal: AbortSignal.timeout(1000) });
+        if (response.ok) {
+          ready = true;
+          break;
+        }
+      } catch {
+        /* Nest may still be compiling. */
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    if (!ready)
+      throw new Error(
+        'Local API did not become ready. Check the API terminal, PostgreSQL and Redis before restarting pnpm dev.',
+      );
+  }
+}
 await import('../node_modules/next/dist/bin/next');

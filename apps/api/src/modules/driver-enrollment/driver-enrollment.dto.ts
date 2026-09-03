@@ -122,3 +122,11 @@ export class AddStudentToTransportRouteDto {
   @IsInt() @Min(1) pickupOrder!: number;
   @Transform(clean) @IsOptional() @IsString() @Length(0, 500) notes?: string;
 }
+
+export class AssignStudentRoutesDto {
+  @IsUUID() studentId!: string;
+  @IsUUID() toSchoolRouteId!: string;
+  @IsUUID() fromSchoolRouteId!: string;
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) toSchoolStopTime!: string;
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) fromSchoolStopTime!: string;
+}

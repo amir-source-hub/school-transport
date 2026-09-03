@@ -23,6 +23,7 @@ import {
 } from '../../database/schemas';
 import { S3_CLIENT, type S3Storage } from '../../infrastructure/s3/s3-storage.port';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
+import { AssignStudentRoutesDto } from './driver-enrollment.dto';
 import { AddStudentToTransportRouteDto, AssignDriverToStudentDto, CreateTransportRouteDto, DriverDocumentUploadDto, DriverEnrollmentDto, UpdateDriverProfileDto } from './driver-enrollment.dto';
 
 const CONTRACT_VERSION = 'driver-v1';
@@ -308,6 +309,55 @@ export class DriverEnrollmentService {
     }).returning();
     await this.audit.record({ actorType: 'ADMIN', actorId: adminId, action: 'TRANSPORT_ROUTE_CREATED', entityType: 'TRANSPORT_SERVICE_RUN', entityId: created.id, newValues: { driverId: driver.id, schoolId: school.id, title: created.title }, ipAddress });
     return created;
+  }
+
+  async assignStudentRoutes(input: AssignStudentRoutesDto, adminId: string, ipAddress?: string) {
+    return this.database.db.transaction(async (txn) => {
+      const [student] = await txn.select().from(students).where(and(eq(students.id, input.studentId), eq(students.isActive, true))).for('update');
+      if (!student) throw new NotFoundError('Student', input.studentId);
+      const selected = await txn.select().from(transportServiceRuns)
+        .where(inArray(transportServiceRuns.id, [input.toSchoolRouteId, input.fromSchoolRouteId]))
+        .orderBy(asc(transportServiceRuns.id)).for('update');
+      const outbound = selected.find(r => r.id === input.toSchoolRouteId);
+      const inbound = selected.find(r => r.id === input.fromSchoolRouteId);
+      if (!outbound || !inbound || !outbound.isActive || !inbound.isActive || outbound.direction !== 'TO_SCHOOL' || inbound.direction !== 'FROM_SCHOOL') {
+        throw new ValidationError('یک مسیر رفت و یک مسیر برگشت فعال انتخاب کنید.');
+      }
+      if (outbound.driverId !== inbound.driverId || outbound.academicYear !== inbound.academicYear || selected.some(r => r.schoolId !== student.schoolId)) {
+        throw new ValidationError('هر دو مسیر باید متعلق به یک راننده، مدرسه دانش‌آموز و یک سال تحصیلی باشند.');
+      }
+      const [driver] = await txn.select().from(drivers).where(and(eq(drivers.id, outbound.driverId), eq(drivers.status, 'ACTIVE')));
+      if (!driver) throw new ValidationError('راننده فعال نیست.');
+      const vehicleRows = await txn.select().from(vehicles).where(inArray(vehicles.id, selected.map(r => r.vehicleId))).orderBy(asc(vehicles.id)).for('update');
+      for (const route of selected) {
+        const stop = route.direction === 'TO_SCHOOL' ? input.toSchoolStopTime : input.fromSchoolStopTime;
+        if (stop < route.scheduledStartTime.slice(0, 5) || stop > route.scheduledArrivalTime.slice(0, 5)) throw new ValidationError('زمان توقف باید در بازه مسیر باشد.');
+        const vehicle = vehicleRows.find(v => v.id === route.vehicleId);
+        const members = await txn.select().from(transportServiceRunStudents).where(and(eq(transportServiceRunStudents.serviceRunId, route.id), eq(transportServiceRunStudents.isActive, true)));
+        if (!vehicle || vehicle.status !== 'ACTIVE' || members.filter(m => m.studentId !== student.id).length >= vehicle.capacity) throw new ConflictError('VEHICLE_CAPACITY_REACHED', 'ظرفیت یکی از مسیرها تکمیل است.');
+      }
+      const previous = await txn.select({ id: transportServiceRunStudents.id, driverId: transportServiceRuns.driverId })
+        .from(transportServiceRunStudents).innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId))
+        .where(and(eq(transportServiceRunStudents.studentId, student.id), eq(transportServiceRunStudents.isActive, true), eq(transportServiceRuns.academicYear, outbound.academicYear)));
+      if (previous.length) await txn.update(transportServiceRunStudents).set({ isActive: false }).where(inArray(transportServiceRunStudents.id, previous.map(m => m.id)));
+      for (const route of selected) {
+        const [existing] = await txn.select().from(transportServiceRunStudents).where(and(eq(transportServiceRunStudents.serviceRunId, route.id), eq(transportServiceRunStudents.studentId, student.id)));
+        const [last] = await txn.select({ value: max(transportServiceRunStudents.pickupOrder) }).from(transportServiceRunStudents).where(eq(transportServiceRunStudents.serviceRunId, route.id));
+        const values = { isActive: true, scheduledStopTime: route.direction === 'TO_SCHOOL' ? input.toSchoolStopTime : input.fromSchoolStopTime };
+        if (existing) await txn.update(transportServiceRunStudents).set(values).where(eq(transportServiceRunStudents.id, existing.id));
+        else await txn.insert(transportServiceRunStudents).values({ ...values, serviceRunId: route.id, studentId: student.id, pickupOrder: (last?.value ?? 0) + 1 });
+      }
+      const eventId = randomUUID();
+      const message = `سرویس رفت و برگشت ${student.firstName} ${student.lastName} با رانندگی ${driver.firstName} ${driver.lastName} ثبت شد.`;
+      const recipients = new Set([student.userId, driver.userId]);
+      if (previous.length) {
+        const oldDrivers = await txn.select({ userId: drivers.userId }).from(drivers).where(inArray(drivers.id, previous.map(m => m.driverId)));
+        oldDrivers.forEach(d => recipients.add(d.userId));
+      }
+      for (const userId of recipients) await this.notifications.enqueueInTransaction(txn, { eventId: `ROUTE_PAIR:${eventId}:${userId}`, userId, notificationType: 'STUDENT_DRIVER_ASSIGNED', title: 'برنامه سرویس به‌روزرسانی شد', message, relatedEntityType: 'STUDENT', relatedEntityId: student.id });
+      await this.audit.recordInTransaction(txn, { actorType: 'ADMIN', actorId: adminId, action: 'STUDENT_ROUTE_PAIR_ASSIGNED', entityType: 'STUDENT', entityId: student.id, newValues: { driverId: driver.id, toSchoolRouteId: outbound.id, fromSchoolRouteId: inbound.id }, ipAddress });
+      return { assigned: true };
+    });
   }
 
   async addStudentToRoute(routeId: string, input: AddStudentToTransportRouteDto, adminId: string, ipAddress?: string) {
