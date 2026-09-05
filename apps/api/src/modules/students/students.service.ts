@@ -35,6 +35,7 @@ import { S3_CLIENT, type S3Storage } from '../../infrastructure/s3/s3-storage.po
 import type { AdminStudentListQueryDto } from './student-list.dto';
 import type { AdminUpdateStudentDto } from './student.dto';
 import { buildAdminStudentArchiveWhere, buildAdminStudentOrderBy } from './student-list.sort';
+import type { DatabaseTransaction } from '../../database/payment-plan';
 
 export const MAX_STUDENTS_PER_GUARDIAN = 5;
 export const STUDENT_LIMIT_REQUEST_LIST_LIMIT = 500;
@@ -146,10 +147,15 @@ export class StudentsService {
     ) {
       await this.assertValidSchoolProgram(editableFields, current);
     }
-    await this.db.db
-      .update(students)
-      .set({ ...editableFields, updatedAt: new Date() })
-      .where(eq(students.id, studentId));
+    await this.db.db.transaction(async (txn) => {
+      await txn
+        .update(students)
+        .set({ ...editableFields, updatedAt: new Date() })
+        .where(eq(students.id, studentId));
+      if (editableFields.schoolId && editableFields.schoolId !== current.schoolId) {
+        await this.reconcileSpecialSchoolEnrollment(txn, studentId, userId, editableFields.schoolId);
+      }
+    });
     return this.getById(studentId);
   }
 
@@ -704,6 +710,14 @@ export class StudentsService {
           'This student was modified by another admin. Refresh the page and try again.',
         );
       }
+      if (editable.schoolId && editable.schoolId !== current.schoolId) {
+        await this.reconcileSpecialSchoolEnrollment(
+          txn,
+          studentId,
+          current.userId,
+          editable.schoolId,
+        );
+      }
       await this.auditService.recordInTransaction(txn, {
         actorType: 'ADMIN',
         actorId: context.adminId,
@@ -717,6 +731,91 @@ export class StudentsService {
       return updated[0];
     });
     return saved;
+  }
+
+  private async reconcileSpecialSchoolEnrollment(
+    txn: DatabaseTransaction,
+    studentId: string,
+    userId: string,
+    schoolId: string,
+  ) {
+    const [school] = await txn
+      .select({ schoolType: schools.schoolType })
+      .from(schools)
+      .where(eq(schools.id, schoolId))
+      .limit(1);
+    if (school?.schoolType !== 'SPECIAL') return;
+
+    const registrations = await txn
+      .select({ id: serviceRegistrations.id })
+      .from(serviceRegistrations)
+      .where(
+        and(
+          eq(serviceRegistrations.studentId, studentId),
+          inArray(serviceRegistrations.registrationStatus, [
+            'CONTRACT_READY',
+            'CONTRACT_ACCEPTED',
+            'ENROLLED',
+          ]),
+        ),
+      );
+    const registrationIds = registrations.map(({ id }) => id);
+    if (registrationIds.length === 0) return;
+
+    const generatedContracts = await txn
+      .select({ paymentPlanId: contracts.paymentPlanId })
+      .from(contracts)
+      .where(
+        and(
+          inArray(contracts.registrationId, registrationIds),
+          eq(contracts.contractStatus, 'GENERATED'),
+        ),
+      );
+    const planIds = generatedContracts
+      .map(({ paymentPlanId }) => paymentPlanId)
+      .filter((value): value is string => Boolean(value));
+    const now = new Date();
+    await txn
+      .update(contracts)
+      .set({ contractStatus: 'CANCELLED', cancelledAt: now, updatedAt: now })
+      .where(
+        and(
+          inArray(contracts.registrationId, registrationIds),
+          eq(contracts.contractStatus, 'GENERATED'),
+        ),
+      );
+    await txn
+      .update(registrationPrices)
+      .set({ priceStatus: 'REPLACED', updatedAt: now })
+      .where(
+        and(
+          inArray(registrationPrices.registrationId, registrationIds),
+          eq(registrationPrices.priceStatus, 'ACCEPTED'),
+        ),
+      );
+    if (planIds.length > 0) {
+      await txn
+        .update(paymentScheduleItems)
+        .set({ itemStatus: 'CANCELLED', updatedAt: now })
+        .where(
+          and(
+            inArray(paymentScheduleItems.paymentPlanId, planIds),
+            eq(paymentScheduleItems.itemStatus, 'PENDING'),
+          ),
+        );
+      await txn
+        .update(paymentPlans)
+        .set({ planStatus: 'CANCELLED', updatedAt: now })
+        .where(and(inArray(paymentPlans.id, planIds), eq(paymentPlans.planStatus, 'PENDING')));
+    }
+    await txn
+      .update(serviceRegistrations)
+      .set({ registrationStatus: 'ENROLLED', updatedAt: now })
+      .where(inArray(serviceRegistrations.id, registrationIds));
+    await txn
+      .update(users)
+      .set({ accountStatus: 'ACTIVE', updatedAt: now })
+      .where(eq(users.id, userId));
   }
 
   private async assertValidSchoolProgram(
