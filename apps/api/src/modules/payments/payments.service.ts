@@ -226,8 +226,8 @@ export class PaymentsService {
       );
     }
     const item = await this.getOwnedScheduleItem(scheduleItemId, userId);
-    if (item.itemStatus === 'PAID') {
-      throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'This item has already been paid.');
+    if (item.itemStatus !== 'PENDING') {
+      throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This payment item is not payable.');
     }
 
     const fingerprint = createHash('sha256')
@@ -326,8 +326,8 @@ export class PaymentsService {
         .for('update')
         .limit(1);
 
-      if (item[0].itemStatus === 'PAID') {
-        throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Already paid.');
+      if (item[0].itemStatus !== 'PENDING') {
+        throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This payment item is not payable.');
       }
 
       await txn
@@ -420,8 +420,8 @@ export class PaymentsService {
     },
   ) {
     const item = await this.getOwnedScheduleItem(scheduleItemId, userId);
-    if (item.itemStatus === 'PAID') {
-      throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Already paid.');
+    if (item.itemStatus !== 'PENDING') {
+      throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This payment item is not payable.');
     }
     const destination = await this.getActiveOfflineDestination();
     // The receipt image is the evidence. Legacy metadata is optional and must
@@ -766,8 +766,8 @@ export class PaymentsService {
         .for('update')
         .limit(1);
       if (!item) throw new NotFoundError('Schedule item');
-      if (item.itemStatus === 'PAID') {
-        throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Schedule item already paid.');
+      if (item.itemStatus !== 'PENDING') {
+        throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'Schedule item is not payable.');
       }
       const [lockedPlan] = await txn
         .select({ id: paymentPlans.id })

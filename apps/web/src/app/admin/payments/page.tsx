@@ -218,7 +218,11 @@ export default async function AdminPaymentsPage({
                     </p>
                   </div>
                   <Badge tone={payment.planStatus === 'COMPLETED' ? 'success' : 'neutral'}>
-                    {payment.planStatus === 'COMPLETED' ? 'تسویه شده' : 'در حال پرداخت'}
+                    {payment.planStatus === 'COMPLETED'
+                      ? 'تسویه شده'
+                      : payment.planStatus === 'CANCELLED'
+                        ? 'معاف از پرداخت'
+                        : 'در حال پرداخت'}
                   </Badge>
                 </div>
                 <section className="mt-5 rounded-xl border border-border bg-surface-muted/40 p-4">

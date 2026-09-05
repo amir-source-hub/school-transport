@@ -70,11 +70,13 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
   PENDING: 'در انتظار',
   ACTIVE: 'فعال',
   COMPLETED: 'تکمیل‌شده',
+  CANCELLED: 'معاف از پرداخت',
 };
 
 const ITEM_STATUS_LABELS: Record<string, string> = {
   PENDING: 'در انتظار',
   PAID: 'پرداخت‌شده',
+  CANCELLED: 'معاف از پرداخت',
 };
 
 export function StudentEditDialog({

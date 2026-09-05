@@ -196,16 +196,11 @@ export class SchoolsService {
         const registrationIds = affected.map(({ registrationId }) => registrationId);
         const userIds = [...new Set(affected.map(({ userId }) => userId))];
         if (registrationIds.length > 0) {
-          const generatedContracts = await txn
+          const registrationContracts = await txn
             .select({ id: contracts.id, paymentPlanId: contracts.paymentPlanId })
             .from(contracts)
-            .where(
-              and(
-                inArray(contracts.registrationId, registrationIds),
-                eq(contracts.contractStatus, 'GENERATED'),
-              ),
-            );
-          const planIds = generatedContracts
+            .where(inArray(contracts.registrationId, registrationIds));
+          const planIds = registrationContracts
             .map(({ paymentPlanId }) => paymentPlanId)
             .filter((value): value is string => Boolean(value));
           const now = new Date();

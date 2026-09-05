@@ -461,7 +461,12 @@ export class ReportsService {
           sequence: item.sequenceNumber,
           amount: item.amount,
           dueDate: item.dueDate,
-          itemStatus: item.itemStatus === 'PAID' ? 'پرداخت شده' : 'پرداخت نشده',
+          itemStatus:
+            item.itemStatus === 'PAID'
+              ? 'پرداخت شده'
+              : item.itemStatus === 'CANCELLED'
+                ? 'معاف از پرداخت'
+                : 'پرداخت نشده',
           paidAmount: item.paidAmount,
           paidAt: item.paidAt,
           transactionStatus: transaction?.transactionStatus ?? '',
@@ -634,7 +639,12 @@ export class ReportsService {
             itemType: item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : 'قسط',
             amount: item.amount,
             dueDate: item.dueDate,
-            status: item.itemStatus === 'PAID' ? 'پرداخت شده' : 'پرداخت نشده',
+            status:
+              item.itemStatus === 'PAID'
+                ? 'پرداخت شده'
+                : item.itemStatus === 'CANCELLED'
+                  ? 'معاف از پرداخت'
+                  : 'پرداخت نشده',
             paidAmount: item.paidAmount,
           };
         });

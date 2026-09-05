@@ -277,6 +277,7 @@ export default async function ContractsPage({
                 <div className="mt-5 space-y-3">
                   {selectedContract.paymentPlan.items.map((item) => {
                     const paid = item.itemStatus === 'PAID';
+                    const cancelled = item.itemStatus === 'CANCELLED';
                     const latestTransaction = item.transactions[0];
                     return (
                       <div key={item.id} className="rounded-xl border border-border p-4">
@@ -293,7 +294,7 @@ export default async function ContractsPage({
                             </p>
                           </div>
                           <Badge tone={paid ? 'success' : 'neutral'}>
-                            {paid ? 'پرداخت شده' : 'پرداخت نشده'}
+                            {paid ? 'پرداخت شده' : cancelled ? 'معاف از پرداخت' : 'پرداخت نشده'}
                           </Badge>
                         </div>
                         {paid && item.paidAt && (

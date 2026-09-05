@@ -762,16 +762,11 @@ export class StudentsService {
     const registrationIds = registrations.map(({ id }) => id);
     if (registrationIds.length === 0) return;
 
-    const generatedContracts = await txn
+    const registrationContracts = await txn
       .select({ paymentPlanId: contracts.paymentPlanId })
       .from(contracts)
-      .where(
-        and(
-          inArray(contracts.registrationId, registrationIds),
-          eq(contracts.contractStatus, 'GENERATED'),
-        ),
-      );
-    const planIds = generatedContracts
+      .where(inArray(contracts.registrationId, registrationIds));
+    const planIds = registrationContracts
       .map(({ paymentPlanId }) => paymentPlanId)
       .filter((value): value is string => Boolean(value));
     const now = new Date();
