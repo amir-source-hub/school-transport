@@ -375,7 +375,11 @@ export class RegistrationsService {
           // schools. Finalizing onboarding later is only responsible for issuing panel tokens.
           await txn
             .update(users)
-            .set({ accountStatus: 'ACTIVE', updatedAt: new Date() })
+            .set({
+              accountStatus: 'ACTIVE',
+              username: sql`${users.phoneNumber}`,
+              updatedAt: new Date(),
+            })
             .where(eq(users.id, userId));
           if (adminAudit) {
             await this.auditService.recordInTransaction(txn, {

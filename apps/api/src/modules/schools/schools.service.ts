@@ -4,6 +4,7 @@ import {
   contracts,
   paymentPlans,
   paymentScheduleItems,
+  paymentTransactions,
   registrationPrices,
   schoolManagerAssignments,
   schoolManagerUsers,
@@ -12,7 +13,7 @@ import {
   students,
   users,
 } from '../../database/schemas';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import type { SchoolEducationOption } from '../../database/schemas/schools.schema';
@@ -236,7 +237,24 @@ export class SchoolsService {
               .update(paymentPlans)
               .set({ planStatus: 'CANCELLED', updatedAt: now })
               .where(
-                and(inArray(paymentPlans.id, planIds), eq(paymentPlans.planStatus, 'PENDING')),
+                and(
+                  inArray(paymentPlans.id, planIds),
+                  inArray(paymentPlans.planStatus, ['PENDING', 'ACTIVE']),
+                ),
+              );
+            await txn
+              .update(paymentTransactions)
+              .set({
+                transactionStatus: 'FAILED',
+                failureCode: 'SPECIAL_SCHOOL_PAYMENT_WAIVED',
+                failureMessage: 'Payment is not required for SPECIAL-school enrollment.',
+                updatedAt: now,
+              })
+              .where(
+                and(
+                  inArray(paymentTransactions.paymentPlanId, planIds),
+                  eq(paymentTransactions.transactionStatus, 'CREATED'),
+                ),
               );
           }
           await txn
@@ -246,7 +264,7 @@ export class SchoolsService {
           if (userIds.length > 0) {
             await txn
               .update(users)
-              .set({ accountStatus: 'ACTIVE', updatedAt: now })
+              .set({ accountStatus: 'ACTIVE', username: sql`${users.phoneNumber}`, updatedAt: now })
               .where(inArray(users.id, userIds));
           }
         }

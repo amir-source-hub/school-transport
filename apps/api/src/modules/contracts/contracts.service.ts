@@ -14,7 +14,7 @@ import {
   schools,
   users,
 } from '../../database/schemas';
-import { eq, and, inArray, desc } from 'drizzle-orm';
+import { eq, and, inArray, desc, sql } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ValidationError } from '../../common/errors';
 import { generateId, generateContractNumber } from '../../common/utils';
@@ -530,7 +530,11 @@ export class ContractsService {
       // depend on the browser successfully making the subsequent token-finalization request.
       await txn
         .update(users)
-        .set({ accountStatus: 'ACTIVE', updatedAt: new Date() })
+        .set({
+          accountStatus: 'ACTIVE',
+          username: sql`${users.phoneNumber}`,
+          updatedAt: new Date(),
+        })
         .where(eq(users.id, ownerUserId));
       await this.notifications.enqueueInTransaction(txn, {
         eventId: `CONTRACT_ACCEPTED:${contractId}:${ownerUserId}`,

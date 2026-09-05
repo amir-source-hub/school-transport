@@ -8,6 +8,7 @@ import {
   parents,
   paymentPlans,
   paymentScheduleItems,
+  paymentTransactions,
   registrationPrices,
   schools,
   serviceRegistrations,
@@ -801,7 +802,26 @@ export class StudentsService {
       await txn
         .update(paymentPlans)
         .set({ planStatus: 'CANCELLED', updatedAt: now })
-        .where(and(inArray(paymentPlans.id, planIds), eq(paymentPlans.planStatus, 'PENDING')));
+        .where(
+          and(
+            inArray(paymentPlans.id, planIds),
+            inArray(paymentPlans.planStatus, ['PENDING', 'ACTIVE']),
+          ),
+        );
+      await txn
+        .update(paymentTransactions)
+        .set({
+          transactionStatus: 'FAILED',
+          failureCode: 'SPECIAL_SCHOOL_PAYMENT_WAIVED',
+          failureMessage: 'Payment is not required for SPECIAL-school enrollment.',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            inArray(paymentTransactions.paymentPlanId, planIds),
+            eq(paymentTransactions.transactionStatus, 'CREATED'),
+          ),
+        );
     }
     await txn
       .update(serviceRegistrations)
@@ -809,7 +829,7 @@ export class StudentsService {
       .where(inArray(serviceRegistrations.id, registrationIds));
     await txn
       .update(users)
-      .set({ accountStatus: 'ACTIVE', updatedAt: now })
+      .set({ accountStatus: 'ACTIVE', username: sql`${users.phoneNumber}`, updatedAt: now })
       .where(eq(users.id, userId));
   }
 
