@@ -371,6 +371,12 @@ export class RegistrationsService {
           submittedAt: new Date(),
         });
         if (isSpecialSchool) {
+          // Completing the required information is the durable enrollment boundary for special
+          // schools. Finalizing onboarding later is only responsible for issuing panel tokens.
+          await txn
+            .update(users)
+            .set({ accountStatus: 'ACTIVE', updatedAt: new Date() })
+            .where(eq(users.id, userId));
           if (adminAudit) {
             await this.auditService.recordInTransaction(txn, {
               actorType: 'ADMIN',

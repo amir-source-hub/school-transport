@@ -1,7 +1,18 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { schoolManagerAssignments, schoolManagerUsers, schools } from '../../database/schemas';
-import { and, asc, eq } from 'drizzle-orm';
+import {
+  contracts,
+  paymentPlans,
+  paymentScheduleItems,
+  registrationPrices,
+  schoolManagerAssignments,
+  schoolManagerUsers,
+  schools,
+  serviceRegistrations,
+  students,
+  users,
+} from '../../database/schemas';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import type { SchoolEducationOption } from '../../database/schemas/schools.schema';
@@ -153,15 +164,99 @@ export class SchoolsService {
       isActive: boolean;
     }>,
   ) {
-    await this.getById(id);
+    const current = await this.getById(id);
     const next = { ...data } as Record<string, unknown>;
     if ('phoneNumber' in data) next.phoneNumber = data.phoneNumber || null;
     if ('managerName' in data) next.managerName = data.managerName || null;
     if ('managerPhone' in data) next.managerPhone = data.managerPhone || null;
-    await this.db.db
-      .update(schools)
-      .set({ ...(next as typeof data), updatedAt: new Date() })
-      .where(eq(schools.id, id));
+    await this.db.db.transaction(async (txn) => {
+      await txn
+        .update(schools)
+        .set({ ...(next as typeof data), updatedAt: new Date() })
+        .where(eq(schools.id, id));
+
+      if (current.schoolType !== 'SPECIAL' && data.schoolType === 'SPECIAL') {
+        const affected = await txn
+          .select({
+            registrationId: serviceRegistrations.id,
+            userId: students.userId,
+          })
+          .from(serviceRegistrations)
+          .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+          .where(
+            and(
+              eq(students.schoolId, id),
+              inArray(serviceRegistrations.registrationStatus, [
+                'CONTRACT_READY',
+                'CONTRACT_ACCEPTED',
+                'ENROLLED',
+              ]),
+            ),
+          );
+        const registrationIds = affected.map(({ registrationId }) => registrationId);
+        const userIds = [...new Set(affected.map(({ userId }) => userId))];
+        if (registrationIds.length > 0) {
+          const generatedContracts = await txn
+            .select({ id: contracts.id, paymentPlanId: contracts.paymentPlanId })
+            .from(contracts)
+            .where(
+              and(
+                inArray(contracts.registrationId, registrationIds),
+                eq(contracts.contractStatus, 'GENERATED'),
+              ),
+            );
+          const planIds = generatedContracts
+            .map(({ paymentPlanId }) => paymentPlanId)
+            .filter((value): value is string => Boolean(value));
+          const now = new Date();
+          await txn
+            .update(contracts)
+            .set({ contractStatus: 'CANCELLED', cancelledAt: now, updatedAt: now })
+            .where(
+              and(
+                inArray(contracts.registrationId, registrationIds),
+                eq(contracts.contractStatus, 'GENERATED'),
+              ),
+            );
+          await txn
+            .update(registrationPrices)
+            .set({ priceStatus: 'REPLACED', updatedAt: now })
+            .where(
+              and(
+                inArray(registrationPrices.registrationId, registrationIds),
+                eq(registrationPrices.priceStatus, 'ACCEPTED'),
+              ),
+            );
+          if (planIds.length > 0) {
+            await txn
+              .update(paymentScheduleItems)
+              .set({ itemStatus: 'CANCELLED', updatedAt: now })
+              .where(
+                and(
+                  inArray(paymentScheduleItems.paymentPlanId, planIds),
+                  eq(paymentScheduleItems.itemStatus, 'PENDING'),
+                ),
+              );
+            await txn
+              .update(paymentPlans)
+              .set({ planStatus: 'CANCELLED', updatedAt: now })
+              .where(
+                and(inArray(paymentPlans.id, planIds), eq(paymentPlans.planStatus, 'PENDING')),
+              );
+          }
+          await txn
+            .update(serviceRegistrations)
+            .set({ registrationStatus: 'ENROLLED', updatedAt: now })
+            .where(inArray(serviceRegistrations.id, registrationIds));
+          if (userIds.length > 0) {
+            await txn
+              .update(users)
+              .set({ accountStatus: 'ACTIVE', updatedAt: now })
+              .where(inArray(users.id, userIds));
+          }
+        }
+      }
+    });
     return this.getById(id);
   }
 

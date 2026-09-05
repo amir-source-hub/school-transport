@@ -12,6 +12,7 @@ import {
   familyAddresses,
   emergencyContacts,
   schools,
+  users,
 } from '../../database/schemas';
 import { eq, and, inArray, desc } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
@@ -514,7 +515,7 @@ export class ContractsService {
 
       const [registrationUpdated] = await txn
         .update(serviceRegistrations)
-        .set({ registrationStatus: 'CONTRACT_ACCEPTED', updatedAt: new Date() })
+        .set({ registrationStatus: 'ENROLLED', updatedAt: new Date() })
         .where(
           and(
             eq(serviceRegistrations.id, contract.registrationId),
@@ -525,6 +526,12 @@ export class ContractsService {
       if (!registrationUpdated) {
         throw new ValidationError('Registration state changed during contract acceptance.');
       }
+      // Contract acceptance is the durable enrollment boundary. Account activation must not
+      // depend on the browser successfully making the subsequent token-finalization request.
+      await txn
+        .update(users)
+        .set({ accountStatus: 'ACTIVE', updatedAt: new Date() })
+        .where(eq(users.id, ownerUserId));
       await this.notifications.enqueueInTransaction(txn, {
         eventId: `CONTRACT_ACCEPTED:${contractId}:${ownerUserId}`,
         userId: ownerUserId,
@@ -543,7 +550,7 @@ export class ContractsService {
         previousValues: { contractStatus: contract.contractStatus },
         newValues: {
           contractStatus: 'ACCEPTED',
-          registrationStatus: 'CONTRACT_ACCEPTED',
+          registrationStatus: 'ENROLLED',
           planId: plan[0].id,
           templateHash: immutableSnapshot?.templateHash,
           reviewedPages: immutableSnapshot?.templateHash ? [1, 2, 3] : undefined,
