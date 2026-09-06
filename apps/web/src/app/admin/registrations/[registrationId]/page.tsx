@@ -35,7 +35,7 @@ export default async function RegistrationPage({
   const isApproved = status === 'تأییدشده';
   const isRejected = status === 'ردشده';
   const awaitingPricing = status === 'در انتظار قیمت';
-  const prepaid = status === 'پیش‌پرداخت انجام‌شده';
+  const enrolled = status === 'ثبت‌نام تکمیل‌شده';
   const installmentsInProgress = status.startsWith('در حال پرداخت اقساط');
   const paymentCompleted = status === 'تسویه کامل';
 
@@ -84,8 +84,8 @@ export default async function RegistrationPage({
           {isApproved && 'این درخواست تأیید شده است. برای ثبت قیمت به بخش قیمت‌گذاری مراجعه کنید.'}
           {isRejected && 'این درخواست رد شده است.'}
           {awaitingPricing && 'درخواست تأیید شده و در انتظار ثبت قیمت است.'}
-          {prepaid &&
-            'قرارداد پذیرفته و پیش‌پرداخت انجام شده است. برنامه پرداخت باقی‌مانده را در بخش پرداخت‌ها ثبت کنید.'}
+          {enrolled &&
+            'ثبت‌نام و دسترسی پنل تکمیل شده است. وضعیت واقعی پیش‌پرداخت و اقساط را در بخش پرداخت‌ها بررسی کنید.'}
           {installmentsInProgress && 'پیش‌پرداخت انجام شده و بخشی از اقساط نیز پرداخت شده است.'}
           {paymentCompleted && 'پیش‌پرداخت و تمام اقساط این دانش‌آموز پرداخت شده‌اند.'}
         </p>
@@ -101,8 +101,8 @@ export default async function RegistrationPage({
           {(isApproved || awaitingPricing) && (
             <ButtonLink href="/admin/payments">مدیریت برنامه پرداخت</ButtonLink>
           )}
-          {prepaid && (
-            <ButtonLink href="/admin/payments">تنظیم مبلغ و سررسیدهای باقی‌مانده</ButtonLink>
+          {enrolled && (
+            <ButtonLink href="/admin/payments">مشاهده وضعیت پرداخت</ButtonLink>
           )}
           {installmentsInProgress && (
             <ButtonLink href="/admin/payments">مشاهده پرداخت‌ها و اقساط باقی‌مانده</ButtonLink>

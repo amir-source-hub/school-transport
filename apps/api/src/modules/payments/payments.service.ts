@@ -1371,7 +1371,7 @@ export class PaymentsService {
           installments: planItems.filter((item) => item.itemType === 'INSTALLMENT').map(mapItem),
         };
       })
-      .filter((account) => account !== null && account.prepayment.transaction !== null);
+      .filter((account) => account !== null);
   }
 
   async configureInstallments(planId: string, items: { amount: number; dueDate: string }[]) {

@@ -52,7 +52,7 @@ const REGISTRATION_STATUS_LABELS: Record<string, string> = {
   CONTRACT_PENDING: 'در انتظار قرارداد',
   CONTRACT_READY: 'قرارداد آماده',
   CONTRACT_ACCEPTED: 'قرارداد پذیرفته‌شده',
-  ENROLLED: 'پیش‌پرداخت انجام‌شده',
+  ENROLLED: 'ثبت‌نام تکمیل‌شده',
   CANCELLED: 'لغوشده',
   INSTALLMENTS_IN_PROGRESS: 'در حال پرداخت اقساط',
   PAYMENT_COMPLETED: 'تسویه کامل',
