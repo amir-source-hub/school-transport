@@ -1,4 +1,5 @@
 import { apiRequest } from '@/lib/api-client';
+import { formatJalaliDate } from '@/lib/formatters';
 
 export type ManagerDashboard = {
   school: { id: string; name: string; city: string | null; educationLevels: string[] };
@@ -148,7 +149,14 @@ export async function getManagerStudent(id: string) {
   return (await apiRequest<ManagerStudentDetail>(`/manager/students/${id}`)).data;
 }
 export async function getManagerDrivers() { return (await apiRequest<ManagerDriver[]>('/manager/drivers')).data; }
-export async function getManagerDriver(id: string) { return (await apiRequest<ManagerDriverDetail>(`/manager/drivers/${id}`)).data; }
+export async function getManagerDriver(id: string): Promise<ManagerDriverDetail> {
+  const data=(await apiRequest<ManagerDriverDetail>(`/manager/drivers/${id}`)).data;
+  return {
+    ...data,
+    driver:{...data.driver,licenseExpiresAt:data.driver.licenseExpiresAt?formatJalaliDate(data.driver.licenseExpiresAt):data.driver.licenseExpiresAt},
+    vehicle:data.vehicle?{...data.vehicle,insuranceExpiresAt:data.vehicle.insuranceExpiresAt?formatJalaliDate(data.vehicle.insuranceExpiresAt):data.vehicle.insuranceExpiresAt,technicalInspectionExpiresAt:data.vehicle.technicalInspectionExpiresAt?formatJalaliDate(data.vehicle.technicalInspectionExpiresAt):data.vehicle.technicalInspectionExpiresAt}:null,
+  };
+}
 export async function getManagerStudentPhoto(id: string) {
   return (
     await apiRequest<{ status: 'APPROVED'; viewUrl: string; expiresInSeconds: number }>(

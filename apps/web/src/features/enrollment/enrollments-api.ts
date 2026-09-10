@@ -78,10 +78,10 @@ export async function acceptGuidedContract(
   });
 }
 
-export async function finalizeOnboarding() {
+export async function finalizeOnboarding(portalRole?: 'PARENT' | 'DRIVER') {
   const response = await apiRequest<{ accessToken: string; user: { role: 'PARENT' | 'DRIVER' } }>('/auth/onboarding/finalize', {
     method: 'POST',
-    body: { rememberMe: false },
+    body: { rememberMe: false, portalRole },
   });
   setAuthSession(response.data.accessToken, response.data.user.role);
 }

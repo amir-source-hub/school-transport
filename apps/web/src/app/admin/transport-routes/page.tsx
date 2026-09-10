@@ -6,6 +6,7 @@ import {
 } from '@/features/admin-drivers/admin-drivers-api';
 import { getAdminSchools } from '@/features/admin-schools/admin-schools-api';
 import { getAdminStudents } from '@/features/admin-students/admin-students-api';
+import { FilteredCount } from '@/components/data/filtered-count';
 
 export const metadata = { title: 'مدیریت مسیرها' };
 export const dynamic = 'force-dynamic';
@@ -21,13 +22,16 @@ export default async function Page() {
       <Breadcrumbs
         items={[{ label: 'پنل مدیریت', href: '/admin/dashboard' }, { label: 'مدیریت مسیرها' }]}
       />
-      <header>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
         <p className="text-sm font-bold text-primary">تخصیص هوشمند سرویس</p>
         <h1 className="text-2xl font-black">مسیرها و ارتباط راننده–دانش‌آموز</h1>
         <p className="mt-2 max-w-3xl text-sm leading-7 text-muted">
           ابتدا مسیرها را تعریف کنید، سپس رفت و برگشت هر دانش‌آموز را با یک راننده ثبت کنید.
           ظرفیت هر دو مسیر هنگام ذخیره بررسی می‌شود.
         </p>
+        </div>
+        <FilteredCount count={routes.length} label="مسیر فعال" />
       </header>
       <RouteManagement routes={routes} drivers={drivers} schools={schools} students={students} />
     </div>

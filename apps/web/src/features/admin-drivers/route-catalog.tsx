@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { BusFront, ChevronDown, Clock3, GraduationCap, Route, Search, Users } from 'lucide-react';
+import { BusFront, ChevronDown, Clock3, GraduationCap, Pencil, Route, Search, Trash2, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { AdminTransportRoute } from './admin-drivers-api';
 
@@ -10,7 +11,7 @@ const time = (value: string) =>
   value.slice(0, 5).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
 const normalize = (value: string) => value.replace(/ي/g, 'ی').replace(/ك/g, 'ک').trim();
 
-export function RouteCatalog({ routes }: { routes: AdminTransportRoute[] }) {
+export function RouteCatalog({ routes, onArchive, onEdit, busy = false }: { routes: AdminTransportRoute[]; onArchive?: (id:string) => void; onEdit?: (id:string,title:string) => void; busy?: boolean }) {
   const [query, setQuery] = useState('');
   const [direction, setDirection] = useState('ALL');
   const visible = routes.filter(
@@ -63,6 +64,7 @@ export function RouteCatalog({ routes }: { routes: AdminTransportRoute[] }) {
             ['ALL', 'همه'],
             ['TO_SCHOOL', 'رفت'],
             ['FROM_SCHOOL', 'برگشت'],
+            ['ROUND_TRIP', 'رفت و برگشت'],
           ].map(([value, label]) => (
             <button
               type="button"
@@ -81,7 +83,7 @@ export function RouteCatalog({ routes }: { routes: AdminTransportRoute[] }) {
       </p>
       <ul className="grid gap-4 lg:grid-cols-2">
         {visible.map((route) => {
-          const count = route.students.length;
+          const count = route.students.reduce((sum, student) => sum + (student.seatCount ?? 1), 0);
           const capacity = route.driver?.capacity ?? 0;
           const remaining = Math.max(0, capacity - count);
           const percent = capacity > 0 ? Math.min(100, (count / capacity) * 100) : 0;
@@ -96,7 +98,7 @@ export function RouteCatalog({ routes }: { routes: AdminTransportRoute[] }) {
                 <span
                   className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${route.direction === 'TO_SCHOOL' ? 'bg-primary-soft text-primary' : 'bg-emerald-50 text-emerald-700'}`}
                 >
-                  {route.direction === 'TO_SCHOOL' ? 'رفت' : 'برگشت'}
+                  {route.direction === 'TO_SCHOOL' ? 'رفت' : route.direction === 'FROM_SCHOOL' ? 'برگشت' : 'رفت و برگشت'}
                 </span>
               </div>
               <div className="mt-4 space-y-2.5 text-sm text-muted">
@@ -128,7 +130,7 @@ export function RouteCatalog({ routes }: { routes: AdminTransportRoute[] }) {
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
                   <span className="flex items-center gap-1.5 text-muted">
                     <Users className="size-4" aria-hidden="true" />
-                    {number(count)} از {number(capacity)} نفر
+                    {number(count)} از {number(capacity)} صندلی
                   </span>
                   <span className={isFull ? 'font-bold text-danger' : 'font-bold text-primary'}>
                     {capacity === 0
@@ -152,6 +154,7 @@ export function RouteCatalog({ routes }: { routes: AdminTransportRoute[] }) {
                   />
                 </div>
               </div>
+              <div className="mt-4 flex flex-wrap gap-2">{onEdit && <Button type="button" size="sm" variant="ghost" className="min-h-11" disabled={busy} onClick={() => { const title=window.prompt('عنوان جدید مسیر',route.title)?.trim(); if(title&&title!==route.title)onEdit(route.id,title); }}><Pencil className="size-4" aria-hidden="true"/>ویرایش مسیر</Button>}{onArchive && <Button type="button" size="sm" variant="ghost" className="min-h-11 text-danger" disabled={busy} onClick={() => { if(window.confirm('این مسیر و ارتباط دانش‌آموزان آن غیرفعال شود؟'))onArchive(route.id); }}><Trash2 className="size-4" aria-hidden="true" />حذف مسیر</Button>}</div>
             </li>
           );
         })}

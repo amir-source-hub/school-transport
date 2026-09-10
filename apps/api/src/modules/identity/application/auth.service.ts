@@ -353,6 +353,23 @@ export class AuthService {
       .select({ id: parents.id, phoneNumber: parents.phoneNumber, nationalId: parents.nationalId })
       .from(parents)
       .where(eq(parents.userId, account.id));
+    if (familyParents.length === 0) {
+      const [matchingDriver] = await this.db.db
+        .select({ id: drivers.id })
+        .from(drivers)
+        .where(
+          and(
+            eq(drivers.userId, account.id),
+            eq(drivers.phoneNumber, phoneNumber),
+            eq(drivers.nationalId, nationalId),
+          ),
+        )
+        .limit(1);
+      if (matchingDriver && this.config.featureOnboarding !== false && this.onboarding) {
+        const onboarding = await this.onboarding.beginOrResume(account.id, phoneNumber);
+        return { user: null, onboarding: { ...onboarding, nationalId } };
+      }
+    }
     const matchingParent = familyParents.find(
       (parent) => parent.phoneNumber === phoneNumber && parent.nationalId === nationalId,
     );
@@ -392,6 +409,17 @@ export class AuthService {
       return this.authenticateParent(phoneNumber, nationalId, context, rememberMe, onboardingToken);
     }
     const [driver] = await this.db.db.select({ id: drivers.id }).from(drivers).where(and(eq(drivers.userId, account.id), eq(drivers.phoneNumber, phoneNumber), eq(drivers.nationalId, nationalId))).limit(1);
+    if (!driver && account.status === 'ACTIVE' && this.config.featureOnboarding !== false && this.onboarding) {
+      const [matchingParent] = await this.db.db
+        .select({ id: parents.id })
+        .from(parents)
+        .where(and(eq(parents.userId, account.id), eq(parents.phoneNumber, phoneNumber), eq(parents.nationalId, nationalId)))
+        .limit(1);
+      if (matchingParent) {
+        const onboarding = await this.onboarding.beginOrResume(account.id, phoneNumber);
+        return { user: null, onboarding: { ...onboarding, nationalId } };
+      }
+    }
     if (!driver || account.status !== 'ACTIVE') throw new AuthenticationError('شماره همراه راننده یا کد ملی صحیح نیست.');
     const tokens = await this.generateTokens(account.id, 'DRIVER', context, undefined, rememberMe);
     return { user: { id: account.id, username: account.username, phoneNumber, role: 'DRIVER' }, ...tokens };
@@ -486,6 +514,7 @@ export class AuthService {
     token: string,
     context?: SessionContext,
     rememberMe = false,
+    requestedRole?: 'PARENT' | 'DRIVER',
   ): Promise<LoginResult> {
     if (!this.onboarding) {
       throw new AuthenticationError('Onboarding is not configured.');
@@ -504,8 +533,13 @@ export class AuthService {
       .update(users)
       .set({ username: session.phoneNumber, updatedAt: new Date() })
       .where(eq(users.id, session.userId));
-    const [driver] = await this.db.db.select({ id: drivers.id }).from(drivers).where(eq(drivers.userId, session.userId)).limit(1);
-    const role: UserRole = driver ? 'DRIVER' : 'PARENT';
+    const [[driver], [parent]] = await Promise.all([
+      this.db.db.select({ id: drivers.id }).from(drivers).where(eq(drivers.userId, session.userId)).limit(1),
+      this.db.db.select({ id: parents.id }).from(parents).where(eq(parents.userId, session.userId)).limit(1),
+    ]);
+    if (requestedRole === 'DRIVER' && !driver) throw new ValidationError('پروفایل راننده تکمیل نشده است.');
+    if (requestedRole === 'PARENT' && !parent) throw new ValidationError('پروفایل خانواده تکمیل نشده است.');
+    const role: UserRole = requestedRole ?? (driver ? 'DRIVER' : 'PARENT');
     const tokens = await this.generateTokens(
       session.userId,
       role,

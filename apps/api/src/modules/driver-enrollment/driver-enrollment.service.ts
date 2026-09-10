@@ -20,11 +20,12 @@ import {
   familyAddresses,
   parents,
   studentPhotoUploads,
+  studentCompanions,
 } from '../../database/schemas';
 import { S3_CLIENT, type S3Storage } from '../../infrastructure/s3/s3-storage.port';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import { AssignStudentRoutesDto } from './driver-enrollment.dto';
-import { AddStudentToTransportRouteDto, AssignDriverToStudentDto, CreateTransportRouteDto, DriverDocumentUploadDto, DriverEnrollmentDto, UpdateDriverProfileDto } from './driver-enrollment.dto';
+import { AddStudentToTransportRouteDto, AssignDriverToStudentDto, CreateTransportRouteDto, DriverDocumentUploadDto, DriverEnrollmentDto, UpdateDriverProfileDto, UpdateTransportRouteDto } from './driver-enrollment.dto';
 
 const CONTRACT_VERSION = 'driver-v1';
 const CAPACITY: Record<string, number> = { CAR: 4, VAN: 10, MINIBUS: 16, BUS: 30 };
@@ -117,7 +118,7 @@ export class DriverEnrollmentService {
     const [vehicle] = await this.database.db.select({ id: vehicles.id }).from(vehicles).where(eq(vehicles.driverId, driver.id)).orderBy(desc(vehicles.createdAt)).limit(1);
     const rows = await this.database.db.select().from(transportDocuments).where(or(eq(transportDocuments.driverId, driver.id), ...(vehicle ? [eq(transportDocuments.vehicleId, vehicle.id)] : []))).orderBy(desc(transportDocuments.createdAt));
     const latest = rows.filter((row, index, all) => all.findIndex((item) => item.documentType === row.documentType) === index);
-    return Promise.all(latest.map(async (row) => ({ id: row.id, documentType: row.documentType, mimeType: row.mimeType, createdAt: row.createdAt, viewUrl: this.storage.presignGet(row.objectKey, 300) })));
+    return Promise.all(latest.map(async (row) => ({ id: row.id, documentType: row.documentType, mimeType: row.mimeType, createdAt: row.createdAt, reviewStatus: row.reviewStatus, rejectionReason: row.rejectionReason, viewUrl: this.storage.presignGet(row.objectKey, 300) })));
   }
 
   async getServiceRuns(userId: string) {
@@ -133,6 +134,8 @@ export class DriverEnrollmentService {
       firstName: students.firstName, lastName: students.lastName, grade: students.grade,
       pickupOrder: transportServiceRunStudents.pickupOrder,
       scheduledStopTime: transportServiceRunStudents.scheduledStopTime,
+      companionId: studentCompanions.id, companionFirstName: studentCompanions.firstName,
+      companionLastName: studentCompanions.lastName, companionRelationship: studentCompanions.relationship,
       stopNotes: transportServiceRunStudents.notes,
       studentAddress: familyAddresses.streetAddress,
       studentLatitude: familyAddresses.latitude,
@@ -144,6 +147,7 @@ export class DriverEnrollmentService {
       .innerJoin(schools, eq(schools.id, transportServiceRuns.schoolId))
       .leftJoin(transportServiceRunStudents, and(eq(transportServiceRunStudents.serviceRunId, transportServiceRuns.id), eq(transportServiceRunStudents.isActive, true)))
       .leftJoin(students, eq(students.id, transportServiceRunStudents.studentId))
+      .leftJoin(studentCompanions, eq(studentCompanions.studentId, students.id))
       .leftJoin(users, eq(users.id, students.userId))
       .leftJoin(familyAddresses, and(eq(familyAddresses.userId, students.userId), eq(familyAddresses.isActive, true)))
       .leftJoin(parents, and(eq(parents.userId, students.userId), eq(parents.isPrimaryContact, true)))
@@ -152,7 +156,7 @@ export class DriverEnrollmentService {
     const grouped = new Map<string, any>();
     for (const row of rows) {
       if (!grouped.has(row.runId)) grouped.set(row.runId, { id: row.runId, title: row.title, direction: row.direction, sequenceNumber: row.sequenceNumber, scheduledStartTime: row.scheduledStartTime, scheduledArrivalTime: row.scheduledArrivalTime, areaDescription: row.areaDescription, activeWeekdays: row.activeWeekdays, schoolName: row.schoolName, schoolAddress: row.schoolAddress, schoolPhoneNumber: row.schoolPhoneNumber, schoolLatitude: row.schoolLatitude, schoolLongitude: row.schoolLongitude, students: [] });
-      if (row.studentId) grouped.get(row.runId).students.push({ id: row.studentId, firstName: row.firstName, lastName: row.lastName, grade: row.grade, pickupOrder: row.pickupOrder, scheduledStopTime: row.scheduledStopTime, notes: row.stopNotes, address: row.studentAddress, latitude: row.studentLatitude, longitude: row.studentLongitude, guardianPhone: row.guardianPhone, guardianName: [row.guardianFirstName, row.guardianLastName].filter(Boolean).join(' ') });
+      if (row.studentId) grouped.get(row.runId).students.push({ id: row.studentId, firstName: row.firstName, lastName: row.lastName, grade: row.grade, pickupOrder: row.pickupOrder, scheduledStopTime: row.scheduledStopTime, notes: row.stopNotes, address: row.studentAddress, latitude: row.studentLatitude, longitude: row.studentLongitude, guardianPhone: row.guardianPhone, guardianName: [row.guardianFirstName, row.guardianLastName].filter(Boolean).join(' '), seatCount: row.companionId ? 2 : 1, companion: row.companionId ? { id: row.companionId, firstName: row.companionFirstName, lastName: row.companionLastName, relationship: row.companionRelationship } : null });
     }
     return [...grouped.values()];
   }
@@ -257,8 +261,38 @@ export class DriverEnrollmentService {
       driver,
       vehicle: vehicle ?? null,
       runs,
-      documents: await Promise.all(documents.map(async (document) => ({ ...document, objectKey: undefined, viewUrl: await this.storage.presignGet(document.objectKey, 300) }))),
+      documents: await Promise.all(documents.filter((document, index, all) => all.findIndex(item => item.documentType === document.documentType) === index).map(async (document) => ({ ...document, objectKey: undefined, viewUrl: await this.storage.presignGet(document.objectKey, 300) }))),
     };
+  }
+
+  async updateAdminDriver(driverId: string, input: UpdateDriverProfileDto, adminId: string, ipAddress?: string) {
+    const [driver] = await this.database.db.select().from(drivers).where(eq(drivers.id, driverId)).limit(1);
+    if (!driver) throw new NotFoundError('Driver', driverId);
+    const values = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
+    const [updated] = await this.database.db.update(drivers).set({ ...values, updatedAt: new Date() }).where(eq(drivers.id, driverId)).returning();
+    await this.audit.record({ actorType:'ADMIN', actorId:adminId, action:'DRIVER_UPDATED', entityType:'DRIVER', entityId:driverId, newValues:values, ipAddress });
+    return updated;
+  }
+
+  async deactivateAdminDriver(driverId: string, adminId: string, ipAddress?: string) {
+    const [driver] = await this.database.db.select().from(drivers).where(eq(drivers.id, driverId)).limit(1);
+    if (!driver) throw new NotFoundError('Driver', driverId);
+    await this.database.db.transaction(async txn => {
+      await txn.update(drivers).set({ status:'INACTIVE', updatedAt:new Date() }).where(eq(drivers.id, driverId));
+      await txn.update(vehicles).set({ status:'INACTIVE', updatedAt:new Date() }).where(eq(vehicles.driverId, driverId));
+      await txn.update(transportServiceRuns).set({ isActive:false, updatedAt:new Date() }).where(eq(transportServiceRuns.driverId, driverId));
+      await this.audit.recordInTransaction(txn, { actorType:'ADMIN', actorId:adminId, action:'DRIVER_DEACTIVATED', entityType:'DRIVER', entityId:driverId, newValues:{status:'INACTIVE'}, ipAddress });
+    });
+    return { deactivated:true };
+  }
+
+  async rejectDriverDocument(driverId: string, documentId: string, reason: string | undefined, adminId: string, ipAddress?: string) {
+    const [vehicle] = await this.database.db.select({ id: vehicles.id }).from(vehicles).where(eq(vehicles.driverId, driverId)).orderBy(desc(vehicles.createdAt)).limit(1);
+    const [document] = await this.database.db.select().from(transportDocuments).where(and(eq(transportDocuments.id, documentId), or(eq(transportDocuments.driverId, driverId), ...(vehicle ? [eq(transportDocuments.vehicleId, vehicle.id)] : [])))).limit(1);
+    if (!document) throw new NotFoundError('Driver document', documentId);
+    await this.database.db.update(transportDocuments).set({ reviewStatus: 'REJECTED', rejectionReason: reason?.trim() || null, reviewedAt: new Date() }).where(eq(transportDocuments.id, documentId));
+    await this.audit.record({ actorType: 'ADMIN', actorId: adminId, action: 'DRIVER_DOCUMENT_REJECTED', entityType: 'DRIVER_DOCUMENT', entityId: documentId, newValues: { driverId, reason: reason?.trim() || null }, ipAddress });
+    return { rejected: true };
   }
 
   async getAdminRoutes() {
@@ -275,18 +309,21 @@ export class DriverEnrollmentService {
       studentFirstName: students.firstName, studentLastName: students.lastName,
       pickupOrder: transportServiceRunStudents.pickupOrder,
       scheduledStopTime: transportServiceRunStudents.scheduledStopTime,
+      companionId: studentCompanions.id, companionFirstName: studentCompanions.firstName,
+      companionLastName: studentCompanions.lastName, companionRelationship: studentCompanions.relationship,
     }).from(transportServiceRuns)
       .innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
       .innerJoin(vehicles, eq(vehicles.id, transportServiceRuns.vehicleId))
       .innerJoin(schools, eq(schools.id, transportServiceRuns.schoolId))
       .leftJoin(transportServiceRunStudents, and(eq(transportServiceRunStudents.serviceRunId, transportServiceRuns.id), eq(transportServiceRunStudents.isActive, true)))
       .leftJoin(students, eq(students.id, transportServiceRunStudents.studentId))
+      .leftJoin(studentCompanions, eq(studentCompanions.studentId, students.id))
       .where(eq(transportServiceRuns.isActive, true))
       .orderBy(asc(drivers.lastName), asc(transportServiceRuns.sequenceNumber), asc(transportServiceRunStudents.pickupOrder));
     const grouped = new Map<string, any>();
     for (const row of rows) {
       const route = grouped.get(row.id) ?? { id: row.id, driverId: row.driverId, title: row.title, direction: row.direction, academicYear: row.academicYear, scheduledStartTime: row.scheduledStartTime, scheduledArrivalTime: row.scheduledArrivalTime, activeWeekdays: row.activeWeekdays, areaDescription: row.areaDescription, school: { id: row.schoolId, name: row.schoolName }, driver: { id: row.driverId, firstName: row.firstName, lastName: row.lastName, phoneNumber: row.phoneNumber, nationalId: row.nationalId, status: row.driverStatus, vehicleType: row.vehicleType, vehicleSystem: row.vehicleSystem, plateNumber: row.plateNumber, capacity: row.capacity, serviceRunCount: 0 }, students: [] };
-      if (row.studentId) route.students.push({ id: row.studentId, firstName: row.studentFirstName, lastName: row.studentLastName, pickupOrder: row.pickupOrder, scheduledStopTime: row.scheduledStopTime });
+      if (row.studentId) route.students.push({ id: row.studentId, firstName: row.studentFirstName, lastName: row.studentLastName, pickupOrder: row.pickupOrder, scheduledStopTime: row.scheduledStopTime, seatCount: row.companionId ? 2 : 1, companion: row.companionId ? { id: row.companionId, firstName: row.companionFirstName, lastName: row.companionLastName, relationship: row.companionRelationship } : null });
       grouped.set(row.id, route);
     }
     return [...grouped.values()];
@@ -294,7 +331,6 @@ export class DriverEnrollmentService {
 
   async createAdminRoute(input: CreateTransportRouteDto, adminId: string, ipAddress?: string) {
     if (!input.activeWeekdays.length) throw new ValidationError('حداقل یک روز فعال باید انتخاب شود.');
-    if (input.scheduledStartTime >= input.scheduledArrivalTime) throw new ValidationError('زمان پایان مسیر باید بعد از زمان شروع باشد.');
     const [driver, school, vehicle] = await Promise.all([
       this.database.db.select().from(drivers).where(and(eq(drivers.id, input.driverId), eq(drivers.status, 'ACTIVE'))).limit(1).then((rows) => rows[0]),
       this.database.db.select().from(schools).where(eq(schools.id, input.schoolId)).limit(1).then((rows) => rows[0]),
@@ -303,16 +339,44 @@ export class DriverEnrollmentService {
     if (!driver) throw new NotFoundError('Driver', input.driverId);
     if (!school) throw new NotFoundError('School', input.schoolId);
     if (!vehicle) throw new ConflictError('DRIVER_HAS_NO_ACTIVE_VEHICLE', 'راننده خودروی فعال ندارد.');
+    const scheduledStartTime = school.openingTime;
+    const scheduledArrivalTime = [...(school.closingTimes ?? []), school.closingTime].filter(Boolean).sort().at(-1)!;
+    if (scheduledStartTime >= scheduledArrivalTime) throw new ValidationError('ساعت پایان مدرسه باید بعد از ساعت شروع باشد.');
     const [sequence] = await this.database.db.select({ value: max(transportServiceRuns.sequenceNumber) }).from(transportServiceRuns).where(and(eq(transportServiceRuns.vehicleId, vehicle.id), eq(transportServiceRuns.academicYear, input.academicYear), eq(transportServiceRuns.direction, input.direction)));
     const [created] = await this.database.db.insert(transportServiceRuns).values({
       id: randomUUID(), schoolId: school.id, driverId: driver.id, vehicleId: vehicle.id,
       academicYear: input.academicYear, title: input.title, direction: input.direction,
-      sequenceNumber: (sequence?.value ?? 0) + 1, scheduledStartTime: input.scheduledStartTime,
-      scheduledArrivalTime: input.scheduledArrivalTime, areaDescription: input.areaDescription || null,
+      sequenceNumber: (sequence?.value ?? 0) + 1, scheduledStartTime,
+      scheduledArrivalTime, areaDescription: input.areaDescription || null,
       activeWeekdays: [...new Set(input.activeWeekdays)].sort(),
     }).returning();
     await this.audit.record({ actorType: 'ADMIN', actorId: adminId, action: 'TRANSPORT_ROUTE_CREATED', entityType: 'TRANSPORT_SERVICE_RUN', entityId: created.id, newValues: { driverId: driver.id, schoolId: school.id, title: created.title }, ipAddress });
     return created;
+  }
+
+  async updateAdminRoute(routeId: string, input: UpdateTransportRouteDto, adminId: string, ipAddress?: string) {
+    const [route] = await this.database.db.select().from(transportServiceRuns).where(and(eq(transportServiceRuns.id, routeId), eq(transportServiceRuns.isActive, true))).limit(1);
+    if (!route) throw new NotFoundError('Transport route', routeId);
+    const schoolId = input.schoolId ?? route.schoolId;
+    const driverId = input.driverId ?? route.driverId;
+    const [school, vehicle] = await Promise.all([
+      this.database.db.select().from(schools).where(and(eq(schools.id, schoolId), eq(schools.isActive, true))).limit(1).then(rows => rows[0]),
+      this.database.db.select().from(vehicles).where(and(eq(vehicles.driverId, driverId), eq(vehicles.status, 'ACTIVE'))).orderBy(desc(vehicles.createdAt)).limit(1).then(rows => rows[0]),
+    ]);
+    if (!school) throw new NotFoundError('School', schoolId);
+    if (!vehicle) throw new ConflictError('DRIVER_HAS_NO_ACTIVE_VEHICLE', 'راننده خودروی فعال ندارد.');
+    const values = {
+      ...input,
+      schoolId,
+      driverId,
+      vehicleId: vehicle.id,
+      scheduledStartTime: school.openingTime,
+      scheduledArrivalTime: [...(school.closingTimes ?? []), school.closingTime].filter(Boolean).sort().at(-1)!,
+      updatedAt: new Date(),
+    };
+    const [updated] = await this.database.db.update(transportServiceRuns).set(values).where(eq(transportServiceRuns.id, routeId)).returning();
+    await this.audit.record({ actorType: 'ADMIN', actorId: adminId, action: 'TRANSPORT_ROUTE_UPDATED', entityType: 'TRANSPORT_SERVICE_RUN', entityId: routeId, newValues: values, ipAddress });
+    return updated;
   }
 
   async assignStudentRoutes(input: AssignStudentRoutesDto, adminId: string, ipAddress?: string) {
@@ -338,7 +402,12 @@ export class DriverEnrollmentService {
         if (stop < route.scheduledStartTime.slice(0, 5) || stop > route.scheduledArrivalTime.slice(0, 5)) throw new ValidationError('زمان توقف باید در بازه مسیر باشد.');
         const vehicle = vehicleRows.find(v => v.id === route.vehicleId);
         const members = await txn.select().from(transportServiceRunStudents).where(and(eq(transportServiceRunStudents.serviceRunId, route.id), eq(transportServiceRunStudents.isActive, true)));
-        if (!vehicle || vehicle.status !== 'ACTIVE' || members.filter(m => m.studentId !== student.id).length >= vehicle.capacity) throw new ConflictError('VEHICLE_CAPACITY_REACHED', 'ظرفیت یکی از مسیرها تکمیل است.');
+        const memberIds = members.map(m => m.studentId);
+        const companionRows = memberIds.length ? await txn.select({ studentId: studentCompanions.studentId }).from(studentCompanions).where(inArray(studentCompanions.studentId, memberIds)) : [];
+        const [targetCompanion] = await txn.select({ id: studentCompanions.id }).from(studentCompanions).where(eq(studentCompanions.studentId, student.id)).limit(1);
+        const existing = members.some(m => m.studentId === student.id);
+        const occupiedSeats = members.length + companionRows.length;
+        if (!vehicle || vehicle.status !== 'ACTIVE' || occupiedSeats + (existing ? 0 : targetCompanion ? 2 : 1) > vehicle.capacity) throw new ConflictError('VEHICLE_CAPACITY_REACHED', targetCompanion ? 'این دانش‌آموز همراه دارد و برای ثبت او دو صندلی خالی لازم است.' : 'ظرفیت یکی از مسیرها تکمیل است.');
       }
       const previous = await txn.select({ id: transportServiceRunStudents.id, driverId: transportServiceRuns.driverId })
         .from(transportServiceRunStudents).innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId))
@@ -378,7 +447,14 @@ export class DriverEnrollmentService {
       this.database.db.select().from(drivers).where(eq(drivers.id, route.driverId)).limit(1).then((rows) => rows[0]),
     ]);
     if (!vehicle) throw new ConflictError('ROUTE_HAS_NO_VEHICLE', 'خودروی مسیر پیدا نشد.');
-    if (activeMembers.length >= vehicle.capacity && !activeMembers.some((item) => item.studentId === student.id)) throw new ConflictError('VEHICLE_CAPACITY_REACHED', 'ظرفیت خودرو در این مسیر تکمیل شده است.');
+    const memberIds = activeMembers.map(item => item.studentId);
+    const [memberCompanions, targetCompanion] = await Promise.all([
+      memberIds.length ? this.database.db.select({ studentId: studentCompanions.studentId }).from(studentCompanions).where(inArray(studentCompanions.studentId, memberIds)) : Promise.resolve([]),
+      this.database.db.select({ id: studentCompanions.id }).from(studentCompanions).where(eq(studentCompanions.studentId, student.id)).limit(1).then(rows => rows[0]),
+    ]);
+    const existingMember = activeMembers.some(item => item.studentId === student.id);
+    const occupiedSeats = activeMembers.length + memberCompanions.length;
+    if (occupiedSeats + (existingMember ? 0 : targetCompanion ? 2 : 1) > vehicle.capacity) throw new ConflictError('VEHICLE_CAPACITY_REACHED', targetCompanion ? 'این دانش‌آموز همراه دارد و برای افزودن او دو صندلی خالی لازم است.' : 'ظرفیت خودرو در این مسیر تکمیل شده است.');
     if (activeMembers.some((item) => item.studentId !== student.id && item.pickupOrder === input.pickupOrder)) throw new ConflictError('PICKUP_ORDER_OCCUPIED', 'این شماره ترتیب قبلاً برای دانش‌آموز دیگری ثبت شده است.');
     await this.database.db.transaction(async (txn) => {
       const [existing] = await txn.select({ id: transportServiceRunStudents.id }).from(transportServiceRunStudents).where(and(eq(transportServiceRunStudents.serviceRunId, route.id), eq(transportServiceRunStudents.studentId, student.id))).limit(1);
@@ -513,7 +589,13 @@ export class DriverEnrollmentService {
         }
         const [count] = await txn.select({ value: max(transportServiceRunStudents.pickupOrder) }).from(transportServiceRunStudents).where(eq(transportServiceRunStudents.serviceRunId, run.id));
         const activeCount = await txn.select({ studentId: transportServiceRunStudents.studentId }).from(transportServiceRunStudents).where(and(eq(transportServiceRunStudents.serviceRunId, run.id), eq(transportServiceRunStudents.isActive, true)));
-        if (activeCount.length >= vehicle.capacity && !activeCount.some((row) => row.studentId === studentId)) throw new ConflictError('VEHICLE_CAPACITY_REACHED', 'ظرفیت این سرویس تکمیل است.');
+        const activeIds = activeCount.map(row => row.studentId);
+        const [companions, targetCompanion] = await Promise.all([
+          activeIds.length ? txn.select({ studentId: studentCompanions.studentId }).from(studentCompanions).where(inArray(studentCompanions.studentId, activeIds)) : Promise.resolve([]),
+          txn.select({ id: studentCompanions.id }).from(studentCompanions).where(eq(studentCompanions.studentId, studentId)).limit(1).then(rows => rows[0]),
+        ]);
+        const alreadyAssigned = activeCount.some(row => row.studentId === studentId);
+        if (activeCount.length + companions.length + (alreadyAssigned ? 0 : targetCompanion ? 2 : 1) > vehicle.capacity) throw new ConflictError('VEHICLE_CAPACITY_REACHED', targetCompanion ? 'این دانش‌آموز همراه دارد و برای ثبت سرویس او دو صندلی خالی لازم است.' : 'ظرفیت این سرویس تکمیل است.');
         const scheduledStopTime = direction === 'TO_SCHOOL' ? input.toSchoolStartTime : input.fromSchoolArrivalTime;
         await txn.insert(transportServiceRunStudents).values({ id: randomUUID(), serviceRunId: run.id, studentId, pickupOrder: (count?.value ?? 0) + 1, scheduledStopTime })
           .onConflictDoUpdate({ target: [transportServiceRunStudents.serviceRunId, transportServiceRunStudents.studentId], set: { isActive: true, pickupOrder: (count?.value ?? 0) + 1, scheduledStopTime } });
@@ -537,14 +619,12 @@ export class DriverEnrollmentService {
     if (!input.contractFullyRead || !input.contractAccepted) {
       throw new ValidationError('مطالعه کامل و پذیرش قرارداد برای ثبت نهایی الزامی است.');
     }
-    if (input.secondaryPhoneNumber && input.secondaryPhoneNumber === input.phoneNumber) {
-      throw new ValidationError('شماره همراه دوم نباید با شماره همراه اول یکسان باشد.');
-    }
-    if (input.emergencyPhoneNumber === input.phoneNumber) {
-      throw new ValidationError('شماره تماس اضطراری نباید با شماره همراه اول یکسان باشد.');
+    const contactNumbers = [input.phoneNumber, input.secondaryPhoneNumber, input.homePhoneNumber, input.emergencyPhoneNumber].filter((value): value is string => Boolean(value));
+    if (new Set(contactNumbers).size !== contactNumbers.length) {
+      throw new ValidationError('شماره‌های همراه اول، همراه دوم، منزل و تماس اضطراری باید متفاوت باشند.');
     }
     const today = new Date().toISOString().slice(0, 10);
-    if ([input.licenseExpiresAt, input.insuranceExpiresAt, input.technicalInspectionExpiresAt].some((date) => date < today)) {
+    if ([input.insuranceExpiresAt, input.technicalInspectionExpiresAt].some((date) => date < today)) {
       throw new ValidationError('تاریخ انقضای مدارک نمی‌تواند گذشته باشد.');
     }
     const existing = await this.database.db
@@ -589,9 +669,11 @@ export class DriverEnrollmentService {
         secondaryPhoneNumber: input.secondaryPhoneNumber || null,
         homePhoneNumber: input.homePhoneNumber || null,
         emergencyPhoneNumber: input.emergencyPhoneNumber,
+        emergencyFirstName: input.emergencyFirstName,
+        emergencyLastName: input.emergencyLastName,
+        emergencyRelationship: input.emergencyRelationship,
         gender: input.gender,
         education: input.education,
-        licenseExpiresAt: input.licenseExpiresAt,
         streetAddress: input.streetAddress,
         postalCode: input.postalCode,
         province: input.province,
@@ -673,6 +755,8 @@ export class DriverEnrollmentService {
     const [vehicle] = await this.database.db.select({ id: vehicles.id }).from(vehicles).where(eq(vehicles.driverId, driver.id)).limit(1);
     const vehicleDocument = VEHICLE_DOCUMENT_TYPES.has(upload.documentType);
     if (vehicleDocument && !vehicle) throw new ValidationError('خودروی راننده پیدا نشد.');
+    const existingRows = await this.database.db.select().from(transportDocuments).where(and(eq(transportDocuments.documentType, upload.documentType), vehicleDocument ? eq(transportDocuments.vehicleId, vehicle!.id) : eq(transportDocuments.driverId, driver.id))).orderBy(desc(transportDocuments.createdAt)).limit(1);
+    if (existingRows[0] && existingRows[0].reviewStatus !== 'REJECTED') throw new ConflictError('DRIVER_DOCUMENT_ALREADY_UPLOADED', 'این تصویر قبلاً ثبت شده و فقط پس از رد مدیریت قابل بارگذاری مجدد است.');
     await this.database.db.transaction(async (txn) => {
       await txn.insert(transportDocuments).values(vehicleDocument
         ? { vehicleId: vehicle!.id, documentType: upload.documentType, objectKey: upload.objectKey, mimeType: upload.mimeType }

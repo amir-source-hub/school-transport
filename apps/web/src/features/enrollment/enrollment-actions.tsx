@@ -133,7 +133,6 @@ export function CreateEnrollmentForm({
   const [reviewedContractPages, setReviewedContractPages] = useState<number[]>([]);
   const [accepted, setAccepted] = useState(false);
   const [paid, setPaid] = useState(false);
-  const [paymentDestinationReady, setPaymentDestinationReady] = useState(false);
   const [photoUploadId, setPhotoUploadId] = useState<string>();
   const [photoCardGeneration, setPhotoCardGeneration] = useState(0);
   const [pending, setPending] = useState(false);
@@ -150,7 +149,7 @@ export function CreateEnrollmentForm({
   useEffect(() => {
     if (mode !== 'onboarding') return;
     let active = true;
-    finalizeOnboarding()
+    finalizeOnboarding('PARENT')
       .then(() => {
         if (active) router.replace('/student/dashboard');
       })
@@ -552,6 +551,12 @@ export function CreateEnrollmentForm({
       }
       const people = [
         {
+          label: 'تلفن منزل',
+          name: '',
+          nationalId: '',
+          phone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
+        },
+        {
           label: 'دانش‌آموز',
           name: `${form.studentFirst} ${form.studentLast}`,
           nationalId: form.studentNationalId,
@@ -728,7 +733,7 @@ export function CreateEnrollmentForm({
       setResult(created);
       if (created.requiresContract === false) {
         if (mode === 'onboarding') {
-          await finalizeOnboarding();
+          await finalizeOnboarding('PARENT');
           router.replace('/student/dashboard');
         } else {
           setAccepted(true);
@@ -1277,6 +1282,7 @@ export function CreateEnrollmentForm({
               <LocationPicker
                 latitude={form.latitude}
                 longitude={form.longitude}
+                showCoordinates={false}
                 onChange={(lat, lng) =>
                   setForm((prev) => ({
                     ...prev,
@@ -1287,39 +1293,9 @@ export function CreateEnrollmentForm({
                 }
                 readOnly={reusingFamilyProfile}
               />
-              <div className="mt-3 grid gap-3 sm:grid-cols-2" aria-label="ورود دستی مختصات">
-                <label className="text-sm font-bold">
-                  عرض جغرافیایی
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    dir="ltr"
-                    step="any"
-                    className="mt-1"
-                    value={form.latitude}
-                    disabled={reusingFamilyProfile}
-                    onChange={(event) => set('latitude', Number(event.target.value))}
-                    onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))}
-                  />
-                </label>
-                <label className="text-sm font-bold">
-                  طول جغرافیایی
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    dir="ltr"
-                    step="any"
-                    className="mt-1"
-                    value={form.longitude}
-                    disabled={reusingFamilyProfile}
-                    onChange={(event) => set('longitude', Number(event.target.value))}
-                    onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))}
-                  />
-                </label>
-              </div>
               <p className="mt-2 text-xs leading-6 text-muted">
                 برای دریافت خودکار موقعیت در گوشی، GPS را روشن و اجازه Location مرورگر را تأیید
-                کنید. اگر نقشه در دسترس نیست، نشانی و مختصات را دستی وارد کنید.
+                کنید. همچنین می‌توانید نشانگر را مستقیماً روی نقشه جابه‌جا کنید.
               </p>
               {locationError && <p className="mt-2 text-sm text-danger">{locationError}</p>}
             </div>
@@ -1630,13 +1606,9 @@ export function CreateEnrollmentForm({
             ) : mode === 'onboarding' ? (
               <div className="mt-6 space-y-5 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
-                  اطلاعات کارت و حساب پرداخت در همین صفحه نمایش داده می‌شود. مبلغ را واریز و تصویر
-                  رسید را نگه دارید؛ ارسال رسید پس از ورود به پنل خانواده انجام می‌شود.
+                  قرارداد پذیرفته شد. حساب خانواده را ایجاد کنید و جزئیات پرداخت و ارسال رسید را
+                  از بخش «پرداخت‌ها» در پنل خود انجام دهید.
                 </div>
-                <OfflinePaymentDestinationCard
-                  mode="onboarding"
-                  onReadyChange={setPaymentDestinationReady}
-                />
               </div>
             ) : (
               <div className="mt-6 space-y-5 text-right">
@@ -1644,7 +1616,6 @@ export function CreateEnrollmentForm({
                   قرارداد پذیرفته شد. برای جلوگیری از ثبت تکراری یا گم‌شدن وضعیت پرداخت، پرداخت و
                   ارسال رسید فقط از بخش «پرداخت‌ها» انجام می‌شود.
                 </div>
-                <OfflinePaymentDestinationCard />
                 <Button className="w-full" onClick={() => router.push('/student/payments')}>
                   رفتن به بخش پرداخت‌ها
                 </Button>
@@ -1653,17 +1624,16 @@ export function CreateEnrollmentForm({
             {mode === 'onboarding' && (
               <Button
                 className="mt-4 w-full"
-                variant="secondary"
                 loading={pending}
-                disabled={!paymentDestinationReady || pending}
+                disabled={pending}
                 onClick={async () => {
                   if (submissionLockRef.current) return;
                   submissionLockRef.current = true;
                   setPending(true);
                   setError(undefined);
                   try {
-                    await finalizeOnboarding();
-                    router.replace('/student/dashboard');
+                    await finalizeOnboarding('PARENT');
+                    router.replace('/student/payments');
                   } catch (caught) {
                     setError(getApiErrorFeedback(caught).message);
                   } finally {
@@ -1672,7 +1642,7 @@ export function CreateEnrollmentForm({
                   }
                 }}
               >
-                تأیید اطلاعات پرداخت و ورود به پنل خانواده
+                ایجاد حساب و ورود به پنل خانواده
               </Button>
             )}
             {error && <p className="mt-3 text-sm text-danger">{error}</p>}

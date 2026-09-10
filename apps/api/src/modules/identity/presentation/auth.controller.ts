@@ -384,6 +384,10 @@ export class FinalizeOnboardingDto {
   @IsOptional()
   @Transform(toBoolean)
   rememberMe?: boolean;
+
+  @IsOptional()
+  @IsIn(['PARENT', 'DRIVER'])
+  portalRole?: 'PARENT' | 'DRIVER';
 }
 
 type CookieRequest = FastifyRequest & {
@@ -654,6 +658,7 @@ export class AuthController {
       token,
       context,
       dto.rememberMe ?? false,
+      dto.portalRole,
     );
     this.setRefreshCookie(reply, result.refreshToken, false, dto.rememberMe ?? false);
     this.setAccessCookie(reply, result.accessToken, false);

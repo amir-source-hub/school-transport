@@ -337,6 +337,27 @@
       "when": 1789023600000,
       "tag": "0047_student_photo_owner_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1789027200000,
+      "tag": "0048_driver_emergency_contact",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1789030800000,
+      "tag": "0049_driver_document_review",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1789034400000,
+      "tag": "0050_student_companions",
+      "breakpoints": true
     }
   ]
 }

@@ -18,6 +18,7 @@ import {
 import { StudentEditDialog } from '@/features/admin-students/student-edit-dialog';
 import { getAdminFamilies } from '@/features/admin-families/admin-families-api';
 import { getAdminSchools } from '@/features/admin-schools/admin-schools-api';
+import { FilteredCount } from '@/components/data/filtered-count';
 
 export const metadata = { title: 'دانش‌آموزان' };
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,7 @@ type SearchParams = Promise<{
   sort?: string;
   direction?: string;
   page?: string;
+  schoolId?: string;
 }>;
 
 export default async function StudentsPage({ searchParams }: { searchParams: SearchParams }) {
@@ -43,6 +45,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
     : 'createdAt';
   const direction = params.direction === 'asc' ? 'asc' : 'desc';
   const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
+  const schoolId = params.schoolId ?? '';
 
   const query: AdminStudentListParams = {
     q: q || undefined,
@@ -51,6 +54,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
     direction,
     page,
     pageSize: PAGE_SIZE,
+    schoolId: schoolId || undefined,
   };
   const [{ students, pagination }, { families }, { schools }, limitRequests] = await Promise.all([
     getAdminStudents(query),
@@ -73,6 +77,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
     if (archive !== 'all') next.set('archive', archive);
     if (sort !== 'createdAt') next.set('sort', sort);
     if (direction !== 'desc') next.set('direction', direction);
+    if (schoolId) next.set('schoolId', schoolId);
     next.set('page', String(nextPage));
     return `/admin/students?${next.toString()}`;
   };
@@ -87,13 +92,13 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
           <p className="text-sm font-bold text-primary">مدیریت دانش‌آموزان</p>
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">دانش‌آموزان</h1>
         </div>
-        <AdminStudentDialog families={familyOptions} schools={schoolOptions} />
+        <div className="flex flex-wrap items-center gap-3"><FilteredCount count={pagination.totalItems} label="دانش‌آموز مطابق فیلتر"/><AdminStudentDialog families={familyOptions} schools={schoolOptions} /></div>
       </div>
       <AdminLimitRequestSection initialRequests={limitRequests} />
       <Card>
         <form
           method="get"
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]"
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto]"
         >
           <label className="text-sm font-bold">
             جست‌وجوی دانش‌آموز
@@ -105,6 +110,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
               placeholder="نام، کد ملی، تلفن یا مدرسه"
             />
           </label>
+          <label className="text-sm font-bold">مدرسه<select name="schoolId" defaultValue={schoolId} className="mt-2 min-h-12 w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm"><option value="">همه مدارس</option>{schoolOptions.map(school=><option key={school.id} value={school.id}>{school.name}</option>)}</select></label>
           <label className="text-sm font-bold">
             وضعیت
             <select

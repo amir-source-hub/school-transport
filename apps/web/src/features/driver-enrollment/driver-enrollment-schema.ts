@@ -8,7 +8,7 @@ const optionalPersianText = z.string().trim().refine((value) => !value || /^[\u0
 const mobile = z.string().transform(normalizeDigits).pipe(z.string().regex(/^09\d{9}$/, 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.'));
 const optionalMobile = z.string().transform(normalizeDigits).refine((value) => !value || value === '09' || /^09\d{9}$/.test(value), 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.');
 const futureDate = z.string().min(1, required).refine((value) => value >= new Date().toISOString().slice(0, 10), 'تاریخ انقضا نمی‌تواند گذشته باشد.');
-export const plateLetters = ['ب', 'ج', 'د', 'ز', 'ط', 'ظ', 'ع', 'ف', 'ق', 'ک', 'ل', 'م', 'ن', 'و', 'ه', 'ی'] as const;
+export const plateLetters = ['ب', 'ت', 'ج', 'چ', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'ژ', 'س', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ک', 'گ', 'ل', 'م', 'ن', 'و', 'ه', 'ی'] as const;
 
 export function removeLatinLetters(value: string) {
   return value.replace(/[A-Za-z]/g, '');
@@ -25,9 +25,11 @@ export const driverEnrollmentSchema = z.object({
   phoneNumber: mobile,
   secondaryPhoneNumber: optionalMobile,
   education: z.enum(['BELOW_DIPLOMA', 'DIPLOMA', 'ASSOCIATE', 'BACHELOR', 'MASTER', 'DOCTORATE'], { message: required }),
-  homePhoneNumber: z.string().transform(normalizeDigits).refine((value) => !value || /^\d{8}$/.test(value), 'تلفن منزل باید دقیقاً ۸ رقم باشد.'),
+  homePhoneNumber: z.string().transform(normalizeDigits).pipe(z.string().regex(/^021\d{8}$/, 'تلفن منزل باید شامل پیش‌شماره ۰۲۱ و ۸ رقم باشد.')),
+  emergencyFirstName: persianText,
+  emergencyLastName: persianText,
+  emergencyRelationship: persianText,
   emergencyPhoneNumber: mobile,
-  licenseExpiresAt: futureDate,
   driverPhotoUploadId: z.string().uuid('بارگذاری عکس راننده الزامی است.'),
   streetAddress: persianText.refine((value) => value.length >= 5, 'آدرس کامل را وارد کنید.'),
   postalCode: z.string().transform(normalizeDigits).pipe(z.string().regex(/^\d{10}$/, 'کد پستی باید ۱۰ رقم باشد.')),
@@ -49,17 +51,26 @@ export const driverEnrollmentSchema = z.object({
   contractFullyRead: z.boolean().refine(Boolean, 'قرارداد را تا انتها مطالعه کنید.'),
   contractAccepted: z.boolean().refine(Boolean, 'پذیرش قرارداد الزامی است.'),
 }).superRefine((values, context) => {
-  if (values.secondaryPhoneNumber && values.secondaryPhoneNumber !== '09' && values.secondaryPhoneNumber === values.phoneNumber) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ['secondaryPhoneNumber'], message: 'شماره همراه دوم نباید با شماره همراه اول یکسان باشد.' });
-  }
-  if (values.emergencyPhoneNumber === values.phoneNumber) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ['emergencyPhoneNumber'], message: 'شماره تماس اضطراری نباید با شماره همراه اول یکسان باشد.' });
+  const phones = [
+    ['phoneNumber', values.phoneNumber],
+    ['secondaryPhoneNumber', values.secondaryPhoneNumber === '09' ? '' : values.secondaryPhoneNumber],
+    ['emergencyPhoneNumber', values.emergencyPhoneNumber],
+    ['homePhoneNumber', values.homePhoneNumber],
+  ] as const;
+  const seen = new Set<string>();
+  for (const [field, rawValue] of phones) {
+    if (!rawValue) continue;
+    const value = normalizeDigits(rawValue);
+    if (seen.has(value)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: 'هر شماره تماس باید منحصربه‌فرد باشد.' });
+    }
+    seen.add(value);
   }
 });
 
 export type DriverEnrollmentForm = z.input<typeof driverEnrollmentSchema>;
 export const stepFields: (keyof DriverEnrollmentForm)[][] = [
-  ['firstName','lastName','fatherName','gender','nationalId','phoneNumber','secondaryPhoneNumber','education','homePhoneNumber','emergencyPhoneNumber','licenseExpiresAt','driverPhotoUploadId'],
+  ['firstName','lastName','fatherName','gender','nationalId','phoneNumber','secondaryPhoneNumber','education','homePhoneNumber','emergencyFirstName','emergencyLastName','emergencyRelationship','emergencyPhoneNumber','driverPhotoUploadId'],
   ['streetAddress','postalCode','province','city','municipalityDistrict','latitude','longitude','locationSelected','referrerName','referrerPhoneNumber'],
   ['vehiclePhotoUploadId','insuranceExpiresAt','vehicleType','system','modelYear','technicalInspectionExpiresAt','plateLeft','plateLetter','plateMiddle','plateIran','usageType','ownershipType'],
   ['contractFullyRead','contractAccepted'],

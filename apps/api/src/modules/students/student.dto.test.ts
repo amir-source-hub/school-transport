@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { describe, expect, it } from 'vitest';
-import { AdminUpdateStudentDto, CreateStudentDto, UpdateStudentDto } from './student.dto';
+import { AdminUpdateStudentDto, CreateStudentDto, UpdateStudentDto, UpsertStudentCompanionDto } from './student.dto';
 
 describe('student DTO validation', () => {
   it('normalizes a valid Persian-digit national ID', async () => {
@@ -62,5 +62,18 @@ describe('student DTO validation', () => {
 
     const properties = (await validate(dto)).map((error) => error.property);
     expect(properties).toEqual(expect.arrayContaining(['schoolId', 'expectedUpdatedAt']));
+  });
+
+  it('normalizes and validates companion identity, phone, and relationship', async () => {
+    const dto = plainToInstance(UpsertStudentCompanionDto, { firstName:'مریم', lastName:'احمدی', fatherName:'رضا', nationalId:'۱۲۳۴۵۶۷۸۹۱', phoneNumber:'۰۹۱۲۳۴۵۶۷۸۹', relationship:'CAREGIVER' });
+    expect(await validate(dto)).toHaveLength(0);
+    expect(dto.nationalId).toBe('1234567891');
+    expect(dto.phoneNumber).toBe('09123456789');
+  });
+
+  it('rejects an unsupported companion relationship and invalid phone', async () => {
+    const dto = plainToInstance(UpsertStudentCompanionDto, { firstName:'مریم', lastName:'احمدی', fatherName:'رضا', nationalId:'1234567891', phoneNumber:'02112345678', relationship:'FRIEND' });
+    const properties=(await validate(dto)).map(error=>error.property);
+    expect(properties).toEqual(expect.arrayContaining(['phoneNumber','relationship']));
   });
 });

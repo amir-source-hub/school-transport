@@ -9,6 +9,7 @@ import {
 } from '@/features/admin-schools/admin-schools-api';
 import { ArchiveSchoolDialog } from '@/features/admin-schools/archive-action';
 import { SchoolFormDialog } from '@/features/admin-schools/school-form-dialog';
+import { FilteredCount } from '@/components/data/filtered-count';
 
 export const metadata = { title: 'مدارس ما' };
 export const dynamic = 'force-dynamic';
@@ -28,7 +29,7 @@ export default async function SchoolsPage() {
           <p className="text-sm font-bold text-primary">مدیریت مدارس</p>
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">مدارس ما</h1>
         </div>
-        <SchoolFormDialog mode="create" />
+        <div className="flex flex-wrap items-center gap-3"><FilteredCount count={schools.length} label="مدرسه"/><SchoolFormDialog mode="create" /></div>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {activeSchools.map((school) => (

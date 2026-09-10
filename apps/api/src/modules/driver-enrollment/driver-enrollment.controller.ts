@@ -6,7 +6,7 @@ import { RolesGuard } from '../access-control/roles.guard';
 import { successResponse } from '../../common/response';
 import type { OnboardingRequest } from '../../common/http-request';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
-import { AddStudentToTransportRouteDto, AssignDriverToStudentDto, CreateTransportRouteDto, DriverDocumentUploadDto, DriverEnrollmentDto, UpdateDriverProfileDto } from './driver-enrollment.dto';
+import { AddStudentToTransportRouteDto, AssignDriverToStudentDto, CreateTransportRouteDto, DriverDocumentUploadDto, DriverEnrollmentDto, RejectDriverDocumentDto, UpdateDriverProfileDto, UpdateTransportRouteDto } from './driver-enrollment.dto';
 import { DriverEnrollmentService } from './driver-enrollment.service';
 import { AssignStudentRoutesDto } from './driver-enrollment.dto';
 
@@ -71,6 +71,11 @@ export class AdminDriversController {
 
   @Get('drivers') list() { return this.service.getAdminDrivers().then(successResponse); }
   @Get('drivers/:id') detail(@Param('id', new ParseUUIDPipe()) id: string) { return this.service.getAdminDriver(id).then(successResponse); }
+  @Patch('drivers/:id') updateDriver(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string, @Body() body: UpdateDriverProfileDto) { return this.service.updateAdminDriver(id, body, req.user.id, req.ip).then(successResponse); }
+  @Delete('drivers/:id') removeDriver(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) { return this.service.deactivateAdminDriver(id, req.user.id, req.ip).then(successResponse); }
+  @Post('drivers/:id/documents/:documentId/reject') rejectDocument(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string, @Param('documentId', new ParseUUIDPipe()) documentId: string, @Body() body: RejectDriverDocumentDto) {
+    return this.service.rejectDriverDocument(id, documentId, body.reason, req.user.id, req.ip).then(successResponse);
+  }
   @Post('students/:studentId/driver-assignment')
   assign(
     @Req() req: AuthenticatedRequest,
@@ -88,6 +93,13 @@ export class AdminDriversController {
   }
   @Post('transport-routes') createRoute(@Req() req: AuthenticatedRequest, @Body() body: CreateTransportRouteDto) {
     return this.service.createAdminRoute(body, req.user.id, req.ip).then(successResponse);
+  }
+  @Patch('transport-routes/:routeId') updateRoute(
+    @Req() req: AuthenticatedRequest,
+    @Param('routeId', new ParseUUIDPipe()) routeId: string,
+    @Body() body: UpdateTransportRouteDto,
+  ) {
+    return this.service.updateAdminRoute(routeId, body, req.user.id, req.ip).then(successResponse);
   }
   @Post('transport-routes/:routeId/students') addStudent(
     @Req() req: AuthenticatedRequest,

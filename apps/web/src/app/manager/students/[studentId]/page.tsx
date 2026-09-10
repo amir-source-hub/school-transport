@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { LocationDisplay } from '@/components/common/location-display';
 import { getManagerStudent, getManagerStudentPhoto } from '@/features/manager/manager-api';
 import { PrintButton } from '@/features/manager/print-button';
+import { formatJalaliDate } from '@/lib/formatters';
 export const metadata = { title: 'جزئیات دانش‌آموز' };
 export default async function Page({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
@@ -61,7 +62,7 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
             </div>
             <div>
               <dt className="text-muted">تاریخ تولد</dt>
-              <dd className="mt-1 font-bold">{s.birthDate ?? '—'}</dd>
+              <dd className="mt-1 font-bold">{s.birthDate ? formatJalaliDate(s.birthDate) : '—'}</dd>
             </div>
             <div>
               <dt className="text-muted">جنسیت</dt>

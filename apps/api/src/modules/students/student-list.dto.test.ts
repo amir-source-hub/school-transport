@@ -25,12 +25,19 @@ describe('AdminStudentListQueryDto', () => {
       page: '3',
       pageSize: '50',
       q: 'علی رضایی',
+      schoolId: '00000000-0000-4000-8000-000000000001',
     });
 
     expect(await validate(dto)).toHaveLength(0);
     expect(dto.page).toBe(3);
     expect(dto.pageSize).toBe(50);
     expect(dto.q).toBe('علی رضایی');
+    expect(dto.schoolId).toBe('00000000-0000-4000-8000-000000000001');
+  });
+
+  it('rejects a malformed school filter', async () => {
+    const dto = plainToInstance(AdminStudentListQueryDto, { schoolId: 'all-schools' });
+    expect((await validate(dto)).map(error => error.property)).toContain('schoolId');
   });
 
   it('rejects unknown archive, sort, and direction values', async () => {

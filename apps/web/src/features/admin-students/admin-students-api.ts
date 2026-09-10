@@ -17,6 +17,8 @@ const rawAdminStudentSchema = z.object({
   phoneNumber: z.string().nullable().optional(),
   fieldOfStudy: z.string().nullable().optional(),
   isActive: z.boolean(),
+  seatCount: z.number().default(1),
+  companion: z.object({ id:z.string(), firstName:z.string(), lastName:z.string(), relationship:z.string() }).nullable().default(null),
 });
 
 export const adminStudentSchema = rawAdminStudentSchema.extend({ status: z.string() });
@@ -25,6 +27,7 @@ export const adminStudentsSchema = z.array(rawAdminStudentSchema);
 export type AdminStudent = z.infer<typeof adminStudentSchema>;
 
 export type AdminStudentListParams = {
+  schoolId?: string;
   q?: string;
   archive?: 'all' | 'active' | 'archived';
   sort?: 'studentName' | 'schoolName' | 'createdAt';
@@ -44,6 +47,7 @@ export async function getAdminStudents(
   params: AdminStudentListParams = {},
 ): Promise<{ students: AdminStudent[]; pagination: AdminStudentListPagination }> {
   const search = new URLSearchParams();
+  if (params.schoolId) search.set('schoolId', params.schoolId);
   if (params.q) search.set('q', params.q);
   if (params.archive && params.archive !== 'all') search.set('archive', params.archive);
   if (params.sort && params.sort !== 'createdAt') search.set('sort', params.sort);

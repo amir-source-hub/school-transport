@@ -20,6 +20,7 @@ import { Button, ButtonLink } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { formatJalaliDate } from '@/lib/formatters';
 import {
   type FamilyProfile,
   addEmergencyContact,
@@ -222,7 +223,7 @@ export function FamilyProfileForm({
                           <Detail label="نام" value={`${student.firstName} ${student.lastName}`} />
                           <Detail label="نام پدر" value={student.fatherName ?? '—'} />
                           <Detail label="کد ملی" value={student.nationalId} ltr />
-                          <Detail label="تاریخ تولد" value={student.birthDate ?? '—'} />
+                          <Detail label="تاریخ تولد" value={student.birthDate ? formatJalaliDate(student.birthDate) : '—'} />
                           <Detail
                             label="جنسیت"
                             value={

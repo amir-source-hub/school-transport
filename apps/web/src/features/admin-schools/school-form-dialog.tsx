@@ -33,6 +33,7 @@ const schoolTypes = [
   { value: 'BOARDING', label: 'شبانه‌روزی' },
   { value: 'SPECIAL', label: 'استثنائی' },
   { value: 'INTERNATIONAL', label: 'بین‌المللی' },
+  { value: 'PRESCHOOL', label: 'پیش دبستانی و آمادگی' },
 ];
 
 const genderTypes = [
@@ -47,6 +48,7 @@ const normalizeDigits = (value: string) =>
     .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
 
 const educationLevels = [
+  { level: 'پیش دبستانی و آمادگی', grades: ['پیش دبستانی', 'آمادگی'] },
   { level: 'ابتدایی', grades: ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم'] },
   { level: 'متوسطه اول', grades: ['هفتم', 'هشتم', 'نهم'] },
   { level: 'متوسطه دوم', grades: ['دهم', 'یازدهم', 'دوازدهم'] },

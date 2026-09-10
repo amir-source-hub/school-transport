@@ -5,8 +5,6 @@ import {
   Send,
   MessageSquareText,
   Building2,
-  ClipboardCheck,
-  FileText,
   FileSpreadsheet,
   GraduationCap,
   Bus,
@@ -33,13 +31,11 @@ import { cn } from '@/lib/cn';
 
 const navigation = [
   { href: '/admin/dashboard', label: 'داشبورد', icon: LayoutDashboard },
-  { href: '/admin/registrations', label: 'ثبت‌نام‌ها', icon: ClipboardCheck },
   { href: '/admin/students', label: 'دانش‌آموزان', icon: GraduationCap },
   { href: '/admin/transport-routes', label: 'مسیرها و تخصیص‌ها', icon: Route },
   { href: '/admin/drivers', label: 'رانندگان', icon: Bus },
   { href: '/admin/student-photos', label: 'بررسی عکس‌ها', icon: Images },
   { href: '/admin/schools', label: 'مدارس ما', icon: Building2 },
-  { href: '/admin/contracts', label: 'قراردادها', icon: FileText },
   { href: '/admin/payments', label: 'پرداخت‌ها', icon: WalletCards },
   { href: '/admin/reports', label: 'گزارش‌ها', icon: FileSpreadsheet },
   { href: '/admin/notifications', label: 'اعلان‌ها', icon: Bell, exact: true },
@@ -141,7 +137,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </Link>
 
           <AutoSubmitForm
-            action="/admin/registrations"
+            action="/admin/students"
             method="get"
             showSubmit={false}
             className="ms-auto hidden w-full max-w-xs lg:block"
@@ -156,7 +152,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <Input
                   type="search"
                   name="q"
-                  placeholder="جست‌وجوی ثبت‌نام‌ها..."
+                  placeholder="جست‌وجوی دانش‌آموزان..."
                   className="pe-10 min-h-11 text-sm rounded-[var(--radius-pill)] bg-surface-muted border-0"
                 />
               </span>

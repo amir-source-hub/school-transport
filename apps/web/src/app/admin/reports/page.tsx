@@ -42,7 +42,7 @@ export default function AdminReportsPage() {
           </div>
         </div>
         <div className="mt-6 border-t border-border pt-5">
-          <ExportReportButton />
+          <div className="flex flex-wrap gap-3"><ExportReportButton /><ExportReportButton path="/admin/reports/drivers.xlsx" label="خروجی Excel رانندگان" /></div>
         </div>
       </Card>
       <div>

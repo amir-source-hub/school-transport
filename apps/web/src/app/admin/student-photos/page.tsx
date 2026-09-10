@@ -3,6 +3,7 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { ButtonLink } from '@/components/ui/button';
 import { AdminPhotoReviewQueue } from '@/features/student-photos/admin-photo-review-queue';
 import { getAdminPhotos } from '@/features/student-photos/admin-student-photos-api';
+import { FilteredCount } from '@/components/data/filtered-count';
 
 export const metadata = { title: 'بررسی عکس کارت سرویس' };
 export const dynamic = 'force-dynamic';
@@ -28,9 +29,12 @@ export default async function AdminStudentPhotosPage({
       <Breadcrumbs
         items={[{ label: 'پنل مدیریت', href: '/admin/dashboard' }, { label: 'بررسی عکس‌ها' }]}
       />
-      <div>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
         <p className="text-sm font-bold text-primary">صف مشترک مدیران</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">بررسی عکس کارت سرویس</h1>
+        </div>
+        <FilteredCount count={list.total} label="تصویر مطابق فیلتر" />
       </div>
       <form className="flex flex-wrap items-end gap-3">
         <label className="min-w-64 flex-1 text-sm font-bold">

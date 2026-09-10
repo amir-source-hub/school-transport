@@ -11,12 +11,14 @@ export function formatIrr(amount: number) {
 }
 
 const jalaliDateFormatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+  timeZone: 'Asia/Tehran',
   year: 'numeric',
   month: '2-digit',
   day: '2-digit',
 });
 
 const jalaliDateTimeFormatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+  timeZone: 'Asia/Tehran',
   year: 'numeric',
   month: '2-digit',
   day: '2-digit',

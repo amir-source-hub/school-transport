@@ -1,6 +1,7 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { AdminFeedbackList } from '@/features/feedback/admin-feedback-list';
 import { getAdminFeedback, getPublicContactMessages } from '@/features/feedback/feedback-api';
+import { FilteredCount } from '@/components/data/filtered-count';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 export const metadata = { title: 'پیام‌ها و بازخوردها' };
@@ -28,7 +29,7 @@ export default async function Page({
           { label: 'پیام‌ها و بازخوردها' },
         ]}
       />
-      <h1 className="text-2xl font-black">پیام‌ها و بازخوردها</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-2xl font-black">پیام‌ها و بازخوردها</h1><FilteredCount count={items.length + contactMessages.length} label="پیام مطابق فیلتر"/></div>
       <Card>
         <form className="grid gap-3 md:grid-cols-[1fr_14rem_auto] md:items-end">
           <label className="text-sm font-bold">

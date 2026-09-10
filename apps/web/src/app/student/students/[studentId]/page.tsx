@@ -8,6 +8,7 @@ import { metadataFor } from '@/lib/route-metadata';
 import { getFamilyProfile } from '@/features/family-profile/family-api';
 import { LocationDisplay } from '@/components/common/location-display';
 import { getSchools } from '@/features/schools/schools-api';
+import { StudentCompanionForm } from '@/features/students/student-companion-form';
 
 export const metadata = metadataFor('/student/students/[studentId]');
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,7 @@ export default async function StudentPage({ params }: { params: Promise<{ studen
           schools={schoolsResult.schools}
         />
       </Card>
+      <Card><StudentCompanionForm student={student} /></Card>
       <Card>
         <PhotoUploadCard studentId={student.id} initialItems={photos} />
       </Card>

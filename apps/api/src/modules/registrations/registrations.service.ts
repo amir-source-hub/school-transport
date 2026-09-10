@@ -188,6 +188,20 @@ export class RegistrationsService {
             'A verified phone number is required for the guardian.',
           );
         }
+        const submittedPhones = [
+          guardianPhone,
+          data.homePhone,
+          data.student.phoneNumber,
+          data.father?.phoneNumber,
+          data.mother?.phoneNumber,
+          data.emergencyContact?.phoneNumber,
+        ].filter((value): value is string => Boolean(value));
+        if (new Set(submittedPhones).size !== submittedPhones.length) {
+          throw new ConflictError(
+            'DUPLICATE_PHONE_NUMBER',
+            'شماره‌های سرپرست، والدین، دانش‌آموز، منزل و تماس اضطراری باید متفاوت باشند.',
+          );
+        }
         const existingFamilyParents = await txn
           .select({
             id: parents.id,

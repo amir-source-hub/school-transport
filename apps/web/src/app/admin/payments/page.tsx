@@ -78,15 +78,15 @@ export default async function AdminPaymentsPage({
       <section className="grid gap-4 sm:grid-cols-3" aria-label="خلاصه پرداخت‌ها">
         <Card>
           <p className="text-sm text-muted">دانش‌آموزان دارای پرداخت</p>
-          <p className="mt-2 text-2xl font-black">{visiblePayments.length}</p>
+          <p className="mt-2 text-2xl font-black">{visiblePayments.length.toLocaleString('fa-IR')}</p>
         </Card>
         <Card>
           <p className="text-sm text-muted">در انتظار بررسی</p>
-          <p className="mt-2 text-2xl font-black text-warning">{awaitingReview}</p>
+          <p className="mt-2 text-2xl font-black text-warning">{awaitingReview.toLocaleString('fa-IR')}</p>
         </Card>
         <Card>
           <p className="text-sm text-muted">تأییدشده</p>
-          <p className="mt-2 text-2xl font-black text-success">{approved}</p>
+          <p className="mt-2 text-2xl font-black text-success">{approved.toLocaleString('fa-IR')}</p>
         </Card>
       </section>
       <Card>

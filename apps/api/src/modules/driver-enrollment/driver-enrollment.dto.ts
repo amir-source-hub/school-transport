@@ -55,9 +55,11 @@ export class DriverEnrollmentDto {
   @IsIn(['MALE', 'FEMALE']) gender!: 'MALE' | 'FEMALE';
   @Transform(clean) @IsIn(['BELOW_DIPLOMA', 'DIPLOMA', 'ASSOCIATE', 'BACHELOR', 'MASTER', 'DOCTORATE']) education!: string;
   @Transform(digits) @IsOptional() @ValidateIf((_, value) => value !== '') @Matches(/^09\d{9}$/) secondaryPhoneNumber?: string;
-  @Transform(digits) @IsOptional() @ValidateIf((_, value) => value !== '') @Matches(/^\d{8}$/) homePhoneNumber?: string;
+  @Transform(digits) @Matches(/^021\d{8}$/) homePhoneNumber!: string;
+  @Transform(clean) @IsString() @Length(1, 100) @Matches(persianName) emergencyFirstName!: string;
+  @Transform(clean) @IsString() @Length(1, 100) @Matches(persianName) emergencyLastName!: string;
+  @Transform(clean) @IsString() @Length(1, 100) @Matches(persianName) emergencyRelationship!: string;
   @Transform(digits) @Matches(/^09\d{9}$/) emergencyPhoneNumber!: string;
-  @Matches(/^\d{4}-\d{2}-\d{2}$/) licenseExpiresAt!: string;
   @Transform(clean) @IsString() @Length(5, 500) @Matches(persianText) streetAddress!: string;
   @Transform(digits) @Matches(/^\d{10}$/) postalCode!: string;
   @Transform(clean) @IsString() @Length(1, 100) @Matches(persianText) province!: string;
@@ -70,7 +72,7 @@ export class DriverEnrollmentDto {
   @IsIn(['CAR', 'VAN', 'MINIBUS', 'BUS']) vehicleType!: 'CAR' | 'VAN' | 'MINIBUS' | 'BUS';
   @Transform(clean) @IsString() @Length(1, 100) @Matches(persianText) system!: string;
   @Type(() => Number) @IsInt() @Min(1300) @Max(1500) modelYear!: number;
-  @Transform(digits) @Matches(/^\d{2}[بجددزطظعفقکلمنوهی]\d{3}\d{2}$/) plateNumber!: string;
+  @Transform(digits) @Matches(/^\d{2}[بتجچحخدذرزژسصضطظعغفقکگلمنوهی]\d{3}\d{2}$/) plateNumber!: string;
   @Matches(/^\d{4}-\d{2}-\d{2}$/) insuranceExpiresAt!: string;
   @Matches(/^\d{4}-\d{2}-\d{2}$/) technicalInspectionExpiresAt!: string;
   @IsIn(['PERSONAL', 'TAXI']) usageType!: 'PERSONAL' | 'TAXI';
@@ -83,7 +85,7 @@ export class DriverEnrollmentDto {
 
 export class UpdateDriverProfileDto {
   @Transform(digits) @IsOptional() @ValidateIf((_, value) => value !== '') @Matches(/^09\d{9}$/) secondaryPhoneNumber?: string;
-  @Transform(digits) @IsOptional() @ValidateIf((_, value) => value !== '') @Matches(/^\d{8}$/) homePhoneNumber?: string;
+  @Transform(digits) @IsOptional() @ValidateIf((_, value) => value !== '') @Matches(/^021\d{8}$/) homePhoneNumber?: string;
   @Transform(digits) @IsOptional() @Matches(/^09\d{9}$/) emergencyPhoneNumber?: string;
   @Transform(clean) @IsOptional() @IsString() @Length(5, 500) @Matches(persianText) streetAddress?: string;
   @Transform(digits) @IsOptional() @Matches(/^\d{10}$/) postalCode?: string;
@@ -109,11 +111,21 @@ export class CreateTransportRouteDto {
   @IsUUID() schoolId!: string;
   @Transform(clean) @IsString() @Length(2, 100) title!: string;
   @Transform(clean) @IsString() @Length(4, 20) academicYear!: string;
-  @IsIn(['TO_SCHOOL', 'FROM_SCHOOL']) direction!: 'TO_SCHOOL' | 'FROM_SCHOOL';
+  @IsIn(['TO_SCHOOL', 'FROM_SCHOOL', 'ROUND_TRIP']) direction!: 'TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP';
   @Matches(/^\d{2}:\d{2}$/) scheduledStartTime!: string;
   @Matches(/^\d{2}:\d{2}$/) scheduledArrivalTime!: string;
   @Transform(clean) @IsOptional() @IsString() @Length(0, 500) areaDescription?: string;
   @IsInt({ each: true }) @Min(0, { each: true }) @Max(6, { each: true }) activeWeekdays!: number[];
+}
+
+export class UpdateTransportRouteDto {
+  @IsOptional() @IsUUID() driverId?: string;
+  @IsOptional() @IsUUID() schoolId?: string;
+  @Transform(clean) @IsOptional() @IsString() @Length(2, 100) title?: string;
+  @Transform(clean) @IsOptional() @IsString() @Length(4, 20) academicYear?: string;
+  @IsOptional() @IsIn(['TO_SCHOOL', 'FROM_SCHOOL', 'ROUND_TRIP']) direction?: 'TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP';
+  @Transform(clean) @IsOptional() @IsString() @Length(0, 500) areaDescription?: string;
+  @IsOptional() @IsInt({ each: true }) @Min(0, { each: true }) @Max(6, { each: true }) activeWeekdays?: number[];
 }
 
 export class AddStudentToTransportRouteDto {
@@ -121,6 +133,10 @@ export class AddStudentToTransportRouteDto {
   @Matches(/^\d{2}:\d{2}$/) scheduledStopTime!: string;
   @IsInt() @Min(1) pickupOrder!: number;
   @Transform(clean) @IsOptional() @IsString() @Length(0, 500) notes?: string;
+}
+
+export class RejectDriverDocumentDto {
+  @Transform(clean) @IsOptional() @IsString() @Length(0, 500) reason?: string;
 }
 
 export class AssignStudentRoutesDto {

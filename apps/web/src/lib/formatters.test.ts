@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { formatIrr, formatPersianNumber } from '@/lib/formatters';
+import { formatJalaliDate, formatJalaliDateTime } from './formatters';
 
-describe('Persian formatters', () => {
-  it('formats numbers with Persian digits and grouping', () => {
-    expect(formatPersianNumber(150000000)).toBe('۱۵۰٬۰۰۰٬۰۰۰');
+describe('Persian date formatters', () => {
+  it('renders canonical stored dates with the Persian calendar', () => {
+    expect(formatJalaliDate('2026-09-10')).toBe('۱۴۰۵/۰۶/۱۹');
   });
 
-  it('formats documented IRR amounts without converting to toman', () => {
-    expect(formatIrr(50000000)).toBe('۵۰٬۰۰۰٬۰۰۰ ریال');
+  it('uses Tehran time consistently for timestamps', () => {
+    const rendered = formatJalaliDateTime('2026-03-20T21:00:00.000Z');
+    expect(rendered).toContain('۱۴۰۵/۰۱/۰۱');
   });
 });

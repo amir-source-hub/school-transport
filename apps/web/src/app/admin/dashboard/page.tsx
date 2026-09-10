@@ -5,7 +5,6 @@ import {
   ArrowDown,
   ClipboardCheck,
   Clock,
-  FileClock,
   ReceiptText,
   TrendingUp,
   WalletCards,
@@ -32,17 +31,6 @@ export default async function AdminDashboardPage() {
       danger: false,
       color: 'from-primary/10 to-primary/5 border-primary/20',
       iconColor: 'text-primary',
-    },
-    {
-      label: 'قرارداد منتظر پذیرش',
-      value: summary.contractsAwaitingAcceptance,
-      icon: FileClock,
-      href: '/admin/contracts',
-      trend: '+۱',
-      trendUp: true,
-      danger: false,
-      color: 'from-sun/10 to-sun/5 border-sun/20',
-      iconColor: 'text-sun',
     },
     {
       label: 'پرداخت آفلاین منتظر',
@@ -96,7 +84,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="شاخص‌های کلیدی عملیات"
       >
         {kpis.map(({ label, value, icon: Icon, href, trend, trendUp, color, iconColor }) => (
@@ -255,17 +243,6 @@ export default async function AdminDashboardPage() {
                 size="sm"
                 className="shrink-0"
               >
-                مشاهده
-              </ButtonLink>
-            </div>
-            <div className="flex items-center justify-between rounded-lg bg-primary/5 p-3 border border-primary/10">
-              <div>
-                <p className="text-sm font-bold">
-                  {formatPersianNumber(summary.contractsAwaitingAcceptance)} قرارداد منتظر پذیرش
-                </p>
-                <p className="text-xs text-muted mt-0.5">منتظر تأیید نهایی</p>
-              </div>
-              <ButtonLink href="/admin/contracts" variant="ghost" size="sm" className="shrink-0">
                 مشاهده
               </ButtonLink>
             </div>

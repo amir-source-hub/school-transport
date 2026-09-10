@@ -15,9 +15,11 @@ import {
   studentLimitRequests,
   studentPhotoUploads,
   students,
+  studentCompanions,
   transportServiceRuns,
   transportServiceRunStudents,
   drivers,
+  vehicles,
   users,
 } from '../../database/schemas';
 import { eq, and, sql, desc, ilike, inArray, or } from 'drizzle-orm';
@@ -53,11 +55,13 @@ export class StudentsService {
   ) {}
 
   async getAllByFamily(userId: string) {
-    return this.db.db
+    const rows = await this.db.db
       .select({ ...getTableColumns(students), schoolName: schools.name })
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .where(and(eq(students.userId, userId), eq(students.isActive, true)));
+    const companions = rows.length ? await this.db.db.select().from(studentCompanions).where(inArray(studentCompanions.studentId, rows.map(row => row.id))) : [];
+    return rows.map(row => ({ ...row, companion: companions.find(item => item.studentId === row.id) ?? null, seatCount: companions.some(item => item.studentId === row.id) ? 2 : 1 }));
   }
 
   async getById(studentId: string, userId?: string) {
@@ -71,6 +75,36 @@ export class StudentsService {
       .limit(1);
     if (result.length === 0) throw new NotFoundError('Student', studentId);
     return result[0];
+  }
+
+  async getDetailById(studentId: string, userId: string) {
+    const student = await this.getById(studentId, userId);
+    const [companion] = await this.db.db.select().from(studentCompanions).where(eq(studentCompanions.studentId, studentId)).limit(1);
+    return { ...student, companion: companion ?? null, seatCount: companion ? 2 : 1 };
+  }
+
+  async upsertCompanion(studentId: string, userId: string, data: { firstName:string; lastName:string; fatherName:string; nationalId:string; phoneNumber:string; relationship:'FAMILY'|'CAREGIVER'|'COACH' }) {
+    await this.getById(studentId, userId);
+    const [duplicate] = await this.db.db.select({ studentId: studentCompanions.studentId }).from(studentCompanions).where(eq(studentCompanions.nationalId, data.nationalId)).limit(1);
+    if (duplicate && duplicate.studentId !== studentId) throw new ConflictError('DUPLICATE_COMPANION_NATIONAL_ID', 'این کد ملی قبلاً برای همراه دانش‌آموز دیگری ثبت شده است.');
+    const [current] = await this.db.db.select({ id: studentCompanions.id }).from(studentCompanions).where(eq(studentCompanions.studentId, studentId)).limit(1);
+    if (!current) {
+      const assignedRoutes = await this.db.db.select({ runId: transportServiceRuns.id, capacity: vehicles.capacity }).from(transportServiceRunStudents).innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId)).innerJoin(vehicles, eq(vehicles.id, transportServiceRuns.vehicleId)).where(and(eq(transportServiceRunStudents.studentId, studentId), eq(transportServiceRunStudents.isActive, true), eq(transportServiceRuns.isActive, true)));
+      for (const route of assignedRoutes) {
+        const members = await this.db.db.select({ studentId: transportServiceRunStudents.studentId }).from(transportServiceRunStudents).where(and(eq(transportServiceRunStudents.serviceRunId, route.runId), eq(transportServiceRunStudents.isActive, true)));
+        const ids = members.map(member => member.studentId);
+        const companions = ids.length ? await this.db.db.select({ id: studentCompanions.id }).from(studentCompanions).where(inArray(studentCompanions.studentId, ids)) : [];
+        if (members.length + companions.length + 1 > route.capacity) throw new ConflictError('COMPANION_ROUTE_CAPACITY_UNAVAILABLE', 'در یکی از سرویس‌های فعلی صندلی خالی برای همراه وجود ندارد. ابتدا ظرفیت یا مسیر را در پنل مدیریت تغییر دهید.');
+      }
+    }
+    const [saved] = await this.db.db.insert(studentCompanions).values({ id: generateId(), studentId, ...data }).onConflictDoUpdate({ target: studentCompanions.studentId, set: { ...data, updatedAt: new Date() } }).returning();
+    return saved;
+  }
+
+  async removeCompanion(studentId: string, userId: string) {
+    await this.getById(studentId, userId);
+    await this.db.db.delete(studentCompanions).where(eq(studentCompanions.studentId, studentId));
+    return { removed: true };
   }
 
   async create(
@@ -180,7 +214,7 @@ export class StudentsService {
       .innerJoin(users, eq(users.id, students.userId))
       .where(eq(users.accountStatus, 'ACTIVE'));
 
-    const parentRows = await this.db.db.select().from(parents);
+    const [parentRows, companionRows] = await Promise.all([this.db.db.select().from(parents), rows.length ? this.db.db.select().from(studentCompanions).where(inArray(studentCompanions.studentId, rows.map(row => row.id))) : Promise.resolve([])]);
 
     return rows.map((student) => {
       const familyParent =
@@ -188,6 +222,8 @@ export class StudentsService {
         parentRows.find((parent) => parent.userId === student.userId);
       return {
         ...student,
+        companion: companionRows.find(item => item.studentId === student.id) ?? null,
+        seatCount: companionRows.some(item => item.studentId === student.id) ? 2 : 1,
         familyName: familyParent
           ? `${familyParent.firstName} ${familyParent.lastName}`
           : student.username,
@@ -211,12 +247,13 @@ export class StudentsService {
           ilike(schools.name, `%${search}%`),
         )
       : sql`true`;
+    const schoolFilter = query.schoolId ? eq(students.schoolId, query.schoolId) : sql`true`;
     const [countRow] = await this.db.db
       .select({ total: sql<number>`count(*)::int` })
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(and(archiveFilter, searchFilter, eq(users.accountStatus, 'ACTIVE')));
+      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE')));
 
     const rows = await this.db.db
       .select({
@@ -227,18 +264,20 @@ export class StudentsService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(and(archiveFilter, searchFilter, eq(users.accountStatus, 'ACTIVE')))
+      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE')))
       .orderBy(...buildAdminStudentOrderBy(sort, direction))
       .offset((page - 1) * pageSize)
       .limit(pageSize);
 
-    const parentRows = await this.db.db.select().from(parents);
+    const [parentRows, companionRows] = await Promise.all([this.db.db.select().from(parents), rows.length ? this.db.db.select().from(studentCompanions).where(inArray(studentCompanions.studentId, rows.map(row => row.id))) : Promise.resolve([])]);
     const items = rows.map((student) => {
       const familyParent =
         parentRows.find((parent) => parent.userId === student.userId && parent.isPrimaryContact) ??
         parentRows.find((parent) => parent.userId === student.userId);
       return {
         ...student,
+        companion: companionRows.find(item => item.studentId === student.id) ?? null,
+        seatCount: companionRows.some(item => item.studentId === student.id) ? 2 : 1,
         familyName: familyParent
           ? `${familyParent.firstName} ${familyParent.lastName}`
           : student.username,

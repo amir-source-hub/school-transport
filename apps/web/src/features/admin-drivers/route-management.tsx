@@ -1,301 +1,39 @@
 'use client';
-import { useCallback, useState } from 'react';
-import { SearchPicker } from '@/components/ui/search-picker';
-import { RouteCatalog } from './route-catalog';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { apiRequest } from '@/lib/api-client';
-import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { SearchPicker } from '@/components/ui/search-picker';
 import type { AdminSchool } from '@/features/admin-schools/admin-schools-api';
 import { getAdminStudents, type AdminStudent } from '@/features/admin-students/admin-students-api';
-import {
-  createAdminTransportRoute,
-  type AdminTransportRoute,
-  type DriverListItem,
-} from './admin-drivers-api';
+import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { addStudentToAdminRoute, archiveAdminRoute, createAdminTransportRoute, removeStudentFromAdminRoute, updateAdminTransportRoute, type AdminTransportRoute, type DriverListItem } from './admin-drivers-api';
+import { RouteCatalog } from './route-catalog';
 
-export function RouteManagement({
-  routes,
-  drivers,
-  schools,
-  students,
-}: {
-  routes: AdminTransportRoute[];
-  drivers: DriverListItem[];
-  schools: AdminSchool[];
-  students: AdminStudent[];
-}) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
-  const [choices, setChoices] = useState(students);
-  const [studentId, setStudentId] = useState('');
-  const [toId, setToId] = useState('');
-  const [fromId, setFromId] = useState('');
-  const student = choices.find((s) => s.id === studentId);
-  const outbound = routes.find((r) => r.id === toId);
-  const eligible = routes;
-  const label = (r: AdminTransportRoute) =>
-    `${r.title} · ${r.driver?.firstName ?? ''} ${r.driver?.lastName ?? ''} · ${r.school.name} · ${r.students.length}/${r.driver?.capacity ?? 0}`;
-  const full = (r: AdminTransportRoute) =>
-    !r.students.some((s) => s.id === studentId) && r.students.length >= (r.driver?.capacity ?? 0);
-  async function perform(action: () => Promise<unknown>, success: string) {
-    setBusy(true);
-    setMessage('');
-    try {
-      await action();
-      setMessage(success);
-      router.refresh();
-    } catch (error) {
-      setMessage(getApiErrorFeedback(error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  const searchStudents = useCallback(async (q: string) => {
-    const result = await getAdminStudents({ q, archive: 'active', pageSize: 100 });
-    const rows = [...result.students];
-    for (let page = 2; page <= result.pagination.totalPages; page++) {
-      rows.push(
-        ...(await getAdminStudents({ q, page, archive: 'active', pageSize: 100 })).students,
-      );
-    }
-    setChoices((current) => [...new Map([...current, ...rows].map((s) => [s.id, s])).values()]);
-    return rows.map((s) => ({
-      value: s.id,
-      label: `${s.firstName} ${s.lastName} · ${s.schoolName ?? ''}`,
-    }));
-  }, []);
-  async function create(data: FormData) {
-    await perform(
-      () =>
-        createAdminTransportRoute({
-          title: String(data.get('title')),
-          driverId: String(data.get('driverId')),
-          schoolId: String(data.get('schoolId')),
-          academicYear: String(data.get('academicYear')),
-          direction: String(data.get('direction')) as 'TO_SCHOOL' | 'FROM_SCHOOL',
-          scheduledStartTime: String(data.get('start')),
-          scheduledArrivalTime: String(data.get('end')),
-          activeWeekdays: [0, 1, 2, 3, 4],
-        }),
-      'مسیر ایجاد شد.',
-    );
-  }
-  async function assign(data: FormData) {
-    await perform(
-      () =>
-        apiRequest('/admin/transport-assignments', {
-          method: 'POST',
-          body: {
-            studentId,
-            toSchoolRouteId: toId,
-            fromSchoolRouteId: fromId,
-            toSchoolStopTime: String(data.get('toStop')),
-            fromSchoolStopTime: String(data.get('fromStop')),
-          },
-        }),
-      'هر دو مسیر ذخیره و به خانواده و راننده اطلاع‌رسانی شد.',
-    );
-  }
-  return (
-    <div className="space-y-6">
-      <Card>
-        <h2 className="text-lg font-black">۱. تعریف مسیر</h2>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void create(new FormData(event.currentTarget));
-          }}
-          className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4"
-        >
-          <Field label="عنوان مسیر">
-            <Input name="title" required minLength={2} />
-          </Field>
-          <Field label="راننده">
-            <Picker
-              name="driverId"
-              options={drivers.map((d) => ({
-                value: d.id,
-                label: `${d.firstName} ${d.lastName} · ظرفیت ${d.capacity ?? 0}`,
-              }))}
-            />
-          </Field>
-          <Field label="مدرسه">
-            <Picker
-              name="schoolId"
-              options={schools
-                .filter((s) => s.isActive)
-                .map((s) => ({ value: s.id, label: s.name }))}
-            />
-          </Field>
-          <Field label="جهت">
-            <Picker
-              name="direction"
-              options={[
-                { value: 'TO_SCHOOL', label: 'رفت به مدرسه' },
-                { value: 'FROM_SCHOOL', label: 'برگشت از مدرسه' },
-              ]}
-            />
-          </Field>
-          <Field label="شروع">
-            <Input type="time" name="start" required />
-          </Field>
-          <Field label="پایان">
-            <Input type="time" name="end" required />
-          </Field>
-          <Field label="سال تحصیلی">
-            <Input name="academicYear" defaultValue="1405-1406" required />
-          </Field>
-          <Button className="self-end" loading={busy} disabled={busy}>
-            ایجاد مسیر
-          </Button>
-        </form>
-        <RouteCatalog routes={routes} />
-      </Card>
-      <Card>
-        <h2 className="text-lg font-black">۲. اتصال رفت و برگشت دانش‌آموز</h2>
-        <p className="mt-2 text-sm text-muted">
-          هر دو مسیر باید متعلق به یک راننده باشند؛ انتخاب مسیر مدارس دیگر نیز مجاز است. ذخیره،
-          ارتباط قبلی همان سال را جایگزین می‌کند.
-        </p>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void assign(new FormData(event.currentTarget));
-          }}
-          className="mt-4 grid gap-4 md:grid-cols-2"
-        >
-          <SearchPicker
-            label="دانش‌آموز"
-            loadOptions={searchStudents}
-            value={studentId}
-            onChange={(v) => {
-              setStudentId(v);
-              setToId('');
-              setFromId('');
-            }}
-            options={choices.map((s) => ({
-              value: s.id,
-              label: `${s.firstName} ${s.lastName} · ${s.schoolName ?? ''}`,
-            }))}
-          />
-          <SearchPicker
-            label="مسیر رفت"
-            value={toId}
-            onChange={(v) => {
-              setToId(v);
-              setFromId('');
-            }}
-            options={eligible
-              .filter((r) => r.direction === 'TO_SCHOOL')
-              .map((r) => ({
-                value: r.id,
-                label: label(r),
-                disabled: full(r),
-                reason: full(r) ? 'ظرفیت تکمیل' : undefined,
-              }))}
-          />
-          <SearchPicker
-            label="مسیر برگشت همان راننده"
-            value={fromId}
-            onChange={setFromId}
-            options={eligible
-              .filter(
-                (r) =>
-                  r.direction === 'FROM_SCHOOL' &&
-                  (!outbound ||
-                    (r.driver?.id === outbound.driver?.id &&
-                      r.academicYear === outbound.academicYear)),
-              )
-              .map((r) => ({
-                value: r.id,
-                label: label(r),
-                disabled: full(r),
-                reason: full(r) ? 'ظرفیت تکمیل' : undefined,
-              }))}
-          />
-          <Field label="زمان سوار شدن در رفت">
-            <Input
-              key={toId}
-              name="toStop"
-              type="time"
-              required
-              defaultValue={outbound?.scheduledStartTime.slice(0, 5)}
-            />
-          </Field>
-          <Field label="زمان رسیدن در برگشت">
-            <Input
-              key={fromId}
-              name="fromStop"
-              type="time"
-              required
-              defaultValue={routes.find((r) => r.id === fromId)?.scheduledArrivalTime.slice(0, 5)}
-            />
-          </Field>
-          <Button disabled={busy || !studentId || !toId || !fromId} loading={busy}>
-            ذخیره ارتباط و اطلاع‌رسانی
-          </Button>
-        </form>
-        {student && (
-          <div className="mt-5 rounded-xl bg-primary-soft p-4">
-            <h3 className="font-bold">
-              برنامه فعلی {student.firstName} {student.lastName}
-            </h3>
-            {routes
-              .filter((r) => r.students.some((s) => s.id === studentId))
-              .map((r) => (
-                <p key={r.id} className="mt-2 text-sm">
-                  {r.direction === 'TO_SCHOOL' ? 'رفت' : 'برگشت'}: {label(r)}
-                </p>
-              ))}
-          </div>
-        )}
-        {message && (
-          <p role="status" className="mt-4 text-sm">
-            {message}
-          </p>
-        )}
-      </Card>
-    </div>
-  );
+export function RouteManagement({ routes, drivers, schools, students }: { routes:AdminTransportRoute[]; drivers:DriverListItem[]; schools:AdminSchool[]; students:AdminStudent[] }) {
+  const router=useRouter(); const [busy,setBusy]=useState(false); const [message,setMessage]=useState('');
+  const [schoolId,setSchoolId]=useState(''); const [filterSchoolId,setFilterSchoolId]=useState(''); const [routeId,setRouteId]=useState(''); const [studentId,setStudentId]=useState(''); const [choices,setChoices]=useState(students);
+  const school=schools.find(s=>s.id===schoolId); const route=routes.find(r=>r.id===routeId);
+  const visibleStudents=useMemo(()=>choices.filter(s=>!filterSchoolId||s.schoolId===filterSchoolId),[choices,filterSchoolId]);
+  async function perform(action:()=>Promise<unknown>,success:string){setBusy(true);setMessage('');try{await action();setMessage(success);router.refresh();}catch(error){setMessage(getApiErrorFeedback(error).message);}finally{setBusy(false);}}
+  const studentLabel=(s:AdminStudent)=>`${s.firstName} ${s.lastName} · ${s.schoolName??''}${s.companion?' · دارای همراه (۲ صندلی)':''}`;
+  const searchStudents=useCallback(async(q:string)=>{const result=await getAdminStudents({q,archive:'active',pageSize:100});const rows=result.students.filter(s=>!filterSchoolId||s.schoolId===filterSchoolId);setChoices(current=>[...new Map([...current,...rows].map(s=>[s.id,s])).values()]);return rows.map(s=>({value:s.id,label:`${s.firstName} ${s.lastName} · ${s.schoolName??''}${s.companion?' · دارای همراه (۲ صندلی)':''}`}));},[filterSchoolId]);
+  async function create(data:FormData){if(!school)return;const end=[...school.closingTimes,school.closingTime].filter(Boolean).sort().at(-1)??school.closingTime;await perform(()=>createAdminTransportRoute({title:String(data.get('title')),driverId:String(data.get('driverId')),schoolId:school.id,academicYear:String(data.get('academicYear')),direction:String(data.get('direction')) as AdminTransportRoute['direction'],scheduledStartTime:school.openingTime,scheduledArrivalTime:end,activeWeekdays:[0,1,2,3,4]}),'مسیر با ساعت‌های مدرسه ایجاد شد.');}
+  async function add(data:FormData){if(!route||!studentId)return;const student=choices.find(item=>item.id===studentId);await perform(()=>addStudentToAdminRoute(route.id,{studentId,scheduledStopTime:String(data.get('stopTime')),pickupOrder:route.students.length+1}),student?.companion?'دانش‌آموز و همراه او با مصرف دو صندلی به مسیر افزوده شدند.':'دانش‌آموز به مسیر افزوده شد.');}
+  return <Card className="space-y-8">
+    <section><h2 className="text-lg font-black">تعریف مسیر و تخصیص دانش‌آموز</h2><p className="mt-2 text-sm leading-7 text-muted">ساعت مسیر از ساعت شروع و آخرین ساعت پایان مدرسه خوانده می‌شود. فیلتر مدرسه فقط جست‌وجوی دانش‌آموز را آسان می‌کند؛ یک مسیر می‌تواند دانش‌آموزان چند مدرسه را داشته باشد.</p>
+      <form onSubmit={e=>{e.preventDefault();void create(new FormData(e.currentTarget));}} className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Field label="عنوان مسیر"><Input name="title" required minLength={2}/></Field><Field label="راننده"><Picker name="driverId" options={drivers.filter(d=>d.status==='ACTIVE').map(d=>({value:d.id,label:`${d.firstName} ${d.lastName} · ظرفیت ${d.capacity??0}`}))}/></Field>
+        <Field label="مدرسه مبنا"><Picker value={schoolId} onChange={setSchoolId} options={schools.filter(s=>s.isActive).map(s=>({value:s.id,label:s.name}))}/></Field><Field label="جهت"><Picker name="direction" options={[{value:'TO_SCHOOL',label:'رفت'},{value:'FROM_SCHOOL',label:'برگشت'},{value:'ROUND_TRIP',label:'رفت و برگشت'}]}/></Field>
+        <Field label="شروع مدرسه"><Input value={school?.openingTime??''} readOnly/></Field><Field label="پایان مدرسه"><Input value={school?([...school.closingTimes,school.closingTime].filter(Boolean).sort().at(-1)??''):''} readOnly/></Field><Field label="سال تحصیلی"><Input name="academicYear" defaultValue="1405-1406" required/></Field><Button className="self-end" loading={busy} disabled={busy||!school}>ایجاد مسیر</Button>
+      </form></section>
+    <section className="border-t border-border pt-7"><h3 className="font-black">مدیریت دانش‌آموزان مسیر</h3><div className="mt-4 grid gap-4 md:grid-cols-2"><Field label="مسیر"><Picker value={routeId} onChange={setRouteId} options={routes.map(r=>({value:r.id,label:`${r.title} · ${r.school.name}`}))}/></Field><Field label="فیلتر مدرسه دانش‌آموز"><Picker value={filterSchoolId} onChange={v=>{setFilterSchoolId(v);setStudentId('');}} required={false} options={schools.map(s=>({value:s.id,label:s.name}))}/></Field></div>
+      <form onSubmit={e=>{e.preventDefault();void add(new FormData(e.currentTarget));}} className="mt-4 grid gap-4 md:grid-cols-2"><SearchPicker label="دانش‌آموز" loadOptions={searchStudents} value={studentId} onChange={setStudentId} options={visibleStudents.map(s=>({value:s.id,label:studentLabel(s)}))}/><Field label="زمان توقف"><Input key={routeId} name="stopTime" type="time" required defaultValue={route?.scheduledStartTime.slice(0,5)}/></Field><Button disabled={busy||!route||!studentId} loading={busy}>افزودن به مسیر</Button></form>
+      {route?.students.length?<ul className="mt-5 divide-y divide-border rounded-xl border border-border">{route.students.map(student=><li key={student.id} className="flex min-h-14 items-center justify-between gap-3 px-4"><span className="text-sm font-bold">{student.pickupOrder}. {student.firstName} {student.lastName}{student.companion&&<small className="mr-2 rounded-full bg-warning-soft px-2 py-1 text-warning">همراه: {student.companion.firstName} {student.companion.lastName} · ۲ صندلی</small>}</span><Button type="button" size="sm" variant="ghost" disabled={busy} onClick={()=>void perform(()=>removeStudentFromAdminRoute(route.id,student.id),'ارتباط دانش‌آموز و همراه او با مسیر حذف شد.')}>حذف از مسیر</Button></li>)}</ul>:null}
+    </section>
+    <RouteCatalog routes={routes} onEdit={(id,title)=>perform(()=>updateAdminTransportRoute(id,{title}),'مسیر ویرایش شد.')} onArchive={id=>perform(()=>archiveAdminRoute(id),'مسیر غیرفعال شد.')} busy={busy}/>{message&&<p role="status" className="rounded-xl bg-primary-soft p-3 text-sm font-bold">{message}</p>}
+  </Card>;
 }
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block text-sm font-bold">
-      {label}
-      <span className="mt-2 block">{children}</span>
-    </label>
-  );
-}
-function Picker({
-  name,
-  value,
-  onChange,
-  options,
-}: {
-  name?: string;
-  value?: string;
-  onChange?: (value: string) => void;
-  options: { value: string; label: string; disabled?: boolean }[];
-}) {
-  return (
-    <select
-      name={name}
-      value={value}
-      onChange={(e) => onChange?.(e.target.value)}
-      required
-      className="min-h-12 w-full rounded-xl border border-border bg-white px-3"
-    >
-      <option value="">انتخاب کنید</option>
-      {options.map((o) => (
-        <option key={o.value} value={o.value} disabled={o.disabled}>
-          {o.label}
-          {o.disabled ? ' · ظرفیت تکمیل' : ''}
-        </option>
-      ))}
-    </select>
-  );
-}
+function Field({label,children}:{label:string;children:React.ReactNode}){return <label className="block text-sm font-bold">{label}<span className="mt-2 block">{children}</span></label>}
+function Picker({name,value,onChange,options,required=true}:{name?:string;value?:string;onChange?:(value:string)=>void;options:{value:string;label:string}[];required?:boolean}){return <select name={name} value={value} onChange={e=>onChange?.(e.target.value)} required={required} className="min-h-12 w-full rounded-xl border border-border bg-white px-3"><option value="">{required?'انتخاب کنید':'همه مدارس'}</option>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>}

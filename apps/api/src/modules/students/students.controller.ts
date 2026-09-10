@@ -22,6 +22,7 @@ import {
   ArchiveStudentDto,
   CreateStudentDto,
   UpdateStudentDto,
+  UpsertStudentCompanionDto,
 } from './student.dto';
 import { CreateLimitRequestDto, RejectLimitRequestDto } from './student-limit-request.dto';
 import { AdminStudentListQueryDto } from './student-list.dto';
@@ -71,7 +72,7 @@ export class StudentsController {
     @Req() req: AuthenticatedRequest,
     @Param('studentId', new ParseUUIDPipe()) studentId: string,
   ) {
-    const student = await this.studentsService.getById(studentId, req.user.id);
+    const student = await this.studentsService.getDetailById(studentId, req.user.id);
     return successResponse(student);
   }
 
@@ -151,6 +152,16 @@ export class AdminStudentsController {
         ipAddress: req.ip,
       }),
     );
+  }
+
+  @Post(':studentId/companion')
+  async saveCompanion(@Req() req: AuthenticatedRequest, @Param('studentId', new ParseUUIDPipe()) studentId: string, @Body() dto: UpsertStudentCompanionDto) {
+    return successResponse(await this.studentsService.upsertCompanion(studentId, req.user.id, dto));
+  }
+
+  @Delete(':studentId/companion')
+  async removeCompanion(@Req() req: AuthenticatedRequest, @Param('studentId', new ParseUUIDPipe()) studentId: string) {
+    return successResponse(await this.studentsService.removeCompanion(studentId, req.user.id));
   }
 
   @Delete(':studentId')

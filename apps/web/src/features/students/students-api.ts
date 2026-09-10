@@ -17,6 +17,8 @@ export const studentSchema = z.object({
   phoneNumber: z.string().nullable().default(null),
   fieldOfStudy: z.string().nullable().default(null),
   isActive: z.boolean(),
+  seatCount: z.number().default(1),
+  companion: z.object({ id:z.string(), studentId:z.string(), firstName:z.string(), lastName:z.string(), fatherName:z.string(), nationalId:z.string(), phoneNumber:z.string(), relationship:z.enum(['FAMILY','CAREGIVER','COACH']) }).nullable().default(null),
 });
 
 export type Student = z.infer<typeof studentSchema>;
@@ -64,6 +66,10 @@ export async function updateStudent(
   const response = await apiRequest<unknown>(`/students/${id}`, { method: 'PATCH', body: input });
   return studentSchema.parse(response.data);
 }
+
+export type StudentCompanionInput={firstName:string;lastName:string;fatherName:string;nationalId:string;phoneNumber:string;relationship:'FAMILY'|'CAREGIVER'|'COACH'};
+export async function saveStudentCompanion(studentId:string,input:StudentCompanionInput){return (await apiRequest(`/students/${studentId}/companion`,{method:'POST',body:input})).data;}
+export async function removeStudentCompanion(studentId:string){return (await apiRequest(`/students/${studentId}/companion`,{method:'DELETE'})).data;}
 
 export const studentCapacitySchema = z.object({
   studentLimit: z.number(),

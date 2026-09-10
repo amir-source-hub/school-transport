@@ -178,3 +178,14 @@ export class ArchiveStudentDto {
   @Length(1, 500)
   reason?: string;
 }
+
+export class UpsertStudentCompanionDto {
+  @IsString() @IsNotEmpty() @Length(1, 100) firstName!: string;
+  @IsString() @IsNotEmpty() @Length(1, 100) lastName!: string;
+  @IsString() @IsNotEmpty() @Length(1, 100) fatherName!: string;
+  @Transform(({ value }) => typeof value === 'string' ? normalizeIranianDigits(value).trim() : value)
+  @Validate(IranianNationalIdConstraint) nationalId!: string;
+  @Transform(({ value }) => typeof value === 'string' ? normalizeIranianDigits(value).trim() : value)
+  @Matches(/^09\d{9}$/) phoneNumber!: string;
+  @IsIn(['FAMILY', 'CAREGIVER', 'COACH']) relationship!: 'FAMILY' | 'CAREGIVER' | 'COACH';
+}

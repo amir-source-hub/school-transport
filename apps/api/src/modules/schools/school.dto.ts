@@ -26,6 +26,7 @@ export const SCHOOL_TYPES = [
   'BOARDING',
   'SPECIAL',
   'INTERNATIONAL',
+  'PRESCHOOL',
 ] as const;
 export const GENDER_TYPES = ['MALE', 'FEMALE', 'MIXED'] as const;
 

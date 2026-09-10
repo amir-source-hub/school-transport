@@ -1,5 +1,6 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { LocationDisplay } from '@/components/common/location-display';
+import { PrintPageButton } from '@/components/common/print-page-button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { AdminStudentPhotoActions } from '@/features/student-photos/admin-student-photo-actions';
@@ -7,6 +8,7 @@ import {
   getAdminStudentDetail,
   getAdminStudentPhoto,
 } from '@/features/admin-students/admin-students-api';
+import { formatJalaliDate } from '@/lib/formatters';
 
 export const metadata = { title: 'جزئیات دانش‌آموز' };
 export const dynamic = 'force-dynamic';
@@ -64,7 +66,7 @@ export default async function AdminStudentPage({
             <Info label="کد دانش‌آموزی" value={student.studentCode} />
             <Info label="نام پدر" value={student.fatherName} />
             <Info label="شماره همراه دانش‌آموز" value={student.phoneNumber} mono />
-            <Info label="تاریخ تولد" value={student.birthDate} />
+            <Info label="تاریخ تولد" value={student.birthDate ? formatJalaliDate(student.birthDate) : null} />
             <Info
               label="جنسیت"
               value={
@@ -123,7 +125,7 @@ export default async function AdminStudentPage({
         ))}
         {student.enrollmentSummary && (
           <Card className="lg:col-span-2">
-            <h2 className="font-black">ثبت‌نام، قرارداد و پرداخت</h2>
+            <div className="flex items-center justify-between gap-3"><h2 className="font-black">ثبت‌نام، قرارداد و پرداخت</h2><PrintPageButton /></div>
             <dl className="mt-4 grid gap-4 sm:grid-cols-3 text-sm">
               <Info label="وضعیت ثبت‌نام" value={student.enrollmentSummary.registrationStatus} />
               <Info label="نوع سرویس" value={student.enrollmentSummary.serviceType} />

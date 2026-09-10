@@ -219,17 +219,17 @@ describe('onboarding guided enrollment funnel', () => {
       'onboarding',
     );
     expect(screen.getByText('۴٬۹۹۷٬۸۰۰')).toBeInTheDocument();
-    expect(await screen.findByText('6037991234567890')).toBeInTheDocument();
+    expect(screen.queryByText('6037991234567890')).toBeNull();
     expect(screen.queryByRole('button', { name: 'ارسال رسید برای بررسی مدیر' })).toBeNull();
     const enterPanel = screen.getByRole('button', {
-      name: 'تأیید اطلاعات پرداخت و ورود به پنل خانواده',
+      name: 'ایجاد حساب و ورود به پنل خانواده',
     });
     expect(enterPanel).toBeEnabled();
-    expect(navigation.replace).not.toHaveBeenCalledWith('/student/dashboard');
+    expect(navigation.replace).not.toHaveBeenCalledWith('/student/payments');
     enrollmentApi.finalizeOnboarding.mockResolvedValue(undefined);
     await user.click(enterPanel);
     await waitFor(() => expect(enrollmentApi.finalizeOnboarding).toHaveBeenCalled());
-    expect(navigation.replace).toHaveBeenCalledWith('/student/dashboard');
+    expect(navigation.replace).toHaveBeenCalledWith('/student/payments');
   }, 30_000);
 
   it('routes a returning accepted enrollment directly to the saved family panel', async () => {
@@ -287,9 +287,14 @@ describe('onboarding guided enrollment funnel', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('نشانی محل سوار شدن')).toBeInTheDocument();
 
-    const latitudeInput = screen.getByLabelText('عرض جغرافیایی');
-    fireEvent.change(latitudeInput, { target: { value: '35.7225' } });
-    fireEvent.blur(latitudeInput);
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: {
+        getCurrentPosition: (success: PositionCallback) =>
+          success({ coords: { latitude: 35.7225, longitude: 51.3347 } } as GeolocationPosition),
+      },
+    });
+    await user.click(screen.getByRole('button', { name: 'دریافت موقعیت من' }));
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
     expect(screen.getByText('مدرسه')).toBeInTheDocument();
   }, 30_000);

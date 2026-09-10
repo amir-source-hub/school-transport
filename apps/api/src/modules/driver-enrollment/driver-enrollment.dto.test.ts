@@ -6,7 +6,7 @@ import { DriverEnrollmentDto, UpdateDriverProfileDto } from './driver-enrollment
 
 describe('DriverEnrollmentDto', () => {
   it('rejects excluded plate letters and malformed verified credentials', async () => {
-    const dto = plainToInstance(DriverEnrollmentDto, { nationalId:'123', phoneNumber:'9123', plateNumber:'12س34567' });
+    const dto = plainToInstance(DriverEnrollmentDto, { nationalId:'123', phoneNumber:'9123', plateNumber:'12ش34567' });
     const properties = (await validate(dto)).map((error) => error.property);
     expect(properties).toEqual(expect.arrayContaining(['nationalId','phoneNumber','plateNumber']));
   });

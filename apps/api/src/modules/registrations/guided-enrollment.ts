@@ -267,7 +267,8 @@ export function normalizeAndValidateGuidedEnrollment(
     throw new ConflictError('INVALID_PHONE_NUMBER', 'Valid Iranian mobile numbers are required.');
   }
   if (data.student.phoneNumber) phoneNumbers.push(data.student.phoneNumber);
-  if (new Set(phoneNumbers).size !== phoneNumbers.length) {
+  const allContactNumbers = [...phoneNumbers, data.homePhone];
+  if (new Set(allContactNumbers).size !== allContactNumbers.length) {
     throw new ConflictError(
       'DUPLICATE_PHONE_NUMBER',
       'شماره همراه دانش‌آموز، والدین و تماس اضطراری باید متفاوت باشد.',
