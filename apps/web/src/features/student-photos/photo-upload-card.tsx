@@ -182,9 +182,19 @@ export function PhotoUploadCard({
           declaredMime: selected.mime,
           declaredSize: file.size,
         };
-        const created = familyId
-          ? await authorizePhotoUpload(authorizationInput, mode, familyId, controller.signal)
-          : await authorizePhotoUpload(authorizationInput, mode, undefined, controller.signal);
+        let created;
+        try {
+          created = familyId
+            ? await authorizePhotoUpload(authorizationInput, mode, familyId, controller.signal)
+            : await authorizePhotoUpload(authorizationInput, mode, undefined, controller.signal);
+        } catch (error) {
+          // Authorization is safe to retry: the API expires any previous unconsumed
+          // authorization for the same student/draft before issuing the replacement.
+          if (!(error instanceof TypeError) || controller.signal.aborted) throw error;
+          created = familyId
+            ? await authorizePhotoUpload(authorizationInput, mode, familyId, controller.signal)
+            : await authorizePhotoUpload(authorizationInput, mode, undefined, controller.signal);
+        }
         authorization = {
           uploadId: created.uploadId,
           uploadUrl: created.uploadUrl,

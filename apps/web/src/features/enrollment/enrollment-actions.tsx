@@ -422,6 +422,10 @@ export function CreateEnrollmentForm({
   }
 
   function selectExistingStudent(studentId: string) {
+    // A draft upload without a student id belongs only to the currently entered new
+    // student. Never carry it across a switch to another existing/new student.
+    setPhotoUploadId(undefined);
+    setPhotoCardGeneration((current) => current + 1);
     if (studentId === '__NEW__') studentId = '';
     const student = existingStudents.find((item) => item.id === studentId);
     if (!student) {
@@ -1686,13 +1690,9 @@ export function CreateEnrollmentForm({
             <Button
               className="mt-6"
               onClick={() => {
-                setStep(1);
-                setResult(undefined);
-                setAccepted(false);
-                setPaid(false);
-                setPhotoUploadId(undefined);
-                setPhotoCardGeneration((current) => current + 1);
-                setForm(createInitialForm());
+                // Reload server data so the just-enrolled student is removed from the
+                // available list and capacity/defaults are recalculated for the next child.
+                window.location.reload();
               }}
             >
               ثبت دانش‌آموز دیگر
