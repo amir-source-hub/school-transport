@@ -16,5 +16,8 @@ describe('student photo database invariants', () => {
     expect(config.indexes.map((item) => item.config.name)).toContain(
       'idx_student_photos_one_approved',
     );
+    expect(config.foreignKeys.map((item) => item.getName())).toContain(
+      'student_photo_uploads_student_owner_fk',
+    );
   });
 });

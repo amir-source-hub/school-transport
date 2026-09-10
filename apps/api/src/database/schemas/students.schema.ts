@@ -1,4 +1,13 @@
-import { pgTable, uuid, varchar, timestamp, boolean, date, index } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  timestamp,
+  boolean,
+  date,
+  index,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { users } from './auth.schema';
 import { schools } from './schools.schema';
 
@@ -29,6 +38,7 @@ export const students = pgTable(
   },
   (table) => ({
     userIdx: index('idx_students_user').on(table.userId),
+    idUserUnique: uniqueIndex('idx_students_id_user_unique').on(table.id, table.userId),
     schoolIdx: index('idx_students_school').on(table.schoolId),
     nationalIdIdx: index('idx_students_national_id').on(table.nationalId),
   }),

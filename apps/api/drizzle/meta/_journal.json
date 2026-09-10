@@ -330,6 +330,13 @@
       "when": 1788678000000,
       "tag": "0046_cross_school_transport",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1789023600000,
+      "tag": "0047_student_photo_owner_integrity",
+      "breakpoints": true
     }
   ]
 }
