@@ -2,13 +2,25 @@ import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import type { DatabaseService } from '../../database/database.service';
 import {
+  filterEnrolledStudents,
   neutralizeSpreadsheetFormula,
   REPORT_EXPORT_MAX_ROWS_PER_SOURCE,
   ReportsService,
 } from './reports.service';
-import { schools, students } from '../../database/schemas';
+import { schools, serviceRegistrations, students } from '../../database/schemas';
 
 describe('ReportsService', () => {
+  it('excludes students that have no enrolled registration from student reports', () => {
+    const studentRows = [{ id: 'enrolled' }, { id: 'contract-ready' }, { id: 'draft' }];
+    const registrationRows = [
+      { studentId: 'enrolled', registrationStatus: 'ENROLLED' },
+      { studentId: 'contract-ready', registrationStatus: 'CONTRACT_READY' },
+      { studentId: 'draft', registrationStatus: 'DRAFT' },
+    ];
+
+    expect(filterEnrolledStudents(studentRows, registrationRows)).toEqual([{ id: 'enrolled' }]);
+  });
+
   it('neutralizes spreadsheet formula injection without changing typed values', () => {
     expect(neutralizeSpreadsheetFormula('=HYPERLINK("https://attacker.invalid")')).toBe(
       '\'=HYPERLINK("https://attacker.invalid")',
@@ -121,6 +133,9 @@ describe('ReportsService', () => {
               ];
             }
             if (table === schools) return [{ id: 'school-1', name: 'مدرسه نمونه' }];
+            if (table === serviceRegistrations) {
+              return [{ studentId: 'student-1', registrationStatus: 'ENROLLED' }];
+            }
             return [];
           },
         }),
@@ -140,5 +155,44 @@ describe('ReportsService', () => {
     });
     expect(preview.rows[0]).not.toHaveProperty('nationalId');
     expect(preview.columns.map(({ key }) => key)).not.toContain('nationalId');
+  });
+
+  it('excludes contract-ready students from the students preview', async () => {
+    const database = {
+      db: {
+        select: () => ({
+          from: async (table: unknown) => {
+            if (table === students) {
+              return [
+                {
+                  id: 'student-1',
+                  firstName: 'سارا',
+                  lastName: 'احمدی',
+                  schoolId: 'school-1',
+                  grade: 'اول',
+                  className: 'ابتدایی',
+                  isActive: true,
+                  createdAt: new Date('2026-08-02T10:00:00.000Z'),
+                },
+              ];
+            }
+            if (table === schools) return [{ id: 'school-1', name: 'مدرسه نمونه' }];
+            if (table === serviceRegistrations) {
+              return [{ studentId: 'student-1', registrationStatus: 'CONTRACT_READY' }];
+            }
+            return [];
+          },
+        }),
+      },
+    } as unknown as DatabaseService;
+
+    const preview = await new ReportsService(database).getComprehensivePreview({
+      section: 'students',
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(preview.rows).toEqual([]);
+    expect(preview.pagination.total).toBe(0);
   });
 });

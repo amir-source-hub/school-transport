@@ -30,6 +30,18 @@ export function neutralizeSpreadsheetFormula(value: CellValue): CellValue {
   return /^[\t\r ]*[=+\-@]/.test(value) ? `'${value}` : value;
 }
 
+export function filterEnrolledStudents<T extends { id: string }>(
+  studentRows: T[],
+  registrationRows: Array<{ studentId: string; registrationStatus: string }>,
+): T[] {
+  const enrolledStudentIds = new Set(
+    registrationRows
+      .filter((registration) => registration.registrationStatus === 'ENROLLED')
+      .map((registration) => registration.studentId),
+  );
+  return studentRows.filter((student) => enrolledStudentIds.has(student.id));
+}
+
 @Injectable()
 export class ReportsService {
   private readonly logger = new Logger(ReportsService.name);
@@ -302,7 +314,7 @@ export class ReportsService {
         ['active', 'وضعیت'],
         ['createdAt', 'تاریخ ایجاد'],
       ],
-      studentRows.map((student) => {
+      filterEnrolledStudents(studentRows, registrationRows).map((student) => {
         const school = schoolRows.find((row) => row.id === student.schoolId);
         const familyParents = parentRows.filter((row) => row.userId === student.userId);
         const primaryParent = familyParents.find((row) => row.isPrimaryContact) ?? familyParents[0];
@@ -529,9 +541,15 @@ export class ReportsService {
     let rows: Record<string, CellValue>[] = [];
 
     if (section === 'students') {
-      const [studentRows, schoolRows] = await Promise.all([
+      const [studentRows, schoolRows, registrationRows] = await Promise.all([
         this.db.db.select().from(students),
         this.db.db.select().from(schools),
+        this.db.db
+          .select({
+            studentId: serviceRegistrations.studentId,
+            registrationStatus: serviceRegistrations.registrationStatus,
+          })
+          .from(serviceRegistrations),
       ]);
       columns = [
         { key: 'studentName', label: 'دانش‌آموز' },
@@ -541,7 +559,7 @@ export class ReportsService {
         { key: 'status', label: 'وضعیت' },
         { key: 'createdAt', label: 'تاریخ ایجاد', kind: 'date' },
       ];
-      rows = studentRows
+      rows = filterEnrolledStudents(studentRows, registrationRows)
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .map((student) => ({
           studentName: `${student.firstName} ${student.lastName}`,
