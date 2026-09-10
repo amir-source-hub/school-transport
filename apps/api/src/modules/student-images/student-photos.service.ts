@@ -94,6 +94,21 @@ export class StudentPhotosService {
     await Promise.all(
       abandoned.map(({ rawKey }) => this.storage.deleteObject(rawKey).catch(() => undefined)),
     );
+    // A completed draft photo that has not yet been linked belongs to the current
+    // enrollment attempt. Replacing it must not consume another active-upload slot;
+    // otherwise repeated second-student attempts eventually deadlock at the limit.
+    await this.db.db
+      .update(studentPhotoUploads)
+      .set({ status: 'SUPERSEDED', supersededAt: now, updatedAt: now })
+      .where(
+        and(
+          eq(studentPhotoUploads.accountUserId, userId),
+          eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
+          input.studentId
+            ? eq(studentPhotoUploads.studentId, input.studentId)
+            : isNull(studentPhotoUploads.studentId),
+        ),
+      );
     const active = await this.db.db
       .select({ count: count() })
       .from(studentPhotoUploads)

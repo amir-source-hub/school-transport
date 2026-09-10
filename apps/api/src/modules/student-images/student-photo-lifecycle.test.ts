@@ -17,6 +17,7 @@ const allowedTransitions = [
   ['VALIDATING', 'FAILED'],
   ['PENDING_REVIEW', 'APPROVED'],
   ['PENDING_REVIEW', 'REJECTED'],
+  ['PENDING_REVIEW', 'SUPERSEDED'],
   ['APPROVED', 'REJECTED'],
   ['APPROVED', 'SUPERSEDED'],
 ] as const;

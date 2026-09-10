@@ -179,6 +179,36 @@ describe('StudentPhotosService authorizeUpload', () => {
     );
   });
 
+  it('supersedes an earlier unlinked reviewed draft before applying the active limit', async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const db = {
+      db: {
+        update: vi.fn(() => ({
+          set: vi.fn((values: Record<string, unknown>) => {
+            updates.push(values);
+            return {
+              where: vi.fn(() => ({ returning: vi.fn(async () => []) })),
+            };
+          }),
+        })),
+        select: vi.fn(() => selectWhere([{ count: '0' }])),
+        insert: vi.fn(() => ({
+          values: vi.fn(() => ({ returning: vi.fn(async () => [baseRow({ status: 'AUTHORIZED' })]) })),
+        })),
+      },
+    } as unknown as DatabaseService;
+    const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
+
+    await service.authorizeUpload('user-1', {
+      declaredMime: 'image/jpeg',
+      declaredSize: 100_000,
+    });
+
+    expect(updates).toContainEqual(
+      expect.objectContaining({ status: 'SUPERSEDED', supersededAt: expect.any(Date) }),
+    );
+  });
+
   it('checks student ownership when a studentId is provided', async () => {
     const db = {
       db: {
