@@ -13,7 +13,7 @@ export type ReportSection = (typeof reportSections)[number]['value'];
 const previewSchema = z.object({
   section: z.enum(['students', 'families', 'registrations', 'payments', 'contracts']),
   columns: z.array(
-    z.object({ key: z.string(), label: z.string(), kind: z.enum(['money', 'date']).optional() }),
+    z.object({ key: z.string(), label: z.string(), kind: z.enum(['money', 'date', 'datetime']).optional() }),
   ),
   rows: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))),
   pagination: z.object({

@@ -10,6 +10,7 @@ import {
 import { ArchiveSchoolDialog } from '@/features/admin-schools/archive-action';
 import { SchoolFormDialog } from '@/features/admin-schools/school-form-dialog';
 import { FilteredCount } from '@/components/data/filtered-count';
+import { formatPersianTime } from '@/lib/formatters';
 
 export const metadata = { title: 'مدارس ما' };
 export const dynamic = 'force-dynamic';
@@ -88,13 +89,13 @@ export default async function SchoolsPage() {
               <div>
                 <dt className="text-muted">ساعت شروع</dt>
                 <dd className="mt-1 font-bold" dir="ltr">
-                  {school.openingTime}
+                  {formatPersianTime(school.openingTime)}
                 </dd>
               </div>
               <div>
                 <dt className="text-muted">ساعت‌های پایان</dt>
                 <dd className="mt-1 font-bold" dir="ltr">
-                  {school.closingTimes.join('، ') || school.closingTime}
+                  {(school.closingTimes.length ? school.closingTimes : [school.closingTime]).map(formatPersianTime).join('، ')}
                 </dd>
               </div>
               <div className="sm:col-span-2">

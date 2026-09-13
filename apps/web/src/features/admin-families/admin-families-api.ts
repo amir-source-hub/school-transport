@@ -26,6 +26,7 @@ export const familyDetailSchema = z.object({
       lastName: z.string(),
       nationalId: z.string(),
       phoneNumber: z.string(),
+      homePhone: z.string().nullable(),
       isPrimaryContact: z.boolean(),
     }),
   ),

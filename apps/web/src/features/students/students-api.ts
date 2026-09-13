@@ -12,6 +12,8 @@ export const studentSchema = z.object({
   nationalId: z.string(),
   birthDate: z.string().nullable(),
   gender: z.string().nullable(),
+  physicalStatus: z.string().nullable().optional(),
+  disabilityType: z.string().nullable().optional(),
   grade: z.string().nullable(),
   className: z.string().nullable(),
   phoneNumber: z.string().nullable().default(null),

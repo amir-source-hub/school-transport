@@ -4,6 +4,7 @@ import { PrintPageButton } from '@/components/common/print-page-button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { AdminStudentPhotoActions } from '@/features/student-photos/admin-student-photo-actions';
+import { AdminCompanionEditor } from '@/features/admin-students/admin-companion-editor';
 import {
   getAdminStudentDetail,
   getAdminStudentPhoto,
@@ -76,11 +77,14 @@ export default async function AdminStudentPage({
             <Info label="مقطع" value={student.className} />
             <Info label="پایه" value={student.grade} />
             <Info label="رشته تحصیلی" value={student.fieldOfStudy} />
+            <Info label="وضعیت جسمانی" value={student.physicalStatus === 'SPECIAL' ? 'استثنائی' : 'سالم'} />
+            <Info label="نوع معلولیت" value={student.disabilityType} />
             <Info label="نوع مدرسه" value={student.schoolType} />
             <Info label="حساب خانواده" value={student.familyName} />
             <Info label="وضعیت" value={student.isActive ? 'فعال' : 'بایگانی‌شده'} />
           </dl>
         </Card>
+        <AdminCompanionEditor student={student} />
         <Card>
           <h2 className="font-black">سرپرستان و تماس اضطراری</h2>
           <div className="mt-4 space-y-3 text-sm">

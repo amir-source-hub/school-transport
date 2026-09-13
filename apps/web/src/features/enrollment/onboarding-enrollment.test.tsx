@@ -188,6 +188,8 @@ describe('onboarding guided enrollment funnel', () => {
     await user.click(screen.getByRole('button', { name: 'ثبت عکس آزمایشی' }));
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
 
+    await user.click(screen.getByRole('combobox', { name: 'منطقه' }));
+    await user.click(await screen.findByRole('option', { name: 'سایر' }));
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
     await user.click(screen.getByRole('combobox', { name: 'نام مدرسه' }));
     await user.click(await screen.findByRole('option', { name: /دبستان مجتمع/ }));

@@ -222,6 +222,7 @@ function guided() {
       fatherName: 'علی',
       nationalId: '1234567891',
       gender: 'FEMALE',
+      physicalStatus: 'HEALTHY',
     },
     guardian: {
       firstName: 'مریم',
@@ -242,6 +243,7 @@ function guided() {
       title: 'منزل',
       province: 'تهران',
       city: 'تهران',
+      district: 'سایر',
       streetAddress: 'خیابان نمونه',
       postalCode: '1234567890',
       latitude: '35.7',

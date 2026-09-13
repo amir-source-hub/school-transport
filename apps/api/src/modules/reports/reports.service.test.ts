@@ -7,9 +7,43 @@ import {
   REPORT_EXPORT_MAX_ROWS_PER_SOURCE,
   ReportsService,
 } from './reports.service';
-import { schools, serviceRegistrations, students } from '../../database/schemas';
+import { emergencyContacts, familyAddresses, parents, schools, serviceRegistrations, studentCompanions, students, users } from '../../database/schemas';
+import { formatIranianExportDate, STUDENT_EXPORT_COLUMNS } from './student-workbook';
 
 describe('ReportsService', () => {
+  it('maps every requested column for each database student, including one without enrollment', async () => {
+    const createdAt = new Date('2026-09-13T15:40:00Z');
+    const sources = new Map<unknown, unknown[]>([
+      [students, [{ id:'s1', userId:'u1', schoolId:'sc1', firstName:'سارا', lastName:'احمدی', nationalId:'0012345678', phoneNumber:'09120000000', birthDate:'2015-03-21', gender:'FEMALE', grade:'اول', className:'دبستان', physicalStatus:'SPECIAL', disabilityType:'حرکتی', isActive:true, createdAt }]],
+      [parents, [{ id:'p1', userId:'u1', parentType:'FATHER', relationshipType:'FATHER', firstName:'علی', lastName:'احمدی', nationalId:'0012345679', phoneNumber:'09121111111', homePhone:'02144332211', isPrimaryContact:true }, { id:'p2', userId:'u1', parentType:'MOTHER', firstName:'مریم', lastName:'احمدی', nationalId:'0012345680', phoneNumber:'09122222222', isPrimaryContact:false }]],
+      [familyAddresses, [{ id:'a1', userId:'u1', isActive:true, province:'تهران', city:'تهران', district:'۲', streetAddress:'خیابان پیش‌فرض', postalCode:'1234567890' }, { id:'a2', userId:'u1', isActive:false, province:'تهران', city:'تهران', district:'۳', streetAddress:'خیابان سرویس', postalCode:'1234567891' }]],
+      [emergencyContacts, [{ id:'e1', userId:'u1', isActive:true, firstName:'رضا', lastName:'احمدی', relationship:'عمو', phoneNumber:'09123333333' }]],
+      [studentCompanions, [{ id:'c1', studentId:'s1', firstName:'نرگس', lastName:'احمدی', nationalId:'0012345681', phoneNumber:'09124444444' }]],
+      [schools, [{ id:'sc1', name:'مدرسه نمونه', educationOptions:[{ level:'دبستان', grades:['اول'] }] }]],
+      [serviceRegistrations, [{ id:'r1', studentId:'s1', selectedAddressId:'a2', serviceType:'VAN', registrationStatus:'DRAFT', createdAt }]],
+      [users, [{ id:'u1', createdAt: new Date('2026-09-12T10:00:00Z') }]],
+    ]);
+    const database = { db: { select: () => ({ from: (table: unknown) => ({ orderBy: () => ({ limit: async () => sources.get(table) ?? [] }) }) }) } } as unknown as DatabaseService;
+    const buffer = await new ReportsService(database).createComprehensiveWorkbook();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer);
+    const sheet = workbook.worksheets[0];
+    expect(STUDENT_EXPORT_COLUMNS).toHaveLength(37);
+    expect(sheet.rowCount).toBe(2);
+    expect(sheet.getCell('E2').value).toMatch(/^۱۳۹۴/);
+    expect(sheet.getCell('I2').value).toBe('پدر');
+    expect(sheet.getCell('V2').value).toBe('02144332211');
+    expect(sheet.getCell('Z2').value).toBe('خیابان سرویس');
+    expect(sheet.getCell('AC2').value).toBe('دارد');
+    expect(sheet.getCell('AG2').value).toBe('ون');
+    expect(sheet.getCell('AH2').value).toBe('استثنائی');
+    expect(sheet.getCell('AJ2').value).toMatch(/۱۴۰۵.*۱۳:۳۰/);
+  });
+
+  it('renders date-only values and 24-hour timestamps in the Iranian calendar', () => {
+    expect(formatIranianExportDate('2026-03-21')).toMatch(/^۱۴۰۵/);
+    expect(formatIranianExportDate(new Date('2026-09-13T15:40:00Z'), true)).toContain('۱۹:۱۰');
+  });
   it('excludes students that have no enrolled registration from student reports', () => {
     const studentRows = [{ id: 'enrolled' }, { id: 'contract-ready' }, { id: 'draft' }];
     const registrationRows = [
@@ -30,7 +64,7 @@ describe('ReportsService', () => {
     expect(neutralizeSpreadsheetFormula('خانواده احمدی')).toBe('خانواده احمدی');
     expect(neutralizeSpreadsheetFormula(125_000)).toBe(125_000);
   });
-  it('creates a valid multi-sheet Excel workbook even when no records exist', async () => {
+  it('creates exactly one 37-column student worksheet even when no records exist', async () => {
     const database = {
       db: {
         select: () => ({
@@ -50,15 +84,11 @@ describe('ReportsService', () => {
     ) as ArrayBuffer;
     await workbook.xlsx.load(reportArrayBuffer);
 
-    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([
-      'دانش‌آموزان',
-      'خانواده‌ها و نشانی‌ها',
-      'ثبت‌نام‌ها',
-      'پرداخت‌ها',
-      'قراردادها',
-    ]);
-    expect(workbook.getWorksheet('دانش‌آموزان')?.getCell('A1').value).toBe('شناسه دانش‌آموز');
-    expect(workbook.getWorksheet('پرداخت‌ها')?.autoFilter).toBeTruthy();
+    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['دانش‌آموزان']);
+    expect(workbook.getWorksheet('دانش‌آموزان')?.columnCount).toBe(37);
+    expect(workbook.getWorksheet('دانش‌آموزان')?.getCell('A1').value).toBe('نام دانش آموز');
+    expect(workbook.getWorksheet('دانش‌آموزان')?.getCell('AK1').value).toBe('وضعیت حساب');
+    expect(workbook.getWorksheet('دانش‌آموزان')?.autoFilter).toBeTruthy();
     expect(report.byteLength).toBeGreaterThan(1_000);
   });
 
@@ -81,17 +111,14 @@ describe('ReportsService', () => {
     });
   });
 
-  it('still downloads a workbook and identifies a production source that is unavailable', async () => {
-    let queryNumber = 0;
+  it('fails closed when a required production source is unavailable', async () => {
     const database = {
       db: {
         select: () => ({
           from: () => ({
             orderBy: () => ({
               limit: async () => {
-                queryNumber += 1;
-                if (queryNumber === 1) throw new Error('column does not exist');
-                return [];
+                throw new Error('column does not exist');
               },
             }),
           }),
@@ -99,16 +126,7 @@ describe('ReportsService', () => {
       },
     } as unknown as DatabaseService;
 
-    const report = await new ReportsService(database).createComprehensiveWorkbook();
-    const workbook = new ExcelJS.Workbook();
-    const reportArrayBuffer = report.buffer.slice(
-      report.byteOffset,
-      report.byteOffset + report.byteLength,
-    ) as ArrayBuffer;
-    await workbook.xlsx.load(reportArrayBuffer);
-
-    expect(workbook.getWorksheet('وضعیت گزارش')?.getCell('A2').value).toBe('users');
-    expect(workbook.getWorksheet('دانش‌آموزان')).toBeTruthy();
+    await expect(new ReportsService(database).createComprehensiveWorkbook()).rejects.toThrow('column does not exist');
   });
 
   it('returns a bounded, ordered preview without sensitive student fields', async () => {

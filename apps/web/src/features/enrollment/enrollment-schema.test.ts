@@ -9,6 +9,7 @@ const validInput = {
     nationalId: '0013542419',
     birthDate: '2012-05-14',
     gender: 'MALE',
+    physicalStatus: 'HEALTHY',
   },
   guardian: {
     firstName: 'حسین',
@@ -39,6 +40,7 @@ const validInput = {
     title: 'منزل',
     province: 'تهران',
     city: 'تهران',
+    district: 'سایر',
     streetAddress: 'خیابان آزادی، پلاک ۱',
     postalCode: '1111111221',
     latitude: 35.7,
@@ -53,6 +55,11 @@ const validInput = {
 };
 
 describe('guided enrollment schema', () => {
+  it('requires disability type for special students and complete caregiver identity when supplied', () => {
+    expect(guidedEnrollmentSchema.safeParse({ ...validInput, student: { ...validInput.student, physicalStatus: 'SPECIAL' } }).success).toBe(false);
+    expect(guidedEnrollmentSchema.safeParse({ ...validInput, student: { ...validInput.student, physicalStatus: 'SPECIAL', disabilityType: 'حرکتی' } }).success).toBe(true);
+    expect(guidedEnrollmentSchema.safeParse({ ...validInput, student: { ...validInput.student, physicalStatus: 'SPECIAL', disabilityType: 'حرکتی' }, companion: { firstName: 'مریم' } }).success).toBe(false);
+  });
   it('accepts a complete and valid enrollment', () => {
     const result = guidedEnrollmentSchema.safeParse(validInput);
     expect(result.success).toBe(true);

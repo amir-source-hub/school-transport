@@ -32,6 +32,11 @@ export class FamiliesService {
     private readonly notifications: InAppNotificationService,
   ) {}
 
+  async assertEditableByFamily(userId: string) {
+    const [enrolled] = await this.db.db.select({ id: students.id }).from(students).where(eq(students.userId, userId)).limit(1);
+    if (enrolled) throw new ConflictError('FAMILY_ADMIN_EDIT_ONLY', 'اطلاعات خانواده پس از ثبت‌نام فقط توسط مدیریت قابل تغییر است.');
+  }
+
   async createFamily(userId: string, dto: CreateFamilyDto): Promise<FamilyProfile> {
     const [account] = await this.db.db
       .select({ phoneNumber: users.phoneNumber })
@@ -488,6 +493,7 @@ export class FamiliesService {
         lastName: parent.lastName,
         nationalId: parent.nationalId,
         phoneNumber: parent.phoneNumber,
+        homePhone: parent.homePhone,
         isPrimaryContact: parent.isPrimaryContact,
       })),
       addresses: addressRows.map((address) => ({

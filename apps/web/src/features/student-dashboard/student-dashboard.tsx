@@ -12,6 +12,7 @@ import {
   Home,
   Route,
   UserRound,
+  UserRoundPlus,
 } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { useState } from 'react';
@@ -19,6 +20,7 @@ import { Alert } from '@/components/feedback/alert';
 import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
+import { formatPersianTime } from '@/lib/formatters';
 export type StudentDashboard = {
   id: string;
   name: string;
@@ -329,6 +331,7 @@ export function StudentDashboard({ students }: { students: readonly StudentDashb
           </div>
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">وضعیت سرویس را دنبال کنید</h1>
         </div>
+        <div className="flex flex-wrap gap-2">
         <ButtonLink
           href="/student/enrollments"
           size="sm"
@@ -337,6 +340,11 @@ export function StudentDashboard({ students }: { students: readonly StudentDashb
           <GraduationCap aria-hidden="true" className="size-4" />
           ثبت‌نام دانش‌آموز
         </ButtonLink>
+        <ButtonLink href={`/student/students/${selectedStudent.id}#student-companion`} size="sm" variant="secondary">
+          <UserRoundPlus aria-hidden="true" className="size-4" />
+          {selectedStudent.name} · مراقب همراه
+        </ButtonLink>
+        </div>
       </div>
 
       <StudentIdentitySwitcher
@@ -417,7 +425,7 @@ export function StudentDashboard({ students }: { students: readonly StudentDashb
       <div className="rounded-[var(--radius-card)] border border-border/60 bg-surface-paper p-5 shadow-[var(--shadow-raised)]">
         <div className="flex items-center gap-2"><Route className="size-4 text-primary" /><h2 className="font-black">راننده و سرویس‌های فعال</h2></div>
         {!selectedStudent.driverAssignments.length && <p className="mt-3 text-sm text-muted">هنوز راننده‌ای برای این دانش‌آموز تعیین نشده است.</p>}
-        <div className="mt-4 grid gap-3 md:grid-cols-2">{selectedStudent.driverAssignments.map((assignment) => <div key={assignment.runId} className="rounded-xl bg-primary-soft p-4 text-sm"><p className="font-black">{assignment.driverFirstName} {assignment.driverLastName}</p><p className="mt-1">{assignment.direction === 'TO_SCHOOL' ? 'سرویس رفت' : 'سرویس برگشت'} · {assignment.scheduledStartTime} تا {assignment.scheduledArrivalTime}</p><p className="mt-1 text-muted">{assignment.vehicleSystem} · پلاک {assignment.plateNumber}</p><p className="mt-1 font-mono">{assignment.driverPhoneNumber}</p></div>)}</div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">{selectedStudent.driverAssignments.map((assignment) => <div key={assignment.runId} className="rounded-xl bg-primary-soft p-4 text-sm"><p className="font-black">{assignment.driverFirstName} {assignment.driverLastName}</p><p className="mt-1">{assignment.direction === 'TO_SCHOOL' ? 'سرویس رفت' : 'سرویس برگشت'} · {formatPersianTime(assignment.scheduledStartTime)} تا {formatPersianTime(assignment.scheduledArrivalTime)}</p><p className="mt-1 text-muted">{assignment.vehicleSystem} · پلاک {assignment.plateNumber}</p><p className="mt-1 font-mono">{assignment.driverPhoneNumber}</p></div>)}</div>
       </div>
     </div>
   );

@@ -27,6 +27,8 @@ export const students = pgTable(
     nationalId: varchar('national_id', { length: 20 }).notNull().unique(),
     birthDate: date('birth_date'),
     gender: varchar('gender', { length: 10 }),
+    physicalStatus: varchar('physical_status', { length: 20 }),
+    disabilityType: varchar('disability_type', { length: 200 }),
     phoneNumber: varchar('phone_number', { length: 20 }),
     grade: varchar('grade', { length: 50 }),
     className: varchar('class_name', { length: 50 }),

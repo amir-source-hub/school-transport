@@ -239,6 +239,8 @@ function IdentityTab({
     nationalId: detail.nationalId,
     birthDate: detail.birthDate ?? '',
     gender: detail.gender ?? '',
+    physicalStatus: detail.physicalStatus ?? 'HEALTHY',
+    disabilityType: detail.disabilityType ?? '',
   });
   const set = (key: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -254,6 +256,8 @@ function IdentityTab({
         nationalId: form.nationalId,
         birthDate: form.birthDate || undefined,
         gender: form.gender || undefined,
+        physicalStatus: form.physicalStatus,
+        disabilityType: form.physicalStatus === 'SPECIAL' ? form.disabilityType : '',
         expectedUpdatedAt,
       });
       onSaved(updated.updatedAt);
@@ -310,6 +314,8 @@ function IdentityTab({
             placeholder="انتخاب کنید"
           />
         </label>
+        <label className="text-sm font-bold">وضعیت جسمانی<Select value={form.physicalStatus} onValueChange={(value) => set('physicalStatus', value)} options={[{value:'HEALTHY',label:'سالم'},{value:'SPECIAL',label:'استثنائی'}]} /></label>
+        {form.physicalStatus === 'SPECIAL' && <label className="text-sm font-bold">نوع معلولیت<Input value={form.disabilityType} onChange={(event) => set('disabilityType',event.target.value)} /></label>}
       </div>
       <SaveFeedback message={feedback?.message} tone={feedback?.tone ?? 'success'} />
       <Button type="submit" loading={pending}>

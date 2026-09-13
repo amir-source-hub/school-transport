@@ -8,6 +8,7 @@ import { ReportPreviewQueryDto } from './reports.dto';
 import { successResponse } from '../../common/response';
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { Inject } from '@nestjs/common';
+import { formatIranianExportDate } from './student-workbook';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')
@@ -56,7 +57,7 @@ export class ReportsController {
         ipAddress: req.ip,
       });
       stage = 'response';
-      const date = new Date().toISOString().slice(0, 10);
+      const date = formatIranianExportDate(new Date()).replaceAll('/', '-').replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
       reply
         .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         .header(
@@ -81,7 +82,7 @@ export class ReportsController {
   async downloadDriversReport(@Res() reply: FastifyReply, @Req() req: FastifyRequest & { user?: { id?: string } }) {
     const report = await this.reportsService.createDriversWorkbook();
     await this.auditService.record({ actorType: 'ADMIN', actorId: req.user?.id ?? 'unknown', action: 'DRIVER_REPORT_EXPORTED', entityType: 'REPORT', ipAddress: req.ip });
-    const date = new Date().toISOString().slice(0, 10);
+    const date = formatIranianExportDate(new Date()).replaceAll('/', '-').replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
     reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').header('Content-Disposition', `attachment; filename="drivers-${date}.xlsx"`).header('Cache-Control', 'private, no-store').send(report);
   }
 }

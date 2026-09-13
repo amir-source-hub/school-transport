@@ -2,6 +2,7 @@ import { Building2, Clock3, MapPin, Phone, UserRound } from 'lucide-react';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Card } from '@/components/ui/card';
 import { getDriverSchools } from '@/features/driver/driver-api';
+import { formatPersianTime } from '@/lib/formatters';
 
 export const metadata = { title: 'مدارس من' };
 export default async function Page() {
@@ -14,7 +15,7 @@ export default async function Page() {
       <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
         <div className="sm:col-span-2"><dt className="text-xs text-muted">نشانی</dt><dd className="mt-1 flex gap-2 font-bold"><MapPin className="size-4 shrink-0 text-primary" />{school.address}</dd></div>
         <div><dt className="text-xs text-muted">تلفن مدرسه</dt><dd className="mt-1 font-bold"><Phone className="me-1 inline size-4" />{school.phoneNumber ?? 'ثبت نشده'}</dd></div>
-        <div><dt className="text-xs text-muted">ساعات فعالیت</dt><dd className="mt-1 font-bold"><Clock3 className="me-1 inline size-4" />{school.openingTime} تا {school.closingTime}</dd></div>
+        <div><dt className="text-xs text-muted">ساعات فعالیت</dt><dd className="mt-1 font-bold"><Clock3 className="me-1 inline size-4" />{formatPersianTime(school.openingTime)} تا {formatPersianTime(school.closingTime)}</dd></div>
         <div><dt className="text-xs text-muted">مدیر مدرسه</dt><dd className="mt-1 font-bold"><UserRound className="me-1 inline size-4" />{school.managerName ?? 'ثبت نشده'}</dd></div>
         <div><dt className="text-xs text-muted">تماس مدیر</dt><dd className="mt-1 font-bold">{school.managerPhone ?? 'ثبت نشده'}</dd></div>
       </dl>

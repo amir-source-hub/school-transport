@@ -109,8 +109,9 @@ export class AdminStudentPhotosController {
     @Param('familyId', new ParseUUIDPipe()) familyId: string,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
-    const completed = await this.service.completeUpload(familyId, id, req.ip);
-    return successResponse(await this.service.approve(req.user.id, id, completed.version, req.ip));
+    // The draft has no studentId until guided enrollment creates the student.
+    // Approval must remain a separate review action after that link is made.
+    return successResponse(await this.service.completeUpload(familyId, id, req.ip));
   }
 
   @Get()

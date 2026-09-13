@@ -204,6 +204,7 @@ export class PaymentsService {
       dateStyle: 'full',
       timeStyle: 'short',
       timeZone: 'Asia/Tehran',
+      hourCycle: 'h23',
     });
     return {
       userId: detail.userId,

@@ -122,6 +122,8 @@ export class AdminCreateStudentDto extends CreateStudentDto {
 }
 
 export class AdminUpdateStudentDto {
+  @IsOptional() @IsIn(['HEALTHY', 'SPECIAL']) physicalStatus?: string;
+  @IsOptional() @IsString() @Length(0, 200) disabilityType?: string;
   @IsOptional()
   @IsString()
   @IsNotEmpty()

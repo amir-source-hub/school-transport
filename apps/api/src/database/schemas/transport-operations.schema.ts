@@ -34,6 +34,9 @@ export const drivers = pgTable('drivers', {
   emergencyRelationship: varchar('emergency_relationship', { length: 100 }).notNull(),
   gender: varchar('gender', { length: 10 }).notNull(),
   education: varchar('education', { length: 100 }).notNull(),
+  iban: varchar('iban', { length: 26 }),
+  cardNumber: varchar('card_number', { length: 16 }),
+  bankName: varchar('bank_name', { length: 100 }),
   licenseExpiresAt: date('license_expires_at'),
   streetAddress: text('street_address').notNull(),
   postalCode: varchar('postal_code', { length: 10 }).notNull(),
@@ -91,6 +94,8 @@ export const transportServiceRuns = pgTable(
     scheduledStartTime: time('scheduled_start_time').notNull(),
     scheduledArrivalTime: time('scheduled_arrival_time').notNull(),
     areaDescription: text('area_description'),
+    contractPriceRials: integer('contract_price_rials'),
+    contractDate: varchar('contract_date', { length: 10 }),
     activeWeekdays: integer('active_weekdays').array().notNull().default([]),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -108,7 +113,7 @@ export const transportServiceRuns = pgTable(
     ),
     validDirection: check(
       'transport_runs_direction_check',
-      sql`${table.direction} in ('TO_SCHOOL', 'FROM_SCHOOL')`,
+      sql`${table.direction} in ('TO_SCHOOL', 'FROM_SCHOOL', 'ROUND_TRIP')`,
     ),
     positiveSequence: check(
       'transport_runs_sequence_positive',

@@ -27,6 +27,7 @@ import {
 import { CreateLimitRequestDto, RejectLimitRequestDto } from './student-limit-request.dto';
 import { AdminStudentListQueryDto } from './student-list.dto';
 import { AuthenticatedRequest } from '../../common/http-request';
+import { ConflictError } from '../../common/errors';
 
 @UseGuards(AuthGuard)
 @Controller('students')
@@ -59,12 +60,11 @@ export class StudentsController {
 
   @Post()
   async create(
-    @Req() req: AuthenticatedRequest,
+    @Req() _req: AuthenticatedRequest,
     @Body()
-    dto: CreateStudentDto,
+    _dto: CreateStudentDto,
   ) {
-    const student = await this.studentsService.create(req.user.id, dto);
-    return successResponse(student);
+    throw new ConflictError('STUDENT_ENROLLMENT_ONLY', 'دانش‌آموز فقط از مسیر ثبت‌نام قابل افزودن است.');
   }
 
   @Get(':studentId')
@@ -78,12 +78,16 @@ export class StudentsController {
 
   @Patch(':studentId')
   async update(
-    @Req() req: AuthenticatedRequest,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
-    @Body() dto: UpdateStudentDto,
+    @Req() _req: AuthenticatedRequest,
+    @Param('studentId', new ParseUUIDPipe()) _studentId: string,
+    @Body() _dto: UpdateStudentDto,
   ) {
-    const student = await this.studentsService.update(studentId, req.user.id, dto);
-    return successResponse(student);
+    throw new ConflictError('STUDENT_ADMIN_EDIT_ONLY', 'اطلاعات دانش‌آموز پس از ثبت‌نام فقط توسط مدیریت قابل تغییر است.');
+  }
+
+  @Post(':studentId/companion')
+  async addCompanion(@Req() req: AuthenticatedRequest, @Param('studentId', new ParseUUIDPipe()) studentId: string, @Body() dto: UpsertStudentCompanionDto) {
+    return successResponse(await this.studentsService.upsertCompanion(studentId, req.user.id, dto));
   }
 
 }
@@ -108,6 +112,16 @@ export class AdminStudentsController {
   @Get(':studentId')
   async getById(@Param('studentId', new ParseUUIDPipe()) studentId: string) {
     return successResponse(await this.studentsService.getForAdmin(studentId));
+  }
+
+  @Post(':studentId/companion')
+  async saveCompanion(@Param('studentId', new ParseUUIDPipe()) studentId: string, @Body() dto: UpsertStudentCompanionDto) {
+    return successResponse(await this.studentsService.saveCompanionByAdmin(studentId, dto));
+  }
+
+  @Delete(':studentId/companion')
+  async removeCompanion(@Param('studentId', new ParseUUIDPipe()) studentId: string) {
+    return successResponse(await this.studentsService.removeCompanionByAdmin(studentId));
   }
 
   @Post('limit-requests/:requestId/approve')
@@ -152,16 +166,6 @@ export class AdminStudentsController {
         ipAddress: req.ip,
       }),
     );
-  }
-
-  @Post(':studentId/companion')
-  async saveCompanion(@Req() req: AuthenticatedRequest, @Param('studentId', new ParseUUIDPipe()) studentId: string, @Body() dto: UpsertStudentCompanionDto) {
-    return successResponse(await this.studentsService.upsertCompanion(studentId, req.user.id, dto));
-  }
-
-  @Delete(':studentId/companion')
-  async removeCompanion(@Req() req: AuthenticatedRequest, @Param('studentId', new ParseUUIDPipe()) studentId: string) {
-    return successResponse(await this.studentsService.removeCompanion(studentId, req.user.id));
   }
 
   @Delete(':studentId')

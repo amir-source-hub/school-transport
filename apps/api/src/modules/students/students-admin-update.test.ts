@@ -303,6 +303,7 @@ describe('getForAdmin', () => {
     ];
     const { service } = makeService([
       [currentStudent],
+      [],
       [schoolRow],
       [parent],
       [address],
@@ -336,7 +337,7 @@ describe('getForAdmin', () => {
   });
 
   it('returns a null enrollment summary when the student has no registration', async () => {
-    const { service } = makeService([[currentStudent], [{ schoolType: 'PUBLIC' }], [], [], [], []]);
+    const { service } = makeService([[currentStudent], [], [{ schoolType: 'PUBLIC' }], [], [], [], []]);
 
     const detail = await service.getForAdmin('student-1');
 
