@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UploadCompletionNotice } from '@/components/forms/upload-completion-notice';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { formatJalaliDate } from '@/lib/formatters';
 import { DirectUploadError, DIRECT_UPLOAD_RETRY_MESSAGE } from '@/lib/direct-object-upload';
 import {
   ACCEPTED_PHOTO_MIMES,
@@ -396,7 +397,7 @@ export function PhotoUploadCard({
                 <div className="flex items-center gap-3">
                   <Badge tone={meta.tone}>{meta.label}</Badge>
                   <span className="text-xs text-muted">
-                    {item.createdAt.toLocaleDateString('fa-IR')}
+                    {formatJalaliDate(item.createdAt)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

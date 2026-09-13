@@ -27,6 +27,8 @@ export type ExistingStudent = {
   nationalId: string;
   birthDate: string | null;
   gender: string | null;
+  physicalStatus?: string | null;
+  disabilityType?: string | null;
   grade: string | null;
   className: string | null;
 };
@@ -36,6 +38,7 @@ export type EnrollmentDefaults = {
     title: string;
     province: string;
     city: string;
+    district?: string;
     streetAddress: string;
     postalCode?: string;
     latitude?: number;
@@ -54,6 +57,7 @@ export type EnrollmentDefaults = {
     relationshipType: 'FATHER' | 'MOTHER' | 'OTHER';
     relationshipDescription?: string;
   };
+  homePhone?: string;
 };
 
 export type EnrollmentFormState = {
@@ -64,6 +68,14 @@ export type EnrollmentFormState = {
   studentNationalId: string;
   birthDate: string;
   gender: string;
+  physicalStatus: string;
+  disabilityType: string;
+  companionFirst: string;
+  companionLast: string;
+  companionFatherName: string;
+  companionNationalId: string;
+  companionPhone: string;
+  companionRelationship: string;
   studentPhone: string;
   homePhone: string;
   guardianFirst: string;
@@ -87,6 +99,7 @@ export type EnrollmentFormState = {
   addressTitle: string;
   province: string;
   city: string;
+  district: string;
   streetAddress: string;
   postalCode: string;
   latitude: number;
@@ -126,6 +139,14 @@ const emptyForm: EnrollmentFormState = {
   studentNationalId: '',
   birthDate: '',
   gender: '',
+  physicalStatus: '',
+  disabilityType: '',
+  companionFirst: '',
+  companionLast: '',
+  companionFatherName: '',
+  companionNationalId: '',
+  companionPhone: '',
+  companionRelationship: '',
   studentPhone: '',
   homePhone: '',
   guardianFirst: '',
@@ -149,6 +170,7 @@ const emptyForm: EnrollmentFormState = {
   addressTitle: 'منزل',
   province: 'تهران',
   city: 'تهران',
+  district: 'سایر',
   streetAddress: '',
   postalCode: '',
   latitude: 35.7219,
@@ -193,12 +215,17 @@ export function createEnrollmentFormState({
     studentNationalId: firstExisting?.nationalId ?? '',
     birthDate: firstExisting?.birthDate ?? '',
     gender: firstExisting?.gender ?? '',
+    physicalStatus: firstExisting?.physicalStatus ?? 'HEALTHY',
+    disabilityType: firstExisting?.disabilityType ?? '',
     guardianFirst: defaults.guardian?.firstName ?? '',
     guardianLast: defaults.guardian?.lastName ?? '',
     guardianNationalId: defaults.guardian?.nationalId ?? '',
     guardianRelationshipType: defaults.guardian?.relationshipType ?? '',
     guardianRelationshipDescription: defaults.guardian?.relationshipDescription ?? '',
     guardianPhone: guardianPhone ?? '',
+    homePhone: defaults.homePhone?.startsWith('021')
+      ? defaults.homePhone.slice(3)
+      : (defaults.homePhone ?? ''),
     fatherFirst: savedParents.father?.firstName ?? '',
     fatherLast: savedParents.father?.lastName ?? '',
     fatherNationalId: savedParents.father?.nationalId ?? '',
@@ -214,6 +241,7 @@ export function createEnrollmentFormState({
     addressTitle: defaults.address?.title ?? emptyForm.addressTitle,
     province: defaults.address?.province ?? emptyForm.province,
     city: defaults.address?.city ?? emptyForm.city,
+    district: defaults.address?.district || 'سایر',
     streetAddress: defaults.address?.streetAddress ?? '',
     postalCode: defaults.address?.postalCode ?? '',
     latitude: defaults.address?.latitude ?? emptyForm.latitude,

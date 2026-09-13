@@ -26,6 +26,9 @@ export const driverEnrollmentSchema = z.object({
   secondaryPhoneNumber: optionalMobile,
   education: z.enum(['BELOW_DIPLOMA', 'DIPLOMA', 'ASSOCIATE', 'BACHELOR', 'MASTER', 'DOCTORATE'], { message: required }),
   homePhoneNumber: z.string().transform(normalizeDigits).pipe(z.string().regex(/^021\d{8}$/, 'تلفن منزل باید شامل پیش‌شماره ۰۲۱ و ۸ رقم باشد.')),
+  iban: z.string().transform(normalizeDigits).pipe(z.string().regex(/^IR\d{24}$/, 'شماره شبا باید با IR شروع شود و دقیقاً ۲۴ رقم داشته باشد.')),
+  cardNumber: z.string().transform(normalizeDigits).pipe(z.string().regex(/^\d{16}$/, 'شماره کارت باید دقیقاً ۱۶ رقم داشته باشد.')),
+  bankName: text,
   emergencyFirstName: persianText,
   emergencyLastName: persianText,
   emergencyRelationship: persianText,
@@ -70,7 +73,7 @@ export const driverEnrollmentSchema = z.object({
 
 export type DriverEnrollmentForm = z.input<typeof driverEnrollmentSchema>;
 export const stepFields: (keyof DriverEnrollmentForm)[][] = [
-  ['firstName','lastName','fatherName','gender','nationalId','phoneNumber','secondaryPhoneNumber','education','homePhoneNumber','emergencyFirstName','emergencyLastName','emergencyRelationship','emergencyPhoneNumber','driverPhotoUploadId'],
+  ['firstName','lastName','fatherName','gender','nationalId','phoneNumber','secondaryPhoneNumber','education','homePhoneNumber','emergencyFirstName','emergencyLastName','emergencyRelationship','emergencyPhoneNumber','driverPhotoUploadId','iban','cardNumber','bankName'],
   ['streetAddress','postalCode','province','city','municipalityDistrict','latitude','longitude','locationSelected','referrerName','referrerPhoneNumber'],
   ['vehiclePhotoUploadId','insuranceExpiresAt','vehicleType','system','modelYear','technicalInspectionExpiresAt','plateLeft','plateLetter','plateMiddle','plateIran','usageType','ownershipType'],
   ['contractFullyRead','contractAccepted'],

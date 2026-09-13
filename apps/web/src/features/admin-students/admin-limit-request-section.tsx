@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { formatJalaliDateTime } from '@/lib/formatters';
 import {
   approveAdminLimitRequest,
   rejectAdminLimitRequest,
@@ -23,13 +24,7 @@ const statusLabels: Record<
 };
 
 function formatTimestamp(value: string | null) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('fa-IR', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(date);
+  return value ? formatJalaliDateTime(value) : '';
 }
 
 export function AdminLimitRequestSection({

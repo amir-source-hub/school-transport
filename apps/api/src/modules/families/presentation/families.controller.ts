@@ -35,6 +35,7 @@ export class FamiliesController {
 
   @Post('complete-registration')
   async completeRegistration(@Req() req: AuthenticatedRequest, @Body() dto: CompleteFamilyDto) {
+    await this.familiesService.assertEditableByFamily(req.user.id);
     const profile = await this.familiesService.createFamily(req.user.id, dto);
     return successResponse(profile);
   }
@@ -47,12 +48,14 @@ export class FamiliesController {
 
   @Patch('me')
   async updateProfile(@Req() req: AuthenticatedRequest, @Body() dto: UpdateProfileDto) {
+    await this.familiesService.assertEditableByFamily(req.user.id);
     await this.familiesService.updateProfile(req.user.id, dto);
     return successResponse({ updated: true });
   }
 
   @Post('addresses')
   async addAddress(@Req() req: AuthenticatedRequest, @Body() dto: AddAddressDto) {
+    await this.familiesService.assertEditableByFamily(req.user.id);
     const address = await this.familiesService.addAddress(req.user.id, dto);
     return successResponse(address);
   }
@@ -63,6 +66,7 @@ export class FamiliesController {
     @Param('addressId', new ParseUUIDPipe()) addressId: string,
     @Body() dto: AddressMutationDto,
   ) {
+    await this.familiesService.assertEditableByFamily(req.user.id);
     await this.familiesService.updateAddress(addressId, req.user.id, { ...dto });
     return successResponse({ updated: true });
   }
@@ -73,23 +77,27 @@ export class FamiliesController {
     @Param('contactId', new ParseUUIDPipe()) contactId: string,
     @Body() dto: EmergencyMutationDto,
   ) {
+    await this.familiesService.assertEditableByFamily(req.user.id);
     await this.familiesService.updateEmergencyContact(contactId, req.user.id, dto);
     return successResponse({ updated: true });
   }
 
   @Post('emergency-contacts')
   async addEmergencyContact(@Req() req: AuthenticatedRequest, @Body() dto: EmergencyInputDto) {
+    await this.familiesService.assertEditableByFamily(req.user.id);
     return successResponse(await this.familiesService.addEmergencyContact(req.user.id, dto));
   }
 
   @Post('set-primary-phone')
   async setPrimaryPhone(@Req() req: AuthenticatedRequest, @Body() dto: ParentTypeDto) {
+    await this.familiesService.assertEditableByFamily(req.user.id);
     await this.familiesService.setPrimaryPhone(req.user.id, dto.parentType);
     return successResponse({ updated: true });
   }
 
   @Post('change-primary-phone')
   async changePrimaryPhone(@Req() req: AuthenticatedRequest, @Body() dto: ParentTypeDto) {
+    await this.familiesService.assertEditableByFamily(req.user.id);
     await this.familiesService.setPrimaryPhone(req.user.id, dto.parentType);
     return successResponse({
       updated: true,

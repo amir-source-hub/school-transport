@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { ContractActions } from '@/features/finance/contract-actions';
 import { ContractReview } from '@/features/finance/contract-review';
 import { getContract, getPaymentPlan } from '@/features/finance/contracts-api';
-import { formatIrr } from '@/lib/formatters';
+import { formatIrr, formatJalaliDate, formatJalaliDateTime } from '@/lib/formatters';
 import { metadataFor } from '@/lib/route-metadata';
 
 export const metadata = metadataFor('/student/contracts/[contractId]');
@@ -173,6 +173,8 @@ function getContractText(snapshot: string | null, studentName: string) {
 
 function formatContractValue(key: string, value: unknown) {
   if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'string' && /(?:Date|At)$/.test(key) && /^\d{4}-\d{2}-\d{2}/.test(value))
+    return value.includes('T') ? formatJalaliDateTime(value) : formatJalaliDate(value);
   if (key.toLowerCase().includes('amount') && typeof value === 'number') return formatIrr(value);
   if (typeof value === 'boolean') return value ? 'بله' : 'خیر';
   if (typeof value === 'string' && contractValueLabels[value]) return contractValueLabels[value];

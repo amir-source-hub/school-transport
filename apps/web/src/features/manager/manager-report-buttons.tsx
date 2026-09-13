@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { apiRequest } from '@/lib/api-client';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { formatPersianTime } from '@/lib/formatters';
 import type { ManagerDriver, ManagerDriverDetail, ManagerStudent } from './manager-api';
 
 type ReportColumn = { key: string; header: string; width?: number };
@@ -191,8 +192,8 @@ export function ManagerReportButtons({
             school: schoolName,
             title: route.title,
             direction: route.direction === 'TO_SCHOOL' ? 'رفت به مدرسه' : 'برگشت از مدرسه',
-            startTime: route.scheduledStartTime,
-            arrivalTime: route.scheduledArrivalTime,
+            startTime: formatPersianTime(route.scheduledStartTime),
+            arrivalTime: formatPersianTime(route.scheduledArrivalTime),
             area: route.areaDescription,
             driver: `${driver.firstName} ${driver.lastName}`,
             student: `${student.firstName} ${student.lastName}`,

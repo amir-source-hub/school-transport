@@ -4,6 +4,7 @@ import { getAdminFeedback, getPublicContactMessages } from '@/features/feedback/
 import { FilteredCount } from '@/components/data/filtered-count';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { formatJalaliDateTime } from '@/lib/formatters';
 export const metadata = { title: 'پیام‌ها و بازخوردها' };
 export const dynamic = 'force-dynamic';
 export default async function Page({
@@ -89,10 +90,7 @@ export default async function Page({
                   {item.contactName ?? 'کاربر سایت'} — {item.subject}
                 </h3>
                 <time className="text-xs text-muted">
-                  {new Intl.DateTimeFormat('fa-IR', {
-                    dateStyle: 'medium',
-                    timeStyle: 'short',
-                  }).format(item.createdAt)}
+                  {formatJalaliDateTime(item.createdAt)}
                 </time>
               </div>
               <p className="mt-2 text-sm text-muted">

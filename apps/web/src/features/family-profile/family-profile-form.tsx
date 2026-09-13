@@ -39,9 +39,11 @@ type ProfileStudent = Student & { photoUrl: string | null };
 export function FamilyProfileForm({
   profile,
   students,
+  readOnly = false,
 }: {
   profile: FamilyProfile;
   students: ProfileStudent[];
+  readOnly?: boolean;
 }) {
   const guardianAsMother =
     profile.guardian?.relationshipType === 'MOTHER' ? profile.guardian : null;
@@ -124,11 +126,11 @@ export function FamilyProfileForm({
     return (
       <div className="space-y-5">
         {saved && <Alert title="اطلاعات ذخیره شد">تغییرات پروفایل خانواده ثبت شد.</Alert>}
-        <div className="flex justify-end">
+        {!readOnly && <div className="flex justify-end">
           <Button onClick={() => setEditing(true)}>
             <Edit3 className="size-4" /> ویرایش اطلاعات
           </Button>
-        </div>
+        </div>}
         <div className="grid gap-5 lg:grid-cols-2">
           <ProfileSection icon={UsersRound} title="اطلاعات سرپرست و والدین">
             <ParentDetails label="سرپرست" parent={profile.guardian} />
@@ -249,7 +251,7 @@ export function FamilyProfileForm({
                           variant="secondary"
                           className="mt-3"
                         >
-                          ویرایش اطلاعات و عکس دانش‌آموز
+                          مشاهده اطلاعات و عکس دانش‌آموز
                         </ButtonLink>
                       </div>
                     </article>

@@ -15,6 +15,8 @@ export type StudentEnrollmentData = {
   nationalId: string;
   birthDate?: string;
   gender: string;
+  physicalStatus?: 'HEALTHY' | 'SPECIAL';
+  disabilityType?: string;
   phoneNumber?: string;
 };
 
@@ -43,6 +45,10 @@ export type EmergencyContactData = {
 export type GuidedEnrollmentData = {
   studentPhotoUploadId?: string;
   student: StudentEnrollmentData;
+  companion?: {
+    firstName: string; lastName: string; fatherName: string; nationalId: string;
+    phoneNumber: string; relationship: 'FAMILY' | 'CAREGIVER' | 'COACH';
+  } | null;
   guardian: GuardianEnrollmentData;
   homePhone: string;
   father?: ParentContactData | null;
@@ -52,6 +58,7 @@ export type GuidedEnrollmentData = {
     title: string;
     province: string;
     city: string;
+    district?: string;
     streetAddress: string;
     postalCode: string;
     latitude: number;
@@ -112,6 +119,21 @@ export function normalizeAndValidateGuidedEnrollment(
       phoneNumber: normalizeIranianDigits(input.emergencyContact.phoneNumber).replace(/\D/g, ''),
     };
   }
+  if (input.companion) {
+    data.companion = {
+      ...input.companion,
+      nationalId: normalizeIranianDigits(input.companion.nationalId).trim(),
+      phoneNumber: normalizeIranianDigits(input.companion.phoneNumber).replace(/\D/g, ''),
+    };
+  }
+  if (data.student.physicalStatus === 'SPECIAL' && !data.student.disabilityType?.trim())
+    throw new ConflictError('DISABILITY_TYPE_REQUIRED', 'نوع معلولیت را وارد کنید.');
+  if (data.companion && data.student.physicalStatus !== 'SPECIAL')
+    throw new ConflictError('COMPANION_REQUIRES_SPECIAL_STATUS', 'اطلاعات مراقب فقط برای دانش‌آموز استثنائی ثبت می‌شود.');
+  if (data.companion && (!isIranianNationalId(data.companion.nationalId) || !iranianMobilePattern.test(data.companion.phoneNumber)))
+    throw new ConflictError('INVALID_COMPANION', 'کد ملی یا شماره همراه مراقب معتبر نیست.');
+  if (data.companion && [data.student.nationalId,data.guardian.nationalId,data.father?.nationalId,data.mother?.nationalId].includes(data.companion.nationalId))
+    throw new ConflictError('DUPLICATE_COMPANION_NATIONAL_ID', 'کد ملی مراقب باید با دانش‌آموز و والدین متفاوت باشد.');
 
   const required = [
     data.student.firstName,

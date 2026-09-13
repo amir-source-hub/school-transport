@@ -88,6 +88,7 @@ export class StudentsService {
     const [duplicate] = await this.db.db.select({ studentId: studentCompanions.studentId }).from(studentCompanions).where(eq(studentCompanions.nationalId, data.nationalId)).limit(1);
     if (duplicate && duplicate.studentId !== studentId) throw new ConflictError('DUPLICATE_COMPANION_NATIONAL_ID', 'این کد ملی قبلاً برای همراه دانش‌آموز دیگری ثبت شده است.');
     const [current] = await this.db.db.select({ id: studentCompanions.id }).from(studentCompanions).where(eq(studentCompanions.studentId, studentId)).limit(1);
+    if (current) throw new ConflictError('COMPANION_ADMIN_EDIT_ONLY', 'مراقب همراه پس از ثبت فقط توسط مدیریت قابل تغییر است.');
     if (!current) {
       const assignedRoutes = await this.db.db.select({ runId: transportServiceRuns.id, capacity: vehicles.capacity }).from(transportServiceRunStudents).innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId)).innerJoin(vehicles, eq(vehicles.id, transportServiceRuns.vehicleId)).where(and(eq(transportServiceRunStudents.studentId, studentId), eq(transportServiceRunStudents.isActive, true), eq(transportServiceRuns.isActive, true)));
       for (const route of assignedRoutes) {
@@ -97,12 +98,29 @@ export class StudentsService {
         if (members.length + companions.length + 1 > route.capacity) throw new ConflictError('COMPANION_ROUTE_CAPACITY_UNAVAILABLE', 'در یکی از سرویس‌های فعلی صندلی خالی برای همراه وجود ندارد. ابتدا ظرفیت یا مسیر را در پنل مدیریت تغییر دهید.');
       }
     }
-    const [saved] = await this.db.db.insert(studentCompanions).values({ id: generateId(), studentId, ...data }).onConflictDoUpdate({ target: studentCompanions.studentId, set: { ...data, updatedAt: new Date() } }).returning();
+    const [saved] = await this.db.db.insert(studentCompanions).values({ id: generateId(), studentId, ...data }).onConflictDoNothing({ target: studentCompanions.studentId }).returning();
+    if (!saved) throw new ConflictError('COMPANION_ADMIN_EDIT_ONLY', 'مراقب همراه قبلاً ثبت شده و فقط مدیریت می‌تواند آن را تغییر دهد.');
     return saved;
   }
 
   async removeCompanion(studentId: string, userId: string) {
     await this.getById(studentId, userId);
+    await this.db.db.delete(studentCompanions).where(eq(studentCompanions.studentId, studentId));
+    return { removed: true };
+  }
+
+  async saveCompanionByAdmin(studentId: string, data: { firstName:string; lastName:string; fatherName:string; nationalId:string; phoneNumber:string; relationship:'FAMILY'|'CAREGIVER'|'COACH' }) {
+    const student = await this.getById(studentId);
+    const [current] = await this.db.db.select({ id: studentCompanions.id }).from(studentCompanions).where(eq(studentCompanions.studentId, studentId)).limit(1);
+    if (!current) return this.upsertCompanion(studentId, student.userId, data);
+    const [duplicate] = await this.db.db.select({ studentId: studentCompanions.studentId }).from(studentCompanions).where(eq(studentCompanions.nationalId, data.nationalId)).limit(1);
+    if (duplicate && duplicate.studentId !== studentId) throw new ConflictError('DUPLICATE_COMPANION_NATIONAL_ID', 'این کد ملی قبلاً برای مراقب دیگری ثبت شده است.');
+    const [saved] = await this.db.db.update(studentCompanions).set({ ...data, updatedAt: new Date() }).where(eq(studentCompanions.studentId, studentId)).returning();
+    return saved;
+  }
+
+  async removeCompanionByAdmin(studentId: string) {
+    await this.getById(studentId);
     await this.db.db.delete(studentCompanions).where(eq(studentCompanions.studentId, studentId));
     return { removed: true };
   }
@@ -288,6 +306,7 @@ export class StudentsService {
 
   async getForAdmin(studentId: string) {
     const student = await this.getById(studentId);
+    const [companion] = await this.db.db.select().from(studentCompanions).where(eq(studentCompanions.studentId, studentId)).limit(1);
     const [schoolRow] = await this.db.db
       .select({ schoolType: schools.schoolType })
       .from(schools)
@@ -399,6 +418,8 @@ export class StudentsService {
 
     return {
       ...student,
+      companion: companion ?? null,
+      seatCount: companion ? 2 : 1,
       familyName: primaryParent
         ? `${primaryParent.firstName} ${primaryParent.lastName}`
         : 'بدون سرپرست',

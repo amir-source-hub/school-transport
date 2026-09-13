@@ -21,6 +21,7 @@ const family = {
       lastName: 'احمدی',
       nationalId: '0499370899',
       phoneNumber: '09121111111',
+      homePhone: '02122113333',
       isPrimaryContact: true,
     },
     {
@@ -30,6 +31,7 @@ const family = {
       lastName: 'احمدی',
       nationalId: '0067749811',
       phoneNumber: '09122222222',
+      homePhone: null,
       isPrimaryContact: false,
     },
   ],
@@ -76,6 +78,7 @@ describe('AdminFamilyEnrollmentForm', () => {
           mother: expect.objectContaining({ firstName: 'سارا' }),
         }),
         defaults: expect.objectContaining({
+          homePhone: '02122113333',
           guardian: expect.objectContaining({ relationshipType: 'FATHER' }),
           address: expect.objectContaining({ streetAddress: 'خیابان نمونه' }),
         }),

@@ -242,6 +242,7 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
   },
   {
     path: '/admin/contracts',
+    redirectTo: '/admin/students',
     audience: 'admin',
     title: 'قراردادها',
     description: 'بررسی و صدور قراردادهای سرویس.',

@@ -11,6 +11,7 @@ import {
   contracts,
   emergencyContacts,
   studentPhotoUploads,
+  studentCompanions,
   users,
 } from '../../database/schemas';
 import { students } from '../../database/schemas';
@@ -195,6 +196,7 @@ export class RegistrationsService {
           data.father?.phoneNumber,
           data.mother?.phoneNumber,
           data.emergencyContact?.phoneNumber,
+          data.companion?.phoneNumber,
         ].filter((value): value is string => Boolean(value));
         if (new Set(submittedPhones).size !== submittedPhones.length) {
           throw new ConflictError(
@@ -328,6 +330,8 @@ export class RegistrationsService {
               birthDate: data.student.birthDate || null,
               fatherName: data.student.fatherName,
               gender: data.student.gender || null,
+              physicalStatus: data.student.physicalStatus ?? null,
+              disabilityType: data.student.physicalStatus === 'SPECIAL' ? data.student.disabilityType ?? null : null,
               phoneNumber: data.student.phoneNumber ?? null,
               grade: data.school.grade,
               className: data.school.educationLevel,
@@ -346,11 +350,18 @@ export class RegistrationsService {
             nationalId: data.student.nationalId,
             birthDate: data.student.birthDate || null,
             gender: data.student.gender || null,
+            physicalStatus: data.student.physicalStatus ?? null,
+            disabilityType: data.student.physicalStatus === 'SPECIAL' ? data.student.disabilityType ?? null : null,
             phoneNumber: data.student.phoneNumber ?? null,
             grade: data.school.grade,
             className: data.school.educationLevel,
             fieldOfStudy: data.school.fieldOfStudy ?? null,
           });
+        }
+        if (data.companion) {
+          const [existingCompanion] = await txn.select({ id: studentCompanions.id }).from(studentCompanions).where(eq(studentCompanions.nationalId, data.companion.nationalId)).limit(1);
+          if (existingCompanion) throw new ConflictError('DUPLICATE_COMPANION_NATIONAL_ID', 'این کد ملی قبلاً برای مراقب ثبت شده است.');
+          await txn.insert(studentCompanions).values({ id: generateId(), studentId, ...data.companion });
         }
         if (data.studentPhotoUploadId) {
           const [linkedPhoto] = await txn

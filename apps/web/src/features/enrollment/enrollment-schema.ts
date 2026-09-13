@@ -55,7 +55,21 @@ export const studentSchema = z.object({
     })
     .optional(),
   gender: z.enum(['MALE', 'FEMALE'], { message: 'انتخاب جنسیت اجباری است.' }),
+  physicalStatus: z.enum(['HEALTHY', 'SPECIAL'], { message: 'وضعیت جسمانی را انتخاب کنید.' }),
+  disabilityType: z.string().trim().max(200).optional(),
   phoneNumber: mobile.optional(),
+}).superRefine((value, ctx) => {
+  if (value.physicalStatus === 'SPECIAL' && !value.disabilityType?.trim())
+    ctx.addIssue({ code: 'custom', path: ['disabilityType'], message: 'نوع معلولیت را وارد کنید.' });
+});
+
+export const enrollmentCompanionSchema = z.object({
+  firstName: name,
+  lastName: name,
+  fatherName: name,
+  nationalId,
+  phoneNumber: mobile,
+  relationship: z.enum(['FAMILY', 'CAREGIVER', 'COACH']),
 });
 
 export const parentContactSchema = z.object({
@@ -104,6 +118,7 @@ export const addressSchema = z.object({
   title: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
   province: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
   city: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
+  district: z.enum(['سایر', ...Array.from({ length: 22 }, (_, index) => String(index + 1))] as [string, ...string[]]),
   streetAddress: z.string().trim().min(1, required).max(500, 'حداکثر ۵۰۰ نویسه مجاز است.'),
   postalCode: z
     .string()
@@ -139,6 +154,7 @@ export const serviceSchema = z.object({
 export const guidedEnrollmentSchema = z.object({
   studentPhotoUploadId: z.string().uuid().optional(),
   student: studentSchema,
+  companion: enrollmentCompanionSchema.nullable().optional(),
   guardian: guardianSchema,
   father: parentContactSchema.nullable().optional(),
   mother: parentContactSchema.nullable().optional(),
