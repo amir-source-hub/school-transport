@@ -7,6 +7,7 @@ describe('PaymentsService admin list bound', () => {
     const limit = vi.fn(async () => []);
     const chain: Record<string, unknown> = {};
     chain.innerJoin = vi.fn(() => chain);
+    chain.where = vi.fn(() => chain);
     chain.orderBy = vi.fn(() => ({ limit }));
     const database = {
       db: { select: vi.fn(() => ({ from: () => chain })) },

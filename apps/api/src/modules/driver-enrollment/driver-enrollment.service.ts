@@ -28,6 +28,7 @@ import { S3_CLIENT, type S3Storage } from '../../infrastructure/s3/s3-storage.po
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import { AdminUpdateDriverDto, AssignStudentRoutesDto } from './driver-enrollment.dto';
 import { AddStudentToTransportRouteDto, AssignDriverToStudentDto, CreateTransportRouteDto, DriverDocumentUploadDto, DriverEnrollmentDto, UpdateDriverProfileDto, UpdateTransportRouteDto } from './driver-enrollment.dto';
+import { schoolHours } from './school-hours';
 
 const CONTRACT_VERSION = 'driver-v2';
 const CAPACITY: Record<string, number> = { CAR: 4, VAN: 10, MINIBUS: 16, BUS: 30 };
@@ -133,7 +134,7 @@ export class DriverEnrollmentService {
       activeWeekdays: transportServiceRuns.activeWeekdays, schoolName: schools.name,
       schoolAddress: schools.address, schoolPhoneNumber: schools.phoneNumber,
       schoolLatitude: schools.latitude, schoolLongitude: schools.longitude,
-      studentId: students.id,
+      studentId: students.id, studentSchoolId: students.schoolId,
       firstName: students.firstName, lastName: students.lastName, grade: students.grade,
       pickupOrder: transportServiceRunStudents.pickupOrder,
       scheduledStopTime: transportServiceRunStudents.scheduledStopTime,
@@ -156,10 +157,13 @@ export class DriverEnrollmentService {
       .leftJoin(parents, and(eq(parents.userId, students.userId), eq(parents.isPrimaryContact, true)))
       .where(and(eq(transportServiceRuns.driverId, driver.id), eq(transportServiceRuns.isActive, true)))
       .orderBy(asc(transportServiceRuns.direction), asc(transportServiceRuns.sequenceNumber), asc(transportServiceRunStudents.pickupOrder));
+    const studentSchoolIds = [...new Set(rows.map(row => row.studentSchoolId).filter((id): id is string => Boolean(id)))];
+    const studentSchools = studentSchoolIds.length ? await this.database.db.select().from(schools).where(inArray(schools.id, studentSchoolIds)) : [];
+    const schoolById = new Map(studentSchools.map(school => [school.id, school]));
     const grouped = new Map<string, any>();
     for (const row of rows) {
       if (!grouped.has(row.runId)) grouped.set(row.runId, { id: row.runId, title: row.title, direction: row.direction, sequenceNumber: row.sequenceNumber, scheduledStartTime: row.scheduledStartTime, scheduledArrivalTime: row.scheduledArrivalTime, areaDescription: row.areaDescription, contractPriceRials: row.contractPriceRials, contractDate: row.contractDate, activeWeekdays: row.activeWeekdays, schoolName: row.schoolName, schoolAddress: row.schoolAddress, schoolPhoneNumber: row.schoolPhoneNumber, schoolLatitude: row.schoolLatitude, schoolLongitude: row.schoolLongitude, students: [] });
-      if (row.studentId) grouped.get(row.runId).students.push({ id: row.studentId, firstName: row.firstName, lastName: row.lastName, grade: row.grade, pickupOrder: row.pickupOrder, scheduledStopTime: row.scheduledStopTime, notes: row.stopNotes, address: row.studentAddress, latitude: row.studentLatitude, longitude: row.studentLongitude, guardianPhone: row.guardianPhone, guardianName: [row.guardianFirstName, row.guardianLastName].filter(Boolean).join(' '), seatCount: row.companionId ? 2 : 1, companion: row.companionId ? { id: row.companionId, firstName: row.companionFirstName, lastName: row.companionLastName, relationship: row.companionRelationship } : null });
+      if (row.studentId) grouped.get(row.runId).students.push({ id: row.studentId, firstName: row.firstName, lastName: row.lastName, grade: row.grade, pickupOrder: row.pickupOrder, ...(row.studentSchoolId && schoolById.has(row.studentSchoolId) ? schoolHours(schoolById.get(row.studentSchoolId)!, row.direction) : { scheduledStopTime: row.scheduledStopTime, scheduledReturnStopTime: null }), notes: row.stopNotes, address: row.studentAddress, latitude: row.studentLatitude, longitude: row.studentLongitude, guardianPhone: row.guardianPhone, guardianName: [row.guardianFirstName, row.guardianLastName].filter(Boolean).join(' '), seatCount: row.companionId ? 2 : 1, companion: row.companionId ? { id: row.companionId, firstName: row.companionFirstName, lastName: row.companionLastName, relationship: row.companionRelationship } : null });
     }
     return [...grouped.values()];
   }
@@ -375,7 +379,7 @@ export class DriverEnrollmentService {
       schoolId: schools.id, schoolName: schools.name, firstName: drivers.firstName,
       lastName: drivers.lastName, phoneNumber: drivers.phoneNumber, nationalId: drivers.nationalId,
       driverStatus: drivers.status, vehicleType: vehicles.vehicleType, vehicleSystem: vehicles.system,
-      plateNumber: vehicles.plateNumber, capacity: vehicles.capacity, studentId: students.id,
+      plateNumber: vehicles.plateNumber, capacity: vehicles.capacity, studentId: students.id, studentSchoolId: students.schoolId,
       studentFirstName: students.firstName, studentLastName: students.lastName,
       pickupOrder: transportServiceRunStudents.pickupOrder,
       scheduledStopTime: transportServiceRunStudents.scheduledStopTime,
@@ -390,10 +394,13 @@ export class DriverEnrollmentService {
       .leftJoin(studentCompanions, eq(studentCompanions.studentId, students.id))
       .where(eq(transportServiceRuns.isActive, true))
       .orderBy(asc(drivers.lastName), asc(transportServiceRuns.sequenceNumber), asc(transportServiceRunStudents.pickupOrder));
+    const studentSchoolIds = [...new Set(rows.map(row => row.studentSchoolId).filter((id): id is string => Boolean(id)))];
+    const studentSchools = studentSchoolIds.length ? await this.database.db.select().from(schools).where(inArray(schools.id, studentSchoolIds)) : [];
+    const schoolById = new Map(studentSchools.map(school => [school.id, school]));
     const grouped = new Map<string, any>();
     for (const row of rows) {
       const route = grouped.get(row.id) ?? { id: row.id, driverId: row.driverId, title: row.title, direction: row.direction, academicYear: row.academicYear, scheduledStartTime: row.scheduledStartTime, scheduledArrivalTime: row.scheduledArrivalTime, activeWeekdays: row.activeWeekdays, areaDescription: row.areaDescription, contractPriceRials: row.contractPriceRials, contractDate: row.contractDate, school: { id: row.schoolId, name: row.schoolName }, driver: { id: row.driverId, firstName: row.firstName, lastName: row.lastName, phoneNumber: row.phoneNumber, nationalId: row.nationalId, status: row.driverStatus, vehicleType: row.vehicleType, vehicleSystem: row.vehicleSystem, plateNumber: row.plateNumber, capacity: row.capacity, serviceRunCount: 0 }, students: [] };
-      if (row.studentId) route.students.push({ id: row.studentId, firstName: row.studentFirstName, lastName: row.studentLastName, pickupOrder: row.pickupOrder, scheduledStopTime: row.scheduledStopTime, seatCount: row.companionId ? 2 : 1, companion: row.companionId ? { id: row.companionId, firstName: row.companionFirstName, lastName: row.companionLastName, relationship: row.companionRelationship } : null });
+      if (row.studentId) route.students.push({ id: row.studentId, firstName: row.studentFirstName, lastName: row.studentLastName, pickupOrder: row.pickupOrder, ...(row.studentSchoolId && schoolById.has(row.studentSchoolId) ? schoolHours(schoolById.get(row.studentSchoolId)!, row.direction) : { scheduledStopTime: row.scheduledStopTime, scheduledReturnStopTime: null }), seatCount: row.companionId ? 2 : 1, companion: row.companionId ? { id: row.companionId, firstName: row.companionFirstName, lastName: row.companionLastName, relationship: row.companionRelationship } : null });
       grouped.set(row.id, route);
     }
     return [...grouped.values()];
@@ -511,12 +518,15 @@ export class DriverEnrollmentService {
     ]);
     if (!route) throw new NotFoundError('Transport route', routeId);
     if (!student) throw new NotFoundError('Student', input.studentId);
-    if (input.scheduledStopTime < route.scheduledStartTime || input.scheduledStopTime > route.scheduledArrivalTime) throw new ValidationError('زمان توقف دانش‌آموز باید در بازه شروع و پایان مسیر باشد.');
-    const [vehicle, activeMembers, driver] = await Promise.all([
+    if (!student.schoolId) throw new ConflictError('STUDENT_HAS_NO_SCHOOL', 'مدرسه دانش‌آموز ثبت نشده است.');
+    const [studentSchool, vehicle, activeMembers, driver] = await Promise.all([
+      this.database.db.select().from(schools).where(and(eq(schools.id, student.schoolId), eq(schools.isActive, true))).limit(1).then((rows) => rows[0]),
       this.database.db.select().from(vehicles).where(eq(vehicles.id, route.vehicleId)).limit(1).then((rows) => rows[0]),
       this.database.db.select({ id: transportServiceRunStudents.id, studentId: transportServiceRunStudents.studentId, pickupOrder: transportServiceRunStudents.pickupOrder }).from(transportServiceRunStudents).where(and(eq(transportServiceRunStudents.serviceRunId, route.id), eq(transportServiceRunStudents.isActive, true))),
       this.database.db.select().from(drivers).where(eq(drivers.id, route.driverId)).limit(1).then((rows) => rows[0]),
     ]);
+    if (!studentSchool) throw new ConflictError('STUDENT_HAS_NO_SCHOOL', 'مدرسه فعال دانش‌آموز پیدا نشد.');
+    const { scheduledStopTime } = schoolHours(studentSchool, route.direction);
     if (!vehicle) throw new ConflictError('ROUTE_HAS_NO_VEHICLE', 'خودروی مسیر پیدا نشد.');
     const memberIds = activeMembers.map(item => item.studentId);
     const [memberCompanions, targetCompanion] = await Promise.all([
@@ -526,15 +536,25 @@ export class DriverEnrollmentService {
     const existingMember = activeMembers.some(item => item.studentId === student.id);
     const occupiedSeats = activeMembers.length + memberCompanions.length;
     if (occupiedSeats + (existingMember ? 0 : targetCompanion ? 2 : 1) > vehicle.capacity) throw new ConflictError('VEHICLE_CAPACITY_REACHED', targetCompanion ? 'این دانش‌آموز همراه دارد و برای افزودن او دو صندلی خالی لازم است.' : 'ظرفیت خودرو در این مسیر تکمیل شده است.');
-    if (activeMembers.some((item) => item.studentId !== student.id && item.pickupOrder === input.pickupOrder)) throw new ConflictError('PICKUP_ORDER_OCCUPIED', 'این شماره ترتیب قبلاً برای دانش‌آموز دیگری ثبت شده است.');
     await this.database.db.transaction(async (txn) => {
-      const [existing] = await txn.select({ id: transportServiceRunStudents.id }).from(transportServiceRunStudents).where(and(eq(transportServiceRunStudents.serviceRunId, route.id), eq(transportServiceRunStudents.studentId, student.id))).limit(1);
-      if (existing) await txn.update(transportServiceRunStudents).set({ isActive: true, pickupOrder: input.pickupOrder, scheduledStopTime: input.scheduledStopTime, notes: input.notes || null }).where(eq(transportServiceRunStudents.id, existing.id));
-      else await txn.insert(transportServiceRunStudents).values({ id: randomUUID(), serviceRunId: route.id, studentId: student.id, pickupOrder: input.pickupOrder, scheduledStopTime: input.scheduledStopTime, notes: input.notes || null });
+      const overlappingDirections = route.direction === 'ROUND_TRIP' ? ['TO_SCHOOL', 'FROM_SCHOOL', 'ROUND_TRIP'] : [route.direction, 'ROUND_TRIP'];
+      const previous = await txn.select({ id: transportServiceRunStudents.id, driverUserId: drivers.userId })
+        .from(transportServiceRunStudents)
+        .innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId))
+        .innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
+        .where(and(eq(transportServiceRunStudents.studentId, student.id), eq(transportServiceRunStudents.isActive, true), eq(transportServiceRuns.isActive, true), eq(transportServiceRuns.academicYear, route.academicYear), inArray(transportServiceRuns.direction, overlappingDirections as ('TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP')[]), sql`${transportServiceRuns.id} <> ${route.id}`));
+      if (previous.length) await txn.update(transportServiceRunStudents).set({ isActive: false }).where(inArray(transportServiceRunStudents.id, previous.map(item => item.id)));
+      const positions = await txn.select({ id: transportServiceRunStudents.id, studentId: transportServiceRunStudents.studentId, pickupOrder: transportServiceRunStudents.pickupOrder }).from(transportServiceRunStudents).where(eq(transportServiceRunStudents.serviceRunId, route.id));
+      const existing = positions.find(item => item.studentId === student.id);
+      const pickupOrder = positions.some(item => item.id !== existing?.id && item.pickupOrder === input.pickupOrder)
+        ? Math.max(...positions.map(item => item.pickupOrder), 0) + 1 : input.pickupOrder;
+      if (existing) await txn.update(transportServiceRunStudents).set({ isActive: true, pickupOrder, scheduledStopTime, notes: input.notes || null }).where(eq(transportServiceRunStudents.id, existing.id));
+      else await txn.insert(transportServiceRunStudents).values({ id: randomUUID(), serviceRunId: route.id, studentId: student.id, pickupOrder, scheduledStopTime, notes: input.notes || null });
       const eventId = randomUUID();
       await this.notifications.enqueueInTransaction(txn, { eventId: `STUDENT_ROUTE_ASSIGNED:${eventId}`, userId: student.userId, notificationType: 'STUDENT_DRIVER_ASSIGNED', title: 'مسیر سرویس تعیین شد', message: `${route.title} با رانندگی ${driver ? `${driver.firstName} ${driver.lastName}` : 'راننده سرویس'} برای شما ثبت شد.`, relatedEntityType: 'STUDENT', relatedEntityId: student.id });
       if (driver?.userId) await this.notifications.enqueueInTransaction(txn, { eventId: `DRIVER_ROUTE_STUDENT_ASSIGNED:${eventId}`, userId: driver.userId, notificationType: 'DRIVER_STUDENT_ASSIGNED', title: 'دانش‌آموز به مسیر افزوده شد', message: `${student.firstName} ${student.lastName} به مسیر ${route.title} افزوده شد.`, relatedEntityType: 'STUDENT', relatedEntityId: student.id });
-      await this.audit.recordInTransaction(txn, { actorType: 'ADMIN', actorId: adminId, action: 'STUDENT_ADDED_TO_TRANSPORT_ROUTE', entityType: 'TRANSPORT_SERVICE_RUN', entityId: route.id, newValues: { studentId: student.id, pickupOrder: input.pickupOrder, scheduledStopTime: input.scheduledStopTime }, ipAddress });
+      for (const userId of new Set(previous.map(item => item.driverUserId))) if (userId && userId !== driver?.userId) await this.notifications.enqueueInTransaction(txn, { eventId: `DRIVER_ROUTE_STUDENT_REMOVED:${eventId}:${userId}`, userId, notificationType: 'DRIVER_STUDENT_ASSIGNED', title: 'تغییر مسیر دانش‌آموز', message: `${student.firstName} ${student.lastName} از مسیر پیشین شما خارج شد.`, relatedEntityType: 'STUDENT', relatedEntityId: student.id });
+      await this.audit.recordInTransaction(txn, { actorType: 'ADMIN', actorId: adminId, action: 'STUDENT_ADDED_TO_TRANSPORT_ROUTE', entityType: 'TRANSPORT_SERVICE_RUN', entityId: route.id, newValues: { studentId: student.id, pickupOrder, replacedMembershipIds: previous.map(item => item.id), ...schoolHours(studentSchool, route.direction) }, ipAddress });
     });
     return this.getRunsForDriverId(route.driverId);
   }

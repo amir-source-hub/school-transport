@@ -164,7 +164,6 @@ export class UpdateTransportRouteDto {
 
 export class AddStudentToTransportRouteDto {
   @IsUUID() studentId!: string;
-  @Matches(/^\d{2}:\d{2}$/) scheduledStopTime!: string;
   @IsInt() @Min(1) pickupOrder!: number;
   @Transform(clean) @IsOptional() @IsString() @Length(0, 500) notes?: string;
 }

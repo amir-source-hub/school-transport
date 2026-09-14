@@ -23,7 +23,7 @@ export type AdminTransportRoute = {
   contractPriceRials: number | null; contractDate: string | null;
   school: { id: string; name: string };
   driver: DriverListItem | null;
-  students: Array<{ id: string; firstName: string; lastName: string; pickupOrder: number; scheduledStopTime: string | null; seatCount:number; companion:null|{id:string;firstName:string;lastName:string;relationship:string} }>;
+  students: Array<{ id: string; firstName: string; lastName: string; pickupOrder: number; scheduledStopTime: string | null; scheduledReturnStopTime?:string|null; seatCount:number; companion:null|{id:string;firstName:string;lastName:string;relationship:string} }>;
 };
 
 export async function getAdminDrivers() { return (await apiRequest<DriverListItem[]>('/admin/drivers', { cache: 'no-store' })).data; }
@@ -40,6 +40,6 @@ export async function assignDriver(id: string, body: { driverId: string; academi
 export async function getAdminTransportRoutes() { return (await apiRequest<AdminTransportRoute[]>('/admin/transport-routes', { cache: 'no-store' })).data; }
 export async function createAdminTransportRoute(body: { driverId:string;schoolId:string;title:string;academicYear:string;direction:'TO_SCHOOL'|'FROM_SCHOOL'|'ROUND_TRIP';scheduledStartTime:string;scheduledArrivalTime:string;areaDescription?:string;activeWeekdays:number[];contractPriceRials:number;contractDate:string }) { return (await apiRequest('/admin/transport-routes', { method: 'POST', body })).data; }
 export async function updateAdminTransportRoute(routeId:string,body:{driverId?:string;schoolId?:string;title?:string;academicYear?:string;direction?:'TO_SCHOOL'|'FROM_SCHOOL'|'ROUND_TRIP';activeWeekdays?:number[];contractPriceRials?:number;contractDate?:string}) { return (await apiRequest(`/admin/transport-routes/${routeId}`, { method:'PATCH', body })).data; }
-export async function addStudentToAdminRoute(routeId:string, body:{studentId:string;scheduledStopTime:string;pickupOrder:number;notes?:string}) { return (await apiRequest(`/admin/transport-routes/${routeId}/students`, { method:'POST', body })).data; }
+export async function addStudentToAdminRoute(routeId:string, body:{studentId:string;pickupOrder:number;notes?:string}) { return (await apiRequest(`/admin/transport-routes/${routeId}/students`, { method:'POST', body })).data; }
 export async function removeStudentFromAdminRoute(routeId:string,studentId:string){return (await apiRequest(`/admin/transport-routes/${routeId}/students/${studentId}`,{method:'DELETE'})).data;}
 export async function archiveAdminRoute(routeId:string){return (await apiRequest(`/admin/transport-routes/${routeId}/archive`,{method:'POST'})).data;}

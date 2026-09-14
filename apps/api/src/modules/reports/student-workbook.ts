@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import { asc } from 'drizzle-orm';
 import type { DatabaseService } from '../../database/database.service';
 import { ValidationError } from '../../common/errors';
-import { emergencyContacts, familyAddresses, parents, schools, serviceRegistrations, studentCompanions, students, users } from '../../database/schemas';
+import { emergencyContacts, familyAddresses, parents, paymentPlans, paymentScheduleItems, registrationPrices, schools, serviceRegistrations, studentCompanions, students, users } from '../../database/schemas';
 
 export const STUDENT_EXPORT_COLUMNS = [
   ['firstName', 'نام دانش آموز'], ['lastName', 'نام خانوادگی دانش آموز'],
@@ -21,7 +21,7 @@ export const STUDENT_EXPORT_COLUMNS = [
   ['companionName', 'نام و نام خانوادگی مراقب'], ['companionNationalId', 'کد ملی مراقب'],
   ['companionPhone', 'تلفن مراقب'], ['serviceType', 'متقاضی سرویس'],
   ['physicalStatus', 'وضعیت جسمانی'], ['disabilityType', 'نوع معلولیت'],
-  ['createdAt', 'تاریخ ایجاد حساب'], ['accountStatus', 'وضعیت حساب'],
+  ['createdAt', 'تاریخ ایجاد حساب'], ['accountStatus', 'وضعیت حساب'], ['paymentStatus', 'وضعیت پرداخت'],
 ] as const;
 
 const dateOnly = new Intl.DateTimeFormat('fa-IR-u-ca-persian', { timeZone: 'Asia/Tehran', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -48,7 +48,10 @@ export async function createStudentWorkbook(database: DatabaseService, maxRows: 
   const schoolRows = await database.db.select().from(schools).orderBy(asc(schools.id)).limit(limit);
   const registrationRows = await database.db.select().from(serviceRegistrations).orderBy(asc(serviceRegistrations.id)).limit(limit);
   const userRows = await database.db.select().from(users).orderBy(asc(users.id)).limit(limit);
-  if ([parentRows, addressRows, emergencyRows, companionRows, schoolRows, registrationRows, userRows].some(rows => rows.length > maxRows)) throw new ValidationError('داده‌های گزارش برای خروجی هم‌زمان بیش از حد بزرگ است.');
+  const priceRows = await database.db.select().from(registrationPrices).orderBy(asc(registrationPrices.id)).limit(limit);
+  const planRows = await database.db.select().from(paymentPlans).orderBy(asc(paymentPlans.id)).limit(limit);
+  const scheduleRows = await database.db.select().from(paymentScheduleItems).orderBy(asc(paymentScheduleItems.id)).limit(limit);
+  if ([parentRows, addressRows, emergencyRows, companionRows, schoolRows, registrationRows, userRows, priceRows, planRows, scheduleRows].some(rows => rows.length > maxRows)) throw new ValidationError('داده‌های گزارش برای خروجی هم‌زمان بیش از حد بزرگ است.');
 
   const familyParents = new Map<string, typeof parentRows>();
   for (const parent of parentRows) familyParents.set(parent.userId, [...(familyParents.get(parent.userId) ?? []), parent]);
@@ -58,6 +61,11 @@ export async function createStudentWorkbook(database: DatabaseService, maxRows: 
   const companions = new Map(companionRows.map(row => [row.studentId, row]));
   const schoolById = new Map(schoolRows.map(row => [row.id, row]));
   const userById = new Map(userRows.map(row => [row.id, row]));
+  const pricesByRegistration = new Map<string, typeof priceRows>();
+  for (const price of priceRows) pricesByRegistration.set(price.registrationId, [...(pricesByRegistration.get(price.registrationId) ?? []), price]);
+  const planByPrice = new Map(planRows.map(row => [row.registrationPriceId, row]));
+  const itemsByPlan = new Map<string, typeof scheduleRows>();
+  for (const item of scheduleRows) itemsByPlan.set(item.paymentPlanId, [...(itemsByPlan.get(item.paymentPlanId) ?? []), item]);
   const latestRegistration = new Map<string, (typeof registrationRows)[number]>();
   for (const registration of registrationRows) {
     const previous = latestRegistration.get(registration.studentId);
@@ -69,6 +77,7 @@ export async function createStudentWorkbook(database: DatabaseService, maxRows: 
   const sheet = workbook.addWorksheet('دانش‌آموزان', { views: [{ state: 'frozen', xSplit: 3, ySplit: 1, rightToLeft: true, showGridLines: false }], properties: { defaultRowHeight: 24 } });
   sheet.columns = STUDENT_EXPORT_COLUMNS.map(([key, header]) => ({ key, header, width: Math.min(38, Math.max(18, header.length + 4)) }));
   for (const student of studentRows) {
+    if (!student.isActive || userById.get(student.userId)?.accountStatus !== 'ACTIVE') continue;
     const relatives = familyParents.get(student.userId) ?? [];
     const guardian = relatives.find(row => row.isPrimaryContact) ?? relatives[0];
     const father = relatives.find(row => row.parentType === 'FATHER');
@@ -80,6 +89,12 @@ export async function createStudentWorkbook(database: DatabaseService, maxRows: 
     const companion = companions.get(student.id);
     const school = schoolById.get(student.schoolId);
     const educationLevel = school?.educationOptions?.find(option => option.grades.includes(student.grade ?? ''))?.level ?? student.className ?? '';
+    const prices = service ? pricesByRegistration.get(service.id) ?? [] : [];
+    const latestPrice = prices.filter(price => planByPrice.has(price.id)).sort((a, b) => Number(b.priceStatus === 'ACCEPTED') - Number(a.priceStatus === 'ACCEPTED') || b.versionNumber - a.versionNumber)[0];
+    const plan = latestPrice ? planByPrice.get(latestPrice.id) : undefined;
+    const items = plan ? itemsByPlan.get(plan.id) ?? [] : [];
+    const paidItems = items.filter(item => item.itemStatus === 'PAID').length;
+    const paymentStatus = !plan ? 'برنامه پرداخت ثبت نشده' : plan.planStatus === 'CANCELLED' ? 'لغو شده' : plan.planStatus === 'COMPLETED' || (items.length > 0 && paidItems === items.length) ? 'پرداخت کامل' : paidItems > 0 ? 'پرداخت جزئی' : 'پرداخت نشده';
     sheet.addRow({
       firstName: student.firstName, lastName: student.lastName, nationalId: student.nationalId,
       phoneNumber: student.phoneNumber ?? '', birthDate: formatIranianExportDate(student.birthDate),
@@ -97,7 +112,7 @@ export async function createStudentWorkbook(database: DatabaseService, maxRows: 
       companionNationalId: companion?.nationalId ?? '', companionPhone: companion?.phoneNumber ?? '',
       serviceType: serviceLabel(service?.serviceType), physicalStatus: student.physicalStatus === 'SPECIAL' ? 'استثنائی' : student.physicalStatus === 'HEALTHY' ? 'سالم' : '',
       disabilityType: student.disabilityType ?? '', createdAt: formatIranianExportDate(userById.get(student.userId)?.createdAt ?? student.createdAt, true),
-      accountStatus: student.isActive ? 'فعال' : 'بایگانی',
+      accountStatus: student.isActive ? 'فعال' : 'بایگانی', paymentStatus,
     });
   }
   sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(1, sheet.rowCount), column: STUDENT_EXPORT_COLUMNS.length } };

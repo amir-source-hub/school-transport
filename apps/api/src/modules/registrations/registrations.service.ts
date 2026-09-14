@@ -774,7 +774,7 @@ export class RegistrationsService {
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
       .innerJoin(users, eq(users.id, students.userId))
       .innerJoin(schools, eq(schools.id, students.schoolId))
-      .where(eq(users.accountStatus, 'ACTIVE'))
+      .where(and(eq(users.accountStatus, 'ACTIVE'), eq(students.isActive, true)))
       .orderBy(desc(serviceRegistrations.createdAt), desc(serviceRegistrations.id))
       .limit(ADMIN_ENROLLMENT_MATERIALIZATION_LIMIT + 1);
     if (rows.length > ADMIN_ENROLLMENT_MATERIALIZATION_LIMIT) {

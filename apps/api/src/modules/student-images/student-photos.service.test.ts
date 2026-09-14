@@ -118,6 +118,36 @@ function audit() {
   } as unknown as AuditPort;
 }
 
+describe('StudentPhotosService admin pagination', () => {
+  it('uses a stable two-column order and advances the offset for filtered pages', async () => {
+    const rows = Array.from({ length: 25 }, (_, index) => ({
+      upload: baseRow({ id: `upload-${String(index).padStart(2, '0')}`, status: 'APPROVED', createdAt: new Date('2026-09-14T10:00:00Z') }),
+      student: { firstName: 'دانش', lastName: String(index) },
+    }));
+    const listQuery: Record<string, unknown> = {};
+    listQuery.from = vi.fn(() => listQuery);
+    listQuery.leftJoin = vi.fn(() => listQuery);
+    listQuery.innerJoin = vi.fn(() => listQuery);
+    listQuery.where = vi.fn(() => listQuery);
+    listQuery.orderBy = vi.fn(() => listQuery);
+    listQuery.limit = vi.fn(() => listQuery);
+    listQuery.offset = vi.fn(async (offset: number) => rows.slice(offset, offset + 10));
+    const countQuery: Record<string, unknown> = {};
+    countQuery.from = vi.fn(() => countQuery);
+    countQuery.leftJoin = vi.fn(() => countQuery);
+    countQuery.innerJoin = vi.fn(() => countQuery);
+    countQuery.where = vi.fn(async () => [{ value: 25 }]);
+    const db = { db: { select: vi.fn().mockReturnValueOnce(listQuery).mockReturnValueOnce(countQuery).mockReturnValueOnce(listQuery).mockReturnValueOnce(countQuery) } } as unknown as DatabaseService;
+    const service = new StudentPhotosService(db, config(), notifications(), storage(), audit());
+    const first = await service.listForAdmin({ page: 1, pageSize: 10, status: 'APPROVED' });
+    const second = await service.listForAdmin({ page: 2, pageSize: 10, status: 'APPROVED' });
+    expect(first.items.map(item => item.uploadId)).not.toEqual(second.items.map(item => item.uploadId));
+    expect(listQuery.offset).toHaveBeenNthCalledWith(1, 0);
+    expect(listQuery.offset).toHaveBeenNthCalledWith(2, 10);
+    expect(listQuery.orderBy).toHaveBeenCalledWith(expect.anything(), expect.anything());
+  });
+});
+
 describe('StudentPhotosService authorizeUpload', () => {
   it('throws ConflictError when the active-upload cap is reached', async () => {
     const db = {

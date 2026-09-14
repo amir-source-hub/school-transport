@@ -390,7 +390,7 @@ export class StudentPhotosService {
       .select()
       .from(studentPhotoUploads)
       .where(where)
-      .orderBy(desc(studentPhotoUploads.createdAt))
+      .orderBy(desc(studentPhotoUploads.createdAt), desc(studentPhotoUploads.id))
       .limit(5);
     return { items: items.map((row) => this.toOwnerView(row)) };
   }
@@ -528,7 +528,8 @@ export class StudentPhotosService {
       .leftJoin(students, eq(students.id, studentPhotoUploads.studentId))
       .innerJoin(users, eq(users.id, studentPhotoUploads.accountUserId))
       .where(and(where, eq(users.accountStatus, 'ACTIVE')))
-      .orderBy(desc(studentPhotoUploads.createdAt))
+      // Bulk uploads may share timestamps; the unique ID keeps pages stable.
+      .orderBy(desc(studentPhotoUploads.createdAt), desc(studentPhotoUploads.id))
       .limit(query.pageSize)
       .offset((query.page - 1) * query.pageSize);
     const [{ value }] = await this.db.db

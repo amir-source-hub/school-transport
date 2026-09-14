@@ -230,7 +230,7 @@ export class StudentsService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(eq(users.accountStatus, 'ACTIVE'));
+      .where(and(eq(users.accountStatus, 'ACTIVE'), eq(students.isActive, true)));
 
     const [parentRows, companionRows] = await Promise.all([this.db.db.select().from(parents), rows.length ? this.db.db.select().from(studentCompanions).where(inArray(studentCompanions.studentId, rows.map(row => row.id))) : Promise.resolve([])]);
 
@@ -271,7 +271,7 @@ export class StudentsService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE')));
+      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE'), eq(students.isActive, true)));
 
     const rows = await this.db.db
       .select({
@@ -282,7 +282,7 @@ export class StudentsService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE')))
+      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE'), eq(students.isActive, true)))
       .orderBy(...buildAdminStudentOrderBy(sort, direction))
       .offset((page - 1) * pageSize)
       .limit(pageSize);

@@ -7,6 +7,7 @@ import {
   registrationPrices,
   serviceRegistrations,
   students,
+  users,
   parents,
   offlinePaymentDestinations,
   offlinePaymentSubmissions,
@@ -1143,7 +1144,8 @@ export class PaymentsService {
         eq(serviceRegistrations.id, registrationPrices.registrationId),
       )
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
-      .where(where)
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(and(where, eq(students.isActive, true), eq(users.accountStatus, 'ACTIVE')))
       .orderBy(desc(offlinePaymentSubmissions.createdAt), desc(offlinePaymentSubmissions.id))
       .limit(pageSize)
       .offset((page - 1) * pageSize);
@@ -1161,7 +1163,8 @@ export class PaymentsService {
         eq(serviceRegistrations.id, registrationPrices.registrationId),
       )
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
-      .where(where);
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(and(where, eq(students.isActive, true), eq(users.accountStatus, 'ACTIVE')));
     const payerIds = [...new Set(rows.map(({ submission }) => submission.payerUserId))];
     const familyRows = payerIds.length
       ? await this.db.db.select().from(parents).where(inArray(parents.userId, payerIds))
@@ -1255,6 +1258,8 @@ export class PaymentsService {
         eq(serviceRegistrations.id, registrationPrices.registrationId),
       )
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(and(eq(students.isActive, true), eq(users.accountStatus, 'ACTIVE')))
       .orderBy(desc(paymentPlans.createdAt), desc(paymentPlans.id))
       .limit(ADMIN_PAYMENT_PLAN_LIST_LIMIT);
 

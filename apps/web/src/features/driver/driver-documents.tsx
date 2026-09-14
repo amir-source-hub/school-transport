@@ -7,11 +7,12 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Alert } from '@/components/feedback/alert';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
-import { replaceDriverDocument, type DriverDocument } from './driver-api';
+import { replaceDriverDocument, type DriverDocument, type DriverRun } from './driver-api';
+import { isDriverRouteContractReady } from './driver-commitment';
 
 export type DriverDocumentDefinition = { type: string; label: string; hint: string };
 
-export function DriverDocuments({ documents, definitions, printLetters = false }: { documents: DriverDocument[]; definitions: readonly DriverDocumentDefinition[]; printLetters?: boolean }) {
+export function DriverDocuments({ documents, definitions, printLetters = false, runs = [] }: { documents: DriverDocument[]; definitions: readonly DriverDocumentDefinition[]; printLetters?: boolean; runs?: DriverRun[] }) {
   const router = useRouter();
   const [pending, setPending] = useState<string>();
   const [progress, setProgress] = useState<number | null>(null);
@@ -28,7 +29,7 @@ export function DriverDocuments({ documents, definitions, printLetters = false }
   }
   return <div className="space-y-5">
     {message && <Alert tone="info" title="وضعیت مدرک">{message}</Alert>}
-    {printLetters && <section className="grid gap-4 md:grid-cols-2"><PrintLetter href="/driver/personal-documents/letters/commitment" label="چاپ تعهدنامه" /><PrintLetter href="/driver/personal-documents/letters/addiction" label="چاپ نامه عدم اعتیاد" /></section>}
+    {printLetters && <section className="grid gap-4 md:grid-cols-2"><div className="space-y-3 rounded-2xl border border-border bg-white p-4"><h2 className="font-black">قراردادهای مسیر</h2>{runs.length ? runs.map(run => <div key={run.id}><PrintLetter href={`/driver/personal-documents/letters/commitment?routeId=${encodeURIComponent(run.id)}`} label={`قرارداد مسیر ${run.title} - ${run.schoolName}`} />{!isDriverRouteContractReady(run) && <p className="mt-1 text-xs text-warning">مبلغ یا تاریخ این مسیر هنوز توسط مدیریت ثبت نشده است.</p>}</div>) : <p className="text-sm text-muted">هنوز مسیری به شما تخصیص داده نشده است.</p>}</div><PrintLetter href="/driver/personal-documents/letters/addiction" label="چاپ نامه عدم اعتیاد" /></section>}
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{definitions.map(({ type, label, hint }) => {
       const document = documents.find((item) => item.documentType === type);
       const canUpload = !document || document.reviewStatus === 'REJECTED';

@@ -7,7 +7,7 @@ import {
   REPORT_EXPORT_MAX_ROWS_PER_SOURCE,
   ReportsService,
 } from './reports.service';
-import { emergencyContacts, familyAddresses, parents, schools, serviceRegistrations, studentCompanions, students, users } from '../../database/schemas';
+import { emergencyContacts, familyAddresses, parents, paymentPlans, paymentScheduleItems, registrationPrices, schools, serviceRegistrations, studentCompanions, students, users } from '../../database/schemas';
 import { formatIranianExportDate, STUDENT_EXPORT_COLUMNS } from './student-workbook';
 
 describe('ReportsService', () => {
@@ -21,14 +21,17 @@ describe('ReportsService', () => {
       [studentCompanions, [{ id:'c1', studentId:'s1', firstName:'نرگس', lastName:'احمدی', nationalId:'0012345681', phoneNumber:'09124444444' }]],
       [schools, [{ id:'sc1', name:'مدرسه نمونه', educationOptions:[{ level:'دبستان', grades:['اول'] }] }]],
       [serviceRegistrations, [{ id:'r1', studentId:'s1', selectedAddressId:'a2', serviceType:'VAN', registrationStatus:'DRAFT', createdAt }]],
-      [users, [{ id:'u1', createdAt: new Date('2026-09-12T10:00:00Z') }]],
+      [registrationPrices, [{ id:'price1', registrationId:'r1', versionNumber:1 }]],
+      [paymentPlans, [{ id:'plan1', registrationPriceId:'price1', planStatus:'ACTIVE' }]],
+      [paymentScheduleItems, [{ id:'item1', paymentPlanId:'plan1', itemStatus:'PAID' }, { id:'item2', paymentPlanId:'plan1', itemStatus:'PENDING' }]],
+      [users, [{ id:'u1', accountStatus:'ACTIVE', createdAt: new Date('2026-09-12T10:00:00Z') }]],
     ]);
     const database = { db: { select: () => ({ from: (table: unknown) => ({ orderBy: () => ({ limit: async () => sources.get(table) ?? [] }) }) }) } } as unknown as DatabaseService;
     const buffer = await new ReportsService(database).createComprehensiveWorkbook();
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer);
     const sheet = workbook.worksheets[0];
-    expect(STUDENT_EXPORT_COLUMNS).toHaveLength(37);
+    expect(STUDENT_EXPORT_COLUMNS).toHaveLength(38);
     expect(sheet.rowCount).toBe(2);
     expect(sheet.getCell('E2').value).toMatch(/^۱۳۹۴/);
     expect(sheet.getCell('I2').value).toBe('پدر');
@@ -38,6 +41,7 @@ describe('ReportsService', () => {
     expect(sheet.getCell('AG2').value).toBe('ون');
     expect(sheet.getCell('AH2').value).toBe('استثنائی');
     expect(sheet.getCell('AJ2').value).toMatch(/۱۴۰۵.*۱۳:۳۰/);
+    expect(sheet.getCell('AL2').value).toBe('پرداخت جزئی');
   });
 
   it('renders date-only values and 24-hour timestamps in the Iranian calendar', () => {
@@ -64,7 +68,7 @@ describe('ReportsService', () => {
     expect(neutralizeSpreadsheetFormula('خانواده احمدی')).toBe('خانواده احمدی');
     expect(neutralizeSpreadsheetFormula(125_000)).toBe(125_000);
   });
-  it('creates exactly one 37-column student worksheet even when no records exist', async () => {
+  it('creates exactly one 38-column student worksheet even when no records exist', async () => {
     const database = {
       db: {
         select: () => ({
@@ -85,9 +89,10 @@ describe('ReportsService', () => {
     await workbook.xlsx.load(reportArrayBuffer);
 
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['دانش‌آموزان']);
-    expect(workbook.getWorksheet('دانش‌آموزان')?.columnCount).toBe(37);
+    expect(workbook.getWorksheet('دانش‌آموزان')?.columnCount).toBe(38);
     expect(workbook.getWorksheet('دانش‌آموزان')?.getCell('A1').value).toBe('نام دانش آموز');
     expect(workbook.getWorksheet('دانش‌آموزان')?.getCell('AK1').value).toBe('وضعیت حساب');
+    expect(workbook.getWorksheet('دانش‌آموزان')?.getCell('AL1').value).toBe('وضعیت پرداخت');
     expect(workbook.getWorksheet('دانش‌آموزان')?.autoFilter).toBeTruthy();
     expect(report.byteLength).toBeGreaterThan(1_000);
   });
@@ -139,6 +144,7 @@ describe('ReportsService', () => {
               return [
                 {
                   id: 'student-1',
+                  userId: 'user-1',
                   firstName: 'سارا',
                   lastName: 'احمدی',
                   nationalId: '0012345678',
@@ -151,6 +157,7 @@ describe('ReportsService', () => {
               ];
             }
             if (table === schools) return [{ id: 'school-1', name: 'مدرسه نمونه' }];
+            if (table === users) return [{ id: 'user-1', accountStatus: 'ACTIVE' }];
             if (table === serviceRegistrations) {
               return [{ studentId: 'student-1', registrationStatus: 'ENROLLED' }];
             }
@@ -184,6 +191,7 @@ describe('ReportsService', () => {
               return [
                 {
                   id: 'student-1',
+                  userId: 'user-1',
                   firstName: 'سارا',
                   lastName: 'احمدی',
                   schoolId: 'school-1',
@@ -195,6 +203,7 @@ describe('ReportsService', () => {
               ];
             }
             if (table === schools) return [{ id: 'school-1', name: 'مدرسه نمونه' }];
+            if (table === users) return [{ id: 'user-1', accountStatus: 'ACTIVE' }];
             if (table === serviceRegistrations) {
               return [{ studentId: 'student-1', registrationStatus: 'CONTRACT_READY' }];
             }

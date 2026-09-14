@@ -372,6 +372,13 @@
       "when": 1789297200000,
       "tag": "0052_route_contract_terms",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1789408000000,
+      "tag": "0053_independent_route_directions",
+      "breakpoints": true
     }
   ]
 }

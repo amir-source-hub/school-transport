@@ -87,6 +87,13 @@ export class ReportsService {
     pageSize: number;
   }) {
     const { section, page, pageSize } = input;
+    const activeUserIds = new Set(
+      (await this.db.db.select().from(users))
+        .filter((user) => user.accountStatus === 'ACTIVE')
+        .map((user) => user.id),
+    );
+    const visibleStudent = (student: typeof students.$inferSelect) =>
+      student.isActive && activeUserIds.has(student.userId);
     let columns: { key: string; label: string; kind?: 'money' | 'date' | 'datetime' }[] = [];
     let rows: Record<string, CellValue>[] = [];
 
@@ -109,7 +116,7 @@ export class ReportsService {
         { key: 'status', label: 'وضعیت' },
         { key: 'createdAt', label: 'تاریخ ایجاد', kind: 'datetime' },
       ];
-      rows = filterEnrolledStudents(studentRows, registrationRows)
+      rows = filterEnrolledStudents(studentRows.filter(visibleStudent), registrationRows)
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .map((student) => ({
           studentName: `${student.firstName} ${student.lastName}`,
@@ -132,7 +139,7 @@ export class ReportsService {
         { key: 'addressCount', label: 'تعداد نشانی‌ها' },
         { key: 'status', label: 'وضعیت حساب' },
       ];
-      rows = userRows.map((user) => {
+      rows = userRows.filter((user) => user.accountStatus === 'ACTIVE').map((user) => {
         const familyParents = parentRows.filter((parent) => parent.userId === user.id);
         const primary = familyParents.find((parent) => parent.isPrimaryContact) ?? familyParents[0];
         const familyAddressRows = addressRows.filter((address) => address.userId === user.id);
@@ -158,7 +165,9 @@ export class ReportsService {
         { key: 'status', label: 'وضعیت' },
         { key: 'submittedAt', label: 'تاریخ ارسال', kind: 'datetime' },
       ];
+      const visibleStudentIds = new Set(studentRows.filter(visibleStudent).map((student) => student.id));
       rows = registrationRows
+        .filter((registration) => visibleStudentIds.has(registration.studentId))
         .sort((a, b) => (b.submittedAt?.getTime() ?? 0) - (a.submittedAt?.getTime() ?? 0))
         .map((registration) => {
           const student = studentRows.find((row) => row.id === registration.studentId);
@@ -189,7 +198,14 @@ export class ReportsService {
         { key: 'status', label: 'وضعیت' },
         { key: 'paidAmount', label: 'مبلغ پرداخت‌شده (ریال)', kind: 'money' },
       ];
+      const visibleStudentIds = new Set(studentRows.filter(visibleStudent).map((student) => student.id));
       rows = scheduleRows
+        .filter((item) => {
+          const plan = planRows.find((row) => row.id === item.paymentPlanId);
+          const price = plan ? priceRows.find((row) => row.id === plan.registrationPriceId) : undefined;
+          const registration = price ? registrationRows.find((row) => row.id === price.registrationId) : undefined;
+          return registration ? visibleStudentIds.has(registration.studentId) : false;
+        })
         .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0))
         .map((item) => {
           const plan = planRows.find((row) => row.id === item.paymentPlanId);
@@ -231,7 +247,12 @@ export class ReportsService {
         { key: 'status', label: 'وضعیت' },
         { key: 'generatedAt', label: 'تاریخ صدور', kind: 'datetime' },
       ];
+      const visibleStudentIds = new Set(studentRows.filter(visibleStudent).map((student) => student.id));
       rows = contractRows
+        .filter((contract) => {
+          const registration = registrationRows.find((row) => row.id === contract.registrationId);
+          return registration ? visibleStudentIds.has(registration.studentId) : false;
+        })
         .sort((a, b) => (b.generatedAt?.getTime() ?? 0) - (a.generatedAt?.getTime() ?? 0))
         .map((contract) => {
           const registration = registrationRows.find((row) => row.id === contract.registrationId);
