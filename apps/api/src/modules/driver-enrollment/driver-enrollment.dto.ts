@@ -35,8 +35,9 @@ export class DriverDocumentUploadDto {
     'DRIVER_LICENSE_BACK',
     'CRIMINAL_RECORD_CERTIFICATE',
     'ADDICTION_TEST_CERTIFICATE',
-    'COMMITMENT_LETTER_RETURNED',
-    'ADDICTION_LETTER_RETURNED',
+    'EDUCATION_CERTIFICATE',
+    'POSTAL_CODE_CONFIRMATION',
+    'SCHOOL_SERVICE_INSURANCE_ENDORSEMENT',
     'VEHICLE_CARD_FRONT',
     'VEHICLE_CARD_BACK',
     'VEHICLE_TITLE_DOCUMENT',
@@ -44,7 +45,8 @@ export class DriverDocumentUploadDto {
     'INSURANCE_POLICY_DOCUMENT',
   ])
   documentType!: string;
-  @IsIn(['image/jpeg', 'image/png']) mimeType!: 'image/jpeg' | 'image/png';
+  @IsIn(['image/jpeg', 'image/png', 'application/pdf'])
+  mimeType!: 'image/jpeg' | 'image/png' | 'application/pdf';
   @Type(() => Number) @IsInt() @Min(1) @Max(5 * 1024 * 1024) size!: number;
 }
 

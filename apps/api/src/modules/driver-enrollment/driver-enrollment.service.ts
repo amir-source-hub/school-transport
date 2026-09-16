@@ -64,9 +64,10 @@ export class DriverEnrollmentService {
   ) {}
 
   async authorizeUpload(userId: string, input: DriverDocumentUploadDto, ipAddress?: string) {
-    const extension = input.mimeType === 'image/png' ? 'png' : 'jpg';
+    const extension =
+      input.mimeType === 'application/pdf' ? 'pdf' : input.mimeType === 'image/png' ? 'png' : 'jpg';
     const id = randomUUID();
-    const objectKey = `driver-enrollment/raw/${userId}/${id}.${extension}`;
+    const objectKey = `driver-documents/raw/${userId}/${id}.${extension}`;
     await this.database.db.insert(driverDocumentUploads).values({
       id,
       userId,
@@ -1656,8 +1657,11 @@ export class DriverEnrollmentService {
         scheduledArrivalTime: transportServiceRuns.scheduledArrivalTime,
         activeWeekdays: transportServiceRuns.activeWeekdays,
         areaDescription: transportServiceRuns.areaDescription,
+        contractPriceRials: transportServiceRuns.contractPriceRials,
+        contractDate: transportServiceRuns.contractDate,
         schoolId: schools.id,
         schoolName: schools.name,
+        schoolType: schools.schoolType,
         studentId: students.id,
         studentFirstName: students.firstName,
         studentLastName: students.lastName,
@@ -1690,7 +1694,9 @@ export class DriverEnrollmentService {
         scheduledArrivalTime: row.scheduledArrivalTime,
         activeWeekdays: row.activeWeekdays,
         areaDescription: row.areaDescription,
-        school: { id: row.schoolId, name: row.schoolName },
+        contractPriceRials: row.contractPriceRials,
+        contractDate: row.contractDate,
+        school: { id: row.schoolId, name: row.schoolName, schoolType: row.schoolType },
         students: [],
       };
       if (row.studentId)
@@ -2174,11 +2180,17 @@ export class DriverEnrollmentService {
     const metadata = await this.storage.headObject(upload.objectKey);
     if (metadata.size < 1 || metadata.size > 5 * 1024 * 1024)
       throw new ValidationError('حجم عکس باید حداکثر ۵ مگابایت باشد.');
-    const image = await sharp(await this.storage.getObject(upload.objectKey, 5 * 1024 * 1024))
-      .metadata()
-      .catch(() => null);
-    if (!image?.width || !image.height || !['jpeg', 'png'].includes(image.format ?? ''))
-      throw new ValidationError('فایل بارگذاری‌شده یک عکس JPG یا PNG معتبر نیست.');
+    const file = await this.storage.getObject(upload.objectKey, 5 * 1024 * 1024);
+    if (upload.mimeType === 'application/pdf') {
+      if (file.subarray(0, 5).toString('ascii') !== '%PDF-')
+        throw new ValidationError('فایل بارگذاری‌شده یک PDF معتبر نیست.');
+    } else {
+      const image = await sharp(file)
+        .metadata()
+        .catch(() => null);
+      if (!image?.width || !image.height || !['jpeg', 'png'].includes(image.format ?? ''))
+        throw new ValidationError('فایل بارگذاری‌شده یک عکس JPG یا PNG معتبر نیست.');
+    }
     const [driver] = await this.database.db
       .select({ id: drivers.id })
       .from(drivers)

@@ -20,7 +20,10 @@ import { users } from './auth.schema';
 
 export const drivers = pgTable('drivers', {
   id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull().unique().references(() => users.id),
+  userId: uuid('user_id')
+    .notNull()
+    .unique()
+    .references(() => users.id),
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
   fatherName: varchar('father_name', { length: 100 }).notNull(),
@@ -58,7 +61,9 @@ export const vehicles = pgTable(
   'vehicles',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    driverId: uuid('driver_id').notNull().references(() => drivers.id),
+    driverId: uuid('driver_id')
+      .notNull()
+      .references(() => drivers.id),
     vehicleType: varchar('vehicle_type', { length: 50 }).notNull(),
     system: varchar('system', { length: 100 }).notNull(),
     modelYear: integer('model_year').notNull(),
@@ -84,9 +89,15 @@ export const transportServiceRuns = pgTable(
   'transport_service_runs',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    schoolId: uuid('school_id').notNull().references(() => schools.id),
-    driverId: uuid('driver_id').notNull().references(() => drivers.id),
-    vehicleId: uuid('vehicle_id').notNull().references(() => vehicles.id),
+    schoolId: uuid('school_id')
+      .notNull()
+      .references(() => schools.id),
+    driverId: uuid('driver_id')
+      .notNull()
+      .references(() => drivers.id),
+    vehicleId: uuid('vehicle_id')
+      .notNull()
+      .references(() => vehicles.id),
     academicYear: varchar('academic_year', { length: 20 }).notNull(),
     title: varchar('title', { length: 100 }).notNull(),
     direction: varchar('direction', { length: 12 }).notNull(),
@@ -115,10 +126,7 @@ export const transportServiceRuns = pgTable(
       'transport_runs_direction_check',
       sql`${table.direction} in ('TO_SCHOOL', 'FROM_SCHOOL', 'ROUND_TRIP')`,
     ),
-    positiveSequence: check(
-      'transport_runs_sequence_positive',
-      sql`${table.sequenceNumber} > 0`,
-    ),
+    positiveSequence: check('transport_runs_sequence_positive', sql`${table.sequenceNumber} > 0`),
   }),
 );
 
@@ -126,8 +134,12 @@ export const transportServiceRunStudents = pgTable(
   'transport_service_run_students',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    serviceRunId: uuid('service_run_id').notNull().references(() => transportServiceRuns.id),
-    studentId: uuid('student_id').notNull().references(() => students.id),
+    serviceRunId: uuid('service_run_id')
+      .notNull()
+      .references(() => transportServiceRuns.id),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id),
     pickupOrder: integer('pickup_order').notNull(),
     scheduledStopTime: time('scheduled_stop_time'),
     notes: text('notes'),
@@ -185,7 +197,7 @@ export const driverDocumentUploads = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     userId: uuid('user_id').notNull(),
-    documentType: varchar('document_type', { length: 30 }).notNull(),
+    documentType: varchar('document_type', { length: 50 }).notNull(),
     objectKey: varchar('object_key', { length: 500 }).notNull().unique(),
     mimeType: varchar('mime_type', { length: 100 }).notNull(),
     declaredSize: integer('declared_size').notNull(),

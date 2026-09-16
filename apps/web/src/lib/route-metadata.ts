@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 export const SITE_NAME = 'ثمین گشت مهر ایران';
 export const SITE_URL = new URL('https://samingasht.ir');
 
-export type RouteAudience = 'public' | 'auth' | 'parent' | 'admin' | 'manager' | 'driver' | 'onboarding';
+export type RouteAudience =
+  'public' | 'auth' | 'parent' | 'admin' | 'manager' | 'driver' | 'onboarding';
 
 export type RouteDocumentPolicy = {
   path: string;
@@ -364,13 +365,32 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     redirectTo: '/manager/dashboard',
   },
   {
-    path: '/admin/drivers', audience: 'admin', title: 'رانندگان', description: 'مشاهده پرونده رانندگان و سرویس‌های متصل.', primaryHeading: 'رانندگان ثبت‌شده',
+    path: '/admin/drivers',
+    audience: 'admin',
+    title: 'رانندگان',
+    description: 'مشاهده پرونده رانندگان و سرویس‌های متصل.',
+    primaryHeading: 'رانندگان ثبت‌شده',
   },
   {
-    path: '/admin/drivers/[driverId]', audience: 'admin', title: 'پرونده راننده', description: 'مشاهده اطلاعات کامل راننده، خودرو، مسیر و دانش‌آموزان.', primaryHeading: 'پرونده راننده',
+    path: '/admin/drivers/[driverId]',
+    audience: 'admin',
+    title: 'پرونده راننده',
+    description: 'مشاهده اطلاعات کامل راننده، خودرو، مسیر و دانش‌آموزان.',
+    primaryHeading: 'پرونده راننده',
   },
   {
-    path: '/admin/transport-routes', audience: 'admin', title: 'مسیرها و تخصیص‌ها', description: 'تعریف مسیر و اتصال دانش‌آموزان به راننده با کنترل ظرفیت.', primaryHeading: 'مسیرها و ارتباط راننده–دانش‌آموز',
+    path: '/admin/drivers/[driverId]/contracts/[routeId]',
+    audience: 'admin',
+    title: 'قرارداد مسیر راننده',
+    description: 'مشاهده، چاپ و ساخت PDF قرارداد مسیر توسط مدیریت.',
+    primaryHeading: 'قرارداد مسیر راننده',
+  },
+  {
+    path: '/admin/transport-routes',
+    audience: 'admin',
+    title: 'مسیرها و تخصیص‌ها',
+    description: 'تعریف مسیر و اتصال دانش‌آموزان به راننده با کنترل ظرفیت.',
+    primaryHeading: 'مسیرها و ارتباط راننده–دانش‌آموز',
   },
   {
     path: '/onboarding/driver-enrollment',
@@ -380,34 +400,76 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     primaryHeading: 'تکمیل ثبت‌نام راننده',
   },
   {
-    path: '/driver', audience: 'driver', title: 'پنل راننده', description: 'ورود به داشبورد راننده.', primaryHeading: 'داشبورد راننده', redirectTo: '/driver/dashboard',
+    path: '/driver',
+    audience: 'driver',
+    title: 'پنل راننده',
+    description: 'ورود به داشبورد راننده.',
+    primaryHeading: 'داشبورد راننده',
+    redirectTo: '/driver/dashboard',
   },
   {
-    path: '/driver/dashboard', audience: 'driver', title: 'داشبورد', description: 'نمای برنامه و وضعیت راننده.', primaryHeading: 'برنامه و وضعیت سرویس‌های شما',
+    path: '/driver/dashboard',
+    audience: 'driver',
+    title: 'داشبورد',
+    description: 'نمای برنامه و وضعیت راننده.',
+    primaryHeading: 'برنامه و وضعیت سرویس‌های شما',
   },
   {
-    path: '/driver/service-runs', audience: 'driver', title: 'سرویس من', description: 'مسیرها، زمان توقف و اطلاعات دانش‌آموزان سرویس.', primaryHeading: 'سرویس من',
+    path: '/driver/service-runs',
+    audience: 'driver',
+    title: 'سرویس من',
+    description: 'مسیرها، زمان توقف و اطلاعات دانش‌آموزان سرویس.',
+    primaryHeading: 'سرویس من',
   },
   {
-    path: '/driver/students', audience: 'driver', title: 'دانش‌آموزان من', description: 'اطلاعات کامل دانش‌آموزان فعال اختصاص‌یافته به راننده.', primaryHeading: 'دانش‌آموزان من',
+    path: '/driver/students',
+    audience: 'driver',
+    title: 'دانش‌آموزان من',
+    description: 'اطلاعات کامل دانش‌آموزان فعال اختصاص‌یافته به راننده.',
+    primaryHeading: 'دانش‌آموزان من',
   },
   {
-    path: '/driver/profile', audience: 'driver', title: 'اطلاعات من و خودرو', description: 'پروفایل راننده و مشخصات خودرو.', primaryHeading: 'اطلاعات من و خودرو',
+    path: '/driver/profile',
+    audience: 'driver',
+    title: 'اطلاعات من و خودرو',
+    description: 'پروفایل راننده و مشخصات خودرو.',
+    primaryHeading: 'اطلاعات من و خودرو',
   },
   {
-    path: '/driver/schools', audience: 'driver', title: 'مدارس من', description: 'اطلاعات مدارس متصل به مسیرهای راننده.', primaryHeading: 'مدارس من',
+    path: '/driver/schools',
+    audience: 'driver',
+    title: 'مدارس من',
+    description: 'اطلاعات مدارس متصل به مسیرهای راننده.',
+    primaryHeading: 'مدارس من',
   },
   {
-    path: '/driver/personal-documents', audience: 'driver', title: 'مدارک شخصی من', description: 'مدارک هویتی، صلاحیت و نامه‌های قابل چاپ راننده.', primaryHeading: 'مدارک شخصی من',
+    path: '/driver/personal-documents',
+    audience: 'driver',
+    title: 'مدارک شخصی من',
+    description: 'مدارک هویتی، صلاحیت و نامه‌های قابل چاپ راننده.',
+    primaryHeading: 'مدارک شخصی من',
   },
   {
-    path: '/driver/documents', audience: 'driver', title: 'انتقال به مدارک شخصی', description: 'انتقال مسیر قدیمی تصاویر به مدارک شخصی راننده.', primaryHeading: 'مدارک شخصی من', redirectTo: '/driver/personal-documents',
+    path: '/driver/documents',
+    audience: 'driver',
+    title: 'انتقال به مدارک شخصی',
+    description: 'انتقال مسیر قدیمی تصاویر به مدارک شخصی راننده.',
+    primaryHeading: 'مدارک شخصی من',
+    redirectTo: '/driver/personal-documents',
   },
   {
-    path: '/driver/personal-documents/letters/[letterType]', audience: 'driver', title: 'نامه قابل چاپ راننده', description: 'نسخه قابل چاپ نامه‌های اداری راننده با اطلاعات تکمیل‌شده.', primaryHeading: 'نامه راننده',
+    path: '/driver/personal-documents/letters/[letterType]',
+    audience: 'driver',
+    title: 'نامه قابل چاپ راننده',
+    description: 'نسخه قابل چاپ نامه‌های اداری راننده با اطلاعات تکمیل‌شده.',
+    primaryHeading: 'نامه راننده',
   },
   {
-    path: '/driver/vehicle-documents', audience: 'driver', title: 'مدارک خودروی من', description: 'کارت، سند، معاینه فنی و بیمه‌نامه خودرو.', primaryHeading: 'مدارک خودروی من',
+    path: '/driver/vehicle-documents',
+    audience: 'driver',
+    title: 'مدارک خودروی من',
+    description: 'کارت، سند، معاینه فنی و بیمه‌نامه خودرو.',
+    primaryHeading: 'مدارک خودروی من',
   },
   {
     path: '/manager/dashboard',

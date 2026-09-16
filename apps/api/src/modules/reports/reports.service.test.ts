@@ -7,29 +7,186 @@ import {
   REPORT_EXPORT_MAX_ROWS_PER_SOURCE,
   ReportsService,
 } from './reports.service';
-import { emergencyContacts, familyAddresses, parents, paymentPlans, paymentScheduleItems, registrationPrices, schools, serviceRegistrations, studentCompanions, students, users } from '../../database/schemas';
+import {
+  emergencyContacts,
+  familyAddresses,
+  parents,
+  paymentPlans,
+  paymentScheduleItems,
+  registrationPrices,
+  schools,
+  serviceRegistrations,
+  studentCompanions,
+  students,
+  users,
+} from '../../database/schemas';
 import { formatIranianExportDate, STUDENT_EXPORT_COLUMNS } from './student-workbook';
 
 describe('ReportsService', () => {
   it('maps every requested column for each database student, including one without enrollment', async () => {
     const createdAt = new Date('2026-09-13T15:40:00Z');
     const sources = new Map<unknown, unknown[]>([
-      [students, [{ id:'s1', userId:'u1', schoolId:'sc1', firstName:'سارا', lastName:'احمدی', nationalId:'0012345678', phoneNumber:'09120000000', birthDate:'2015-03-21', gender:'FEMALE', grade:'اول', className:'دبستان', physicalStatus:'SPECIAL', disabilityType:'حرکتی', isActive:true, createdAt }]],
-      [parents, [{ id:'p1', userId:'u1', parentType:'FATHER', relationshipType:'FATHER', firstName:'علی', lastName:'احمدی', nationalId:'0012345679', phoneNumber:'09121111111', homePhone:'02144332211', isPrimaryContact:true }, { id:'p2', userId:'u1', parentType:'MOTHER', firstName:'مریم', lastName:'احمدی', nationalId:'0012345680', phoneNumber:'09122222222', isPrimaryContact:false }]],
-      [familyAddresses, [{ id:'a1', userId:'u1', isActive:true, province:'تهران', city:'تهران', district:'۲', streetAddress:'خیابان پیش‌فرض', postalCode:'1234567890' }, { id:'a2', userId:'u1', isActive:false, province:'تهران', city:'تهران', district:'۳', streetAddress:'خیابان سرویس', postalCode:'1234567891' }]],
-      [emergencyContacts, [{ id:'e1', userId:'u1', isActive:true, firstName:'رضا', lastName:'احمدی', relationship:'عمو', phoneNumber:'09123333333' }]],
-      [studentCompanions, [{ id:'c1', studentId:'s1', firstName:'نرگس', lastName:'احمدی', nationalId:'0012345681', phoneNumber:'09124444444' }]],
-      [schools, [{ id:'sc1', name:'مدرسه نمونه', educationOptions:[{ level:'دبستان', grades:['اول'] }] }]],
-      [serviceRegistrations, [{ id:'r1', studentId:'s1', selectedAddressId:'a2', serviceType:'VAN', registrationStatus:'DRAFT', createdAt }]],
-      [registrationPrices, [{ id:'price1', registrationId:'r1', versionNumber:1 }]],
-      [paymentPlans, [{ id:'plan1', registrationPriceId:'price1', planStatus:'ACTIVE' }]],
-      [paymentScheduleItems, [{ id:'item1', paymentPlanId:'plan1', itemStatus:'PAID' }, { id:'item2', paymentPlanId:'plan1', itemStatus:'PENDING' }]],
-      [users, [{ id:'u1', accountStatus:'ACTIVE', createdAt: new Date('2026-09-12T10:00:00Z') }]],
+      [
+        students,
+        [
+          {
+            id: 's1',
+            userId: 'u1',
+            schoolId: 'sc1',
+            firstName: 'سارا',
+            lastName: 'احمدی',
+            nationalId: '0012345678',
+            phoneNumber: '09120000000',
+            birthDate: '2015-03-21',
+            gender: 'FEMALE',
+            grade: 'اول',
+            className: 'دبستان',
+            physicalStatus: 'SPECIAL',
+            disabilityType: 'حرکتی',
+            isActive: true,
+            createdAt,
+          },
+        ],
+      ],
+      [
+        parents,
+        [
+          {
+            id: 'p1',
+            userId: 'u1',
+            parentType: 'FATHER',
+            relationshipType: 'FATHER',
+            firstName: 'علی',
+            lastName: 'احمدی',
+            nationalId: '0012345679',
+            phoneNumber: '09121111111',
+            homePhone: null,
+            isPrimaryContact: true,
+          },
+          {
+            id: 'p2',
+            userId: 'u1',
+            parentType: 'MOTHER',
+            firstName: 'مریم',
+            lastName: 'احمدی',
+            nationalId: '0012345680',
+            phoneNumber: '09122222222',
+            homePhone: null,
+            isPrimaryContact: false,
+          },
+          {
+            id: 'p3',
+            userId: 'u1',
+            parentType: 'GUARDIAN',
+            firstName: 'نرگس',
+            lastName: 'احمدی',
+            nationalId: '0012345682',
+            phoneNumber: '09125555555',
+            homePhone: '02144332211',
+            isPrimaryContact: false,
+          },
+        ],
+      ],
+      [
+        familyAddresses,
+        [
+          {
+            id: 'a1',
+            userId: 'u1',
+            isActive: true,
+            province: 'تهران',
+            city: 'تهران',
+            district: '۲',
+            streetAddress: 'خیابان پیش‌فرض',
+            postalCode: '1234567890',
+          },
+          {
+            id: 'a2',
+            userId: 'u1',
+            isActive: false,
+            province: 'تهران',
+            city: 'تهران',
+            district: '۳',
+            streetAddress: 'خیابان سرویس',
+            postalCode: '1234567891',
+          },
+        ],
+      ],
+      [
+        emergencyContacts,
+        [
+          {
+            id: 'e1',
+            userId: 'u1',
+            isActive: true,
+            firstName: 'رضا',
+            lastName: 'احمدی',
+            relationship: 'عمو',
+            phoneNumber: '09123333333',
+          },
+        ],
+      ],
+      [
+        studentCompanions,
+        [
+          {
+            id: 'c1',
+            studentId: 's1',
+            firstName: 'نرگس',
+            lastName: 'احمدی',
+            nationalId: '0012345681',
+            phoneNumber: '09124444444',
+          },
+        ],
+      ],
+      [
+        schools,
+        [
+          {
+            id: 'sc1',
+            name: 'مدرسه نمونه',
+            educationOptions: [{ level: 'دبستان', grades: ['اول'] }],
+          },
+        ],
+      ],
+      [
+        serviceRegistrations,
+        [
+          {
+            id: 'r1',
+            studentId: 's1',
+            selectedAddressId: 'a2',
+            serviceType: 'VAN',
+            registrationStatus: 'DRAFT',
+            createdAt,
+          },
+        ],
+      ],
+      [registrationPrices, [{ id: 'price1', registrationId: 'r1', versionNumber: 1 }]],
+      [paymentPlans, [{ id: 'plan1', registrationPriceId: 'price1', planStatus: 'ACTIVE' }]],
+      [
+        paymentScheduleItems,
+        [
+          { id: 'item1', paymentPlanId: 'plan1', itemStatus: 'PAID' },
+          { id: 'item2', paymentPlanId: 'plan1', itemStatus: 'PENDING' },
+        ],
+      ],
+      [users, [{ id: 'u1', accountStatus: 'ACTIVE', createdAt: new Date('2026-09-12T10:00:00Z') }]],
     ]);
-    const database = { db: { select: () => ({ from: (table: unknown) => ({ orderBy: () => ({ limit: async () => sources.get(table) ?? [] }) }) }) } } as unknown as DatabaseService;
+    const database = {
+      db: {
+        select: () => ({
+          from: (table: unknown) => ({
+            orderBy: () => ({ limit: async () => sources.get(table) ?? [] }),
+          }),
+        }),
+      },
+    } as unknown as DatabaseService;
     const buffer = await new ReportsService(database).createComprehensiveWorkbook();
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer);
+    await workbook.xlsx.load(
+      buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer,
+    );
     const sheet = workbook.worksheets[0];
     expect(STUDENT_EXPORT_COLUMNS).toHaveLength(38);
     expect(sheet.rowCount).toBe(2);
@@ -131,7 +288,9 @@ describe('ReportsService', () => {
       },
     } as unknown as DatabaseService;
 
-    await expect(new ReportsService(database).createComprehensiveWorkbook()).rejects.toThrow('column does not exist');
+    await expect(new ReportsService(database).createComprehensiveWorkbook()).rejects.toThrow(
+      'column does not exist',
+    );
   });
 
   it('returns a bounded, ordered preview without sensitive student fields', async () => {

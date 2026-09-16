@@ -1,4 +1,6 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
+import Link from 'next/link';
+import { FileDown } from 'lucide-react';
 import { PrintPageButton } from '@/components/common/print-page-button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -116,6 +118,15 @@ export default async function Page({ params }: { params: Promise<{ driverId: str
                     </li>
                   ))}
                 </ul>
+                {run.school.schoolType !== 'SPECIAL' && (
+                  <Link
+                    href={`/admin/drivers/${driverId}/contracts/${run.id}`}
+                    className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-white"
+                  >
+                    <FileDown className="size-4" />
+                    مشاهده و دانلود قرارداد
+                  </Link>
+                )}
               </section>
             ))}
           </div>

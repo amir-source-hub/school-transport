@@ -25,6 +25,22 @@
         "tags": ["Auth"]
       }
     },
+    "/api/v1/auth/driver/credentials": {
+      "post": {
+        "operationId": "AuthController_driverCredentials",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ParentCredentialsDto" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "" } },
+        "tags": ["Auth"]
+      }
+    },
     "/api/v1/auth/admin/login": {
       "post": {
         "operationId": "AuthController_adminLogin",
@@ -221,6 +237,31 @@
         "tags": ["AdminIdentity"]
       }
     },
+    "/api/v1/admin/admins/school-managers/{managerId}": {
+      "patch": {
+        "operationId": "AdminIdentityController_updateSchoolManager",
+        "parameters": [
+          {
+            "name": "managerId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUpdateSchoolManagerDto"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminIdentity"]
+      }
+    },
     "/api/v1/admin/admins/{adminId}": {
       "patch": {
         "operationId": "AdminIdentityController_update",
@@ -387,6 +428,22 @@
           }
         },
         "responses": { "200": { "description": "" } },
+        "tags": ["Families"]
+      }
+    },
+    "/api/v1/families/emergency-contacts": {
+      "post": {
+        "operationId": "FamiliesController_addEmergencyContact",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EmergencyInputDto" }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Families"]
       }
     },
@@ -695,6 +752,21 @@
         "tags": ["AdminSchools"]
       }
     },
+    "/api/v1/admin/schools/{id}/permanent": {
+      "delete": {
+        "operationId": "AdminSchoolsController_permanentlyDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminSchools"]
+      }
+    },
     "/api/v1/students": {
       "get": {
         "operationId": "StudentsController_getAll",
@@ -781,9 +853,11 @@
         },
         "responses": { "200": { "description": "" } },
         "tags": ["Students"]
-      },
-      "delete": {
-        "operationId": "StudentsController_archive",
+      }
+    },
+    "/api/v1/students/{studentId}/companion": {
+      "post": {
+        "operationId": "StudentsController_addCompanion",
         "parameters": [
           {
             "name": "studentId",
@@ -792,7 +866,17 @@
             "schema": { "type": "string" }
           }
         ],
-        "responses": { "200": { "description": "" } },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertStudentCompanionDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
         "tags": ["Students"]
       }
     },
@@ -858,6 +942,57 @@
             }
           }
         },
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminStudents"]
+      },
+      "delete": {
+        "operationId": "AdminStudentsController_permanentlyDelete",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminStudents"]
+      }
+    },
+    "/api/v1/admin/students/{studentId}/companion": {
+      "post": {
+        "operationId": "AdminStudentsController_saveCompanion",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertStudentCompanionDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminStudents"]
+      },
+      "delete": {
+        "operationId": "AdminStudentsController_removeCompanion",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
         "responses": { "200": { "description": "" } },
         "tags": ["AdminStudents"]
       }
@@ -1716,6 +1851,29 @@
         "tags": ["AdminPayments"]
       }
     },
+    "/api/v1/admin/payments/offline-submissions/{submissionId}/reset": {
+      "post": {
+        "operationId": "AdminPaymentsController_resetForResubmission",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReviewPaymentDto" }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminPayments"]
+      }
+    },
     "/api/v1/onboarding/payments/offline-destination": {
       "get": {
         "operationId": "OnboardingPaymentsController_offlineDestination",
@@ -2192,6 +2350,24 @@
         "tags": ["ManagerFeedback"]
       }
     },
+    "/api/v1/public/contact-messages": {
+      "post": {
+        "operationId": "PublicContactController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePublicContactDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["PublicContact"]
+      }
+    },
     "/api/v1/manager/dashboard": {
       "get": {
         "operationId": "SchoolManagersController_dashboard",
@@ -2223,9 +2399,40 @@
         "tags": ["SchoolManagers"]
       }
     },
+    "/api/v1/manager/drivers": {
+      "get": {
+        "operationId": "SchoolManagersController_drivers",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["SchoolManagers"]
+      }
+    },
+    "/api/v1/manager/drivers/{id}": {
+      "get": {
+        "operationId": "SchoolManagersController_driverDetail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["SchoolManagers"]
+      }
+    },
+    "/api/v1/manager/info": {
+      "get": {
+        "operationId": "SchoolManagersController_info[0]",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["SchoolManagers"]
+      }
+    },
     "/api/v1/manager/settings": {
       "get": {
-        "operationId": "SchoolManagersController_settings",
+        "operationId": "SchoolManagersController_info[1]",
         "parameters": [],
         "responses": { "200": { "description": "" } },
         "tags": ["SchoolManagers"]
@@ -2427,6 +2634,21 @@
         "tags": ["AdminStudentPhotos"]
       }
     },
+    "/api/v1/admin/student-photos/students/{studentId}/photo": {
+      "get": {
+        "operationId": "AdminStudentPhotosController_approvedPhoto",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminStudentPhotos"]
+      }
+    },
     "/api/v1/admin/student-photos/{id}/view-url": {
       "get": {
         "operationId": "AdminStudentPhotosController_viewUrl",
@@ -2503,6 +2725,420 @@
         "tags": ["ManagerStudentPhotos"]
       }
     },
+    "/api/v1/onboarding/driver-enrollment/uploads": {
+      "post": {
+        "operationId": "DriverEnrollmentController_authorize",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverDocumentUploadDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["DriverEnrollment"]
+      }
+    },
+    "/api/v1/onboarding/driver-enrollment": {
+      "post": {
+        "operationId": "DriverEnrollmentController_enroll",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DriverEnrollmentDto" }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["DriverEnrollment"]
+      }
+    },
+    "/api/v1/driver/documents/uploads": {
+      "post": {
+        "operationId": "DriverDocumentsController_authorize",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverDocumentUploadDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["DriverDocuments"]
+      }
+    },
+    "/api/v1/driver/documents/uploads/{id}/replace": {
+      "post": {
+        "operationId": "DriverDocumentsController_replace",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "201": { "description": "" } },
+        "tags": ["DriverDocuments"]
+      }
+    },
+    "/api/v1/driver/documents": {
+      "get": {
+        "operationId": "DriverDocumentsController_list",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["DriverDocuments"]
+      }
+    },
+    "/api/v1/driver/dashboard": {
+      "get": {
+        "operationId": "DriverPortalController_dashboard",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["DriverPortal"]
+      }
+    },
+    "/api/v1/driver/me": {
+      "get": {
+        "operationId": "DriverPortalController_profile",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["DriverPortal"]
+      }
+    },
+    "/api/v1/driver/service-runs": {
+      "get": {
+        "operationId": "DriverPortalController_runs",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["DriverPortal"]
+      }
+    },
+    "/api/v1/driver/students": {
+      "get": {
+        "operationId": "DriverPortalController_students",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["DriverPortal"]
+      }
+    },
+    "/api/v1/driver/schools": {
+      "get": {
+        "operationId": "DriverPortalController_schools",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["DriverPortal"]
+      }
+    },
+    "/api/v1/admin/transport-assignments": {
+      "post": {
+        "operationId": "AdminDriversController_assignRoutes",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignStudentRoutesDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/admin/drivers": {
+      "get": {
+        "operationId": "AdminDriversController_list",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/admin/drivers/{id}": {
+      "get": {
+        "operationId": "AdminDriversController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      },
+      "patch": {
+        "operationId": "AdminDriversController_updateDriver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminUpdateDriverDto" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      },
+      "delete": {
+        "operationId": "AdminDriversController_removeDriver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/admin/drivers/{id}/restore": {
+      "post": {
+        "operationId": "AdminDriversController_restoreDriver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/admin/drivers/{id}/permanent": {
+      "delete": {
+        "operationId": "AdminDriversController_permanentlyDeleteDriver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/admin/drivers/{id}/documents/{documentId}/reject": {
+      "post": {
+        "operationId": "AdminDriversController_rejectDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectDriverDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/admin/students/{studentId}/driver-assignment": {
+      "post": {
+        "operationId": "AdminDriversController_assign",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignDriverToStudentDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      },
+      "get": {
+        "operationId": "AdminDriversController_assignments",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/admin/transport-routes": {
+      "get": {
+        "operationId": "AdminDriversController_routes",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      },
+      "post": {
+        "operationId": "AdminDriversController_createRoute",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTransportRouteDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/admin/transport-routes/{routeId}": {
+      "patch": {
+        "operationId": "AdminDriversController_updateRoute",
+        "parameters": [
+          {
+            "name": "routeId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTransportRouteDto"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/admin/transport-routes/{routeId}/students": {
+      "post": {
+        "operationId": "AdminDriversController_addStudent",
+        "parameters": [
+          {
+            "name": "routeId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddStudentToTransportRouteDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/admin/transport-routes/{routeId}/students/{studentId}": {
+      "delete": {
+        "operationId": "AdminDriversController_removeStudent",
+        "parameters": [
+          {
+            "name": "routeId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/admin/transport-routes/{routeId}/archive": {
+      "post": {
+        "operationId": "AdminDriversController_archiveRoute",
+        "parameters": [
+          {
+            "name": "routeId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminDrivers"]
+      }
+    },
+    "/api/v1/students/{studentId}/driver-assignments": {
+      "get": {
+        "operationId": "DriverAssignmentViewerController_list",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["DriverAssignmentViewer"]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "HealthController_health[0]",
@@ -2542,6 +3178,14 @@
         "responses": { "200": { "description": "" } },
         "tags": ["Reports"]
       }
+    },
+    "/api/v1/admin/reports/drivers.xlsx": {
+      "get": {
+        "operationId": "ReportsController_downloadDriversReport",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["Reports"]
+      }
     }
   },
   "info": {
@@ -2568,6 +3212,7 @@
       "FinalizeOnboardingDto": { "type": "object", "properties": {} },
       "CreateAdminDto": { "type": "object", "properties": {} },
       "ProvisionSchoolManagerDto": { "type": "object", "properties": {} },
+      "AdminUpdateSchoolManagerDto": { "type": "object", "properties": {} },
       "UpdateAdminDto": { "type": "object", "properties": {} },
       "ManagerCredentialsDto": { "type": "object", "properties": {} },
       "CompleteFamilyDto": { "type": "object", "properties": {} },
@@ -2575,6 +3220,7 @@
       "AddAddressDto": { "type": "object", "properties": {} },
       "AddressMutationDto": { "type": "object", "properties": {} },
       "EmergencyMutationDto": { "type": "object", "properties": {} },
+      "EmergencyInputDto": { "type": "object", "properties": {} },
       "ParentTypeDto": { "type": "object", "properties": {} },
       "AdminCreateParentDto": { "type": "object", "properties": {} },
       "AdminUpdateParentDto": { "type": "object", "properties": {} },
@@ -2583,6 +3229,7 @@
       "CreateLimitRequestDto": { "type": "object", "properties": {} },
       "CreateStudentDto": { "type": "object", "properties": {} },
       "UpdateStudentDto": { "type": "object", "properties": {} },
+      "UpsertStudentCompanionDto": { "type": "object", "properties": {} },
       "RejectLimitRequestDto": { "type": "object", "properties": {} },
       "AdminCreateStudentDto": { "type": "object", "properties": {} },
       "AdminUpdateStudentDto": { "type": "object", "properties": {} },
@@ -2607,10 +3254,20 @@
       "VersionDto": { "type": "object", "properties": {} },
       "AssignFeedbackDto": { "type": "object", "properties": {} },
       "RespondFeedbackDto": { "type": "object", "properties": {} },
+      "CreatePublicContactDto": { "type": "object", "properties": {} },
       "AuthorizePhotoUploadDto": { "type": "object", "properties": {} },
       "LinkPhotoUploadDto": { "type": "object", "properties": {} },
       "ReviewPhotoUploadDto": { "type": "object", "properties": {} },
-      "RejectPhotoUploadDto": { "type": "object", "properties": {} }
+      "RejectPhotoUploadDto": { "type": "object", "properties": {} },
+      "DriverDocumentUploadDto": { "type": "object", "properties": {} },
+      "DriverEnrollmentDto": { "type": "object", "properties": {} },
+      "AssignStudentRoutesDto": { "type": "object", "properties": {} },
+      "AdminUpdateDriverDto": { "type": "object", "properties": {} },
+      "RejectDriverDocumentDto": { "type": "object", "properties": {} },
+      "AssignDriverToStudentDto": { "type": "object", "properties": {} },
+      "CreateTransportRouteDto": { "type": "object", "properties": {} },
+      "UpdateTransportRouteDto": { "type": "object", "properties": {} },
+      "AddStudentToTransportRouteDto": { "type": "object", "properties": {} }
     }
   }
 }

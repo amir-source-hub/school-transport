@@ -42,7 +42,11 @@ export type DriverDetail = {
     academicYear: string;
     scheduledStartTime: string;
     scheduledArrivalTime: string;
-    school: { id: string; name: string };
+    activeWeekdays: number[];
+    areaDescription: string | null;
+    contractPriceRials: number | null;
+    contractDate: string | null;
+    school: { id: string; name: string; schoolType: string | null };
     students: Array<{
       id: string;
       firstName: string;

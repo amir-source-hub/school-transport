@@ -160,7 +160,12 @@ export async function replaceDriverDocument(
   documentType: string,
   onProgress?: (percent: number | null) => void,
 ) {
-  const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+  const mimeType =
+    file.type === 'application/pdf'
+      ? 'application/pdf'
+      : file.type === 'image/png'
+        ? 'image/png'
+        : 'image/jpeg';
   const auth = await apiRequest<{ uploadId: string; uploadUrl: string }>(
     '/driver/documents/uploads',
     { method: 'POST', body: { documentType, mimeType, size: file.size } },

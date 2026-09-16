@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ExternalLink, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { rejectAdminDriverDocument, type DriverDetail } from './admin-drivers-api';
@@ -17,14 +18,17 @@ const labels: Record<string, string> = {
   DRIVER_LICENSE_BACK: 'پشت گواهینامه',
   CRIMINAL_RECORD_CERTIFICATE: 'گواهی سوءپیشینه',
   ADDICTION_TEST_CERTIFICATE: 'گواهی عدم اعتیاد',
-  COMMITMENT_LETTER_RETURNED: 'تعهدنامه تکمیل‌شده',
-  ADDICTION_LETTER_RETURNED: 'نامه عدم اعتیاد تکمیل‌شده',
+  COMMITMENT_LETTER_RETURNED: 'تعهدنامه تکمیل‌شده (قدیمی)',
+  ADDICTION_LETTER_RETURNED: 'نامه عدم اعتیاد تکمیل‌شده (قدیمی)',
+  EDUCATION_CERTIFICATE: 'تصویر مدرک تحصیلی',
+  POSTAL_CODE_CONFIRMATION: 'تأییدیه کدپستی',
+  SCHOOL_SERVICE_INSURANCE_ENDORSEMENT: 'الحاقیه بیمه‌نامه سرویس مدرسه',
   VEHICLE_PHOTO: 'عکس خودرو',
   VEHICLE_CARD_FRONT: 'روی کارت خودرو',
   VEHICLE_CARD_BACK: 'پشت کارت خودرو',
   VEHICLE_TITLE_DOCUMENT: 'سند خودرو',
   TECHNICAL_INSPECTION_DOCUMENT: 'معاینه فنی',
-  INSURANCE_POLICY_DOCUMENT: 'بیمه‌نامه',
+  INSURANCE_POLICY_DOCUMENT: 'بیمه‌نامه شخص ثالث',
 };
 export function DriverDocumentCard({
   driverId,
@@ -51,11 +55,20 @@ export function DriverDocumentCard({
   return (
     <article className="overflow-hidden rounded-2xl border border-border bg-white">
       <a href={document.viewUrl} target="_blank" rel="noreferrer">
-        <img
-          src={document.viewUrl}
-          alt={labels[document.documentType] ?? 'تصویر مدرک راننده'}
-          className="aspect-[4/3] w-full bg-surface-inset object-contain"
-        />
+        {document.mimeType === 'application/pdf' ? (
+          <span className="grid aspect-[4/3] place-items-center gap-2 bg-surface-inset text-primary">
+            <FileText className="size-12" />
+            <span className="inline-flex items-center gap-2 text-sm font-bold">
+              مشاهده PDF <ExternalLink className="size-4" />
+            </span>
+          </span>
+        ) : (
+          <img
+            src={document.viewUrl}
+            alt={labels[document.documentType] ?? 'تصویر مدرک راننده'}
+            className="aspect-[4/3] w-full bg-surface-inset object-contain"
+          />
+        )}
       </a>
       <div className="p-4">
         <div className="flex items-center justify-between gap-2">
@@ -77,7 +90,7 @@ export function DriverDocumentCard({
             loading={busy}
             onClick={() => void reject()}
           >
-            رد تصویر و درخواست بارگذاری مجدد
+            رد مدرک و درخواست بارگذاری مجدد
           </Button>
         )}
         {error && (

@@ -1,27 +1,21 @@
 'use client';
 
 /* eslint-disable @next/next/no-img-element */
-import { Camera, Printer, RefreshCw } from 'lucide-react';
-import Link from 'next/link';
+import { Camera, ExternalLink, FileText, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Alert } from '@/components/feedback/alert';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
-import { replaceDriverDocument, type DriverDocument, type DriverRun } from './driver-api';
-import { isDriverRouteContractReady } from './driver-commitment';
+import { replaceDriverDocument, type DriverDocument } from './driver-api';
 
 export type DriverDocumentDefinition = { type: string; label: string; hint: string };
 
 export function DriverDocuments({
   documents,
   definitions,
-  printLetters = false,
-  runs = [],
 }: {
   documents: DriverDocument[];
   definitions: readonly DriverDocumentDefinition[];
-  printLetters?: boolean;
-  runs?: DriverRun[];
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string>();
@@ -29,8 +23,11 @@ export function DriverDocuments({
   const [message, setMessage] = useState<string>();
   async function replace(type: string, file?: File) {
     if (!file) return;
-    if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 5 * 1024 * 1024) {
-      setMessage('تصویر باید JPG یا PNG و حداکثر ۵ مگابایت باشد.');
+    if (
+      !['image/jpeg', 'image/png', 'application/pdf'].includes(file.type) ||
+      file.size > 5 * 1024 * 1024
+    ) {
+      setMessage('فایل باید JPG، PNG یا PDF و حداکثر ۵ مگابایت باشد.');
       return;
     }
     try {
@@ -54,38 +51,6 @@ export function DriverDocuments({
           {message}
         </Alert>
       )}
-      {printLetters && (
-        <section className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-3 rounded-2xl border border-border bg-white p-4">
-            <h2 className="font-black">قراردادهای مسیر</h2>
-            {runs.filter((run) => run.schoolType !== 'SPECIAL').length ? (
-              runs
-                .filter((run) => run.schoolType !== 'SPECIAL')
-                .map((run) => (
-                  <div key={run.id}>
-                    <PrintLetter
-                      href={`/driver/personal-documents/letters/commitment?routeId=${encodeURIComponent(run.id)}`}
-                      label={`قرارداد مسیر ${run.title} - ${run.schoolName} - ${run.students.map((student) => `${student.firstName} ${student.lastName}`).join('، ')}`}
-                    />
-                    {!isDriverRouteContractReady(run) && (
-                      <p className="mt-1 text-xs text-warning">
-                        مبلغ یا تاریخ این مسیر هنوز توسط مدیریت ثبت نشده است.
-                      </p>
-                    )}
-                  </div>
-                ))
-            ) : (
-              <p className="text-sm text-muted">
-                برای مسیرهای مدارس استثنائی قرارداد صادر نمی‌شود.
-              </p>
-            )}
-          </div>
-          <PrintLetter
-            href="/driver/personal-documents/letters/addiction"
-            label="چاپ نامه عدم اعتیاد"
-          />
-        </section>
-      )}
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {definitions.map(({ type, label, hint }) => {
           const document = documents.find((item) => item.documentType === type);
@@ -105,7 +70,19 @@ export function DriverDocuments({
                 </span>
               </div>
               <div className="mt-4 overflow-hidden rounded-xl bg-surface-inset">
-                {document ? (
+                {document?.mimeType === 'application/pdf' ? (
+                  <a
+                    href={document.viewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="grid aspect-[4/3] place-items-center gap-2 text-primary"
+                  >
+                    <FileText className="size-12" />
+                    <span className="inline-flex items-center gap-2 text-sm font-bold">
+                      مشاهده PDF <ExternalLink className="size-4" />
+                    </span>
+                  </a>
+                ) : document ? (
                   <img
                     src={document.viewUrl}
                     alt={label}
@@ -120,7 +97,7 @@ export function DriverDocuments({
               <p className="mt-3 min-h-12 text-xs leading-6 text-muted">
                 {document?.reviewStatus === 'REJECTED'
                   ? `علت رد: ${document.rejectionReason || 'نیاز به بارگذاری تصویر جدید'}`
-                  : `${hint}؛ JPG یا PNG، حداکثر ۵ مگابایت.`}
+                  : `${hint}؛ JPG، PNG یا PDF، حداکثر ۵ مگابایت.`}
               </p>
               {pending === type && (
                 <div
@@ -146,7 +123,7 @@ export function DriverDocuments({
                   <input
                     type="file"
                     className="sr-only"
-                    accept="image/jpeg,image/png"
+                    accept="image/jpeg,image/png,application/pdf"
                     disabled={Boolean(pending)}
                     onChange={(event) => {
                       void replace(type, event.target.files?.[0]);
@@ -172,19 +149,5 @@ export function DriverDocuments({
         })}
       </div>
     </div>
-  );
-}
-
-function PrintLetter({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="flex min-h-20 items-center gap-4 rounded-2xl border border-border bg-white p-4 font-black transition hover:border-primary/40"
-    >
-      <span className="grid size-11 place-items-center rounded-xl bg-primary-soft text-primary">
-        <Printer />
-      </span>
-      {label}
-    </Link>
   );
 }
