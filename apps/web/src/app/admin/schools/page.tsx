@@ -7,7 +7,7 @@ import {
   GENDER_TYPE_LABELS,
   SCHOOL_TYPE_LABELS,
 } from '@/features/admin-schools/admin-schools-api';
-import { ArchiveSchoolDialog } from '@/features/admin-schools/archive-action';
+import { ArchiveSchoolDialog, DeleteSchoolButton } from '@/features/admin-schools/archive-action';
 import { SchoolFormDialog } from '@/features/admin-schools/school-form-dialog';
 import { FilteredCount } from '@/components/data/filtered-count';
 import { formatPersianTime } from '@/lib/formatters';
@@ -30,7 +30,10 @@ export default async function SchoolsPage() {
           <p className="text-sm font-bold text-primary">مدیریت مدارس</p>
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">مدارس ما</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-3"><FilteredCount count={schools.length} label="مدرسه"/><SchoolFormDialog mode="create" /></div>
+        <div className="flex flex-wrap items-center gap-3">
+          <FilteredCount count={schools.length} label="مدرسه" />
+          <SchoolFormDialog mode="create" />
+        </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {activeSchools.map((school) => (
@@ -95,7 +98,9 @@ export default async function SchoolsPage() {
               <div>
                 <dt className="text-muted">ساعت‌های پایان</dt>
                 <dd className="mt-1 font-bold" dir="ltr">
-                  {(school.closingTimes.length ? school.closingTimes : [school.closingTime]).map(formatPersianTime).join('، ')}
+                  {(school.closingTimes.length ? school.closingTimes : [school.closingTime])
+                    .map(formatPersianTime)
+                    .join('، ')}
                 </dd>
               </div>
               <div className="sm:col-span-2">
@@ -137,6 +142,7 @@ export default async function SchoolsPage() {
                 </p>
                 <div className="mt-4">
                   <ArchiveSchoolDialog archived schoolId={school.id} schoolName={school.name} />
+                  <DeleteSchoolButton schoolId={school.id} schoolName={school.name} />
                 </div>
               </Card>
             ))}

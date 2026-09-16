@@ -3,8 +3,6 @@ import { LocationDisplay } from '@/components/common/location-display';
 import { PrintPageButton } from '@/components/common/print-page-button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { AdminStudentPhotoActions } from '@/features/student-photos/admin-student-photo-actions';
-import { AdminCompanionEditor } from '@/features/admin-students/admin-companion-editor';
 import {
   getAdminStudentDetail,
   getAdminStudentPhoto,
@@ -13,6 +11,43 @@ import { formatJalaliDate } from '@/lib/formatters';
 
 export const metadata = { title: 'جزئیات دانش‌آموز' };
 export const dynamic = 'force-dynamic';
+
+const schoolTypeLabels: Record<string, string> = {
+  PUBLIC: 'دولتی',
+  PRIVATE: 'غیرانتفاعی',
+  BOARD_OF_TRUSTEES: 'هیئت امنایی',
+  NEMOONE_DOLATI: 'نمونه دولتی',
+  GIFTED: 'تیزهوشان',
+  SHAHED: 'شاهد',
+  BOARDING: 'شبانه‌روزی',
+  SPECIAL: 'استثنائی',
+  INTERNATIONAL: 'بین‌المللی',
+};
+const serviceTypeLabels: Record<string, string> = {
+  ONE_WAY: 'یک‌طرفه',
+  ROUND_TRIP: 'رفت و برگشت',
+  TO_SCHOOL: 'رفت به مدرسه',
+  FROM_SCHOOL: 'برگشت از مدرسه',
+  CAR: 'سواری',
+  VAN: 'ون',
+  MINIBUS: 'مینی‌بوس',
+  BUS: 'اتوبوس',
+};
+const registrationStatusLabels: Record<string, string> = {
+  DRAFT: 'پیش‌نویس',
+  SUBMITTED: 'ارسال‌شده',
+  UNDER_REVIEW: 'در حال بررسی',
+  NEEDS_CORRECTION: 'نیازمند اصلاح',
+  APPROVED: 'تأییدشده',
+  REJECTED: 'ردشده',
+  CONTRACT_PENDING: 'در انتظار قرارداد',
+  CONTRACT_READY: 'قرارداد آماده',
+  CONTRACT_ACCEPTED: 'قرارداد پذیرفته‌شده',
+  ENROLLED: 'ثبت‌نام تکمیل‌شده',
+  CANCELLED: 'لغوشده',
+  INSTALLMENTS_IN_PROGRESS: 'در حال پرداخت اقساط',
+  PAYMENT_COMPLETED: 'تسویه کامل',
+};
 
 export default async function AdminStudentPage({
   params,
@@ -55,11 +90,6 @@ export default async function AdminStudentPage({
         </div>
       </header>
       <div className="grid gap-5 lg:grid-cols-2">
-        <AdminStudentPhotoActions
-          studentId={student.id}
-          familyId={student.userId}
-          approvedPhoto={photo ? { uploadId: photo.uploadId, version: photo.version } : null}
-        />
         <Card>
           <h2 className="font-black">مشخصات کامل دانش‌آموز</h2>
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
@@ -67,7 +97,10 @@ export default async function AdminStudentPage({
             <Info label="کد دانش‌آموزی" value={student.studentCode} />
             <Info label="نام پدر" value={student.fatherName} />
             <Info label="شماره همراه دانش‌آموز" value={student.phoneNumber} mono />
-            <Info label="تاریخ تولد" value={student.birthDate ? formatJalaliDate(student.birthDate) : null} />
+            <Info
+              label="تاریخ تولد"
+              value={student.birthDate ? formatJalaliDate(student.birthDate) : null}
+            />
             <Info
               label="جنسیت"
               value={
@@ -77,14 +110,23 @@ export default async function AdminStudentPage({
             <Info label="مقطع" value={student.className} />
             <Info label="پایه" value={student.grade} />
             <Info label="رشته تحصیلی" value={student.fieldOfStudy} />
-            <Info label="وضعیت جسمانی" value={student.physicalStatus === 'SPECIAL' ? 'استثنائی' : 'سالم'} />
+            <Info
+              label="وضعیت جسمانی"
+              value={student.physicalStatus === 'SPECIAL' ? 'استثنائی' : 'سالم'}
+            />
             <Info label="نوع معلولیت" value={student.disabilityType} />
-            <Info label="نوع مدرسه" value={student.schoolType} />
+            <Info
+              label="نوع مدرسه"
+              value={
+                student.schoolType
+                  ? (schoolTypeLabels[student.schoolType] ?? student.schoolType)
+                  : null
+              }
+            />
             <Info label="حساب خانواده" value={student.familyName} />
             <Info label="وضعیت" value={student.isActive ? 'فعال' : 'بایگانی‌شده'} />
           </dl>
         </Card>
-        <AdminCompanionEditor student={student} />
         <Card>
           <h2 className="font-black">سرپرستان و تماس اضطراری</h2>
           <div className="mt-4 space-y-3 text-sm">
@@ -129,10 +171,25 @@ export default async function AdminStudentPage({
         ))}
         {student.enrollmentSummary && (
           <Card className="lg:col-span-2">
-            <div className="flex items-center justify-between gap-3"><h2 className="font-black">ثبت‌نام، قرارداد و پرداخت</h2><PrintPageButton /></div>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-black">ثبت‌نام، قرارداد و پرداخت</h2>
+              <PrintPageButton />
+            </div>
             <dl className="mt-4 grid gap-4 sm:grid-cols-3 text-sm">
-              <Info label="وضعیت ثبت‌نام" value={student.enrollmentSummary.registrationStatus} />
-              <Info label="نوع سرویس" value={student.enrollmentSummary.serviceType} />
+              <Info
+                label="وضعیت ثبت‌نام"
+                value={
+                  registrationStatusLabels[student.enrollmentSummary.registrationStatus] ??
+                  student.enrollmentSummary.registrationStatus
+                }
+              />
+              <Info
+                label="نوع سرویس"
+                value={
+                  serviceTypeLabels[student.enrollmentSummary.serviceType] ??
+                  student.enrollmentSummary.serviceType
+                }
+              />
               <Info label="سال تحصیلی" value={student.enrollmentSummary.academicYear} />
               <Info
                 label="شماره قرارداد"

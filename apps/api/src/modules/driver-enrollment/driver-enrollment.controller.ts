@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Roles } from '../../common/decorators';
 import type { AuthenticatedRequest } from '../../common/http-request';
 import { AuthGuard } from '../access-control/auth.guard';
@@ -6,7 +17,16 @@ import { RolesGuard } from '../access-control/roles.guard';
 import { successResponse } from '../../common/response';
 import type { OnboardingRequest } from '../../common/http-request';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
-import { AddStudentToTransportRouteDto, AdminUpdateDriverDto, AssignDriverToStudentDto, CreateTransportRouteDto, DriverDocumentUploadDto, DriverEnrollmentDto, RejectDriverDocumentDto, UpdateDriverProfileDto, UpdateTransportRouteDto } from './driver-enrollment.dto';
+import {
+  AddStudentToTransportRouteDto,
+  AdminUpdateDriverDto,
+  AssignDriverToStudentDto,
+  CreateTransportRouteDto,
+  DriverDocumentUploadDto,
+  DriverEnrollmentDto,
+  RejectDriverDocumentDto,
+  UpdateTransportRouteDto,
+} from './driver-enrollment.dto';
 import { DriverEnrollmentService } from './driver-enrollment.service';
 import { AssignStudentRoutesDto } from './driver-enrollment.dto';
 
@@ -22,7 +42,9 @@ export class DriverEnrollmentController {
 
   @Post()
   enroll(@Req() req: OnboardingRequest, @Body() body: DriverEnrollmentDto) {
-    return this.service.enroll(req.onboarding.userId, req.onboarding.phoneNumber, body, req.ip).then(successResponse);
+    return this.service
+      .enroll(req.onboarding.userId, req.onboarding.phoneNumber, body, req.ip)
+      .then(successResponse);
   }
 }
 
@@ -50,12 +72,21 @@ export class DriverDocumentsController {
 @Controller('driver')
 export class DriverPortalController {
   constructor(private readonly service: DriverEnrollmentService) {}
-  @Get('dashboard') dashboard(@Req() req: AuthenticatedRequest) { return this.service.getDashboard(req.user.id).then(successResponse); }
-  @Get('me') profile(@Req() req: AuthenticatedRequest) { return this.service.getProfile(req.user.id).then(successResponse); }
-  @Patch('me') update(@Req() req: AuthenticatedRequest, @Body() body: UpdateDriverProfileDto) { return this.service.updateProfile(req.user.id, body, req.ip).then(successResponse); }
-  @Get('service-runs') runs(@Req() req: AuthenticatedRequest) { return this.service.getServiceRuns(req.user.id).then(successResponse); }
-  @Get('students') students(@Req() req: AuthenticatedRequest) { return this.service.getStudents(req.user.id).then(successResponse); }
-  @Get('schools') schools(@Req() req: AuthenticatedRequest) { return this.service.getSchools(req.user.id).then(successResponse); }
+  @Get('dashboard') dashboard(@Req() req: AuthenticatedRequest) {
+    return this.service.getDashboard(req.user.id).then(successResponse);
+  }
+  @Get('me') profile(@Req() req: AuthenticatedRequest) {
+    return this.service.getProfile(req.user.id).then(successResponse);
+  }
+  @Get('service-runs') runs(@Req() req: AuthenticatedRequest) {
+    return this.service.getServiceRuns(req.user.id).then(successResponse);
+  }
+  @Get('students') students(@Req() req: AuthenticatedRequest) {
+    return this.service.getStudents(req.user.id).then(successResponse);
+  }
+  @Get('schools') schools(@Req() req: AuthenticatedRequest) {
+    return this.service.getSchools(req.user.id).then(successResponse);
+  }
 }
 
 @UseGuards(AuthGuard, RolesGuard)
@@ -69,14 +100,46 @@ export class AdminDriversController {
     return this.service.assignStudentRoutes(body, req.user.id, req.ip).then(successResponse);
   }
 
-  @Get('drivers') list() { return this.service.getAdminDrivers().then(successResponse); }
-  @Get('drivers/:id') detail(@Param('id', new ParseUUIDPipe()) id: string) { return this.service.getAdminDriver(id).then(successResponse); }
-  @Patch('drivers/:id') updateDriver(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string, @Body() body: AdminUpdateDriverDto) { return this.service.updateAdminDriver(id, body, req.user.id, req.ip).then(successResponse); }
-  @Delete('drivers/:id') removeDriver(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) { return this.service.deactivateAdminDriver(id, req.user.id, req.ip).then(successResponse); }
-  @Post('drivers/:id/restore') restoreDriver(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) { return this.service.restoreAdminDriver(id, req.user.id, req.ip).then(successResponse); }
-  @Delete('drivers/:id/permanent') permanentlyDeleteDriver(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) { return this.service.permanentlyDeleteAdminDriver(id, req.user.id, req.ip).then(successResponse); }
-  @Post('drivers/:id/documents/:documentId/reject') rejectDocument(@Req() req: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string, @Param('documentId', new ParseUUIDPipe()) documentId: string, @Body() body: RejectDriverDocumentDto) {
-    return this.service.rejectDriverDocument(id, documentId, body.reason, req.user.id, req.ip).then(successResponse);
+  @Get('drivers') list() {
+    return this.service.getAdminDrivers().then(successResponse);
+  }
+  @Get('drivers/:id') detail(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.service.getAdminDriver(id).then(successResponse);
+  }
+  @Patch('drivers/:id') updateDriver(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: AdminUpdateDriverDto,
+  ) {
+    return this.service.updateAdminDriver(id, body, req.user.id, req.ip).then(successResponse);
+  }
+  @Delete('drivers/:id') removeDriver(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.service.deactivateAdminDriver(id, req.user.id, req.ip).then(successResponse);
+  }
+  @Post('drivers/:id/restore') restoreDriver(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.service.restoreAdminDriver(id, req.user.id, req.ip).then(successResponse);
+  }
+  @Delete('drivers/:id/permanent') permanentlyDeleteDriver(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.service.permanentlyDeleteAdminDriver(id, req.user.id, req.ip).then(successResponse);
+  }
+  @Post('drivers/:id/documents/:documentId/reject') rejectDocument(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('documentId', new ParseUUIDPipe()) documentId: string,
+    @Body() body: RejectDriverDocumentDto,
+  ) {
+    return this.service
+      .rejectDriverDocument(id, documentId, body.reason, req.user.id, req.ip)
+      .then(successResponse);
   }
   @Post('students/:studentId/driver-assignment')
   assign(
@@ -84,7 +147,9 @@ export class AdminDriversController {
     @Param('studentId', new ParseUUIDPipe()) studentId: string,
     @Body() body: AssignDriverToStudentDto,
   ) {
-    return this.service.assignDriverToStudent(studentId, body, req.user.id, req.ip).then(successResponse);
+    return this.service
+      .assignDriverToStudent(studentId, body, req.user.id, req.ip)
+      .then(successResponse);
   }
   @Get('students/:studentId/driver-assignment')
   assignments(@Param('studentId', new ParseUUIDPipe()) studentId: string) {
@@ -93,7 +158,10 @@ export class AdminDriversController {
   @Get('transport-routes') routes() {
     return this.service.getAdminRoutes().then(successResponse);
   }
-  @Post('transport-routes') createRoute(@Req() req: AuthenticatedRequest, @Body() body: CreateTransportRouteDto) {
+  @Post('transport-routes') createRoute(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: CreateTransportRouteDto,
+  ) {
     return this.service.createAdminRoute(body, req.user.id, req.ip).then(successResponse);
   }
   @Patch('transport-routes/:routeId') updateRoute(
@@ -115,9 +183,14 @@ export class AdminDriversController {
     @Param('routeId', new ParseUUIDPipe()) routeId: string,
     @Param('studentId', new ParseUUIDPipe()) studentId: string,
   ) {
-    return this.service.removeStudentFromRoute(routeId, studentId, req.user.id, req.ip).then(successResponse);
+    return this.service
+      .removeStudentFromRoute(routeId, studentId, req.user.id, req.ip)
+      .then(successResponse);
   }
-  @Post('transport-routes/:routeId/archive') archiveRoute(@Req() req: AuthenticatedRequest, @Param('routeId', new ParseUUIDPipe()) routeId: string) {
+  @Post('transport-routes/:routeId/archive') archiveRoute(
+    @Req() req: AuthenticatedRequest,
+    @Param('routeId', new ParseUUIDPipe()) routeId: string,
+  ) {
     return this.service.archiveRoute(routeId, req.user.id, req.ip).then(successResponse);
   }
 }
@@ -128,7 +201,10 @@ export class DriverAssignmentViewerController {
   constructor(private readonly service: DriverEnrollmentService) {}
 
   @Get(':studentId/driver-assignments')
-  list(@Req() req: AuthenticatedRequest, @Param('studentId', new ParseUUIDPipe()) studentId: string) {
+  list(
+    @Req() req: AuthenticatedRequest,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+  ) {
     return this.service.getStudentAssignments(studentId, req.user.id).then(successResponse);
   }
 }

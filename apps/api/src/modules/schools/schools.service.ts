@@ -14,7 +14,7 @@ import {
   users,
 } from '../../database/schemas';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
-import { NotFoundError } from '../../common/errors';
+import { ConflictError, NotFoundError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import type { SchoolEducationOption } from '../../database/schemas/schools.schema';
 
@@ -279,5 +279,24 @@ export class SchoolsService {
 
   async unarchive(id: string) {
     return this.update(id, { isActive: true });
+  }
+
+  async permanentlyDelete(id: string) {
+    await this.getById(id);
+    const [student] = await this.db.db
+      .select({ id: students.id })
+      .from(students)
+      .where(eq(students.schoolId, id))
+      .limit(1);
+    if (student)
+      throw new ConflictError(
+        'SCHOOL_HAS_STUDENTS',
+        'این مدرسه دانش‌آموز ثبت‌شده دارد و قابل حذف دائمی نیست؛ ابتدا آن را بایگانی کنید.',
+      );
+    const [deleted] = await this.db.db
+      .delete(schools)
+      .where(eq(schools.id, id))
+      .returning({ id: schools.id });
+    return { deleted: Boolean(deleted) };
   }
 }

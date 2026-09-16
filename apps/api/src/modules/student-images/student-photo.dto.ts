@@ -41,4 +41,5 @@ export class AdminPhotoListQueryDto {
   @IsIn(['PENDING_REVIEW', 'APPROVED', 'REJECTED', 'FAILED', 'EXPIRED', 'SUPERSEDED'])
   status?: string;
   @IsOptional() @IsString() @Length(1, 120) q?: string;
+  @IsOptional() @IsUUID() schoolId?: string;
 }

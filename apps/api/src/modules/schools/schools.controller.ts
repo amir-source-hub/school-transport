@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -68,5 +69,10 @@ export class AdminSchoolsController {
   async unarchive(@Param('id', new ParseUUIDPipe()) id: string) {
     const school = await this.schoolsService.unarchive(id);
     return successResponse(school);
+  }
+
+  @Delete(':id/permanent')
+  async permanentlyDelete(@Param('id', new ParseUUIDPipe()) id: string) {
+    return successResponse(await this.schoolsService.permanentlyDelete(id));
   }
 }

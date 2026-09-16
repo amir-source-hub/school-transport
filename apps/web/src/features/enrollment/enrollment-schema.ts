@@ -38,30 +38,36 @@ const homePhone = z
     message: 'شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.',
   });
 
-export const studentSchema = z.object({
-  id: z.string().uuid().optional(),
-  firstName: name,
-  lastName: name,
-  fatherName: name,
-  nationalId,
-  birthDate: z
-    .string()
-    .date('تاریخ تولد معتبر نیست.')
-    .refine((value) => value <= new Date().toISOString().slice(0, 10), {
-      message: 'تاریخ تولد نمی‌تواند در آینده باشد.',
-    })
-    .refine((value) => value >= '1900-01-01', {
-      message: 'تاریخ تولد از بازه مجاز قدیمی‌تر است.',
-    })
-    .optional(),
-  gender: z.enum(['MALE', 'FEMALE'], { message: 'انتخاب جنسیت اجباری است.' }),
-  physicalStatus: z.enum(['HEALTHY', 'SPECIAL'], { message: 'وضعیت جسمانی را انتخاب کنید.' }),
-  disabilityType: z.string().trim().max(200).optional(),
-  phoneNumber: mobile.optional(),
-}).superRefine((value, ctx) => {
-  if (value.physicalStatus === 'SPECIAL' && !value.disabilityType?.trim())
-    ctx.addIssue({ code: 'custom', path: ['disabilityType'], message: 'نوع معلولیت را وارد کنید.' });
-});
+export const studentSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    firstName: name,
+    lastName: name,
+    fatherName: name,
+    nationalId,
+    birthDate: z
+      .string()
+      .date('تاریخ تولد معتبر نیست.')
+      .refine((value) => value <= new Date().toISOString().slice(0, 10), {
+        message: 'تاریخ تولد نمی‌تواند در آینده باشد.',
+      })
+      .refine((value) => value >= '1900-01-01', {
+        message: 'تاریخ تولد از بازه مجاز قدیمی‌تر است.',
+      })
+      .optional(),
+    gender: z.enum(['MALE', 'FEMALE'], { message: 'انتخاب جنسیت اجباری است.' }),
+    physicalStatus: z.enum(['HEALTHY', 'SPECIAL'], { message: 'وضعیت جسمانی را انتخاب کنید.' }),
+    disabilityType: name.optional(),
+    phoneNumber: mobile.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.physicalStatus === 'SPECIAL' && !value.disabilityType?.trim())
+      ctx.addIssue({
+        code: 'custom',
+        path: ['disabilityType'],
+        message: 'نوع معلولیت را وارد کنید.',
+      });
+  });
 
 export const enrollmentCompanionSchema = z.object({
   firstName: name,
@@ -118,7 +124,10 @@ export const addressSchema = z.object({
   title: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
   province: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
   city: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
-  district: z.enum(['سایر', ...Array.from({ length: 22 }, (_, index) => String(index + 1))] as [string, ...string[]]),
+  district: z.enum(['سایر', ...Array.from({ length: 22 }, (_, index) => String(index + 1))] as [
+    string,
+    ...string[],
+  ]),
   streetAddress: z.string().trim().min(1, required).max(500, 'حداکثر ۵۰۰ نویسه مجاز است.'),
   postalCode: z
     .string()

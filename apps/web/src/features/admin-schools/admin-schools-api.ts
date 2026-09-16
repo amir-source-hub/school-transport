@@ -153,3 +153,7 @@ export async function archiveSchool(id: string) {
 export async function unarchiveSchool(id: string) {
   await apiRequest(`/admin/schools/${id}/unarchive`, { method: 'POST' });
 }
+
+export async function permanentlyDeleteSchool(id: string) {
+  await apiRequest(`/admin/schools/${id}/permanent`, { method: 'DELETE' });
+}

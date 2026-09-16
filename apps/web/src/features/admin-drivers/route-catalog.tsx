@@ -1,7 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { BusFront, ChevronDown, Clock3, GraduationCap, Pencil, Route, Search, Trash2, Users } from 'lucide-react';
+import {
+  BusFront,
+  ChevronDown,
+  Clock3,
+  GraduationCap,
+  Pencil,
+  Route,
+  Search,
+  Trash2,
+  Users,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { normalizeDigits } from '@/features/enrollment/national-id';
@@ -13,7 +23,20 @@ const time = (value: string) =>
   value.slice(0, 5).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
 const normalize = (value: string) => value.replace(/ي/g, 'ی').replace(/ك/g, 'ک').trim();
 
-export function RouteCatalog({ routes, onArchive, onEdit, busy = false }: { routes: AdminTransportRoute[]; onArchive?: (id:string) => void; onEdit?: (id:string,body:{title:string;contractPriceRials:number;contractDate:string}) => void; busy?: boolean }) {
+export function RouteCatalog({
+  routes,
+  onArchive,
+  onEdit,
+  busy = false,
+}: {
+  routes: AdminTransportRoute[];
+  onArchive?: (id: string) => void;
+  onEdit?: (
+    id: string,
+    body: { title: string; contractPriceRials: number; contractDate: string },
+  ) => void;
+  busy?: boolean;
+}) {
   const [query, setQuery] = useState('');
   const [direction, setDirection] = useState('ALL');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -91,6 +114,7 @@ export function RouteCatalog({ routes, onArchive, onEdit, busy = false }: { rout
           const remaining = Math.max(0, capacity - count);
           const percent = capacity > 0 ? Math.min(100, (count / capacity) * 100) : 0;
           const isFull = capacity > 0 && count >= capacity;
+          const isOverCapacity = capacity > 0 && count > capacity;
           return (
             <li
               key={route.id}
@@ -101,7 +125,11 @@ export function RouteCatalog({ routes, onArchive, onEdit, busy = false }: { rout
                 <span
                   className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${route.direction === 'TO_SCHOOL' ? 'bg-primary-soft text-primary' : 'bg-emerald-50 text-emerald-700'}`}
                 >
-                  {route.direction === 'TO_SCHOOL' ? 'رفت' : route.direction === 'FROM_SCHOOL' ? 'برگشت' : 'رفت و برگشت'}
+                  {route.direction === 'TO_SCHOOL'
+                    ? 'رفت'
+                    : route.direction === 'FROM_SCHOOL'
+                      ? 'برگشت'
+                      : 'رفت و برگشت'}
                 </span>
               </div>
               <div className="mt-4 space-y-2.5 text-sm text-muted">
@@ -138,9 +166,11 @@ export function RouteCatalog({ routes, onArchive, onEdit, busy = false }: { rout
                   <span className={isFull ? 'font-bold text-danger' : 'font-bold text-primary'}>
                     {capacity === 0
                       ? 'ظرفیت نامشخص'
-                      : isFull
-                        ? 'ظرفیت تکمیل'
-                        : `${number(remaining)} جای خالی`}
+                      : isOverCapacity
+                        ? `${number(count - capacity)} صندلی بیش از ظرفیت (ثبت مجاز است)`
+                        : isFull
+                          ? 'ظرفیت تکمیل'
+                          : `${number(remaining)} جای خالی`}
                   </span>
                 </div>
                 <div
@@ -157,9 +187,104 @@ export function RouteCatalog({ routes, onArchive, onEdit, busy = false }: { rout
                   />
                 </div>
               </div>
-              <p className="mt-3 text-sm text-muted">مبلغ ماهانه قرارداد: <strong className="text-foreground">{route.contractPriceRials == null ? 'ثبت نشده' : `${number(route.contractPriceRials)} ریال`}</strong> · تاریخ قرارداد: <strong className="text-foreground">{route.contractDate ? formatJalaliDate(route.contractDate) : 'ثبت نشده'}</strong></p>
-              {editingId===route.id&&<form className="mt-4 grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2" onSubmit={event=>{event.preventDefault();const data=new FormData(event.currentTarget);onEdit?.(route.id,{title:String(data.get('title')).trim(),contractPriceRials:Number(data.get('contractPriceRials')),contractDate:normalizeDigits(String(data.get('contractDate')))});setEditingId(null);}}><label className="text-sm font-bold">عنوان مسیر<Input name="title" defaultValue={route.title} required minLength={2}/></label><label className="text-sm font-bold">مبلغ ماهانه (ریال)<Input name="contractPriceRials" type="number" min="0" step="1" defaultValue={route.contractPriceRials??''} required/></label><label className="text-sm font-bold">تاریخ قرارداد (شمسی)<Input name="contractDate" dir="ltr" placeholder="1405/06/22" pattern="1[34][0-9]{2}/(0[1-9]|1[0-2])/(0[1-9]|[12][0-9]|3[01])" defaultValue={route.contractDate??''} required/></label><div className="flex items-end gap-2"><Button type="submit" size="sm" disabled={busy}>ذخیره</Button><Button type="button" size="sm" variant="ghost" onClick={()=>setEditingId(null)}>انصراف</Button></div></form>}
-              <div className="mt-4 flex flex-wrap gap-2">{onEdit && <Button type="button" size="sm" variant="ghost" className="min-h-11" disabled={busy} onClick={() => setEditingId(editingId===route.id?null:route.id)}><Pencil className="size-4" aria-hidden="true"/>ویرایش مسیر</Button>}{onArchive && <Button type="button" size="sm" variant="ghost" className="min-h-11 text-danger" disabled={busy} onClick={() => { if(window.confirm('این مسیر و ارتباط دانش‌آموزان آن غیرفعال شود؟'))onArchive(route.id); }}><Trash2 className="size-4" aria-hidden="true" />حذف مسیر</Button>}</div>
+              <p className="mt-3 text-sm text-muted">
+                مبلغ ماهانه قرارداد:{' '}
+                <strong className="text-foreground">
+                  {route.contractPriceRials == null
+                    ? 'ثبت نشده'
+                    : `${number(route.contractPriceRials)} ریال`}
+                </strong>{' '}
+                · تاریخ قرارداد:{' '}
+                <strong className="text-foreground">
+                  {route.contractDate ? formatJalaliDate(route.contractDate) : 'ثبت نشده'}
+                </strong>
+              </p>
+              {editingId === route.id && (
+                <form
+                  className="mt-4 grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const data = new FormData(event.currentTarget);
+                    onEdit?.(route.id, {
+                      title: String(data.get('title')).trim(),
+                      contractPriceRials: Number(data.get('contractPriceRials')),
+                      contractDate: normalizeDigits(String(data.get('contractDate'))),
+                    });
+                    setEditingId(null);
+                  }}
+                >
+                  <label className="text-sm font-bold">
+                    عنوان مسیر
+                    <Input name="title" defaultValue={route.title} required minLength={2} />
+                  </label>
+                  <label className="text-sm font-bold">
+                    مبلغ ماهانه (ریال)
+                    <Input
+                      name="contractPriceRials"
+                      type="number"
+                      min="0"
+                      step="1"
+                      defaultValue={route.contractPriceRials ?? ''}
+                      required
+                    />
+                  </label>
+                  <label className="text-sm font-bold">
+                    تاریخ قرارداد (شمسی)
+                    <Input
+                      name="contractDate"
+                      dir="ltr"
+                      placeholder="1405/06/22"
+                      pattern="1[34][0-9]{2}/(0[1-9]|1[0-2])/(0[1-9]|[12][0-9]|3[01])"
+                      defaultValue={route.contractDate ?? ''}
+                      required
+                    />
+                  </label>
+                  <div className="flex items-end gap-2">
+                    <Button type="submit" size="sm" disabled={busy}>
+                      ذخیره
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setEditingId(null)}
+                    >
+                      انصراف
+                    </Button>
+                  </div>
+                </form>
+              )}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {onEdit && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="min-h-11"
+                    disabled={busy}
+                    onClick={() => setEditingId(editingId === route.id ? null : route.id)}
+                  >
+                    <Pencil className="size-4" aria-hidden="true" />
+                    ویرایش مسیر
+                  </Button>
+                )}
+                {onArchive && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="min-h-11 text-danger"
+                    disabled={busy}
+                    onClick={() => {
+                      if (window.confirm('این مسیر و ارتباط دانش‌آموزان آن غیرفعال شود؟'))
+                        onArchive(route.id);
+                    }}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    حذف مسیر
+                  </Button>
+                )}
+              </div>
             </li>
           );
         })}

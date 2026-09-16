@@ -204,6 +204,10 @@ export function CreateEnrollmentForm({
       'studentFirst',
       'studentLast',
       'studentFatherName',
+      'disabilityType',
+      'companionFirst',
+      'companionLast',
+      'companionFatherName',
       'guardianFirst',
       'guardianLast',
       'guardianRelationshipDescription',
@@ -224,6 +228,10 @@ export function CreateEnrollmentForm({
       'studentFirst',
       'studentLast',
       'studentFatherName',
+      'disabilityType',
+      'companionFirst',
+      'companionLast',
+      'companionFatherName',
       'studentNationalId',
       'birthDate',
       'gender',
@@ -304,7 +312,7 @@ export function CreateEnrollmentForm({
     }
     if (
       typeof value === 'string' &&
-      ['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)
+      ['fatherPhone', 'motherPhone', 'emergencyPhone', 'companionPhone'].includes(key)
     ) {
       normalizedValue = normalizeMobileInput(value);
     }
@@ -315,6 +323,7 @@ export function CreateEnrollmentForm({
         'guardianNationalId',
         'fatherNationalId',
         'motherNationalId',
+        'companionNationalId',
         'postalCode',
       ].includes(key)
     ) {
@@ -439,7 +448,12 @@ export function CreateEnrollmentForm({
         gender: '',
         physicalStatus: 'HEALTHY',
         disabilityType: '',
-        companionFirst: '', companionLast: '', companionFatherName: '', companionNationalId: '', companionPhone: '', companionRelationship: '',
+        companionFirst: '',
+        companionLast: '',
+        companionFatherName: '',
+        companionNationalId: '',
+        companionPhone: '',
+        companionRelationship: '',
         schoolId: '',
         educationLevel: '',
         grade: '',
@@ -462,7 +476,12 @@ export function CreateEnrollmentForm({
       gender: student.gender ?? '',
       physicalStatus: student.physicalStatus ?? 'HEALTHY',
       disabilityType: student.disabilityType ?? '',
-      companionFirst: '', companionLast: '', companionFatherName: '', companionNationalId: '', companionPhone: '', companionRelationship: '',
+      companionFirst: '',
+      companionLast: '',
+      companionFatherName: '',
+      companionNationalId: '',
+      companionPhone: '',
+      companionRelationship: '',
       schoolId: student.schoolId,
       educationLevel: level?.level ?? '',
       grade: student.grade ?? level?.grades[0] ?? '',
@@ -509,13 +528,26 @@ export function CreateEnrollmentForm({
   function validateStep(currentStep: number): string | null {
     if (currentStep === 1) {
       if (!form.physicalStatus) return 'وضعیت جسمانی را انتخاب کنید.';
-      if (form.physicalStatus === 'SPECIAL' && !form.disabilityType.trim()) return 'نوع معلولیت را وارد کنید.';
-      const companionFields = [form.companionFirst, form.companionLast, form.companionFatherName, form.companionNationalId, form.companionPhone, form.companionRelationship];
-      if (companionFields.some((value) => value.trim()) &&
-          (form.physicalStatus !== 'SPECIAL' || companionFields.some((value) => !value.trim())))
+      if (form.physicalStatus === 'SPECIAL' && !form.disabilityType.trim())
+        return 'نوع معلولیت را وارد کنید.';
+      const companionFields = [
+        form.companionFirst,
+        form.companionLast,
+        form.companionFatherName,
+        form.companionNationalId,
+        form.companionPhone,
+        form.companionRelationship,
+      ];
+      if (
+        form.physicalStatus === 'SPECIAL' &&
+        companionFields.some((value) => value.trim()) &&
+        companionFields.some((value) => !value.trim())
+      )
         return 'برای ثبت مراقب همراه، همه مشخصات او را تکمیل کنید.';
-      if (form.companionNationalId && !isValidIranianNationalId(form.companionNationalId)) return 'کد ملی مراقب همراه معتبر نیست.';
-      if (form.companionPhone && !/^09\d{9}$/.test(normalizeDigits(form.companionPhone))) return 'شماره همراه مراقب باید ۱۱ رقم و با ۰۹ شروع شود.';
+      if (form.companionNationalId && !isValidIranianNationalId(form.companionNationalId))
+        return 'کد ملی مراقب همراه معتبر نیست.';
+      if (form.companionPhone && !/^09\d{9}$/.test(normalizeDigits(form.companionPhone)))
+        return 'شماره همراه مراقب باید ۱۱ رقم و با ۰۹ شروع شود.';
       const requiredNames = [
         form.studentFirst,
         form.studentLast,
@@ -644,7 +676,8 @@ export function CreateEnrollmentForm({
     if (
       currentStep === 2 &&
       !reusingFamilyProfile &&
-      (!form.district || !form.streetAddress.trim() ||
+      (!form.district ||
+        !form.streetAddress.trim() ||
         !/^\d{10}$/.test(normalizeDigits(form.postalCode)) ||
         !form.locationSelected)
     ) {
@@ -682,17 +715,21 @@ export function CreateEnrollmentForm({
           birthDate: form.birthDate || undefined,
           gender: form.gender as StudentInput['gender'],
           physicalStatus: form.physicalStatus as StudentInput['physicalStatus'],
-          disabilityType: form.physicalStatus === 'SPECIAL' ? form.disabilityType.trim() : undefined,
+          disabilityType:
+            form.physicalStatus === 'SPECIAL' ? form.disabilityType.trim() : undefined,
           ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
         },
-        companion: form.physicalStatus === 'SPECIAL' && form.companionFirst.trim()
-          ? {
-              firstName: form.companionFirst.trim(), lastName: form.companionLast.trim(),
-              fatherName: form.companionFatherName.trim(), nationalId: normalizeDigits(form.companionNationalId),
-              phoneNumber: normalizeDigits(form.companionPhone),
-              relationship: form.companionRelationship as 'FAMILY' | 'CAREGIVER' | 'COACH',
-            }
-          : null,
+        companion:
+          form.physicalStatus === 'SPECIAL' && form.companionFirst.trim()
+            ? {
+                firstName: form.companionFirst.trim(),
+                lastName: form.companionLast.trim(),
+                fatherName: form.companionFatherName.trim(),
+                nationalId: normalizeDigits(form.companionNationalId),
+                phoneNumber: normalizeDigits(form.companionPhone),
+                relationship: form.companionRelationship as 'FAMILY' | 'CAREGIVER' | 'COACH',
+              }
+            : null,
         guardian: {
           firstName: form.guardianFirst,
           lastName: form.guardianLast,
@@ -886,6 +923,7 @@ export function CreateEnrollmentForm({
         dir={['tel', 'number'].includes(type) ? 'ltr' : undefined}
         disabled={lockedParentFields.has(key)}
         inputMode={type === 'tel' ? 'numeric' : undefined}
+        maxLength={key === 'companionNationalId' ? 10 : key === 'companionPhone' ? 11 : undefined}
         autoComplete={type === 'tel' ? 'off' : undefined}
         onFocus={(event) => {
           if (['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)) {
@@ -1252,20 +1290,85 @@ export function CreateEnrollmentForm({
             </Section>
             <Section title="وضعیت جسمانی">
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="text-sm font-bold">وضعیت جسمانی
-                  <Select className="mt-2" value={form.physicalStatus} onValueChange={(value) => set('physicalStatus', value)} options={[{value:'HEALTHY',label:'سالم'},{value:'SPECIAL',label:'استثنائی'}]} />
-                </label>
+                <fieldset>
+                  <legend className="text-sm font-bold">وضعیت جسمانی</legend>
+                  <div className="mt-2 flex gap-3">
+                    {[
+                      { value: 'HEALTHY', label: 'سالم' },
+                      { value: 'SPECIAL', label: 'استثنائی' },
+                    ].map((option) => (
+                      <label
+                        key={option.value}
+                        className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-border px-4"
+                      >
+                        <input
+                          type="radio"
+                          name="physicalStatus"
+                          value={option.value}
+                          checked={form.physicalStatus === option.value}
+                          onChange={() => {
+                            set('physicalStatus', option.value);
+                            if (option.value === 'HEALTHY') {
+                              setForm((current) => ({
+                                ...current,
+                                disabilityType: '',
+                                companionFirst: '',
+                                companionLast: '',
+                                companionFatherName: '',
+                                companionNationalId: '',
+                                companionPhone: '',
+                                companionRelationship: '',
+                              }));
+                              setFieldErrors((current) => ({
+                                ...current,
+                                disabilityType: undefined,
+                                companionFirst: undefined,
+                                companionLast: undefined,
+                                companionFatherName: undefined,
+                                companionNationalId: undefined,
+                                companionPhone: undefined,
+                                companionRelationship: undefined,
+                              }));
+                            }
+                          }}
+                        />
+                        {option.label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
                 {form.physicalStatus === 'SPECIAL' && field('disabilityType', 'نوع معلولیت')}
               </div>
-              {form.physicalStatus === 'SPECIAL' && <div className="mt-5 space-y-4">
-                <div><p className="font-bold">مخصوص دانش آموزان استثنائی.</p><p className="text-sm text-muted">اگر دانش آموز نیاز به همراه دارد این اطلاعات را وارد کند.</p></div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {field('companionFirst','نام مراقب همراه')}{field('companionLast','نام خانوادگی مراقب همراه')}
-                  {field('companionFatherName','نام پدر مراقب همراه')}{field('companionNationalId','کد ملی مراقب همراه','tel')}
-                  {field('companionPhone','شماره همراه مراقب','tel')}
-                  <label className="text-sm font-bold">نسبت مراقب همراه<Select className="mt-2" value={form.companionRelationship} onValueChange={(value)=>set('companionRelationship',value)} options={[{value:'FAMILY',label:'خانواده'},{value:'CAREGIVER',label:'پرستار'},{value:'COACH',label:'مربی'}]}/></label>
+              {form.physicalStatus === 'SPECIAL' && (
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <p className="font-bold">مخصوص دانش آموزان استثنائی.</p>
+                    <p className="text-sm text-muted">
+                      اگر دانش آموز نیاز به همراه دارد این اطلاعات را وارد کند.
+                    </p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {field('companionFirst', 'نام مراقب همراه')}
+                    {field('companionLast', 'نام خانوادگی مراقب همراه')}
+                    {field('companionFatherName', 'نام پدر مراقب همراه')}
+                    {field('companionNationalId', 'کد ملی مراقب همراه', 'tel')}
+                    {field('companionPhone', 'شماره همراه مراقب', 'tel')}
+                    <label className="text-sm font-bold">
+                      نسبت مراقب همراه
+                      <Select
+                        className="mt-2"
+                        value={form.companionRelationship}
+                        onValueChange={(value) => set('companionRelationship', value)}
+                        options={[
+                          { value: 'FAMILY', label: 'خانواده' },
+                          { value: 'CAREGIVER', label: 'پرستار' },
+                          { value: 'COACH', label: 'مربی' },
+                        ]}
+                      />
+                    </label>
+                  </div>
                 </div>
-              </div>}
+              )}
             </Section>
             {validationSummary}
             <WizardFooter
@@ -1288,8 +1391,20 @@ export function CreateEnrollmentForm({
                 {field('addressTitle', 'عنوان نشانی')}
                 {field('province', 'استان')}
                 {field('city', 'شهر')}
-                <label className="text-sm font-bold">منطقه
-                  <Select className="mt-2" value={form.district} onValueChange={(value) => set('district', value)} options={[{value:'سایر',label:'سایر'},...Array.from({length:22},(_,index)=>({value:String(index+1),label:`منطقه ${index+1}`}))]} />
+                <label className="text-sm font-bold">
+                  منطقه
+                  <Select
+                    className="mt-2"
+                    value={form.district}
+                    onValueChange={(value) => set('district', value)}
+                    options={[
+                      { value: 'سایر', label: 'سایر' },
+                      ...Array.from({ length: 22 }, (_, index) => ({
+                        value: String(index + 1),
+                        label: `منطقه ${index + 1}`,
+                      })),
+                    ]}
+                  />
                 </label>
                 <div className="sm:col-span-2">{field('streetAddress', 'نشانی کامل')}</div>
                 {field('postalCode', 'کد پستی', 'tel')}
@@ -1651,8 +1766,8 @@ export function CreateEnrollmentForm({
             ) : mode === 'onboarding' ? (
               <div className="mt-6 space-y-5 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
-                  قرارداد پذیرفته شد. حساب خانواده را ایجاد کنید و جزئیات پرداخت و ارسال رسید را
-                  از بخش «پرداخت‌ها» در پنل خود انجام دهید.
+                  قرارداد پذیرفته شد. حساب خانواده را ایجاد کنید و جزئیات پرداخت و ارسال رسید را از
+                  بخش «پرداخت‌ها» در پنل خود انجام دهید.
                 </div>
               </div>
             ) : (

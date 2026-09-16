@@ -12,6 +12,7 @@ import { Select } from '@/components/ui/select';
 import { Tabs } from '@/components/ui/tabs';
 import {
   getAdminStudentDetail,
+  getAdminStudentPhoto,
   updateAdminStudent,
   type AdminStudentDetail,
 } from '@/features/admin-students/admin-students-api';
@@ -30,6 +31,8 @@ import {
   placeCaretAfterPrefix,
 } from '@/features/enrollment/input-normalizers';
 import { normalizeDigits } from '@/features/enrollment/national-id';
+import { AdminStudentPhotoActions } from '@/features/student-photos/admin-student-photo-actions';
+import { AdminCompanionEditor } from '@/features/admin-students/admin-companion-editor';
 
 const LocationPicker = dynamic(
   () => import('@/components/common/location-picker').then((m) => ({ default: m.LocationPicker })),
@@ -111,13 +114,22 @@ export function StudentEditDialog({
 
 function StudentEditBody({ studentId, schools }: { studentId: string; schools: SchoolOption[] }) {
   const [detail, setDetail] = useState<AdminStudentDetail | null>(null);
+  const [approvedPhoto, setApprovedPhoto] = useState<{ uploadId: string; version: number } | null>(
+    null,
+  );
   const [error, setError] = useState<string>();
 
   useEffect(() => {
     let active = true;
-    getAdminStudentDetail(studentId)
-      .then((result) => {
-        if (active) setDetail(result);
+    Promise.all([
+      getAdminStudentDetail(studentId),
+      getAdminStudentPhoto(studentId).catch(() => null),
+    ])
+      .then(([result, photo]) => {
+        if (active) {
+          setDetail(result);
+          setApprovedPhoto(photo ? { uploadId: photo.uploadId, version: photo.version } : null);
+        }
       })
       .catch((caught) => {
         if (active) setError(getApiErrorFeedback(caught).message);
@@ -130,15 +142,17 @@ function StudentEditBody({ studentId, schools }: { studentId: string; schools: S
   if (error) return <p className="text-sm text-danger">{error}</p>;
   if (!detail) return <p className="text-sm text-muted">در حال بارگذاری...</p>;
 
-  return <StudentEditForm detail={detail} schools={schools} />;
+  return <StudentEditForm detail={detail} schools={schools} approvedPhoto={approvedPhoto} />;
 }
 
 function StudentEditForm({
   detail: initialDetail,
   schools,
+  approvedPhoto,
 }: {
   detail: AdminStudentDetail;
   schools: SchoolOption[];
+  approvedPhoto: { uploadId: string; version: number } | null;
 }) {
   const [detail, setDetail] = useState(initialDetail);
   const [latestUpdatedAt, setLatestUpdatedAt] = useState(detail.updatedAt);
@@ -199,6 +213,22 @@ function StudentEditForm({
               }}
             />
           ),
+        },
+        {
+          value: 'photo',
+          label: 'عکس دانش‌آموز',
+          content: (
+            <AdminStudentPhotoActions
+              studentId={detail.id}
+              familyId={detail.userId}
+              approvedPhoto={approvedPhoto}
+            />
+          ),
+        },
+        {
+          value: 'companion',
+          label: 'همراه دانش‌آموز',
+          content: <AdminCompanionEditor student={detail} />,
         },
         {
           value: 'contract',
@@ -295,7 +325,11 @@ function IdentityTab({
             dir="ltr"
             inputMode="numeric"
             value={form.nationalId}
-            onChange={(event) => set('nationalId', event.target.value)}
+            maxLength={10}
+            pattern="[0-9]{10}"
+            onChange={(event) =>
+              set('nationalId', normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, 10))
+            }
           />
         </label>
         <label className="text-sm font-bold">
@@ -314,8 +348,26 @@ function IdentityTab({
             placeholder="انتخاب کنید"
           />
         </label>
-        <label className="text-sm font-bold">وضعیت جسمانی<Select value={form.physicalStatus} onValueChange={(value) => set('physicalStatus', value)} options={[{value:'HEALTHY',label:'سالم'},{value:'SPECIAL',label:'استثنائی'}]} /></label>
-        {form.physicalStatus === 'SPECIAL' && <label className="text-sm font-bold">نوع معلولیت<Input value={form.disabilityType} onChange={(event) => set('disabilityType',event.target.value)} /></label>}
+        <label className="text-sm font-bold">
+          وضعیت جسمانی
+          <Select
+            value={form.physicalStatus}
+            onValueChange={(value) => set('physicalStatus', value)}
+            options={[
+              { value: 'HEALTHY', label: 'سالم' },
+              { value: 'SPECIAL', label: 'استثنائی' },
+            ]}
+          />
+        </label>
+        {form.physicalStatus === 'SPECIAL' && (
+          <label className="text-sm font-bold">
+            نوع معلولیت
+            <Input
+              value={form.disabilityType}
+              onChange={(event) => set('disabilityType', event.target.value)}
+            />
+          </label>
+        )}
       </div>
       <SaveFeedback message={feedback?.message} tone={feedback?.tone ?? 'success'} />
       <Button type="submit" loading={pending}>

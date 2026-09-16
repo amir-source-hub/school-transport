@@ -6,6 +6,39 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { archiveSchool, unarchiveSchool } from '@/features/admin-schools/admin-schools-api';
+import { permanentlyDeleteSchool } from '@/features/admin-schools/admin-schools-api';
+
+export function DeleteSchoolButton({
+  schoolId,
+  schoolName,
+}: {
+  schoolId: string;
+  schoolName: string;
+}) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  return (
+    <Button
+      variant="danger"
+      size="sm"
+      loading={loading}
+      onClick={async () => {
+        if (!window.confirm(`مدرسه «${schoolName}» برای همیشه حذف شود؟`)) return;
+        setLoading(true);
+        try {
+          await permanentlyDeleteSchool(schoolId);
+          router.refresh();
+        } catch (error) {
+          window.alert(error instanceof Error ? error.message : 'حذف مدرسه انجام نشد.');
+        } finally {
+          setLoading(false);
+        }
+      }}
+    >
+      حذف دائمی
+    </Button>
+  );
+}
 
 export function ArchiveSchoolDialog({
   schoolId,

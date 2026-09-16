@@ -16,7 +16,9 @@ import {
 
 const digits = ({ value }: { value: unknown }) =>
   typeof value === 'string'
-    ? value.replace(/[۰-۹]/g, (char) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(char))).replace(/[٠-٩]/g, (char) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(char)))
+    ? value
+        .replace(/[۰-۹]/g, (char) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(char)))
+        .replace(/[٠-٩]/g, (char) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(char)))
     : value;
 const clean = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 const persianName = /^[\u0600-\u06FF\s‌-]+$/;
@@ -53,15 +55,29 @@ export class DriverEnrollmentDto {
   @Transform(digits) @IsString() @Matches(/^\d{10}$/) nationalId!: string;
   @Transform(digits) @Matches(/^09\d{9}$/) phoneNumber!: string;
   @IsIn(['MALE', 'FEMALE']) gender!: 'MALE' | 'FEMALE';
-  @Transform(clean) @IsIn(['BELOW_DIPLOMA', 'DIPLOMA', 'ASSOCIATE', 'BACHELOR', 'MASTER', 'DOCTORATE']) education!: string;
-  @Transform(digits) @Matches(/^IR\d{24}$/, { message: 'شماره شبا باید با IR شروع شود و دقیقاً ۲۴ رقم داشته باشد.' }) iban!: string;
-  @Transform(digits) @Matches(/^\d{16}$/, { message: 'شماره کارت باید دقیقاً ۱۶ رقم داشته باشد.' }) cardNumber!: string;
-  @Transform(clean) @IsString() @Length(1, 100) bankName!: string;
-  @Transform(digits) @IsOptional() @ValidateIf((_, value) => value !== '') @Matches(/^09\d{9}$/) secondaryPhoneNumber?: string;
-  @Transform(digits) @Matches(/^021\d{8}$/) homePhoneNumber!: string;
+  @Transform(clean)
+  @IsIn(['BELOW_DIPLOMA', 'DIPLOMA', 'ASSOCIATE', 'BACHELOR', 'MASTER', 'DOCTORATE'])
+  education!: string;
+  @Transform(digits)
+  @Matches(/^IR\d{24}$/, { message: 'شماره شبا باید با IR شروع شود و دقیقاً ۲۴ رقم داشته باشد.' })
+  iban!: string;
+  @Transform(digits)
+  @Matches(/^\d{16}$/, { message: 'شماره کارت باید دقیقاً ۱۶ رقم داشته باشد.' })
+  cardNumber!: string;
+  @Transform(clean) @IsString() @Length(1, 100) @Matches(persianName) bankName!: string;
+  @Transform(digits)
+  @IsOptional()
+  @ValidateIf((_, value) => value !== '')
+  @Matches(/^09\d{9}$/)
+  secondaryPhoneNumber?: string;
+  @Transform(digits) @Matches(/^\d{11}$/) homePhoneNumber!: string;
   @Transform(clean) @IsString() @Length(1, 100) @Matches(persianName) emergencyFirstName!: string;
   @Transform(clean) @IsString() @Length(1, 100) @Matches(persianName) emergencyLastName!: string;
-  @Transform(clean) @IsString() @Length(1, 100) @Matches(persianName) emergencyRelationship!: string;
+  @Transform(clean)
+  @IsString()
+  @Length(1, 100)
+  @Matches(persianName)
+  emergencyRelationship!: string;
   @Transform(digits) @Matches(/^09\d{9}$/) emergencyPhoneNumber!: string;
   @Transform(clean) @IsString() @Length(5, 500) @Matches(persianText) streetAddress!: string;
   @Transform(digits) @Matches(/^\d{10}$/) postalCode!: string;
@@ -70,12 +86,24 @@ export class DriverEnrollmentDto {
   @Transform(clean) @IsString() @Length(1, 50) municipalityDistrict!: string;
   @Type(() => Number) @IsNumber() @Min(-90) @Max(90) latitude!: number;
   @Type(() => Number) @IsNumber() @Min(-180) @Max(180) longitude!: number;
-  @Transform(clean) @IsOptional() @ValidateIf((_, value) => value !== '') @IsString() @Length(1, 200) @Matches(persianText) referrerName?: string;
-  @Transform(digits) @IsOptional() @ValidateIf((_, value) => value !== '') @Matches(/^09\d{9}$/) referrerPhoneNumber?: string;
+  @Transform(clean)
+  @IsOptional()
+  @ValidateIf((_, value) => value !== '')
+  @IsString()
+  @Length(1, 200)
+  @Matches(persianName)
+  referrerName?: string;
+  @Transform(digits)
+  @IsOptional()
+  @ValidateIf((_, value) => value !== '')
+  @Matches(/^09\d{9}$/)
+  referrerPhoneNumber?: string;
   @IsIn(['CAR', 'VAN', 'MINIBUS', 'BUS']) vehicleType!: 'CAR' | 'VAN' | 'MINIBUS' | 'BUS';
   @Transform(clean) @IsString() @Length(1, 100) @Matches(persianText) system!: string;
   @Type(() => Number) @IsInt() @Min(1300) @Max(1500) modelYear!: number;
-  @Transform(digits) @Matches(/^\d{2}[بتجچحخدذرزژسصضطظعغفقکگلمنوهی]\d{3}\d{2}$/) plateNumber!: string;
+  @Transform(digits)
+  @Matches(/^\d{2}[بتجچحخدذرزژسصضطظعغفقکگلمنوهی]\d{3}\d{2}$/)
+  plateNumber!: string;
   @Matches(/^\d{4}-\d{2}-\d{2}$/) insuranceExpiresAt!: string;
   @Matches(/^\d{4}-\d{2}-\d{2}$/) technicalInspectionExpiresAt!: string;
   @IsIn(['PERSONAL', 'TAXI']) usageType!: 'PERSONAL' | 'TAXI';
@@ -90,16 +118,44 @@ export class UpdateDriverProfileDto {
   @Transform(digits) @IsOptional() @Matches(/^IR\d{24}$/) iban?: string;
   @Transform(digits) @IsOptional() @Matches(/^\d{16}$/) cardNumber?: string;
   @Transform(clean) @IsOptional() @IsString() @Length(1, 100) bankName?: string;
-  @Transform(digits) @IsOptional() @ValidateIf((_, value) => value !== '') @Matches(/^09\d{9}$/) secondaryPhoneNumber?: string;
-  @Transform(digits) @IsOptional() @ValidateIf((_, value) => value !== '') @Matches(/^021\d{8}$/) homePhoneNumber?: string;
+  @Transform(digits)
+  @IsOptional()
+  @ValidateIf((_, value) => value !== '')
+  @Matches(/^09\d{9}$/)
+  secondaryPhoneNumber?: string;
+  @Transform(digits)
+  @IsOptional()
+  @ValidateIf((_, value) => value !== '')
+  @Matches(/^\d{11}$/)
+  homePhoneNumber?: string;
   @Transform(digits) @IsOptional() @Matches(/^09\d{9}$/) emergencyPhoneNumber?: string;
-  @Transform(clean) @IsOptional() @IsString() @Length(5, 500) @Matches(persianText) streetAddress?: string;
+  @Transform(clean)
+  @IsOptional()
+  @IsString()
+  @Length(5, 500)
+  @Matches(persianText)
+  streetAddress?: string;
   @Transform(digits) @IsOptional() @Matches(/^\d{10}$/) postalCode?: string;
-  @Transform(clean) @IsOptional() @IsString() @Length(1, 100) @Matches(persianText) province?: string;
+  @Transform(clean)
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  @Matches(persianText)
+  province?: string;
   @Transform(clean) @IsOptional() @IsString() @Length(1, 100) @Matches(persianText) city?: string;
   @Transform(clean) @IsOptional() @IsString() @Length(1, 50) municipalityDistrict?: string;
-  @Transform(clean) @IsOptional() @ValidateIf((_, value) => value !== '') @IsString() @Length(1, 200) @Matches(persianText) referrerName?: string;
-  @Transform(digits) @IsOptional() @ValidateIf((_, value) => value !== '') @Matches(/^09\d{9}$/) referrerPhoneNumber?: string;
+  @Transform(clean)
+  @IsOptional()
+  @ValidateIf((_, value) => value !== '')
+  @IsString()
+  @Length(1, 200)
+  @Matches(persianText)
+  referrerName?: string;
+  @Transform(digits)
+  @IsOptional()
+  @ValidateIf((_, value) => value !== '')
+  @Matches(/^09\d{9}$/)
+  referrerPhoneNumber?: string;
 }
 
 export class AssignDriverToStudentDto {
@@ -117,12 +173,16 @@ export class CreateTransportRouteDto {
   @IsUUID() schoolId!: string;
   @Transform(clean) @IsString() @Length(2, 100) title!: string;
   @Transform(clean) @IsString() @Length(4, 20) academicYear!: string;
-  @IsIn(['TO_SCHOOL', 'FROM_SCHOOL', 'ROUND_TRIP']) direction!: 'TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP';
+  @IsIn(['TO_SCHOOL', 'FROM_SCHOOL', 'ROUND_TRIP']) direction!:
+    'TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP';
   @Matches(/^\d{2}:\d{2}$/) scheduledStartTime!: string;
   @Matches(/^\d{2}:\d{2}$/) scheduledArrivalTime!: string;
   @Transform(clean) @IsOptional() @IsString() @Length(0, 500) areaDescription?: string;
   @IsOptional() @IsInt() @Min(0) contractPriceRials?: number;
-  @Transform(clean) @IsOptional() @Matches(/^1[34]\d{2}\/(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])$/) contractDate?: string;
+  @Transform(clean)
+  @IsOptional()
+  @Matches(/^1[34]\d{2}\/(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])$/)
+  contractDate?: string;
   @IsInt({ each: true }) @Min(0, { each: true }) @Max(6, { each: true }) activeWeekdays!: number[];
 }
 
@@ -142,7 +202,10 @@ export class AdminUpdateDriverDto extends UpdateDriverProfileDto {
   @IsOptional() @IsIn(['CAR', 'VAN', 'MINIBUS', 'BUS']) vehicleType?: string;
   @Transform(clean) @IsOptional() @IsString() @Length(1, 100) system?: string;
   @Type(() => Number) @IsOptional() @IsInt() @Min(1300) @Max(1500) modelYear?: number;
-  @Transform(digits) @IsOptional() @Matches(/^\d{2}[بتجچحخدذرزژسصضطظعغفقکگلمنوهی]\d{5}$/) plateNumber?: string;
+  @Transform(digits)
+  @IsOptional()
+  @Matches(/^\d{2}[بتجچحخدذرزژسصضطظعغفقکگلمنوهی]\d{5}$/)
+  plateNumber?: string;
   @Type(() => Number) @IsOptional() @IsInt() @Min(1) capacity?: number;
   @IsOptional() @IsIn(['PERSONAL', 'TAXI']) usageType?: string;
   @IsOptional() @IsIn(['SELF', 'OTHER']) ownershipType?: string;
@@ -155,11 +218,19 @@ export class UpdateTransportRouteDto {
   @IsOptional() @IsUUID() schoolId?: string;
   @Transform(clean) @IsOptional() @IsString() @Length(2, 100) title?: string;
   @Transform(clean) @IsOptional() @IsString() @Length(4, 20) academicYear?: string;
-  @IsOptional() @IsIn(['TO_SCHOOL', 'FROM_SCHOOL', 'ROUND_TRIP']) direction?: 'TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP';
+  @IsOptional() @IsIn(['TO_SCHOOL', 'FROM_SCHOOL', 'ROUND_TRIP']) direction?:
+    'TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP';
   @Transform(clean) @IsOptional() @IsString() @Length(0, 500) areaDescription?: string;
   @IsOptional() @IsInt() @Min(0) contractPriceRials?: number;
-  @Transform(clean) @IsOptional() @Matches(/^1[34]\d{2}\/(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])$/) contractDate?: string;
-  @IsOptional() @IsInt({ each: true }) @Min(0, { each: true }) @Max(6, { each: true }) activeWeekdays?: number[];
+  @Transform(clean)
+  @IsOptional()
+  @Matches(/^1[34]\d{2}\/(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])$/)
+  contractDate?: string;
+  @IsOptional()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  activeWeekdays?: number[];
 }
 
 export class AddStudentToTransportRouteDto {

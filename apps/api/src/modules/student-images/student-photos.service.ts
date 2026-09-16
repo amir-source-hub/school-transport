@@ -21,6 +21,7 @@ import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { DatabaseService } from '../../database/database.service';
 import {
   schoolManagerAssignments,
+  schools,
   students,
   studentPhotoUploads,
   users,
@@ -515,6 +516,7 @@ export class StudentPhotosService {
         )!,
       );
     }
+    if (query.schoolId) filters.push(eq(students.schoolId, query.schoolId));
     const where = and(...filters);
     const rows = await this.db.db
       .select({
@@ -522,10 +524,12 @@ export class StudentPhotosService {
         student: {
           firstName: students.firstName,
           lastName: students.lastName,
+          schoolName: schools.name,
         },
       })
       .from(studentPhotoUploads)
       .leftJoin(students, eq(students.id, studentPhotoUploads.studentId))
+      .leftJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, studentPhotoUploads.accountUserId))
       .where(and(where, eq(users.accountStatus, 'ACTIVE')))
       // Bulk uploads may share timestamps; the unique ID keeps pages stable.
@@ -536,12 +540,19 @@ export class StudentPhotosService {
       .select({ value: count() })
       .from(studentPhotoUploads)
       .leftJoin(students, eq(students.id, studentPhotoUploads.studentId))
+      .leftJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, studentPhotoUploads.accountUserId))
       .where(and(where, eq(users.accountStatus, 'ACTIVE')));
     return {
       items: rows.map(({ upload, student }) => ({
         ...this.toAdminView(upload),
-        student: student ? { firstName: student.firstName, lastName: student.lastName } : null,
+        student: student
+          ? {
+              firstName: student.firstName,
+              lastName: student.lastName,
+              schoolName: student.schoolName,
+            }
+          : null,
       })),
       total: Number(value),
       page: query.page,

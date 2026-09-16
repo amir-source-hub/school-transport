@@ -130,6 +130,9 @@ export function AdminPhotoReviewQueue({ items }: { items: AdminPhoto[] }) {
                     {item.width}×{item.height} پیکسل ·{' '}
                     {Math.round((item.actualSize ?? item.declaredSize) / 1024)} کیلوبایت
                   </p>
+                  {item.student?.schoolName && (
+                    <p className="mt-1 text-sm font-bold text-primary">{item.student.schoolName}</p>
+                  )}
                 </div>
                 <Badge
                   tone={

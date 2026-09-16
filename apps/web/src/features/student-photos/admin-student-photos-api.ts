@@ -18,19 +18,24 @@ export const adminPhotoSchema = z.object({
   hasCanonical: z.boolean(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-  student: z.object({ firstName: z.string(), lastName: z.string() }).nullable(),
+  student: z
+    .object({ firstName: z.string(), lastName: z.string(), schoolName: z.string().nullable() })
+    .nullable(),
 });
 export type AdminPhoto = z.infer<typeof adminPhotoSchema>;
 
 const listSchema = z.array(adminPhotoSchema);
 
-export async function getAdminPhotos(params: { page?: number; status?: string; q?: string } = {}) {
+export async function getAdminPhotos(
+  params: { page?: number; status?: string; q?: string; schoolId?: string } = {},
+) {
   const query = new URLSearchParams({
     page: String(params.page ?? 1),
     pageSize: '10',
   });
   if (params.status) query.set('status', params.status);
   if (params.q) query.set('q', params.q);
+  if (params.schoolId) query.set('schoolId', params.schoolId);
   const response = await apiRequest<unknown>(`/admin/student-photos?${query}`, {
     cache: 'no-store',
   });
