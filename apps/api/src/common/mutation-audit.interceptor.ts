@@ -19,6 +19,10 @@ type AuditableRequest = FastifyRequest & {
   params?: Record<string, unknown>;
 };
 
+function boundedRoute(request: AuditableRequest): string {
+  return (request.routeOptions?.url ?? new URL(request.url, 'http://local').pathname).slice(0, 255);
+}
+
 @Injectable()
 export class MutationAuditInterceptor implements NestInterceptor {
   private readonly logger = new Logger(MutationAuditInterceptor.name);
@@ -48,7 +52,7 @@ export class MutationAuditInterceptor implements NestInterceptor {
   }
 
   private async recordMutation(request: AuditableRequest, actorId: string) {
-    const route = request.routeOptions?.url ?? new URL(request.url, 'http://local').pathname;
+    const route = boundedRoute(request);
     const entityType =
       route
         .split('/')
@@ -67,6 +71,11 @@ export class MutationAuditInterceptor implements NestInterceptor {
       entityType,
       entityId,
       ipAddress: request.ip,
+      newValues: {
+        httpMethod: request.method.toUpperCase().slice(0, 10),
+        route,
+        outcome: 'SUCCESS',
+      },
     });
   }
 }

@@ -3,6 +3,21 @@ import { allowlistedAuditValues } from './audit.service';
 import { serializeSafeAuditValues } from '../../common/sensitive-data';
 
 describe('audit value allowlist', () => {
+  it('keeps HTTP mutation metadata but drops request contents', () => {
+    expect(
+      allowlistedAuditValues({
+        httpMethod: 'PATCH',
+        route: '/api/v1/admin/students/:id',
+        outcome: 'SUCCESS',
+        requestBody: { nationalId: '0012345678' },
+      }),
+    ).toEqual({
+      httpMethod: 'PATCH',
+      route: '/api/v1/admin/students/:id',
+      outcome: 'SUCCESS',
+    });
+  });
+
   it('keeps operational student fields and drops direct child identifiers', () => {
     expect(
       allowlistedAuditValues({
