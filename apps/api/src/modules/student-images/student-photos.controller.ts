@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { Roles } from '../../common/decorators';
+import { OnboardingRole, Roles } from '../../common/decorators';
 import type { AuthenticatedRequest } from '../../common/http-request';
 import { paginatedResponse, successResponse } from '../../common/response';
 import { AuthGuard } from '../access-control/auth.guard';
@@ -62,6 +62,7 @@ export class StudentPhotosController {
 }
 
 @UseGuards(OnboardingGuard)
+@OnboardingRole('PARENT')
 @Controller('onboarding/student-photos')
 export class OnboardingStudentPhotosController {
   constructor(private readonly service: StudentPhotosService) {}

@@ -61,6 +61,7 @@ export function StudentPortalLoginForm({ nextPath, enrollmentPath = '/onboarding
           nationalId: response.data.onboarding.nationalId,
           expiresAt: response.data.onboarding.expiresAt,
           currentStep: response.data.onboarding.currentStep,
+          portalRole: audience === 'driver' ? 'DRIVER' : 'PARENT',
         });
         router.replace(enrollmentPath);
         return;

@@ -436,6 +436,7 @@ export class AuthController {
           expiresAt: result.onboarding.expiresAt,
           currentStep: result.onboarding.currentStep,
           nationalId: result.onboarding.nationalId,
+          portalRole: result.onboarding.portalRole,
         },
       });
     }
@@ -460,7 +461,7 @@ export class AuthController {
     }, dto.rememberMe ?? false, (req as FastifyRequest & { cookies?: Record<string, string> }).cookies?.onboarding_token);
     if (result.user === null) {
       this.setOnboardingCookie(reply, result.onboarding.token, result.onboarding.expiresAt);
-      return successResponse({ user: null, onboarding: { sessionId: result.onboarding.sessionId, expiresAt: result.onboarding.expiresAt, currentStep: result.onboarding.currentStep, nationalId: result.onboarding.nationalId } });
+      return successResponse({ user: null, onboarding: { sessionId: result.onboarding.sessionId, expiresAt: result.onboarding.expiresAt, currentStep: result.onboarding.currentStep, nationalId: result.onboarding.nationalId, portalRole: result.onboarding.portalRole } });
     }
     this.setRefreshCookie(reply, result.refreshToken, false, dto.rememberMe ?? false);
     this.setAccessCookie(reply, result.accessToken, false);
@@ -601,6 +602,7 @@ export class AuthController {
           sessionId: result.onboarding.sessionId,
           expiresAt: result.onboarding.expiresAt,
           currentStep: result.onboarding.currentStep,
+          portalRole: result.onboarding.portalRole,
         },
       });
     }
@@ -630,6 +632,7 @@ export class AuthController {
       status: 'PENDING',
       expiresAt: req.onboarding.expiresAt,
       currentStep: req.onboarding.currentStep,
+      portalRole: req.onboarding.portalRole,
       nationalId,
     });
   }

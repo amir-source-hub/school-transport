@@ -9,7 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Roles } from '../../common/decorators';
+import { OnboardingRole, Roles } from '../../common/decorators';
 import { AuthenticatedRequest } from '../../common/http-request';
 import { successResponse } from '../../common/response';
 import { AuthGuard } from '../access-control/auth.guard';
@@ -116,6 +116,7 @@ export class PaymentsController {
 }
 
 @UseGuards(OnboardingGuard)
+@OnboardingRole('PARENT')
 @Controller('onboarding/payments')
 export class OnboardingPaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}

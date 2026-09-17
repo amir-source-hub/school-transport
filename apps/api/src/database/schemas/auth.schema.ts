@@ -14,8 +14,9 @@ export const users = pgTable(
   'users',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    username: varchar('username', { length: 100 }).notNull().unique(),
-    phoneNumber: varchar('phone_number', { length: 20 }).unique(),
+    username: varchar('username', { length: 100 }).notNull(),
+    phoneNumber: varchar('phone_number', { length: 20 }),
+    accountType: varchar('account_type', { length: 20 }).notNull().default('PARENT'),
     accountStatus: varchar('account_status', { length: 20 }).notNull().default('ACTIVE'),
     studentLimit: integer('student_limit').notNull().default(2),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
@@ -23,8 +24,8 @@ export const users = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
-    usernameIdx: index('idx_users_username').on(table.username),
-    phoneIdx: uniqueIndex('idx_users_phone').on(table.phoneNumber),
+    usernameIdx: uniqueIndex('idx_users_type_username').on(table.accountType, table.username),
+    phoneIdx: uniqueIndex('idx_users_type_phone').on(table.accountType, table.phoneNumber),
   }),
 );
 
@@ -118,6 +119,7 @@ export const onboardingSessions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     phoneNumber: varchar('phone_number', { length: 20 }).notNull(),
+    portalRole: varchar('portal_role', { length: 20 }).notNull().default('PARENT'),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id),
@@ -131,10 +133,14 @@ export const onboardingSessions = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
-    activePerPhoneIdx: uniqueIndex('idx_onboarding_one_active_per_phone')
-      .on(table.phoneNumber)
+    activePerPhoneIdx: uniqueIndex('idx_onboarding_one_active_per_phone_role')
+      .on(table.phoneNumber, table.portalRole)
       .where(sql`${table.status} = 'PENDING'`),
-    phoneStatusIdx: index('idx_onboarding_phone_status').on(table.phoneNumber, table.status),
+    phoneStatusIdx: index('idx_onboarding_phone_role_status').on(
+      table.phoneNumber,
+      table.portalRole,
+      table.status,
+    ),
     expiresAtIdx: index('idx_onboarding_expires_at').on(table.expiresAt),
   }),
 );

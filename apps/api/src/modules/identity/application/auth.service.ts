@@ -317,6 +317,7 @@ export class AuthService {
           id: userId,
           username: pendingUsername,
           phoneNumber,
+          accountType: 'PARENT',
           accountStatus: 'PENDING',
         });
       } else {
@@ -325,9 +326,11 @@ export class AuthService {
             ? await this.onboarding.resolve(onboardingToken)
             : undefined;
         const ownsPendingDraft =
-          existingOnboarding?.userId === userId && existingOnboarding.phoneNumber === phoneNumber;
+          existingOnboarding?.userId === userId &&
+          existingOnboarding.phoneNumber === phoneNumber &&
+          existingOnboarding.portalRole === 'PARENT';
         if (!ownsPendingDraft) {
-          await this.onboarding?.restartPendingDraft(userId);
+          await this.onboarding?.restartPendingDraft(userId, 'PARENT');
         }
         // A PENDING row is only a restricted draft owner, not a completed account.
         // Its credentials may be corrected only by the browser that owns the draft.
@@ -343,7 +346,7 @@ export class AuthService {
           .where(eq(users.id, userId));
       }
       if (!this.onboarding) throw new AuthenticationError('Onboarding is not configured.');
-      const onboarding = await this.onboarding.beginOrResume(userId, phoneNumber);
+      const onboarding = await this.onboarding.beginOrResume(userId, phoneNumber, 'PARENT');
       this.logger.log('Parent onboarding session issued with fixed credentials.');
       return { user: null, onboarding: { ...onboarding, nationalId } };
     }
@@ -353,23 +356,6 @@ export class AuthService {
       .select({ id: parents.id, phoneNumber: parents.phoneNumber, nationalId: parents.nationalId })
       .from(parents)
       .where(eq(parents.userId, account.id));
-    if (familyParents.length === 0) {
-      const [matchingDriver] = await this.db.db
-        .select({ id: drivers.id })
-        .from(drivers)
-        .where(
-          and(
-            eq(drivers.userId, account.id),
-            eq(drivers.phoneNumber, phoneNumber),
-            eq(drivers.nationalId, nationalId),
-          ),
-        )
-        .limit(1);
-      if (matchingDriver && this.config.featureOnboarding !== false && this.onboarding) {
-        const onboarding = await this.onboarding.beginOrResume(account.id, phoneNumber);
-        return { user: null, onboarding: { ...onboarding, nationalId } };
-      }
-    }
     const matchingParent = familyParents.find(
       (parent) => parent.phoneNumber === phoneNumber && parent.nationalId === nationalId,
     );
@@ -404,23 +390,70 @@ export class AuthService {
     rememberMe = false,
     onboardingToken?: string,
   ): Promise<ParentCredentialResult> {
-    const account = await this.findAccountByPhone(phoneNumber);
+    const genericError = () => new AuthenticationError('شماره همراه راننده یا کد ملی صحیح نیست.');
+    const account = await this.findAccountByPhone(phoneNumber, 'DRIVER');
+    const [nationalIdOwner] = await this.db.db
+      .select({ userId: drivers.userId, status: users.accountStatus })
+      .from(drivers)
+      .innerJoin(users, eq(users.id, drivers.userId))
+      .where(eq(drivers.nationalId, nationalId))
+      .limit(1);
+    if (
+      nationalIdOwner?.status === 'ACTIVE' &&
+      (!account || account.id !== nationalIdOwner.userId)
+    ) {
+      throw genericError();
+    }
+
     if (!account || account.status === 'PENDING' || account.status === 'EXPIRED') {
-      return this.authenticateParent(phoneNumber, nationalId, context, rememberMe, onboardingToken);
-    }
-    const [driver] = await this.db.db.select({ id: drivers.id }).from(drivers).where(and(eq(drivers.userId, account.id), eq(drivers.phoneNumber, phoneNumber), eq(drivers.nationalId, nationalId))).limit(1);
-    if (!driver && account.status === 'ACTIVE' && this.config.featureOnboarding !== false && this.onboarding) {
-      const [matchingParent] = await this.db.db
-        .select({ id: parents.id })
-        .from(parents)
-        .where(and(eq(parents.userId, account.id), eq(parents.phoneNumber, phoneNumber), eq(parents.nationalId, nationalId)))
-        .limit(1);
-      if (matchingParent) {
-        const onboarding = await this.onboarding.beginOrResume(account.id, phoneNumber);
-        return { user: null, onboarding: { ...onboarding, nationalId } };
+      if (this.config.featureOnboarding === false || !this.onboarding) throw genericError();
+      let userId = account?.id;
+      const pendingUsername = `${phoneNumber}:${nationalId}`;
+      if (!userId) {
+        userId = generateId();
+        await this.db.db.insert(users).values({
+          id: userId,
+          username: pendingUsername,
+          phoneNumber,
+          accountType: 'DRIVER',
+          accountStatus: 'PENDING',
+        });
+      } else {
+        const existingOnboarding = onboardingToken
+          ? await this.onboarding.resolve(onboardingToken)
+          : undefined;
+        const ownsPendingDraft =
+          existingOnboarding?.userId === userId &&
+          existingOnboarding.phoneNumber === phoneNumber &&
+          existingOnboarding.portalRole === 'DRIVER';
+        if (!ownsPendingDraft) {
+          await this.onboarding.restartPendingDraft(userId, 'DRIVER');
+        }
+        await this.db.db
+          .update(users)
+          .set({ username: pendingUsername, accountStatus: 'PENDING', updatedAt: new Date() })
+          .where(eq(users.id, userId));
       }
+      const onboarding = await this.onboarding.beginOrResume(userId, phoneNumber, 'DRIVER');
+      return { user: null, onboarding: { ...onboarding, nationalId } };
     }
-    if (!driver || account.status !== 'ACTIVE') throw new AuthenticationError('شماره همراه راننده یا کد ملی صحیح نیست.');
+
+    const [driver] = await this.db.db
+      .select({ id: drivers.id })
+      .from(drivers)
+      .where(
+        and(
+          eq(drivers.userId, account.id),
+          eq(drivers.phoneNumber, phoneNumber),
+          eq(drivers.nationalId, nationalId),
+        ),
+      )
+      .limit(1);
+    if (!driver || account.status !== 'ACTIVE') throw genericError();
+    await this.db.db
+      .update(users)
+      .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, account.id));
     const tokens = await this.generateTokens(account.id, 'DRIVER', context, undefined, rememberMe);
     return { user: { id: account.id, username: account.username, phoneNumber, role: 'DRIVER' }, ...tokens };
   }
@@ -455,6 +488,7 @@ export class AuthService {
           id: userId,
           username: phoneNumber,
           phoneNumber,
+          accountType: 'PARENT',
           accountStatus: 'PENDING',
         });
         this.logger.log('Parent onboarding account created after OTP verification.');
@@ -467,7 +501,7 @@ export class AuthService {
       if (!this.onboarding) {
         throw new AuthenticationError('Onboarding is not configured.');
       }
-      const onboardingSession = await this.onboarding.beginOrResume(userId, phoneNumber);
+      const onboardingSession = await this.onboarding.beginOrResume(userId, phoneNumber, 'PARENT');
       this.logger.log('Onboarding session issued for a verified phone.');
       return { user: null, onboarding: onboardingSession };
     }
@@ -523,12 +557,15 @@ export class AuthService {
     if (!session) {
       throw new AuthenticationError('Invalid or expired onboarding session.');
     }
-    if (!(await this.onboarding.isPanelReady(session.userId))) {
+    if (requestedRole && requestedRole !== session.portalRole) {
+      throw new AuthenticationError('This onboarding session belongs to another portal.');
+    }
+    if (!(await this.onboarding.isPanelReady(session.userId, session.portalRole))) {
       throw new ValidationError(
         'Onboarding cannot be completed until an enrollment contract is accepted.',
       );
     }
-    await this.onboarding.completeOnboarding(session.id, session.userId);
+    await this.onboarding.completeOnboarding(session.id, session.userId, session.portalRole);
     await this.db.db
       .update(users)
       .set({ username: session.phoneNumber, updatedAt: new Date() })
@@ -539,7 +576,7 @@ export class AuthService {
     ]);
     if (requestedRole === 'DRIVER' && !driver) throw new ValidationError('پروفایل راننده تکمیل نشده است.');
     if (requestedRole === 'PARENT' && !parent) throw new ValidationError('پروفایل خانواده تکمیل نشده است.');
-    const role: UserRole = requestedRole ?? (driver ? 'DRIVER' : 'PARENT');
+    const role: UserRole = session.portalRole;
     const tokens = await this.generateTokens(
       session.userId,
       role,
@@ -547,7 +584,7 @@ export class AuthService {
       undefined,
       rememberMe,
     );
-    this.logger.log('Onboarding completed; parent account activated.');
+    this.logger.log(`${role} onboarding completed; isolated account activated.`);
     return {
       user: {
         id: session.userId,
@@ -1375,21 +1412,22 @@ export class AuthService {
 
   private async findAccountByPhone(
     phoneNumber: string,
-    _role: 'PARENT' = 'PARENT',
+    role: 'PARENT' | 'DRIVER' = 'PARENT',
   ): Promise<{ id: string; username: string; status: string } | undefined> {
     const direct = await this.db.db
       .select({ id: users.id, username: users.username, status: users.accountStatus })
       .from(users)
-      .where(eq(users.phoneNumber, phoneNumber))
+      .where(and(eq(users.phoneNumber, phoneNumber), eq(users.accountType, role)))
       .limit(1);
     if (direct[0]) return direct[0];
 
     // Compatibility for accounts created before users.phone_number existed.
+    if (role !== 'PARENT') return undefined;
     const legacy = await this.db.db
       .select({ id: users.id, username: users.username, status: users.accountStatus })
       .from(parents)
       .innerJoin(users, eq(parents.userId, users.id))
-      .where(eq(parents.phoneNumber, phoneNumber))
+      .where(and(eq(parents.phoneNumber, phoneNumber), eq(users.accountType, 'PARENT')))
       .limit(1);
     return legacy[0];
   }
@@ -1417,7 +1455,12 @@ export class AuthService {
       await this.db.db
         .select({ status: users.accountStatus })
         .from(users)
-        .where(eq(users.id, userId))
+        .where(
+          and(
+            eq(users.id, userId),
+            eq(users.accountType, role === 'DRIVER' ? 'DRIVER' : 'PARENT'),
+          ),
+        )
         .limit(1)
     )[0];
   }

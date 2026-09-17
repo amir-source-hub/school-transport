@@ -242,7 +242,13 @@ export class FamiliesService {
         const phoneOwner = await this.db.db
           .select({ id: users.id })
           .from(users)
-          .where(and(eq(users.phoneNumber, phoneNumber), ne(users.id, userId)))
+          .where(
+            and(
+              eq(users.phoneNumber, phoneNumber),
+              eq(users.accountType, 'PARENT'),
+              ne(users.id, userId),
+            ),
+          )
           .limit(1);
         if (phoneOwner[0]) {
           throw new ConflictError('DUPLICATE_PHONE_NUMBER', 'This phone number is already in use.');

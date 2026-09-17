@@ -1,22 +1,28 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { FastifyRequest } from 'fastify';
 import { createHash } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { isPast } from 'date-fns';
 import { DatabaseService } from '../../database/database.service';
 import { onboardingSessions } from '../../database/schemas';
+import { ONBOARDING_ROLE_KEY } from '../../common/decorators';
 
 export interface OnboardingContext {
   id: string;
   userId: string;
   phoneNumber: string;
+  portalRole: 'PARENT' | 'DRIVER';
   currentStep: string | null;
   expiresAt: Date;
 }
 
 @Injectable()
 export class OnboardingGuard implements CanActivate {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly reflector: Reflector = new Reflector(),
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
@@ -42,14 +48,27 @@ export class OnboardingGuard implements CanActivate {
       throw new UnauthorizedException('Invalid or expired onboarding session.');
     }
 
+    const handler = (context as ExecutionContext & { getHandler?: () => Function }).getHandler?.();
+    const controllerClass = (context as ExecutionContext & { getClass?: () => Function }).getClass?.();
+    const requiredRole = this.reflector.getAllAndOverride<'PARENT' | 'DRIVER'>(
+      ONBOARDING_ROLE_KEY,
+      [handler, controllerClass].filter(Boolean) as Function[],
+    );
+    const portalRole: 'PARENT' | 'DRIVER' =
+      session.portalRole === 'DRIVER' ? 'DRIVER' : 'PARENT';
+    if (requiredRole && portalRole !== requiredRole) {
+      throw new UnauthorizedException('This onboarding session belongs to another portal.');
+    }
+
     (request as any).onboarding = {
       id: session.id,
       userId: session.userId,
       phoneNumber: session.phoneNumber,
+      portalRole,
       currentStep: session.currentStep,
       expiresAt: session.expiresAt,
     } satisfies OnboardingContext;
-    (request as any).user = { id: session.userId, role: 'PARENT', sessionId: null };
+    (request as any).user = { id: session.userId, role: portalRole, sessionId: null };
     return true;
   }
 

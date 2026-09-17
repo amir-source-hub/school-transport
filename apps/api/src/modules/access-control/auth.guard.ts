@@ -76,7 +76,12 @@ export class AuthGuard implements CanActivate {
             : await this.database.db
                 .select({ status: users.accountStatus })
                 .from(users)
-                .where(eq(users.id, payload.sub))
+                .where(
+                  and(
+                    eq(users.id, payload.sub),
+                    eq(users.accountType, payload.role === 'DRIVER' ? 'DRIVER' : 'PARENT'),
+                  ),
+                )
                 .limit(1);
       if (!account || account.status !== 'ACTIVE') {
         throw new UnauthorizedException('Inactive account.');

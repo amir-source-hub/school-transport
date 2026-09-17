@@ -9,6 +9,7 @@ export type OnboardingRequest = FastifyRequest & {
     id: string;
     userId: string;
     phoneNumber: string;
+    portalRole: 'PARENT' | 'DRIVER';
     currentStep: string | null;
     expiresAt: Date;
   };

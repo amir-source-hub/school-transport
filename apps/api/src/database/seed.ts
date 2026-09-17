@@ -166,6 +166,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         id: ids.driverUser,
         username: SEED_CREDENTIALS.driver.username,
         phoneNumber: SEED_CREDENTIALS.driver.phoneNumber,
+        accountType: 'DRIVER',
         accountStatus: 'ACTIVE',
       })
       .onConflictDoNothing();
@@ -188,11 +189,13 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           id: ids.driverUser2,
           username: SEED_CREDENTIALS.additionalDrivers[0].username,
           phoneNumber: SEED_CREDENTIALS.additionalDrivers[0].phoneNumber,
+          accountType: 'DRIVER',
         },
         {
           id: ids.driverUser3,
           username: SEED_CREDENTIALS.additionalDrivers[1].username,
           phoneNumber: SEED_CREDENTIALS.additionalDrivers[1].phoneNumber,
+          accountType: 'DRIVER',
         },
       ])
       .onConflictDoNothing();

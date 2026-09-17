@@ -4,6 +4,7 @@ export type OnboardingState = {
   nationalId: string | null;
   expiresAt: string | null;
   currentStep: string | null;
+  portalRole?: 'PARENT' | 'DRIVER' | null;
 };
 
 let onboardingState: OnboardingState = {
@@ -12,6 +13,7 @@ let onboardingState: OnboardingState = {
   nationalId: null,
   expiresAt: null,
   currentStep: null,
+  portalRole: null,
 };
 
 export function setOnboardingState(state: OnboardingState) {
@@ -29,5 +31,6 @@ export function clearOnboardingState() {
     nationalId: null,
     expiresAt: null,
     currentStep: null,
+    portalRole: null,
   };
 }

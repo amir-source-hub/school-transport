@@ -386,6 +386,13 @@
       "when": 1789581600000,
       "tag": "0054_driver_document_files",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1789668000000,
+      "tag": "0055_role_isolated_portal_accounts",
+      "breakpoints": true
     }
   ]
 }

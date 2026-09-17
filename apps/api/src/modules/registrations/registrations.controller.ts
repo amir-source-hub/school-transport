@@ -13,7 +13,7 @@ import { RegistrationsService } from './registrations.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
 import { RolesGuard } from '../access-control/roles.guard';
-import { Roles } from '../../common/decorators';
+import { OnboardingRole, Roles } from '../../common/decorators';
 import { paginatedResponse, successResponse } from '../../common/response';
 import { AuthenticatedRequest } from '../../common/http-request';
 import {
@@ -68,6 +68,7 @@ export class RegistrationsController {
 }
 
 @UseGuards(OnboardingGuard)
+@OnboardingRole('PARENT')
 @Controller('onboarding/enrollments')
 export class OnboardingRegistrationsController {
   constructor(private readonly registrationsService: RegistrationsService) {}

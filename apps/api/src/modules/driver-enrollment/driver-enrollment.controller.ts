@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Roles } from '../../common/decorators';
+import { OnboardingRole, Roles } from '../../common/decorators';
 import type { AuthenticatedRequest } from '../../common/http-request';
 import { AuthGuard } from '../access-control/auth.guard';
 import { RolesGuard } from '../access-control/roles.guard';
@@ -31,6 +31,7 @@ import { DriverEnrollmentService } from './driver-enrollment.service';
 import { AssignStudentRoutesDto } from './driver-enrollment.dto';
 
 @UseGuards(OnboardingGuard)
+@OnboardingRole('DRIVER')
 @Controller('onboarding/driver-enrollment')
 export class DriverEnrollmentController {
   constructor(private readonly service: DriverEnrollmentService) {}

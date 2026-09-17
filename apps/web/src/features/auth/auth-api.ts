@@ -31,6 +31,7 @@ export type OnboardingResponse = {
     expiresAt: string;
     currentStep: string | null;
     nationalId: string;
+    portalRole: 'PARENT' | 'DRIVER';
   };
 };
 
