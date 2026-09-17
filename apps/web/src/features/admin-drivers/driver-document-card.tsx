@@ -23,6 +23,7 @@ const labels: Record<string, string> = {
   EDUCATION_CERTIFICATE: 'تصویر مدرک تحصیلی',
   POSTAL_CODE_CONFIRMATION: 'تأییدیه کدپستی',
   SCHOOL_SERVICE_INSURANCE_ENDORSEMENT: 'الحاقیه بیمه‌نامه سرویس مدرسه',
+  TAXI_OPERATION_LICENSE: 'پروانه تاکسیرانی (مخصوص خودرو تاکسی)',
   VEHICLE_PHOTO: 'عکس خودرو',
   VEHICLE_CARD_FRONT: 'روی کارت خودرو',
   VEHICLE_CARD_BACK: 'پشت کارت خودرو',

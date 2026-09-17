@@ -66,6 +66,15 @@ describe('DriverDocumentUploadDto', () => {
     expect(await validate(dto)).toHaveLength(0);
   });
 
+  it('accepts the taxi operation license as a bucket-backed driver document', async () => {
+    const dto = plainToInstance(DriverDocumentUploadDto, {
+      documentType: 'TAXI_OPERATION_LICENSE',
+      mimeType: 'image/jpeg',
+      size: 2048,
+    });
+    expect(await validate(dto)).toHaveLength(0);
+  });
+
   it('rejects removed returned-letter slots and unsupported file types', async () => {
     const dto = plainToInstance(DriverDocumentUploadDto, {
       documentType: 'COMMITMENT_LETTER_RETURNED',

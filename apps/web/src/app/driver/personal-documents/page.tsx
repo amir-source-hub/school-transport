@@ -53,6 +53,11 @@ const definitions = [
     label: 'الحاقیه بیمه‌نامه سرویس مدرسه',
     hint: 'تصویر یا PDF کامل الحاقیه بیمه‌نامه',
   },
+  {
+    type: 'TAXI_OPERATION_LICENSE',
+    label: 'پروانه تاکسیرانی (مخصوص خودرو تاکسی)',
+    hint: 'تصویر یا PDF خوانای پروانه تاکسیرانی؛ فقط برای خودروهای تاکسی',
+  },
 ] as const;
 export default async function Page() {
   const documents = await getDriverDocuments();
