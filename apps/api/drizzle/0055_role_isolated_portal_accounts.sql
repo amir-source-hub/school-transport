@@ -11,7 +11,7 @@ DROP INDEX IF EXISTS "idx_onboarding_phone_status";
 CREATE TEMP TABLE "driver_user_split" (
   "old_user_id" uuid PRIMARY KEY,
   "new_user_id" uuid NOT NULL
-) ON COMMIT DROP;
+);
 
 INSERT INTO "driver_user_split" ("old_user_id", "new_user_id")
 SELECT DISTINCT d."user_id", gen_random_uuid()
