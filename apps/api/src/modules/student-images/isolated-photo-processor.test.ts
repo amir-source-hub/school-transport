@@ -25,22 +25,22 @@ describe('processStudentPhotoIsolated', () => {
     expect(result.checksum).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it('accepts decodable JPEG and PNG files with harmless trailing bytes', async () => {
-    const pngWithTrailingBytes = Buffer.concat([await image(), Buffer.from('camera-metadata')]);
+  it('neutralizes decodable image polyglots and harmless trailing bytes by canonicalizing them', async () => {
+    const trailingPayload = Buffer.from('<script>polyglots-must-not-survive</script>');
+    const pngWithTrailingBytes = Buffer.concat([await image(), trailingPayload]);
     const jpeg = await sharp(await image())
       .jpeg()
       .toBuffer();
-    const jpegWithTrailingBytes = Buffer.concat([jpeg, Buffer.from('camera-metadata')]);
-    await expect(processStudentPhotoIsolated(pngWithTrailingBytes, config)).resolves.toMatchObject({
+    const jpegWithTrailingBytes = Buffer.concat([jpeg, trailingPayload]);
+    const pngResult = await processStudentPhotoIsolated(pngWithTrailingBytes, config);
+    expect(pngResult).toMatchObject({
       width: 600,
       height: 800,
     });
-    await expect(processStudentPhotoIsolated(jpegWithTrailingBytes, config)).resolves.toMatchObject(
-      {
-        width: 600,
-        height: 800,
-      },
-    );
+    expect(pngResult.canonical.includes(trailingPayload)).toBe(false);
+    const jpegResult = await processStudentPhotoIsolated(jpegWithTrailingBytes, config);
+    expect(jpegResult).toMatchObject({ width: 600, height: 800 });
+    expect(jpegResult.canonical.includes(trailingPayload)).toBe(false);
   });
 
   it('bounds concurrent compressed high-pixel inputs outside the API process', async () => {

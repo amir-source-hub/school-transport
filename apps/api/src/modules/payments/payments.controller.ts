@@ -28,7 +28,8 @@ import {
 } from './payment-request.dto';
 import { PaymentsService } from './payments.service';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('PARENT')
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}

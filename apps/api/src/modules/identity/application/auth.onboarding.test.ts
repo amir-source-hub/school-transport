@@ -342,7 +342,11 @@ describe('OnboardingGuard', () => {
     });
     const guard = new OnboardingGuard(memory.db as never);
     const request = { headers: {}, cookies: { onboarding_token: 'secret-token' } };
-    const context = { switchToHttp: () => ({ getRequest: () => request }) } as never;
+    const context = {
+      switchToHttp: () => ({ getRequest: () => request }),
+      getHandler: () => () => undefined,
+      getClass: () => class TestController {},
+    } as never;
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect((request as any).user).toEqual({
@@ -357,7 +361,11 @@ describe('OnboardingGuard', () => {
     const memory = memoryDatabase();
     const guard = new OnboardingGuard(memory.db as never);
     const request = { headers: {}, cookies: {} };
-    const context = { switchToHttp: () => ({ getRequest: () => request }) } as never;
+    const context = {
+      switchToHttp: () => ({ getRequest: () => request }),
+      getHandler: () => () => undefined,
+      getClass: () => class TestController {},
+    } as never;
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
   });
@@ -379,7 +387,11 @@ describe('OnboardingGuard', () => {
     });
     const guard = new OnboardingGuard(memory.db as never);
     const request = { headers: {}, cookies: { onboarding_token: 'secret-token' } };
-    const context = { switchToHttp: () => ({ getRequest: () => request }) } as never;
+    const context = {
+      switchToHttp: () => ({ getRequest: () => request }),
+      getHandler: () => () => undefined,
+      getClass: () => class TestController {},
+    } as never;
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
   });

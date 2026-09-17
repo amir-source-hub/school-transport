@@ -48,14 +48,11 @@ export class OnboardingGuard implements CanActivate {
       throw new UnauthorizedException('Invalid or expired onboarding session.');
     }
 
-    const handler = (context as ExecutionContext & { getHandler?: () => Function }).getHandler?.();
-    const controllerClass = (context as ExecutionContext & { getClass?: () => Function }).getClass?.();
     const requiredRole = this.reflector.getAllAndOverride<'PARENT' | 'DRIVER'>(
       ONBOARDING_ROLE_KEY,
-      [handler, controllerClass].filter(Boolean) as Function[],
+      [context.getHandler(), context.getClass()],
     );
-    const portalRole: 'PARENT' | 'DRIVER' =
-      session.portalRole === 'DRIVER' ? 'DRIVER' : 'PARENT';
+    const portalRole: 'PARENT' | 'DRIVER' = session.portalRole === 'DRIVER' ? 'DRIVER' : 'PARENT';
     if (requiredRole && portalRole !== requiredRole) {
       throw new UnauthorizedException('This onboarding session belongs to another portal.');
     }

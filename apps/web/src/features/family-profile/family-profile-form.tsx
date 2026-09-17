@@ -126,11 +126,13 @@ export function FamilyProfileForm({
     return (
       <div className="space-y-5">
         {saved && <Alert title="اطلاعات ذخیره شد">تغییرات پروفایل خانواده ثبت شد.</Alert>}
-        {!readOnly && <div className="flex justify-end">
-          <Button onClick={() => setEditing(true)}>
-            <Edit3 className="size-4" /> ویرایش اطلاعات
-          </Button>
-        </div>}
+        {!readOnly && (
+          <div className="flex justify-end">
+            <Button onClick={() => setEditing(true)}>
+              <Edit3 className="size-4" /> ویرایش اطلاعات
+            </Button>
+          </div>
+        )}
         <div className="grid gap-5 lg:grid-cols-2">
           <ProfileSection icon={UsersRound} title="اطلاعات سرپرست و والدین">
             <ParentDetails label="سرپرست" parent={profile.guardian} />
@@ -212,6 +214,7 @@ export function FamilyProfileForm({
                           alt={`عکس ${student.firstName} ${student.lastName}`}
                           width={96}
                           height={96}
+                          sizes="96px"
                           unoptimized
                           className="size-24 shrink-0 rounded-2xl object-cover"
                         />
@@ -225,7 +228,10 @@ export function FamilyProfileForm({
                           <Detail label="نام" value={`${student.firstName} ${student.lastName}`} />
                           <Detail label="نام پدر" value={student.fatherName ?? '—'} />
                           <Detail label="کد ملی" value={student.nationalId} ltr />
-                          <Detail label="تاریخ تولد" value={student.birthDate ? formatJalaliDate(student.birthDate) : '—'} />
+                          <Detail
+                            label="تاریخ تولد"
+                            value={student.birthDate ? formatJalaliDate(student.birthDate) : '—'}
+                          />
                           <Detail
                             label="جنسیت"
                             value={

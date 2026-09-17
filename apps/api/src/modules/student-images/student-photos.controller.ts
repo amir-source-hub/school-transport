@@ -25,7 +25,8 @@ import {
 } from './student-photo.dto';
 import { StudentPhotosService } from './student-photos.service';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('PARENT')
 @Controller('student-photos')
 export class StudentPhotosController {
   constructor(private readonly service: StudentPhotosService) {}

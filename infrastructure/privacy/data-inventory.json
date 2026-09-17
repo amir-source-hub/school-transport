@@ -17,9 +17,11 @@
         "admin_auth_challenges",
         "otp_requests",
         "auth_sessions",
-        "onboarding_sessions"
+        "onboarding_sessions",
+        "school_manager_users",
+        "school_manager_assignments"
       ],
-      "subjects": ["parent", "administrator"],
+      "subjects": ["parent", "administrator", "school-manager"],
       "dataClasses": ["identity", "contact", "credential-metadata", "network-metadata"],
       "purpose": "Account authentication, onboarding, session security, and administrator access control.",
       "access": "Self/session owner and restricted identity administrators; secrets and OTP material are never returned or audited.",
@@ -34,9 +36,10 @@
         "emergency_contacts",
         "students",
         "student_limit_requests",
-        "schools"
+        "schools",
+        "student_companions"
       ],
-      "subjects": ["parent", "child", "emergency-contact"],
+      "subjects": ["parent", "child", "emergency-contact", "student-companion"],
       "dataClasses": ["identity", "child", "contact", "precise-location", "education"],
       "purpose": "Eligibility, safe pickup/drop-off, emergency contact, school assignment, and account capacity.",
       "access": "Owning family and role-restricted administrators with uniform not-found ownership enforcement.",
@@ -88,7 +91,14 @@
     },
     {
       "name": "driver-enrollment-and-vehicle",
-      "tables": ["drivers", "vehicles", "transport_documents", "driver_document_uploads"],
+      "tables": [
+        "drivers",
+        "vehicles",
+        "transport_documents",
+        "driver_document_uploads",
+        "transport_service_runs",
+        "transport_service_run_students"
+      ],
       "subjects": ["driver", "vehicle-owner", "referrer"],
       "dataClasses": [
         "identity",
@@ -142,7 +152,7 @@
     },
     {
       "name": "audit-evidence",
-      "tables": ["audit_logs"],
+      "tables": ["audit_logs", "http_activity_logs"],
       "subjects": ["parent", "administrator"],
       "dataClasses": ["actor-id", "operation-metadata", "network-metadata"],
       "purpose": "Security, accountability, dispute evidence, and incident investigation.",

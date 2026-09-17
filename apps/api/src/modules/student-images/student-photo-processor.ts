@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import sharp from 'sharp';
+import sharp, { type Metadata } from 'sharp';
 
 export interface PhotoProcessingConfig {
   maxBytes: number;
@@ -64,7 +64,7 @@ export async function processStudentPhoto(
     throw new PhotoValidationError('UNSUPPORTED_FORMAT', 'The uploaded file is not a valid image.');
   }
 
-  let metadata: sharp.Metadata;
+  let metadata: Metadata;
   try {
     metadata = await sharp(source, {
       failOn: 'none',

@@ -4,6 +4,12 @@ import type { DatabaseService } from '../../database/database.service';
 import type { S3Storage } from '../../infrastructure/s3/s3-storage.port';
 import { PaymentsService } from './payments.service';
 
+type PaymentServiceInternals = {
+  getOwnedScheduleItem: (scheduleItemId: string, userId: string) => Promise<unknown>;
+  getScheduleItemOwner: (scheduleItemId: string) => Promise<string>;
+  getSubmissionOwner: (submissionId: string) => Promise<string>;
+};
+
 function selectQuery(rows: unknown[]) {
   const chain: Record<string, unknown> = {};
   Object.assign(chain, {
@@ -38,12 +44,14 @@ function createHarness(
     {} as never,
     {} as never,
   );
-  vi.spyOn(service as never, 'getOwnedScheduleItem' as never).mockResolvedValue({
-    id: 'item-1',
-    paymentPlanId: 'plan-1',
-    itemStatus: 'PENDING',
-    amount: 2_000_000,
-  } as never);
+  vi.spyOn(service as unknown as PaymentServiceInternals, 'getOwnedScheduleItem').mockResolvedValue(
+    {
+      id: 'item-1',
+      paymentPlanId: 'plan-1',
+      itemStatus: 'PENDING',
+      amount: 2_000_000,
+    },
+  );
   vi.spyOn(service, 'getActiveOfflineDestination').mockResolvedValue({
     id: 'destination-1',
     version: 2,
@@ -140,9 +148,10 @@ describe('offline payment payer submission', () => {
 describe('admin payment on behalf', () => {
   it('creates a family-owned draft for either prepayment or installment', async () => {
     const service = new PaymentsService({ db: {} } as DatabaseService, {} as never, {} as never);
-    vi.spyOn(service as never, 'getScheduleItemOwner' as never).mockResolvedValue(
-      'family-1' as never,
-    );
+    vi.spyOn(
+      service as unknown as PaymentServiceInternals,
+      'getScheduleItemOwner',
+    ).mockResolvedValue('family-1');
     const create = vi.spyOn(service, 'createOfflineSubmission').mockResolvedValue('submission-1');
 
     await expect(
@@ -153,8 +162,8 @@ describe('admin payment on behalf', () => {
 
   it('does not approve an admin payment until its receipt completes validation', async () => {
     const service = new PaymentsService({ db: {} } as DatabaseService, {} as never, {} as never);
-    vi.spyOn(service as never, 'getSubmissionOwner' as never).mockResolvedValue(
-      'family-1' as never,
+    vi.spyOn(service as unknown as PaymentServiceInternals, 'getSubmissionOwner').mockResolvedValue(
+      'family-1',
     );
     const complete = vi
       .spyOn(service, 'completeReceiptUpload')

@@ -7,7 +7,8 @@ import { OnboardingRole, Roles } from '../../common/decorators';
 import { successResponse } from '../../common/response';
 import { AuthenticatedRequest } from '../../common/http-request';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('PARENT')
 @Controller('contracts')
 export class ContractsController {
   constructor(private readonly contractsService: ContractsService) {}

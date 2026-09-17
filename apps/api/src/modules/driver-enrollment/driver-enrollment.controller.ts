@@ -196,7 +196,8 @@ export class AdminDriversController {
   }
 }
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('PARENT')
 @Controller('students')
 export class DriverAssignmentViewerController {
   constructor(private readonly service: DriverEnrollmentService) {}

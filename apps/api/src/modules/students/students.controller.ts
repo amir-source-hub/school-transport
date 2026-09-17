@@ -29,7 +29,8 @@ import { AdminStudentListQueryDto } from './student-list.dto';
 import { AuthenticatedRequest } from '../../common/http-request';
 import { ConflictError } from '../../common/errors';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('PARENT')
 @Controller('students')
 export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
@@ -64,7 +65,10 @@ export class StudentsController {
     @Body()
     _dto: CreateStudentDto,
   ) {
-    throw new ConflictError('STUDENT_ENROLLMENT_ONLY', 'دانش‌آموز فقط از مسیر ثبت‌نام قابل افزودن است.');
+    throw new ConflictError(
+      'STUDENT_ENROLLMENT_ONLY',
+      'دانش‌آموز فقط از مسیر ثبت‌نام قابل افزودن است.',
+    );
   }
 
   @Get(':studentId')
@@ -82,14 +86,20 @@ export class StudentsController {
     @Param('studentId', new ParseUUIDPipe()) _studentId: string,
     @Body() _dto: UpdateStudentDto,
   ) {
-    throw new ConflictError('STUDENT_ADMIN_EDIT_ONLY', 'اطلاعات دانش‌آموز پس از ثبت‌نام فقط توسط مدیریت قابل تغییر است.');
+    throw new ConflictError(
+      'STUDENT_ADMIN_EDIT_ONLY',
+      'اطلاعات دانش‌آموز پس از ثبت‌نام فقط توسط مدیریت قابل تغییر است.',
+    );
   }
 
   @Post(':studentId/companion')
-  async addCompanion(@Req() req: AuthenticatedRequest, @Param('studentId', new ParseUUIDPipe()) studentId: string, @Body() dto: UpsertStudentCompanionDto) {
+  async addCompanion(
+    @Req() req: AuthenticatedRequest,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Body() dto: UpsertStudentCompanionDto,
+  ) {
     return successResponse(await this.studentsService.upsertCompanion(studentId, req.user.id, dto));
   }
-
 }
 
 @UseGuards(AuthGuard, RolesGuard)
@@ -115,7 +125,10 @@ export class AdminStudentsController {
   }
 
   @Post(':studentId/companion')
-  async saveCompanion(@Param('studentId', new ParseUUIDPipe()) studentId: string, @Body() dto: UpsertStudentCompanionDto) {
+  async saveCompanion(
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Body() dto: UpsertStudentCompanionDto,
+  ) {
     return successResponse(await this.studentsService.saveCompanionByAdmin(studentId, dto));
   }
 

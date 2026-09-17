@@ -24,7 +24,8 @@ import {
   RejectRegistrationDto,
 } from './registration.dto';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('PARENT')
 @Controller('enrollments')
 export class RegistrationsController {
   constructor(private readonly registrationsService: RegistrationsService) {}
