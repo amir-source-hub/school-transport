@@ -65,6 +65,7 @@ const createContentSecurityPolicy = ({
     "form-action 'self'",
     "frame-src 'self' https://www.google.com",
     `img-src ${imageSources.filter(Boolean).join(' ')}`,
+    `media-src ${["'self'", 'blob:', publicAssetOrigin].filter(Boolean).join(' ')}`,
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
     `script-src ${scriptSources.join(' ')}`,

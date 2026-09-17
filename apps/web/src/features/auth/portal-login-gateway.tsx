@@ -9,6 +9,7 @@ import { PortalRoleSelector } from './portal-role-selector';
 import { StudentPortalLoginForm } from './student-portal-login-form';
 import { ManagerPortalLoginForm } from './manager-portal-login-form';
 import { DriverComingSoonForm } from './driver-coming-soon-form';
+import { EnrollmentTutorialVideo } from './enrollment-tutorial-video';
 import { PORTAL_PATH_BY_ROLE, type UiRoleIdentifier } from './auth-api';
 
 export function PortalLoginGateway() {
@@ -43,6 +44,8 @@ export function PortalLoginGateway() {
   return (
     <div className="space-y-6">
       <PortalRoleSelector selected={role} onSelect={setRole} />
+
+      <EnrollmentTutorialVideo role={role} />
 
       <div key={role} className="mt-6">
         {role === 'STUDENT_PORTAL' && <StudentPortalLoginForm nextPath={next ?? undefined} />}

@@ -22,6 +22,9 @@ describe('createSecurityHeaders', () => {
     expect(headerMap.get('Content-Security-Policy')).toContain(
       "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://s3.example.test https://assets.example.test",
     );
+    expect(headerMap.get('Content-Security-Policy')).toContain(
+      "media-src 'self' blob: https://assets.example.test",
+    );
     expect(headerMap.get('Strict-Transport-Security')).toBe('max-age=31536000; includeSubDomains');
     expect(headerMap.get('X-Content-Type-Options')).toBe('nosniff');
     expect(headerMap.get('X-Frame-Options')).toBe('DENY');
