@@ -7,7 +7,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
   FileCheck2,
   LocateFixed,
   LogOut,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { MapProviderLinks } from '@/components/common/map-provider-links';
 
 const LocationPicker = dynamic(
   () => import('@/components/common/location-picker').then((m) => ({ default: m.LocationPicker })),
@@ -413,8 +413,6 @@ export function CreateEnrollmentForm({
   const levelOptions = selectedSchool?.educationOptions ?? [];
   const gradeOptions =
     levelOptions.find(({ level }) => level === form.educationLevel)?.grades ?? [];
-  const googleMapUrl = `https://www.google.com/maps?q=${form.latitude},${form.longitude}&z=16`;
-
   function selectSchool(schoolId: string) {
     const school = schools.find(({ id }) => id === schoolId);
     const firstLevel = school?.educationOptions[0];
@@ -1436,15 +1434,6 @@ export function CreateEnrollmentForm({
                     <LocateFixed className="size-4" />
                     دریافت موقعیت من
                   </Button>
-                  <a
-                    href={googleMapUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-bold"
-                  >
-                    <ExternalLink className="size-4" />
-                    باز کردن نقشه
-                  </a>
                 </div>
               </div>
               <LocationPicker
@@ -1461,6 +1450,7 @@ export function CreateEnrollmentForm({
                 }
                 readOnly={reusingFamilyProfile}
               />
+              <MapProviderLinks latitude={form.latitude} longitude={form.longitude} />
               <p className="mt-2 text-xs leading-6 text-muted">
                 برای دریافت خودکار موقعیت در گوشی، GPS را روشن و اجازه Location مرورگر را تأیید
                 کنید. همچنین می‌توانید نشانگر را مستقیماً روی نقشه جابه‌جا کنید.

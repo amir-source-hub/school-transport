@@ -1,20 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
-  ImagePlus,
-  LocateFixed,
-  LogOut,
-} from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, ImagePlus, LocateFixed, LogOut } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert } from '@/components/feedback/alert';
+import { MapProviderLinks } from '@/components/common/map-provider-links';
 import { Field } from '@/components/forms/field';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { Button } from '@/components/ui/button';
@@ -662,15 +655,6 @@ export function DriverEnrollmentForm() {
                     <LocateFixed className="size-4" />
                     دریافت موقعیت من
                   </Button>
-                  <a
-                    href={`https://www.google.com/maps?q=${form.watch('latitude')},${form.watch('longitude')}&z=16`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-bold"
-                  >
-                    <ExternalLink className="size-4" />
-                    باز کردن نقشه
-                  </a>
                 </div>
               </div>
               <LocationPicker
@@ -682,6 +666,10 @@ export function DriverEnrollmentForm() {
                   form.setValue('longitude', longitude, { shouldValidate: true });
                   form.setValue('locationSelected', true, { shouldValidate: true });
                 }}
+              />
+              <MapProviderLinks
+                latitude={form.watch('latitude')}
+                longitude={form.watch('longitude')}
               />
               {e('locationSelected') && (
                 <p className="text-xs text-danger">{e('locationSelected')}</p>

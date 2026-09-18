@@ -2,6 +2,7 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import Link from 'next/link';
 import { FileDown } from 'lucide-react';
 import { PrintPageButton } from '@/components/common/print-page-button';
+import { LocationDisplay } from '@/components/common/location-display';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { DriverAdminActions } from '@/features/admin-drivers/driver-admin-actions';
@@ -72,6 +73,15 @@ export default async function Page({ params }: { params: Promise<{ driverId: str
       </header>
       <div className="grid gap-5 lg:grid-cols-2">
         <InfoCard title="مشخصات فردی" rows={personal} />
+        {typeof d.latitude === 'number' && typeof d.longitude === 'number' && (
+          <Card>
+            <h2 className="font-black">موقعیت ثبت‌شده راننده</h2>
+            <p className="mt-2 text-sm text-muted">{String(d.streetAddress ?? '')}</p>
+            <div className="mt-4">
+              <LocationDisplay latitude={d.latitude} longitude={d.longitude} />
+            </div>
+          </Card>
+        )}
         <Card>
           <h2 className="font-black">خودرو</h2>
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
