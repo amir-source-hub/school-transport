@@ -3,6 +3,14 @@ import { isValidIranianNationalId, normalizeDigits } from '@/features/enrollment
 
 const required = 'پر کردن این فیلد اجباری است';
 const text = z.string().trim().min(1, required);
+const persianName = z
+  .string()
+  .trim()
+  .min(1, required)
+  .regex(
+    /^[\u0621-\u063A\u0641-\u065F\u066E-\u0670\u0671-\u06D3\u06D5-\u06ED\u06EE-\u06EF\u06FA-\u06FC\u06FF\u200c\s-]+$/,
+    'فقط حروف فارسی مجاز است.',
+  );
 const persianText = z
   .string()
   .trim()
@@ -78,9 +86,9 @@ export function hasReachedContractEnd(
 
 export const driverEnrollmentSchema = z
   .object({
-    firstName: persianText,
-    lastName: persianText,
-    fatherName: persianText,
+    firstName: persianName,
+    lastName: persianName,
+    fatherName: persianName,
     gender: z.enum(['MALE', 'FEMALE'], { message: required }),
     nationalId: z
       .string()
@@ -106,10 +114,10 @@ export const driverEnrollmentSchema = z
       .string()
       .transform(normalizeDigits)
       .pipe(z.string().regex(/^\d{16}$/, 'شماره کارت باید دقیقاً ۱۶ رقم داشته باشد.')),
-    bankName: persianText,
-    emergencyFirstName: persianText,
-    emergencyLastName: persianText,
-    emergencyRelationship: persianText,
+    bankName: persianName,
+    emergencyFirstName: persianName,
+    emergencyLastName: persianName,
+    emergencyRelationship: persianName,
     emergencyPhoneNumber: mobile,
     driverPhotoUploadId: z.string().uuid('بارگذاری عکس راننده الزامی است.'),
     streetAddress: persianText.refine((value) => value.length >= 5, 'آدرس کامل را وارد کنید.'),
@@ -117,8 +125,8 @@ export const driverEnrollmentSchema = z
       .string()
       .transform(normalizeDigits)
       .pipe(z.string().regex(/^\d{10}$/, 'کد پستی باید ۱۰ رقم باشد.')),
-    province: persianText,
-    city: persianText,
+    province: persianName,
+    city: persianName,
     municipalityDistrict: text,
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
@@ -200,16 +208,16 @@ export const stepFields: (keyof DriverEnrollmentForm)[][] = [
     'bankName',
   ],
   [
-    'streetAddress',
-    'postalCode',
     'province',
     'city',
     'municipalityDistrict',
+    'streetAddress',
+    'postalCode',
+    'referrerName',
+    'referrerPhoneNumber',
     'latitude',
     'longitude',
     'locationSelected',
-    'referrerName',
-    'referrerPhoneNumber',
   ],
   [
     'vehiclePhotoUploadId',

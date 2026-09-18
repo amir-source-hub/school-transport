@@ -21,7 +21,8 @@ const digits = ({ value }: { value: unknown }) =>
         .replace(/[٠-٩]/g, (char) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(char)))
     : value;
 const clean = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
-const persianName = /^[\u0600-\u06FF\s‌-]+$/;
+const persianName =
+  /^[\u0621-\u063A\u0641-\u065F\u066E-\u0670\u0671-\u06D3\u06D5-\u06ED\u06EE-\u06EF\u06FA-\u06FC\u06FF\u200c\s-]+$/;
 const persianText = /^[\u0600-\u06FF\u200c\s\d۰-۹٠-٩،؛,.()\-/]+$/;
 
 export class DriverDocumentUploadDto {
@@ -84,8 +85,8 @@ export class DriverEnrollmentDto {
   @Transform(digits) @Matches(/^09\d{9}$/) emergencyPhoneNumber!: string;
   @Transform(clean) @IsString() @Length(5, 500) @Matches(persianText) streetAddress!: string;
   @Transform(digits) @Matches(/^\d{10}$/) postalCode!: string;
-  @Transform(clean) @IsString() @Length(1, 100) @Matches(persianText) province!: string;
-  @Transform(clean) @IsString() @Length(1, 100) @Matches(persianText) city!: string;
+  @Transform(clean) @IsString() @Length(1, 100) @Matches(persianName) province!: string;
+  @Transform(clean) @IsString() @Length(1, 100) @Matches(persianName) city!: string;
   @Transform(clean) @IsString() @Length(1, 50) municipalityDistrict!: string;
   @Type(() => Number) @IsNumber() @Min(-90) @Max(90) latitude!: number;
   @Type(() => Number) @IsNumber() @Min(-180) @Max(180) longitude!: number;

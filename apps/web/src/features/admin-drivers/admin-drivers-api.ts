@@ -12,6 +12,7 @@ export type DriverListItem = {
   plateNumber: string | null;
   capacity: number | null;
   serviceRunCount: number;
+  createdAt: string;
 };
 export type TransportAssignment = {
   membershipId: string;

@@ -17,11 +17,11 @@ describe('driver enrollment input behavior', () => {
     });
   });
 
-  it('does not retain Latin letters in Persian-only inputs', async () => {
+  it('does not retain Latin letters, numbers, or symbols in name inputs', async () => {
     const user = userEvent.setup();
     render(<DriverEnrollmentForm />);
     const firstName = screen.getByLabelText('نام');
-    await user.type(firstName, 'Aliعلی');
+    await user.type(firstName, 'Ali12@علی');
     expect(firstName).toHaveValue('علی');
   });
 
@@ -34,7 +34,11 @@ describe('driver enrollment input behavior', () => {
     await user.type(secondary, '09123456789');
     await user.clear(emergency);
     await user.type(emergency, '09123456789');
-    expect(screen.getByText('شماره همراه دوم نباید با شماره همراه اول یکسان باشد.')).toBeInTheDocument();
-    expect(screen.getByText('شماره تماس اضطراری نباید با شماره همراه اول یکسان باشد.')).toBeInTheDocument();
+    expect(
+      screen.getByText('شماره همراه دوم نباید با شماره همراه اول یکسان باشد.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('شماره تماس اضطراری نباید با شماره همراه اول یکسان باشد.'),
+    ).toBeInTheDocument();
   });
 });

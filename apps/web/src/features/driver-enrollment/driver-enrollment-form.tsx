@@ -35,7 +35,6 @@ import {
   driverEnrollmentSchema,
   hasReachedContractEnd,
   plateLetters,
-  removeLatinLetters,
   stepFields,
   type DriverEnrollmentForm,
 } from './driver-enrollment-schema';
@@ -182,12 +181,19 @@ export function DriverEnrollmentForm() {
         }
       },
     });
-  const persianReg = (name: keyof DriverEnrollmentForm) => {
+  const persianNameReg = (name: keyof DriverEnrollmentForm) => {
     const registered = form.register(name);
     return {
       ...registered,
-      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        form.setValue(name, removeLatinLetters(event.target.value) as never, { shouldDirty: true });
+      onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+        form.setValue(
+          name,
+          event.target.value.replace(
+            /[^\u0621-\u063A\u0641-\u065F\u066E-\u0670\u0671-\u06D3\u06D5-\u06ED\u06EE-\u06EF\u06FA-\u06FC\u06FF\u200c\s-]/g,
+            '',
+          ) as never,
+          { shouldDirty: true },
+        );
       },
     };
   };
@@ -427,13 +433,13 @@ export function DriverEnrollmentForm() {
         {step === 0 && (
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="نام" htmlFor="firstName" error={e('firstName')}>
-              <Input id="firstName" {...persianReg('firstName')} />
+              <Input id="firstName" {...persianNameReg('firstName')} />
             </Field>
             <Field label="نام خانوادگی" htmlFor="lastName" error={e('lastName')}>
-              <Input id="lastName" {...persianReg('lastName')} />
+              <Input id="lastName" {...persianNameReg('lastName')} />
             </Field>
             <Field label="نام پدر" htmlFor="fatherName" error={e('fatherName')}>
-              <Input id="fatherName" {...persianReg('fatherName')} />
+              <Input id="fatherName" {...persianNameReg('fatherName')} />
             </Field>
             <Field label="جنسیت" htmlFor="gender" error={e('gender')}>
               <Controller
@@ -522,21 +528,21 @@ export function DriverEnrollmentForm() {
               htmlFor="emergencyFirstName"
               error={e('emergencyFirstName')}
             >
-              <Input id="emergencyFirstName" {...persianReg('emergencyFirstName')} />
+              <Input id="emergencyFirstName" {...persianNameReg('emergencyFirstName')} />
             </Field>
             <Field
               label="نام خانوادگی تماس اضطراری"
               htmlFor="emergencyLastName"
               error={e('emergencyLastName')}
             >
-              <Input id="emergencyLastName" {...persianReg('emergencyLastName')} />
+              <Input id="emergencyLastName" {...persianNameReg('emergencyLastName')} />
             </Field>
             <Field
               label="نسبت تماس اضطراری"
               htmlFor="emergencyRelationship"
               error={e('emergencyRelationship')}
             >
-              <Input id="emergencyRelationship" {...persianReg('emergencyRelationship')} />
+              <Input id="emergencyRelationship" {...persianNameReg('emergencyRelationship')} />
             </Field>
             {uploadField(
               'driverPhotoUploadId',
@@ -582,25 +588,17 @@ export function DriverEnrollmentForm() {
               hint="شماره کارت و شبا باید به اسم خود راننده باشد. ترجیحاً بانک شهر."
               error={e('bankName')}
             >
-              <Input id="bankName" {...persianReg('bankName')} />
+              <Input id="bankName" {...persianNameReg('bankName')} />
             </Field>
           </div>
         )}
         {step === 1 && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <Field label="آدرس محل سکونت" htmlFor="streetAddress" error={e('streetAddress')}>
-                <Textarea id="streetAddress" {...reg('streetAddress')} />
-              </Field>
-            </div>
-            <Field label="کد پستی" htmlFor="postalCode" error={e('postalCode')}>
-              <Input id="postalCode" dir="ltr" {...reg('postalCode', 10)} />
-            </Field>
             <Field label="استان" htmlFor="province" error={e('province')}>
-              <Input id="province" {...persianReg('province')} />
+              <Input id="province" {...persianNameReg('province')} />
             </Field>
             <Field label="شهر" htmlFor="city" error={e('city')}>
-              <Input id="city" {...persianReg('city')} />
+              <Input id="city" {...persianNameReg('city')} />
             </Field>
             <Field
               label="منطقه شهرداری"
@@ -625,11 +623,31 @@ export function DriverEnrollmentForm() {
                 )}
               />
             </Field>
+            <div className="sm:col-span-2">
+              <Field label="آدرس محل سکونت" htmlFor="streetAddress" error={e('streetAddress')}>
+                <Textarea id="streetAddress" {...reg('streetAddress')} />
+              </Field>
+            </div>
+            <Field label="کد پستی" htmlFor="postalCode" error={e('postalCode')}>
+              <Input
+                id="postalCode"
+                dir="ltr"
+                inputMode="numeric"
+                maxLength={10}
+                {...reg('postalCode', 10)}
+              />
+            </Field>
             <Field label="معرف" htmlFor="referrerName" error={e('referrerName')}>
-              <Input id="referrerName" {...reg('referrerName')} />
+              <Input id="referrerName" {...persianNameReg('referrerName')} />
             </Field>
             <Field label="تلفن معرف" htmlFor="referrerPhoneNumber" error={e('referrerPhoneNumber')}>
-              <Input id="referrerPhoneNumber" dir="ltr" {...reg('referrerPhoneNumber', 11)} />
+              <Input
+                id="referrerPhoneNumber"
+                dir="ltr"
+                inputMode="numeric"
+                maxLength={11}
+                {...reg('referrerPhoneNumber', 11)}
+              />
             </Field>
             <div className="space-y-3 sm:col-span-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -708,7 +726,13 @@ export function DriverEnrollmentForm() {
                 error={e('plateLeft') || e('plateLetter') || e('plateMiddle') || e('plateIran')}
               >
                 <div className="grid grid-cols-[1fr_1fr_1.5fr_1fr] gap-2" dir="ltr">
-                  <Input id="plateLeft" placeholder="12" {...reg('plateLeft', 2)} />
+                  <Input
+                    id="plateLeft"
+                    inputMode="numeric"
+                    maxLength={2}
+                    placeholder="12"
+                    {...reg('plateLeft', 2)}
+                  />
                   <Controller
                     control={form.control}
                     name="plateLetter"
@@ -720,8 +744,18 @@ export function DriverEnrollmentForm() {
                       />
                     )}
                   />
-                  <Input placeholder="345" {...reg('plateMiddle', 3)} />
-                  <Input placeholder="67" {...reg('plateIran', 2)} />
+                  <Input
+                    inputMode="numeric"
+                    maxLength={3}
+                    placeholder="345"
+                    {...reg('plateMiddle', 3)}
+                  />
+                  <Input
+                    inputMode="numeric"
+                    maxLength={2}
+                    placeholder="67"
+                    {...reg('plateIran', 2)}
+                  />
                 </div>
               </Field>
             </div>

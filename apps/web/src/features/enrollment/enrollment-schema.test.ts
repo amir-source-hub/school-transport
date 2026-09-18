@@ -138,6 +138,14 @@ describe('guided enrollment schema', () => {
     }
   });
 
+  it('rejects Persian digits in word-only fields', () => {
+    const result = guidedEnrollmentSchema.safeParse({
+      ...validInput,
+      student: { ...validInput.student, firstName: 'علی۲' },
+    });
+    expect(result.success).toBe(false);
+  });
+
   it('rejects an over-length national ID with the exact Persian message', () => {
     const result = guidedEnrollmentSchema.safeParse({
       ...validInput,

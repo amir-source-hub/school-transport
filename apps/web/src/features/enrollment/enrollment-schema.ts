@@ -8,6 +8,8 @@ import { isAllowedPersianText, persianTextMessage } from './persian-text';
 import { isValidIranianNationalId, nationalIdError } from './national-id';
 
 const required = 'پر کردن این فیلد اجباری است';
+const persianLettersOnly =
+  /^[\u0621-\u063A\u0641-\u065F\u066E-\u0670\u0671-\u06D3\u06D5-\u06ED\u06EE-\u06EF\u06FA-\u06FC\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF\u200c\u200f\s-]+$/;
 
 const name = z
   .string()
@@ -15,7 +17,7 @@ const name = z
   .min(1, required)
   .max(100, 'حداکثر ۱۰۰ نویسه مجاز است.')
   .superRefine((value, ctx) => {
-    if (!value || isAllowedPersianText(value)) return;
+    if (!value || (isAllowedPersianText(value) && persianLettersOnly.test(value))) return;
     ctx.addIssue({ code: 'custom', message: persianTextMessage(value) });
   });
 
@@ -121,9 +123,9 @@ export const emergencyContactSchema = z.object({
 });
 
 export const addressSchema = z.object({
-  title: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
-  province: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
-  city: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
+  title: name,
+  province: name,
+  city: name,
   district: z.enum(['سایر', ...Array.from({ length: 22 }, (_, index) => String(index + 1))] as [
     string,
     ...string[],

@@ -9,6 +9,21 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('CreateEnrollmentForm inline validation', () => {
+  it('prevents numbers and Latin characters from remaining in student names', async () => {
+    const user = userEvent.setup();
+    render(
+      <CreateEnrollmentForm
+        schools={[]}
+        savedParents={{ father: null, mother: null }}
+        existingStudents={[]}
+        defaults={{}}
+      />,
+    );
+    const name = screen.getByRole('textbox', { name: 'نام دانش‌آموز' });
+    await user.type(name, 'Ali12@علی');
+    expect(name).toHaveValue('علی');
+  });
+
   it('shows only the opposite parent section and validates its mobile number', async () => {
     const user = userEvent.setup();
     render(

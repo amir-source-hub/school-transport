@@ -287,7 +287,7 @@ export function CreateEnrollmentForm({
 
   function set(key: keyof typeof form, value: string | number) {
     let normalizedValue = value;
-    const persianOnlyKeys: (keyof typeof form)[] = [
+    const persianLetterOnlyKeys: (keyof typeof form)[] = [
       'studentFirst',
       'studentLast',
       'studentFatherName',
@@ -301,13 +301,21 @@ export function CreateEnrollmentForm({
       'emergencyFirst',
       'emergencyLast',
       'emergencyRelationship',
+      'disabilityType',
+      'companionFirst',
+      'companionLast',
+      'companionFatherName',
       'addressTitle',
       'province',
       'city',
-      'streetAddress',
-      'parentNotes',
     ];
-    if (typeof value === 'string' && persianOnlyKeys.includes(key)) {
+    const persianTextKeys: (keyof typeof form)[] = ['streetAddress', 'parentNotes'];
+    if (typeof value === 'string' && persianLetterOnlyKeys.includes(key)) {
+      normalizedValue = value.replace(
+        /[^\u0621-\u063A\u0641-\u065F\u066E-\u0670\u0671-\u06D3\u06D5-\u06ED\u06EE-\u06EF\u06FA-\u06FC\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF\u200c\u200f\s-]/g,
+        '',
+      );
+    } else if (typeof value === 'string' && persianTextKeys.includes(key)) {
       normalizedValue = value.replace(/[A-Za-z]/g, '');
     }
     if (
