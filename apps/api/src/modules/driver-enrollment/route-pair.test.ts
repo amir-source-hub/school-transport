@@ -68,20 +68,22 @@ describe('paired route assignment', () => {
     await expect(h.service.assignStudentRoutes(input, 'admin')).rejects.toThrow();
     expect(h.insert).not.toHaveBeenCalled();
   });
-  it('checks capacity in both directions before writing', async () => {
+  it('allows admin assignment beyond nominal vehicle capacity', async () => {
     const h = harness([
       [student],
       [to, from],
       [driver],
       [{ id: 'vehicle', status: 'ACTIVE', capacity: 1 }],
       [],
-      [{ studentId: 'another' }],
+      [],
+      [{ value: 4 }],
+      [],
+      [{ value: 4 }],
     ]);
-    await expect(h.service.assignStudentRoutes(input, 'admin')).rejects.toMatchObject({
-      code: 'VEHICLE_CAPACITY_REACHED',
+    await expect(h.service.assignStudentRoutes(input, 'admin')).resolves.toEqual({
+      assigned: true,
     });
-    expect(h.insert).not.toHaveBeenCalled();
-    expect(h.update).not.toHaveBeenCalled();
+    expect(h.insert).toHaveBeenCalledTimes(2);
   });
   it('allows different schools and notifies family and driver', async () => {
     const h = harness([
@@ -89,8 +91,6 @@ describe('paired route assignment', () => {
       [to, from],
       [driver],
       [{ id: 'vehicle', status: 'ACTIVE', capacity: 4 }],
-      [],
-      [],
       [],
       [],
       [{ value: 2 }],

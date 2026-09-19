@@ -1,4 +1,4 @@
-import { index, integer, pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { index, integer, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 
 export const httpActivityLogs = pgTable(
   'http_activity_logs',
@@ -14,6 +14,9 @@ export const httpActivityLogs = pgTable(
     durationMs: integer('duration_ms').notNull(),
     outcome: varchar('outcome', { length: 20 }).notNull(),
     errorCode: varchar('error_code', { length: 100 }),
+    errorCategory: varchar('error_category', { length: 50 }),
+    databaseCode: varchar('database_code', { length: 20 }),
+    errorFields: text('error_fields').array(),
     ipAddress: varchar('ip_address', { length: 50 }),
     userAgent: varchar('user_agent', { length: 500 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

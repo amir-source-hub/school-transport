@@ -15,8 +15,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { normalizeDigits } from '@/features/enrollment/national-id';
+import { JalaliDateInput } from '@/components/forms/jalali-date-input';
+import { isoToJalaliDate, jalaliToIsoDate } from '@/lib/jalali-date';
 import { formatJalaliDate } from '@/lib/formatters';
 import type { AdminTransportRoute } from './admin-drivers-api';
+import { RoutePriceInput, tomanToRials } from './route-price-input';
 
 const number = (value: number) => value.toLocaleString('fa-IR');
 const time = (value: string) =>
@@ -33,13 +36,14 @@ export function RouteCatalog({
   onArchive?: (id: string) => void;
   onEdit?: (
     id: string,
-    body: { title: string; contractPriceRials: number; contractDate: string },
-  ) => void;
+    body: { title: string; contractPriceRials?: number; contractDate?: string },
+  ) => Promise<boolean> | boolean | void;
   busy?: boolean;
 }) {
   const [query, setQuery] = useState('');
   const [direction, setDirection] = useState('ALL');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingDateIso, setEditingDateIso] = useState('');
   const visible = routes.filter(
     (route) =>
       (direction === 'ALL' || route.direction === direction) &&
@@ -192,7 +196,7 @@ export function RouteCatalog({
                 <strong className="text-foreground">
                   {route.contractPriceRials == null
                     ? 'ثبت نشده'
-                    : `${number(route.contractPriceRials)} ریال`}
+                    : `${number(route.contractPriceRials / 10)} تومان`}
                 </strong>{' '}
                 · تاریخ قرارداد:{' '}
                 <strong className="text-foreground">
@@ -202,43 +206,48 @@ export function RouteCatalog({
               {editingId === route.id && (
                 <form
                   className="mt-4 grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2"
-                  onSubmit={(event) => {
+                  onSubmit={async (event) => {
                     event.preventDefault();
                     const data = new FormData(event.currentTarget);
-                    onEdit?.(route.id, {
+                    const saved = await onEdit?.(route.id, {
                       title: String(data.get('title')).trim(),
-                      contractPriceRials: Number(data.get('contractPriceRials')),
-                      contractDate: normalizeDigits(String(data.get('contractDate'))),
+                      ...(route.contractPriceRials == null
+                        ? {}
+                        : {
+                            contractPriceRials: tomanToRials(
+                              String(data.get('contractPriceTomans')),
+                            ),
+                            contractDate: normalizeDigits(String(data.get('contractDate'))),
+                          }),
                     });
-                    setEditingId(null);
+                    if (saved !== false) setEditingId(null);
                   }}
                 >
                   <label className="text-sm font-bold">
                     عنوان مسیر
                     <Input name="title" defaultValue={route.title} required minLength={2} />
                   </label>
-                  <label className="text-sm font-bold">
-                    مبلغ ماهانه (ریال)
-                    <Input
-                      name="contractPriceRials"
-                      type="number"
-                      min="0"
-                      step="1"
-                      defaultValue={route.contractPriceRials ?? ''}
-                      required
-                    />
-                  </label>
-                  <label className="text-sm font-bold">
-                    تاریخ قرارداد (شمسی)
-                    <Input
-                      name="contractDate"
-                      dir="ltr"
-                      placeholder="1405/06/22"
-                      pattern="1[34][0-9]{2}/(0[1-9]|1[0-2])/(0[1-9]|[12][0-9]|3[01])"
-                      defaultValue={route.contractDate ?? ''}
-                      required
-                    />
-                  </label>
+                  {route.contractPriceRials != null && (
+                    <>
+                      <label className="text-sm font-bold">
+                        مبلغ ماهانه (تومان)
+                        <RoutePriceInput defaultRials={route.contractPriceRials} />
+                      </label>
+                      <div className="text-sm font-bold">
+                        <JalaliDateInput
+                          label="تاریخ قرارداد (شمسی)"
+                          value={editingDateIso}
+                          onChange={setEditingDateIso}
+                          required
+                        />
+                        <input
+                          type="hidden"
+                          name="contractDate"
+                          value={isoToJalaliDate(editingDateIso)}
+                        />
+                      </div>
+                    </>
+                  )}
                   <div className="flex items-end gap-2">
                     <Button type="submit" size="sm" disabled={busy}>
                       ذخیره
@@ -262,7 +271,10 @@ export function RouteCatalog({
                     variant="ghost"
                     className="min-h-11"
                     disabled={busy}
-                    onClick={() => setEditingId(editingId === route.id ? null : route.id)}
+                    onClick={() => {
+                      setEditingDateIso(jalaliToIsoDate(route.contractDate ?? '') ?? '');
+                      setEditingId(editingId === route.id ? null : route.id);
+                    }}
                   >
                     <Pencil className="size-4" aria-hidden="true" />
                     ویرایش مسیر

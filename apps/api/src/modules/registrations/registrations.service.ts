@@ -189,21 +189,6 @@ export class RegistrationsService {
             'A verified phone number is required for the guardian.',
           );
         }
-        const submittedPhones = [
-          guardianPhone,
-          data.homePhone,
-          data.student.phoneNumber,
-          data.father?.phoneNumber,
-          data.mother?.phoneNumber,
-          data.emergencyContact?.phoneNumber,
-          data.companion?.phoneNumber,
-        ].filter((value): value is string => Boolean(value));
-        if (new Set(submittedPhones).size !== submittedPhones.length) {
-          throw new ConflictError(
-            'DUPLICATE_PHONE_NUMBER',
-            'شماره‌های سرپرست، والدین، دانش‌آموز، منزل و تماس اضطراری باید متفاوت باشند.',
-          );
-        }
         const existingFamilyParents = await txn
           .select({
             id: parents.id,
@@ -252,30 +237,37 @@ export class RegistrationsService {
           if (!section) continue;
           const existing = existingFamilyParents.find((item) => item.parentType === parentType);
           if (existing) {
-            const unchanged =
-              existing.firstName === section.firstName &&
-              existing.lastName === section.lastName &&
-              existing.nationalId === section.nationalId &&
-              existing.phoneNumber === section.phoneNumber &&
-              (existing.homePhone ?? null) === (section.homePhone ?? null);
-            if (!unchanged) {
-              throw new ConflictError(
-                'PARENT_PROFILE_CHANGED',
-                'Saved parent information must be changed from the family profile.',
-              );
-            }
+            // An existing family's identity is authoritative. Form drafts can be stale;
+            // never let a second enrollment change a saved parent's identity.
             if (parentType === 'GUARDIAN') {
+              data.guardian.firstName = existing.firstName;
+              data.guardian.lastName = existing.lastName;
+              data.guardian.nationalId = existing.nationalId;
+              data.homePhone = existing.homePhone || data.homePhone;
+              if (
+                existing.relationshipType === 'FATHER' ||
+                existing.relationshipType === 'MOTHER' ||
+                existing.relationshipType === 'OTHER'
+              ) {
+                data.guardian.relationshipType = existing.relationshipType;
+              }
               await txn
                 .update(parents)
                 .set({
-                  relationshipType: section.relationshipType,
-                  relationshipDescription:
-                    section.relationshipType === 'OTHER'
-                      ? (section.relationshipDescription ?? null)
-                      : null,
+                  phoneNumber: guardianPhone,
+                  homePhone: data.homePhone,
                   updatedAt: new Date(),
                 })
                 .where(eq(parents.id, existing.id));
+            } else {
+              const savedContact = {
+                firstName: existing.firstName,
+                lastName: existing.lastName,
+                nationalId: existing.nationalId,
+                phoneNumber: existing.phoneNumber,
+              };
+              if (parentType === 'FATHER') data.father = savedContact;
+              if (parentType === 'MOTHER') data.mother = savedContact;
             }
           } else {
             await txn.insert(parents).values({
@@ -292,6 +284,21 @@ export class RegistrationsService {
               isPrimaryContact: false,
             });
           }
+        }
+        const submittedPhones = [
+          guardianPhone,
+          data.homePhone,
+          data.student.phoneNumber,
+          data.father?.phoneNumber,
+          data.mother?.phoneNumber,
+          data.emergencyContact?.phoneNumber,
+          data.companion?.phoneNumber,
+        ].filter((value): value is string => Boolean(value));
+        if (new Set(submittedPhones).size !== submittedPhones.length) {
+          throw new ConflictError(
+            'DUPLICATE_PHONE_NUMBER',
+            'شماره‌های سرپرست، والدین، دانش‌آموز، منزل و تماس اضطراری باید متفاوت باشند.',
+          );
         }
         await txn
           .update(parents)
@@ -331,7 +338,10 @@ export class RegistrationsService {
               fatherName: data.student.fatherName,
               gender: data.student.gender || null,
               physicalStatus: data.student.physicalStatus ?? null,
-              disabilityType: data.student.physicalStatus === 'SPECIAL' ? data.student.disabilityType ?? null : null,
+              disabilityType:
+                data.student.physicalStatus === 'SPECIAL'
+                  ? (data.student.disabilityType ?? null)
+                  : null,
               phoneNumber: data.student.phoneNumber ?? null,
               grade: data.school.grade,
               className: data.school.educationLevel,
@@ -351,7 +361,10 @@ export class RegistrationsService {
             birthDate: data.student.birthDate || null,
             gender: data.student.gender || null,
             physicalStatus: data.student.physicalStatus ?? null,
-            disabilityType: data.student.physicalStatus === 'SPECIAL' ? data.student.disabilityType ?? null : null,
+            disabilityType:
+              data.student.physicalStatus === 'SPECIAL'
+                ? (data.student.disabilityType ?? null)
+                : null,
             phoneNumber: data.student.phoneNumber ?? null,
             grade: data.school.grade,
             className: data.school.educationLevel,
@@ -359,9 +372,19 @@ export class RegistrationsService {
           });
         }
         if (data.companion) {
-          const [existingCompanion] = await txn.select({ id: studentCompanions.id }).from(studentCompanions).where(eq(studentCompanions.nationalId, data.companion.nationalId)).limit(1);
-          if (existingCompanion) throw new ConflictError('DUPLICATE_COMPANION_NATIONAL_ID', 'این کد ملی قبلاً برای مراقب ثبت شده است.');
-          await txn.insert(studentCompanions).values({ id: generateId(), studentId, ...data.companion });
+          const [existingCompanion] = await txn
+            .select({ id: studentCompanions.id })
+            .from(studentCompanions)
+            .where(eq(studentCompanions.nationalId, data.companion.nationalId))
+            .limit(1);
+          if (existingCompanion)
+            throw new ConflictError(
+              'DUPLICATE_COMPANION_NATIONAL_ID',
+              'این کد ملی قبلاً برای مراقب ثبت شده است.',
+            );
+          await txn
+            .insert(studentCompanions)
+            .values({ id: generateId(), studentId, ...data.companion });
         }
         if (data.studentPhotoUploadId) {
           const [linkedPhoto] = await txn

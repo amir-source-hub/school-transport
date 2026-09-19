@@ -44,7 +44,7 @@ import {
 import { schoolHours } from './school-hours';
 
 const CONTRACT_VERSION = 'driver-v2';
-const CAPACITY: Record<string, number> = { CAR: 4, VAN: 10, MINIBUS: 16, BUS: 30 };
+const CAPACITY: Record<string, number> = { CAR: 4, VAN: 10, MINIBUS: 21, BUS: 40 };
 const VEHICLE_DOCUMENT_TYPES = new Set([
   'VEHICLE_PHOTO',
   'VEHICLE_CARD_FRONT',
@@ -1020,7 +1020,7 @@ export class DriverEnrollmentService {
       this.database.db
         .select()
         .from(schools)
-        .where(eq(schools.id, input.schoolId))
+        .where(and(eq(schools.id, input.schoolId), eq(schools.isActive, true)))
         .limit(1)
         .then((rows) => rows[0]),
       this.database.db
@@ -1042,45 +1042,50 @@ export class DriverEnrollmentService {
       .at(-1)!;
     if (scheduledStartTime >= scheduledArrivalTime)
       throw new ValidationError('ساعت پایان مدرسه باید بعد از ساعت شروع باشد.');
-    const [sequence] = await this.database.db
-      .select({ value: max(transportServiceRuns.sequenceNumber) })
-      .from(transportServiceRuns)
-      .where(
-        and(
-          eq(transportServiceRuns.vehicleId, vehicle.id),
-          eq(transportServiceRuns.academicYear, input.academicYear),
-          eq(transportServiceRuns.direction, input.direction),
-        ),
+    return this.database.db.transaction(async (txn) => {
+      await txn.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`${vehicle.id}:${input.academicYear}:${input.direction}`}))`,
       );
-    const [created] = await this.database.db
-      .insert(transportServiceRuns)
-      .values({
-        id: randomUUID(),
-        schoolId: school.id,
-        driverId: driver.id,
-        vehicleId: vehicle.id,
-        academicYear: input.academicYear,
-        title: input.title,
-        direction: input.direction,
-        sequenceNumber: (sequence?.value ?? 0) + 1,
-        scheduledStartTime,
-        scheduledArrivalTime,
-        areaDescription: input.areaDescription || null,
-        contractPriceRials: input.contractPriceRials ?? null,
-        contractDate: input.contractDate ?? null,
-        activeWeekdays: [...new Set(input.activeWeekdays)].sort(),
-      })
-      .returning();
-    await this.audit.record({
-      actorType: 'ADMIN',
-      actorId: adminId,
-      action: 'TRANSPORT_ROUTE_CREATED',
-      entityType: 'TRANSPORT_SERVICE_RUN',
-      entityId: created.id,
-      newValues: { driverId: driver.id, schoolId: school.id, title: created.title },
-      ipAddress,
+      const [sequence] = await txn
+        .select({ value: max(transportServiceRuns.sequenceNumber) })
+        .from(transportServiceRuns)
+        .where(
+          and(
+            eq(transportServiceRuns.vehicleId, vehicle.id),
+            eq(transportServiceRuns.academicYear, input.academicYear),
+            eq(transportServiceRuns.direction, input.direction),
+          ),
+        );
+      const [created] = await txn
+        .insert(transportServiceRuns)
+        .values({
+          id: randomUUID(),
+          schoolId: school.id,
+          driverId: driver.id,
+          vehicleId: vehicle.id,
+          academicYear: input.academicYear,
+          title: input.title,
+          direction: input.direction,
+          sequenceNumber: (sequence?.value ?? 0) + 1,
+          scheduledStartTime,
+          scheduledArrivalTime,
+          areaDescription: input.areaDescription || null,
+          contractPriceRials: input.contractPriceRials ?? null,
+          contractDate: input.contractDate ?? null,
+          activeWeekdays: [...new Set(input.activeWeekdays)].sort(),
+        })
+        .returning();
+      await this.audit.recordInTransaction(txn, {
+        actorType: 'ADMIN',
+        actorId: adminId,
+        action: 'TRANSPORT_ROUTE_CREATED',
+        entityType: 'TRANSPORT_SERVICE_RUN',
+        entityId: created.id,
+        newValues: { driverId: driver.id, schoolId: school.id, title: created.title },
+        ipAddress,
+      });
+      return created;
     });
-    return created;
   }
 
   async updateAdminRoute(
@@ -1201,40 +1206,9 @@ export class DriverEnrollmentService {
         )
           throw new ValidationError('زمان توقف باید در بازه مسیر باشد.');
         const vehicle = vehicleRows.find((v) => v.id === route.vehicleId);
-        const members = await txn
-          .select()
-          .from(transportServiceRunStudents)
-          .where(
-            and(
-              eq(transportServiceRunStudents.serviceRunId, route.id),
-              eq(transportServiceRunStudents.isActive, true),
-            ),
-          );
-        const memberIds = members.map((m) => m.studentId);
-        const companionRows = memberIds.length
-          ? await txn
-              .select({ studentId: studentCompanions.studentId })
-              .from(studentCompanions)
-              .where(inArray(studentCompanions.studentId, memberIds))
-          : [];
-        const [targetCompanion] = await txn
-          .select({ id: studentCompanions.id })
-          .from(studentCompanions)
-          .where(eq(studentCompanions.studentId, student.id))
-          .limit(1);
-        const existing = members.some((m) => m.studentId === student.id);
-        const occupiedSeats = members.length + companionRows.length;
-        if (
-          !vehicle ||
-          vehicle.status !== 'ACTIVE' ||
-          occupiedSeats + (existing ? 0 : targetCompanion ? 2 : 1) > vehicle.capacity
-        )
-          throw new ConflictError(
-            'VEHICLE_CAPACITY_REACHED',
-            targetCompanion
-              ? 'این دانش‌آموز همراه دارد و برای ثبت او دو صندلی خالی لازم است.'
-              : 'ظرفیت یکی از مسیرها تکمیل است.',
-          );
+        if (!vehicle || vehicle.status !== 'ACTIVE')
+          throw new ConflictError('ROUTE_HAS_NO_VEHICLE', 'خودروی فعال برای مسیر پیدا نشد.');
+        // Admin planning may exceed nominal capacity; the UI displays a warning.
       }
       const previous = await txn
         .select({ id: transportServiceRunStudents.id, driverId: transportServiceRuns.driverId })
@@ -1874,41 +1848,7 @@ export class DriverEnrollmentService {
           .select({ value: max(transportServiceRunStudents.pickupOrder) })
           .from(transportServiceRunStudents)
           .where(eq(transportServiceRunStudents.serviceRunId, run.id));
-        const activeCount = await txn
-          .select({ studentId: transportServiceRunStudents.studentId })
-          .from(transportServiceRunStudents)
-          .where(
-            and(
-              eq(transportServiceRunStudents.serviceRunId, run.id),
-              eq(transportServiceRunStudents.isActive, true),
-            ),
-          );
-        const activeIds = activeCount.map((row) => row.studentId);
-        const [companions, targetCompanion] = await Promise.all([
-          activeIds.length
-            ? txn
-                .select({ studentId: studentCompanions.studentId })
-                .from(studentCompanions)
-                .where(inArray(studentCompanions.studentId, activeIds))
-            : Promise.resolve([]),
-          txn
-            .select({ id: studentCompanions.id })
-            .from(studentCompanions)
-            .where(eq(studentCompanions.studentId, studentId))
-            .limit(1)
-            .then((rows) => rows[0]),
-        ]);
-        const alreadyAssigned = activeCount.some((row) => row.studentId === studentId);
-        if (
-          activeCount.length + companions.length + (alreadyAssigned ? 0 : targetCompanion ? 2 : 1) >
-          vehicle.capacity
-        )
-          throw new ConflictError(
-            'VEHICLE_CAPACITY_REACHED',
-            targetCompanion
-              ? 'این دانش‌آموز همراه دارد و برای ثبت سرویس او دو صندلی خالی لازم است.'
-              : 'ظرفیت این سرویس تکمیل است.',
-          );
+        // Admin planning may exceed nominal capacity; the route screen warns before assignment.
         const scheduledStopTime =
           direction === 'TO_SCHOOL' ? input.toSchoolStartTime : input.fromSchoolArrivalTime;
         await txn

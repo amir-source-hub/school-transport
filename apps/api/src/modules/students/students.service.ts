@@ -271,7 +271,7 @@ export class StudentsService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE'), eq(students.isActive, true)));
+      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE')));
 
     const rows = await this.db.db
       .select({
@@ -282,7 +282,7 @@ export class StudentsService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE'), eq(students.isActive, true)))
+      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE')))
       .orderBy(...buildAdminStudentOrderBy(sort, direction))
       .offset((page - 1) * pageSize)
       .limit(pageSize);

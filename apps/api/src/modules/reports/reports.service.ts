@@ -1,8 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
-import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
 import { DatabaseService } from '../../database/database.service';
-import { ValidationError } from '../../common/errors';
 import {
   contracts,
   familyAddresses,
@@ -14,12 +12,10 @@ import {
   serviceRegistrations,
   students,
   users,
-  drivers,
-  vehicles,
-  transportServiceRuns,
 } from '../../database/schemas';
 import type { ReportPreviewSection } from './reports.dto';
-import { createStudentWorkbook, formatIranianExportDate } from './student-workbook';
+import { createStudentWorkbook } from './student-workbook';
+import { createDriverWorkbook } from './driver-workbook';
 
 type CellValue = string | number | boolean | Date | null;
 
@@ -47,35 +43,7 @@ export class ReportsService {
   constructor(@Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService) {}
 
   async createDriversWorkbook(): Promise<Buffer> {
-    const rows = await this.db.db.select({
-      id: drivers.id, firstName: drivers.firstName, lastName: drivers.lastName,
-      fatherName: drivers.fatherName, nationalId: drivers.nationalId, phoneNumber: drivers.phoneNumber,
-      secondaryPhoneNumber: drivers.secondaryPhoneNumber, homePhoneNumber: drivers.homePhoneNumber,
-      emergencyPhoneNumber: drivers.emergencyPhoneNumber, gender: drivers.gender, education: drivers.education,
-      licenseExpiresAt: drivers.licenseExpiresAt, province: drivers.province, city: drivers.city,
-      municipalityDistrict: drivers.municipalityDistrict, streetAddress: drivers.streetAddress,
-      postalCode: drivers.postalCode, status: drivers.status, vehicleType: vehicles.vehicleType,
-      vehicleSystem: vehicles.system, modelYear: vehicles.modelYear, plateNumber: vehicles.plateNumber,
-      capacity: vehicles.capacity, usageType: vehicles.usageType, ownershipType: vehicles.ownershipType,
-      insuranceExpiresAt: vehicles.insuranceExpiresAt,
-      technicalInspectionExpiresAt: vehicles.technicalInspectionExpiresAt, createdAt: drivers.createdAt,
-    }).from(drivers).leftJoin(vehicles, and(eq(vehicles.driverId, drivers.id), eq(vehicles.status, 'ACTIVE'))).where(isNotNull(drivers.userId)).orderBy(asc(drivers.lastName), asc(drivers.firstName));
-    if (rows.length > REPORT_EXPORT_MAX_ROWS_PER_SOURCE) throw new ValidationError('تعداد رانندگان برای خروجی هم‌زمان بیش از حد مجاز است.');
-    const runCounts = await this.db.db.select({ driverId: transportServiceRuns.driverId, count: sql<number>`count(*)::int` }).from(transportServiceRuns).where(eq(transportServiceRuns.isActive, true)).groupBy(transportServiceRuns.driverId);
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'سامانه سرویس مدارس'; workbook.created = new Date(); workbook.modified = new Date();
-    this.addSheet(workbook, 'رانندگان', [
-      ['id', 'شناسه راننده'], ['firstName', 'نام'], ['lastName', 'نام خانوادگی'], ['fatherName', 'نام پدر'],
-      ['nationalId', 'کد ملی'], ['phoneNumber', 'شماره همراه'], ['secondaryPhoneNumber', 'شماره همراه دوم'],
-      ['homePhoneNumber', 'تلفن منزل'], ['emergencyPhoneNumber', 'تماس اضطراری'], ['gender', 'جنسیت'],
-      ['education', 'تحصیلات'], ['licenseExpiresAt', 'انقضای گواهینامه'], ['province', 'استان'], ['city', 'شهر'],
-      ['municipalityDistrict', 'منطقه شهرداری'], ['streetAddress', 'نشانی'], ['postalCode', 'کد پستی'],
-      ['vehicleType', 'نوع خودرو'], ['vehicleSystem', 'سیستم خودرو'], ['modelYear', 'سال ساخت'], ['plateNumber', 'پلاک'],
-      ['capacity', 'ظرفیت'], ['usageType', 'وضعیت خودرو'], ['ownershipType', 'مالکیت'],
-      ['insuranceExpiresAt', 'انقضای بیمه'], ['technicalInspectionExpiresAt', 'انقضای معاینه فنی'],
-      ['serviceRunCount', 'تعداد مسیر فعال'], ['status', 'وضعیت راننده'], ['createdAt', 'تاریخ ثبت‌نام'],
-    ], rows.map((row) => ({ ...row, licenseExpiresAt: formatIranianExportDate(row.licenseExpiresAt), insuranceExpiresAt: formatIranianExportDate(row.insuranceExpiresAt), technicalInspectionExpiresAt: formatIranianExportDate(row.technicalInspectionExpiresAt), createdAt: formatIranianExportDate(row.createdAt, true), serviceRunCount: runCounts.find((item) => item.driverId === row.id)?.count ?? 0 })));
-    return Buffer.from(await workbook.xlsx.writeBuffer());
+    return createDriverWorkbook(this.db, REPORT_EXPORT_MAX_ROWS_PER_SOURCE);
   }
 
   async createComprehensiveWorkbook(): Promise<Buffer> {

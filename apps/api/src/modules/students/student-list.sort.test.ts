@@ -15,16 +15,19 @@ function renderSql(chunk: SQL) {
 }
 
 describe('buildAdminStudentOrderBy', () => {
-  it('orders Persian student names by lastName then firstName on the database, not JavaScript', async () => {
+  it('orders normalized Persian last names before first names in the database', () => {
     const orders = buildAdminStudentOrderBy('studentName', 'asc');
 
-    expect(orders).toHaveLength(2);
+    expect(orders).toHaveLength(3);
     const first = renderSql(orders[0]).sql;
     const second = renderSql(orders[1]).sql;
     expect(first).toContain('last_name');
+    expect(first).toContain('translate(');
+    expect(first).toContain('collate "C"');
     expect(first).toContain('asc');
     expect(second).toContain('first_name');
     expect(second).toContain('asc');
+    expect(renderSql(orders[2]).sql).toContain('id');
   });
 
   it('applies the requested direction to school name and date sorts', async () => {

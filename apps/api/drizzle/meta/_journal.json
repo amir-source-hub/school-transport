@@ -400,6 +400,20 @@
       "when": 1789754400000,
       "tag": "0056_immutable_http_activity",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1789840800000,
+      "tag": "0057_http_activity_error_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1789927200000,
+      "tag": "0058_vehicle_capacity_defaults",
+      "breakpoints": true
     }
   ]
 }

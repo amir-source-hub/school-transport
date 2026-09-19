@@ -58,4 +58,46 @@ describe('SearchPicker', () => {
     await waitFor(() => expect(load).toHaveBeenCalledWith('با'));
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
+
+  it('shows textual direction badges as well as color for assigned students', () => {
+    render(
+      <SearchPicker
+        label="دانش‌آموز"
+        value=""
+        onChange={vi.fn()}
+        options={[
+          { value: 'out', label: 'دانش‌آموز رفت', assignment: 'TO_SCHOOL' },
+          { value: 'back', label: 'دانش‌آموز برگشت', assignment: 'FROM_SCHOOL' },
+          { value: 'both', label: 'دانش‌آموز هر دو', assignment: 'BOTH' },
+          { value: 'new', label: 'دانش‌آموز جدید' },
+        ]}
+      />,
+    );
+    fireEvent.focus(screen.getByRole('combobox'));
+    expect(screen.getByRole('option', { name: 'دانش‌آموز رفت رفت' })).toHaveClass('bg-emerald-50');
+    expect(screen.getByRole('option', { name: 'دانش‌آموز برگشت برگشت' })).toHaveClass(
+      'bg-amber-50',
+    );
+    expect(screen.getByRole('option', { name: 'دانش‌آموز هر دو رفت برگشت' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'دانش‌آموز جدید' })).not.toHaveClass('bg-emerald-50');
+  });
+
+  it('refreshes assignment badges when the selected route changes', () => {
+    const props = { label: 'دانش‌آموز', value: '', onChange: vi.fn() };
+    const { rerender } = render(
+      <SearchPicker
+        {...props}
+        options={[{ value: 'student', label: 'سارا', assignment: 'TO_SCHOOL' }]}
+      />,
+    );
+    fireEvent.focus(screen.getByRole('combobox'));
+    expect(screen.getByRole('option', { name: 'سارا رفت' })).toBeInTheDocument();
+    rerender(
+      <SearchPicker
+        {...props}
+        options={[{ value: 'student', label: 'سارا', assignment: 'FROM_SCHOOL' }]}
+      />,
+    );
+    expect(screen.getByRole('option', { name: 'سارا برگشت' })).toHaveClass('bg-amber-50');
+  });
 });

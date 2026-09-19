@@ -1,4 +1,4 @@
-import { asc, desc, eq, type SQL } from 'drizzle-orm';
+import { asc, desc, eq, sql, type SQL } from 'drizzle-orm';
 import { schools, students } from '../../database/schemas';
 import type {
   AdminListSortDirection,
@@ -6,13 +6,11 @@ import type {
   AdminStudentSortKey,
 } from './student-list.dto';
 
-/**
- * Persian collation decision: names are ordered by PostgreSQL using the
- * database collation over the raw first_name/last_name values. Sorting is
- * not delegated to JavaScript to avoid assuming its built-in A→Z order is
- * correct for Persian names; the DB collation/byte ordering is the single
- * ordering source for admin student lists.
- */
+// Map Persian letters to ASCII keys in alphabetic order before database pagination.
+// Normalize common Arabic variants so ک/ك and ی/ي sort together.
+function persianNameKey(column: SQL): SQL {
+  return sql`translate(replace(replace(trim(${column}), 'ك', 'ک'), 'ي', 'ی'), 'ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی', '0123456789ABCDEFGHIJKLMNOPQRSTUV') collate "C"`;
+}
 export function buildAdminStudentArchiveWhere(archive: AdminStudentArchiveFilter): SQL | undefined {
   if (archive === 'all') return undefined;
   return eq(students.isActive, archive === 'active');
@@ -25,11 +23,11 @@ export function buildAdminStudentOrderBy(
   const dir = direction === 'asc' ? asc : desc;
   switch (sort) {
     case 'studentName':
-      return [dir(students.lastName), dir(students.firstName)];
+      return [dir(persianNameKey(sql`${students.lastName}`)), dir(persianNameKey(sql`${students.firstName}`)), dir(students.id)];
     case 'schoolName':
-      return [dir(schools.name), dir(students.lastName), dir(students.firstName)];
+      return [dir(persianNameKey(sql`${schools.name}`)), dir(persianNameKey(sql`${students.lastName}`)), dir(persianNameKey(sql`${students.firstName}`)), dir(students.id)];
     case 'createdAt':
     default:
-      return [dir(students.createdAt)];
+      return [dir(students.createdAt), dir(students.id)];
   }
 }

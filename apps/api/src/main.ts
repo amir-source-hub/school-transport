@@ -10,6 +10,7 @@ import { registerSecurityHeaders } from './common/security-headers';
 import { AppLogger } from './common/logger';
 import fastifyCookie = require('@fastify/cookie');
 import { RequestContext } from './common/request-context';
+import { HttpActivityService } from './common/http-activity.service';
 import { SwaggerModule } from '@nestjs/swagger';
 import { createOpenApiDocument } from './openapi';
 
@@ -66,7 +67,9 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new GlobalExceptionFilter(logger, app.get(RequestContext)));
+  app.useGlobalFilters(
+    new GlobalExceptionFilter(logger, app.get(RequestContext), app.get(HttpActivityService)),
+  );
 
   app.enableCors({
     origin: configService.corsOrigins,

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { FilteredCount } from '@/components/data/filtered-count';
 import { getAdminDrivers } from '@/features/admin-drivers/admin-drivers-api';
 import { sortAdminDrivers, type DriverSort } from '@/features/admin-drivers/admin-driver-sort';
+import { driverValueLabel, IranianPlate } from '@/features/admin-drivers/driver-display';
 
 export const metadata = { title: 'رانندگان' };
 export const dynamic = 'force-dynamic';
@@ -110,8 +111,8 @@ export default async function Page({
                 {driver.firstName} {driver.lastName}
               </h2>
               <p className="mt-1 text-sm text-muted">
-                {driver.vehicleType ?? 'خودرو ثبت نشده'} {driver.vehicleSystem ?? ''} ·{' '}
-                {driver.plateNumber ?? 'بدون پلاک'}
+                {driver.vehicleType ? driverValueLabel(driver.vehicleType) : 'خودرو ثبت نشده'}{' '}
+                {driver.vehicleSystem ?? ''} · <IranianPlate value={driver.plateNumber} />
               </p>
               <p className="mt-3 text-xs text-muted">
                 کد ملی: {driver.nationalId} · همراه: {driver.phoneNumber}

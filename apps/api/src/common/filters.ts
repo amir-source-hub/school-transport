@@ -1,20 +1,31 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
-import { FastifyReply } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import { AppError } from './errors';
 import { AppLogger } from './logger';
 import { RequestContext } from './request-context';
 import { translateDatabaseError } from './database-errors';
+import { HttpActivityService } from './http-activity.service';
+import { recordUninterceptedHttpFailure } from './http-activity.interceptor';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   constructor(
     private readonly logger: AppLogger,
     private readonly requestContext: RequestContext,
+    private readonly activity?: HttpActivityService,
   ) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const reply = ctx.getResponse<FastifyReply>();
+    if (this.activity) {
+      recordUninterceptedHttpFailure(
+        this.activity,
+        this.requestContext,
+        ctx.getRequest<FastifyRequest>(),
+        exception,
+      );
+    }
 
     if (exception instanceof AppError) {
       this.logger.warn(

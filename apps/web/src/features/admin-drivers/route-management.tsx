@@ -4,11 +4,14 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { SearchPicker } from '@/components/ui/search-picker';
 import { normalizeDigits } from '@/features/enrollment/national-id';
+import { isoToJalaliDate, jalaliToIsoDate } from '@/lib/jalali-date';
 import type { AdminSchool } from '@/features/admin-schools/admin-schools-api';
 import { getAdminStudents, type AdminStudent } from '@/features/admin-students/admin-students-api';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { ApiClientError } from '@/lib/api-client';
 import { formatPersianTime } from '@/lib/formatters';
 import {
   addStudentToAdminRoute,
@@ -20,6 +23,8 @@ import {
   type DriverListItem,
 } from './admin-drivers-api';
 import { RouteCatalog } from './route-catalog';
+import { RoutePriceInput, tomanToRials } from './route-price-input';
+import { studentRouteAssignments } from './route-student-assignment';
 
 export function RouteManagement({
   routes,
@@ -35,6 +40,8 @@ export function RouteManagement({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [contractDateIso, setContractDateIso] = useState(jalaliToIsoDate('1405/07/01') ?? '');
   const [schoolId, setSchoolId] = useState('');
   const [filterSchoolId, setFilterSchoolId] = useState('');
   const [routeId, setRouteId] = useState('');
@@ -42,25 +49,51 @@ export function RouteManagement({
   const [choices, setChoices] = useState(students);
   const school = schools.find((s) => s.id === schoolId);
   const route = routes.find((r) => r.id === routeId);
+  const assignmentYear =
+    route?.academicYear ??
+    routes
+      .map((r) => r.academicYear)
+      .sort()
+      .at(-1);
+  const assignments = useMemo(
+    () => studentRouteAssignments(routes, assignmentYear),
+    [routes, assignmentYear],
+  );
   const visibleStudents = useMemo(
     () => choices.filter((s) => !filterSchoolId || s.schoolId === filterSchoolId),
     [choices, filterSchoolId],
   );
-  async function perform(action: () => Promise<unknown>, success: string) {
+  async function perform(action: () => Promise<unknown>, success: string): Promise<boolean> {
     setBusy(true);
     setMessage('');
+    setErrorMessage('');
     try {
       await action();
       setMessage(success);
       router.refresh();
+      return true;
     } catch (error) {
-      setMessage(getApiErrorFeedback(error).message);
+      const feedback = getApiErrorFeedback(error);
+      const detail =
+        error instanceof ApiClientError && error.status < 500 && !error.fieldErrors
+          ? error.message
+          : feedback.message;
+      setErrorMessage(
+        `${detail}${feedback.requestId ? ` (شناسه پیگیری: ${feedback.requestId})` : ''}`,
+      );
+      return false;
     } finally {
       setBusy(false);
     }
   }
-  const studentLabel = (s: AdminStudent) =>
-    `${s.firstName} ${s.lastName} · ${s.schoolName ?? ''}${s.companion ? ' · دارای همراه (۲ صندلی)' : ''}`;
+  const studentOption = useCallback(
+    (s: AdminStudent) => ({
+      value: s.id,
+      label: `${s.firstName} ${s.lastName} · ${s.schoolName ?? ''}${s.companion ? ' · دارای همراه (۲ صندلی)' : ''}`,
+      assignment: assignments.get(s.id),
+    }),
+    [assignments],
+  );
   const searchStudents = useCallback(
     async (q: string) => {
       const first = await getAdminStudents({
@@ -86,12 +119,9 @@ export function RouteManagement({
       );
       const rows = [...first.students, ...pages.flatMap((page) => page.students)];
       setChoices((current) => [...new Map([...current, ...rows].map((s) => [s.id, s])).values()]);
-      return rows.map((s) => ({
-        value: s.id,
-        label: `${s.firstName} ${s.lastName} · ${s.schoolName ?? ''}${s.companion ? ' · دارای همراه (۲ صندلی)' : ''}`,
-      }));
+      return rows.map(studentOption);
     },
-    [filterSchoolId],
+    [filterSchoolId, studentOption],
   );
   async function create(data: FormData) {
     if (!school) return;
@@ -112,7 +142,7 @@ export function RouteManagement({
           ...(special
             ? {}
             : {
-                contractPriceRials: Number(data.get('contractPriceRials')),
+                contractPriceRials: tomanToRials(String(data.get('contractPriceTomans'))),
                 contractDate: normalizeDigits(String(data.get('contractDate'))),
               }),
           activeWeekdays: [0, 1, 2, 3, 4],
@@ -126,7 +156,7 @@ export function RouteManagement({
     await perform(
       () => addStudentToAdminRoute(route.id, { studentId, pickupOrder: route.students.length + 1 }),
       student?.companion
-        ? 'دانش‌آموز و همراه او با مصرف دو صندلی به مسیر افزوده شدند.'
+        ? 'دانش‌آموز و همراه او به مسیر افزوده شدند.'
         : 'دانش‌آموز به مسیر افزوده شد.',
     );
   }
@@ -134,6 +164,14 @@ export function RouteManagement({
     <Card className="space-y-8">
       <section>
         <h2 className="text-lg font-black">تعریف مسیر و تخصیص دانش‌آموز</h2>
+        {errorMessage && (
+          <p
+            role="alert"
+            className="mt-3 rounded-xl border border-danger bg-danger-soft p-3 text-sm font-bold text-danger"
+          >
+            {errorMessage}
+          </p>
+        )}
         <p className="mt-2 text-sm leading-7 text-muted">
           ساعت مسیر از ساعت شروع و آخرین ساعت پایان مدرسه خوانده می‌شود. فیلتر مدرسه فقط جست‌وجوی
           دانش‌آموز را آسان می‌کند؛ یک مسیر می‌تواند دانش‌آموزان چند مدرسه را داشته باشد.
@@ -201,25 +239,18 @@ export function RouteManagement({
             </div>
           ) : (
             <>
-              <Field label="مبلغ قرارداد ماهانه مسیر (ریال)">
-                <Input
-                  name="contractPriceRials"
-                  type="number"
-                  min="0"
-                  step="1"
-                  required
-                  inputMode="numeric"
-                />
+              <Field label="مبلغ قرارداد ماهانه مسیر (تومان)">
+                <RoutePriceInput />
               </Field>
-              <Field label="تاریخ قرارداد (شمسی)">
-                <Input
-                  name="contractDate"
-                  placeholder="1405/06/22"
-                  pattern="1[34][0-9]{2}/(0[1-9]|1[0-2])/(0[1-9]|[12][0-9]|3[01])"
+              <div>
+                <JalaliDateInput
+                  label="تاریخ قرارداد (شمسی)"
+                  value={contractDateIso}
+                  onChange={setContractDateIso}
                   required
-                  dir="ltr"
                 />
-              </Field>
+                <input type="hidden" name="contractDate" value={isoToJalaliDate(contractDateIso)} />
+              </div>
             </>
           )}
           <Button className="self-end" loading={busy} disabled={busy || !school}>
@@ -261,53 +292,84 @@ export function RouteManagement({
             loadOptions={searchStudents}
             value={studentId}
             onChange={setStudentId}
-            options={visibleStudents.map((s) => ({ value: s.id, label: studentLabel(s) }))}
+            options={visibleStudents.map(studentOption)}
           />
+          <p className="text-xs text-muted md:col-span-2">
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-900">
+              رفت
+            </span>{' '}
+            ثبت‌شده در مسیر رفت ·{' '}
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 font-bold text-amber-900">
+              برگشت
+            </span>{' '}
+            ثبت‌شده در مسیر برگشت · بدون نشان: هنوز تخصیص داده نشده
+          </p>
           <Button className="self-end" disabled={busy || !route || !studentId} loading={busy}>
             افزودن به مسیر
           </Button>
         </form>
+        {route &&
+          studentId &&
+          (() => {
+            const selected = choices.find((item) => item.id === studentId);
+            const occupied = route.students.reduce((sum, item) => sum + (item.seatCount ?? 1), 0);
+            const capacity = route.driver?.capacity ?? 0;
+            const next = occupied + (selected?.companion ? 2 : 1);
+            return capacity > 0 && next > capacity ? (
+              <p
+                className="mt-3 rounded-xl bg-warning-soft p-3 text-sm font-bold text-warning"
+                role="note"
+              >
+                با این تخصیص، ظرفیت {capacity} نفره خودرو رد می‌شود ({next} صندلی). ثبت همچنان مجاز
+                است.
+              </p>
+            ) : null;
+          })()}
         <p className="mt-3 text-sm text-muted">
           ساعت دانش‌آموز به‌صورت خودکار از مدرسه خودش تعیین می‌شود: رفت با ساعت شروع، برگشت با ساعت
           پایان، و رفت‌وبرگشت با هر دو ساعت.
         </p>
         {route?.students.length ? (
           <ul className="mt-5 divide-y divide-border rounded-xl border border-border">
-            {route.students.map((student) => (
-              <li
-                key={student.id}
-                className="flex min-h-14 items-center justify-between gap-3 px-4"
-              >
-                <span className="text-sm font-bold">
-                  {student.pickupOrder}. {student.firstName} {student.lastName}
-                  {student.companion && (
-                    <small className="mr-2 rounded-full bg-warning-soft px-2 py-1 text-warning">
-                      همراه: {student.companion.firstName} {student.companion.lastName} · ۲ صندلی
-                    </small>
-                  )}
-                  <small className="block font-normal text-muted">
-                    {route.direction === 'FROM_SCHOOL' ? 'برگشت' : 'رفت'}:{' '}
-                    {student.scheduledStopTime ? formatPersianTime(student.scheduledStopTime) : '—'}
-                    {student.scheduledReturnStopTime &&
-                      ` · برگشت: ${formatPersianTime(student.scheduledReturnStopTime)}`}
-                  </small>
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={busy}
-                  onClick={() =>
-                    void perform(
-                      () => removeStudentFromAdminRoute(route.id, student.id),
-                      'ارتباط دانش‌آموز و همراه او با مسیر حذف شد.',
-                    )
-                  }
+            {[...route.students]
+              .sort((a, b) => a.pickupOrder - b.pickupOrder)
+              .map((student) => (
+                <li
+                  key={student.id}
+                  className="flex min-h-14 items-center justify-between gap-3 px-4"
                 >
-                  حذف از مسیر
-                </Button>
-              </li>
-            ))}
+                  <span className="text-sm font-bold">
+                    {student.pickupOrder}. {student.firstName} {student.lastName}
+                    {student.companion && (
+                      <small className="mr-2 rounded-full bg-warning-soft px-2 py-1 text-warning">
+                        همراه: {student.companion.firstName} {student.companion.lastName} · ۲ صندلی
+                      </small>
+                    )}
+                    <small className="block font-normal text-muted">
+                      {route.direction === 'FROM_SCHOOL' ? 'برگشت' : 'رفت'}:{' '}
+                      {student.scheduledStopTime
+                        ? formatPersianTime(student.scheduledStopTime)
+                        : '—'}
+                      {student.scheduledReturnStopTime &&
+                        ` · برگشت: ${formatPersianTime(student.scheduledReturnStopTime)}`}
+                    </small>
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      void perform(
+                        () => removeStudentFromAdminRoute(route.id, student.id),
+                        'ارتباط دانش‌آموز و همراه او با مسیر حذف شد.',
+                      )
+                    }
+                  >
+                    حذف از مسیر
+                  </Button>
+                </li>
+              ))}
           </ul>
         ) : null}
       </section>
