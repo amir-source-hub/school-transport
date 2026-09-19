@@ -9,6 +9,46 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('CreateEnrollmentForm inline validation', () => {
+  it('reuses and locks saved family details for a second student without changing guardian identity', async () => {
+    const user = userEvent.setup();
+    render(
+      <CreateEnrollmentForm
+        schools={[]}
+        savedParents={{ father: null, mother: null }}
+        existingStudents={[]}
+        hasExistingFamilyStudents
+        guardianPhone="09123456789"
+        defaults={{
+          homePhone: '02122113333',
+          guardian: {
+            firstName: 'علی',
+            lastName: 'احمدی',
+            nationalId: '0023518805',
+            relationshipType: 'FATHER',
+          },
+        }}
+      />,
+    );
+
+    const studentSection = within(
+      screen.getByRole('heading', { name: 'مشخصات دانش‌آموز' }).closest('section')!,
+    );
+    const guardianSection = within(
+      screen.getByRole('heading', { name: 'سرپرست' }).closest('section')!,
+    );
+
+    expect(guardianSection.getByLabelText('شماره تلفن منزل')).toHaveValue('22113333');
+    expect(guardianSection.getByLabelText('شماره تلفن منزل')).toBeDisabled();
+    expect(guardianSection.getByLabelText('نام')).toBeDisabled();
+
+    await user.type(studentSection.getByLabelText('نام پدر'), 'رضا');
+    await user.type(studentSection.getByLabelText('نام خانوادگی'), 'رضایی');
+
+    expect(guardianSection.getByLabelText('نام')).toHaveValue('علی');
+    expect(guardianSection.getByLabelText('نام خانوادگی')).toHaveValue('احمدی');
+    expect(studentSection.getByLabelText('نام پدر')).toHaveValue('رضا');
+  });
+
   it('prevents numbers and Latin characters from remaining in student names', async () => {
     const user = userEvent.setup();
     render(

@@ -88,9 +88,11 @@ export default async function EnrollmentsPage() {
           }))}
           savedParents={{ father: family.father, mother: family.mother }}
           existingStudents={availableStudents}
+          hasExistingFamilyStudents={students.length > 0}
           guardianPhone={primaryParent?.phoneNumber ?? undefined}
           capacityRemaining={capacity.remaining}
           defaults={{
+            homePhone: primaryParent?.homePhone ?? undefined,
             address: activeAddress,
             emergencyContact: activeEmergency,
             guardian: primaryParent

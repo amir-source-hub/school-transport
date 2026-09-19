@@ -33,8 +33,16 @@ export class FamiliesService {
   ) {}
 
   async assertEditableByFamily(userId: string) {
-    const [enrolled] = await this.db.db.select({ id: students.id }).from(students).where(eq(students.userId, userId)).limit(1);
-    if (enrolled) throw new ConflictError('FAMILY_ADMIN_EDIT_ONLY', 'اطلاعات خانواده پس از ثبت‌نام فقط توسط مدیریت قابل تغییر است.');
+    const [enrolled] = await this.db.db
+      .select({ id: students.id })
+      .from(students)
+      .where(eq(students.userId, userId))
+      .limit(1);
+    if (enrolled)
+      throw new ConflictError(
+        'FAMILY_ADMIN_EDIT_ONLY',
+        'اطلاعات خانواده پس از ثبت‌نام فقط توسط مدیریت قابل تغییر است.',
+      );
   }
 
   async createFamily(userId: string, dto: CreateFamilyDto): Promise<FamilyProfile> {
@@ -164,6 +172,7 @@ export class FamiliesService {
       lastName: p.lastName,
       nationalId: p.nationalId,
       phoneNumber: p.phoneNumber,
+      homePhone: p.homePhone,
       relationshipType: p.relationshipType ?? undefined,
       relationshipDescription: p.relationshipDescription ?? undefined,
       isPrimaryContact: p.isPrimaryContact,

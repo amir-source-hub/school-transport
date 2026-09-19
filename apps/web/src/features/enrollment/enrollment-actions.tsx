@@ -95,6 +95,7 @@ export function CreateEnrollmentForm({
   schools,
   savedParents,
   existingStudents,
+  hasExistingFamilyStudents = false,
   defaults,
   mode = 'panel',
   guardianPhone,
@@ -104,6 +105,7 @@ export function CreateEnrollmentForm({
   schools: SchoolOption[];
   savedParents: SavedParents;
   existingStudents: ExistingStudent[];
+  hasExistingFamilyStudents?: boolean;
   defaults: EnrollmentDefaults;
   mode?: EnrollmentMode;
   guardianPhone?: string;
@@ -339,7 +341,7 @@ export function CreateEnrollmentForm({
     }
     setForm((current) => {
       const next = { ...current, [key]: normalizedValue };
-      if (current.guardianRelationshipType === 'FATHER') {
+      if (current.guardianRelationshipType === 'FATHER' && !reusingFamilyProfile) {
         if (key === 'studentFatherName') next.guardianFirst = String(normalizedValue);
         if (key === 'studentLast') next.guardianLast = String(normalizedValue);
       }
@@ -372,7 +374,6 @@ export function CreateEnrollmentForm({
           ? ['addressTitle', 'province', 'city', 'streetAddress', 'postalCode']
           : [];
     const inheritedFamilyFields = new Set<keyof typeof form>([
-      'studentFatherName',
       'guardianRelationshipType',
       'guardianRelationshipDescription',
       'guardianFirst',
@@ -869,10 +870,11 @@ export function CreateEnrollmentForm({
       : []),
   ]);
   const reusingFamilyProfile =
-    existingStudents.length > 0 && !form.existingStudentId && !adminFamilyId;
+    (hasExistingFamilyStudents || existingStudents.length > 0) &&
+    !form.existingStudentId &&
+    !adminFamilyId;
   if (reusingFamilyProfile) {
     for (const key of [
-      'studentFatherName',
       'guardianRelationshipType',
       'guardianRelationshipDescription',
       'guardianFirst',

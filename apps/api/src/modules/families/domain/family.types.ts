@@ -45,6 +45,7 @@ export interface ParentProfile {
   lastName: string;
   nationalId: string;
   phoneNumber: string;
+  homePhone: string | null;
   relationshipType?: string;
   relationshipDescription?: string;
   isPrimaryContact: boolean;
