@@ -428,6 +428,13 @@
       "when": 1790100000000,
       "tag": "0060_route_contract_price_bigint",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1790186400000,
+      "tag": "0061_remove_legacy_route_direction_check",
+      "breakpoints": true
     }
   ]
 }
