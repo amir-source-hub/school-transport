@@ -7,9 +7,9 @@ import type {
 } from './student-list.dto';
 
 // Map Persian letters to ASCII keys in alphabetic order before database pagination.
-// Normalize common Arabic variants so ک/ك and ی/ي sort together.
+// Normalize common variants so آ/ا, ک/ك and ی/ي sort together.
 function persianNameKey(column: SQL): SQL {
-  return sql`translate(replace(replace(trim(${column}), 'ك', 'ک'), 'ي', 'ی'), 'ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی', '0123456789ABCDEFGHIJKLMNOPQRSTUV') collate "C"`;
+  return sql`translate(replace(replace(replace(replace(replace(replace(trim(${column}), 'آ', 'ا'), 'أ', 'ا'), 'إ', 'ا'), 'ك', 'ک'), 'ي', 'ی'), 'ى', 'ی'), 'ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی', '0123456789ABCDEFGHIJKLMNOPQRSTUV') collate "C"`;
 }
 export function buildAdminStudentArchiveWhere(archive: AdminStudentArchiveFilter): SQL | undefined {
   if (archive === 'all') return undefined;

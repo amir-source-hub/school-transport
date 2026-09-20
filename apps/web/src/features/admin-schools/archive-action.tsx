@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { archiveSchool, unarchiveSchool } from '@/features/admin-schools/admin-schools-api';
 import { permanentlyDeleteSchool } from '@/features/admin-schools/admin-schools-api';
+import { ApiClientError } from '@/lib/api-client';
 
 export function DeleteSchoolButton({
   schoolId,
@@ -17,26 +18,37 @@ export function DeleteSchoolButton({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   return (
-    <Button
-      variant="danger"
-      size="sm"
-      loading={loading}
-      onClick={async () => {
-        if (!window.confirm(`مدرسه «${schoolName}» برای همیشه حذف شود؟`)) return;
-        setLoading(true);
-        try {
-          await permanentlyDeleteSchool(schoolId);
-          router.refresh();
-        } catch (error) {
-          window.alert(error instanceof Error ? error.message : 'حذف مدرسه انجام نشد.');
-        } finally {
-          setLoading(false);
-        }
-      }}
-    >
-      حذف دائمی
-    </Button>
+    <div className="space-y-2">
+      <Button
+        variant="danger"
+        size="sm"
+        loading={loading}
+        onClick={async () => {
+          if (!window.confirm(`مدرسه «${schoolName}» برای همیشه حذف شود؟`)) return;
+          setError(null);
+          setLoading(true);
+          try {
+            await permanentlyDeleteSchool(schoolId);
+            router.refresh();
+          } catch (caught) {
+            setError(
+              caught instanceof ApiClientError && caught.code === 'RELATED_RESOURCE_CONFLICT'
+                ? 'این مدرسه هنوز اطلاعات مرتبط دارد و برای حفظ سوابق قابل حذف دائمی نیست. آن را بایگانی‌شده نگه دارید.'
+                : caught instanceof Error
+                  ? caught.message
+                  : 'حذف مدرسه انجام نشد.',
+            );
+          } finally {
+            setLoading(false);
+          }
+        }}
+      >
+        حذف دائمی
+      </Button>
+      {error && <p role="alert" className="max-w-sm text-sm text-danger">{error}</p>}
+    </div>
   );
 }
 

@@ -414,6 +414,20 @@
       "when": 1789927200000,
       "tag": "0058_vehicle_capacity_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1790013600000,
+      "tag": "0059_allow_over_capacity_route_assignments",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1790100000000,
+      "tag": "0060_route_contract_price_bigint",
+      "breakpoints": true
     }
   ]
 }

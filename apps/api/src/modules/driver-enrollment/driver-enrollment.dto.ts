@@ -182,7 +182,7 @@ export class CreateTransportRouteDto {
   @Matches(/^\d{2}:\d{2}$/) scheduledStartTime!: string;
   @Matches(/^\d{2}:\d{2}$/) scheduledArrivalTime!: string;
   @Transform(clean) @IsOptional() @IsString() @Length(0, 500) areaDescription?: string;
-  @IsOptional() @IsInt() @Min(0) contractPriceRials?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(99_999_999_999_990) contractPriceRials?: number;
   @Transform(clean)
   @IsOptional()
   @Matches(/^1[34]\d{2}\/(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])$/)
@@ -225,7 +225,7 @@ export class UpdateTransportRouteDto {
   @IsOptional() @IsIn(['TO_SCHOOL', 'FROM_SCHOOL', 'ROUND_TRIP']) direction?:
     'TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP';
   @Transform(clean) @IsOptional() @IsString() @Length(0, 500) areaDescription?: string;
-  @IsOptional() @IsInt() @Min(0) contractPriceRials?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(99_999_999_999_990) contractPriceRials?: number;
   @Transform(clean)
   @IsOptional()
   @Matches(/^1[34]\d{2}\/(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])$/)

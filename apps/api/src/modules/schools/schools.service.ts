@@ -2,6 +2,7 @@ import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import {
   contracts,
+  feedbackSubmissions,
   paymentPlans,
   paymentScheduleItems,
   paymentTransactions,
@@ -11,6 +12,7 @@ import {
   schools,
   serviceRegistrations,
   students,
+  transportServiceRuns,
   users,
 } from '../../database/schemas';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
@@ -283,20 +285,34 @@ export class SchoolsService {
 
   async permanentlyDelete(id: string) {
     await this.getById(id);
-    const [student] = await this.db.db
-      .select({ id: students.id })
-      .from(students)
-      .where(eq(students.schoolId, id))
-      .limit(1);
-    if (student)
-      throw new ConflictError(
-        'SCHOOL_HAS_STUDENTS',
-        'این مدرسه دانش‌آموز ثبت‌شده دارد و قابل حذف دائمی نیست؛ ابتدا آن را بایگانی کنید.',
-      );
-    const [deleted] = await this.db.db
-      .delete(schools)
-      .where(eq(schools.id, id))
-      .returning({ id: schools.id });
-    return { deleted: Boolean(deleted) };
+    return this.db.db.transaction(async (tx) => {
+      const dependencies = [
+        { table: students, label: 'دانش‌آموز' },
+        { table: transportServiceRuns, label: 'مسیر سرویس' },
+        { table: feedbackSubmissions, label: 'پیام یا بازخورد' },
+      ] as const;
+      for (const dependency of dependencies) {
+        const [record] = await tx
+          .select({ id: dependency.table.id })
+          .from(dependency.table)
+          .where(eq(dependency.table.schoolId, id))
+          .limit(1);
+        if (record) {
+          throw new ConflictError(
+            'SCHOOL_HAS_DEPENDENCIES',
+            `این مدرسه ${dependency.label} مرتبط دارد و حذف دائمی آن باعث از دست رفتن سابقه می‌شود. مدرسه را بایگانی‌شده نگه دارید.`,
+          );
+        }
+      }
+
+      // Manager assignments belong to this school and can be removed without
+      // deleting the manager account or any student/route history.
+      await tx.delete(schoolManagerAssignments).where(eq(schoolManagerAssignments.schoolId, id));
+      const [deleted] = await tx
+        .delete(schools)
+        .where(eq(schools.id, id))
+        .returning({ id: schools.id });
+      return { deleted: Boolean(deleted) };
+    });
   }
 }

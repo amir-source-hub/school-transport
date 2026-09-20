@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   check,
   date,
@@ -105,7 +106,7 @@ export const transportServiceRuns = pgTable(
     scheduledStartTime: time('scheduled_start_time').notNull(),
     scheduledArrivalTime: time('scheduled_arrival_time').notNull(),
     areaDescription: text('area_description'),
-    contractPriceRials: integer('contract_price_rials'),
+    contractPriceRials: bigint('contract_price_rials', { mode: 'number' }),
     contractDate: varchar('contract_date', { length: 10 }),
     activeWeekdays: integer('active_weekdays').array().notNull().default([]),
     isActive: boolean('is_active').notNull().default(true),

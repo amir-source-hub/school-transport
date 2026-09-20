@@ -102,6 +102,14 @@ describe('CreateTransportRouteDto contract terms', () => {
   };
   it('accepts a nonnegative price and Persian date for a round-trip route', async () => {
     expect(await validate(plainToInstance(CreateTransportRouteDto, route))).toHaveLength(0);
+    expect(
+      await validate(
+        plainToInstance(CreateTransportRouteDto, {
+          ...route,
+          contractPriceRials: 1_111_111_111_110,
+        }),
+      ),
+    ).toHaveLength(0);
   });
   it('rejects negative prices and invalid Persian dates', async () => {
     const errors = await validate(
@@ -114,5 +122,15 @@ describe('CreateTransportRouteDto contract terms', () => {
     expect(errors.map((error) => error.property)).toEqual(
       expect.arrayContaining(['contractPriceRials', 'contractDate']),
     );
+  });
+
+  it('rejects prices beyond the form-supported range before reaching PostgreSQL', async () => {
+    const errors = await validate(
+      plainToInstance(CreateTransportRouteDto, {
+        ...route,
+        contractPriceRials: 100_000_000_000_000,
+      }),
+    );
+    expect(errors.map((error) => error.property)).toContain('contractPriceRials');
   });
 });

@@ -74,4 +74,19 @@ describe('admin route creation', () => {
     expect(h.audit).toHaveBeenCalledOnce();
     expect(h.transaction).toHaveBeenCalledOnce();
   });
+
+  it('creates one round-trip route with a large but safe rial contract price', async () => {
+    const h = harness();
+    await h.service.createAdminRoute(
+      { ...input, direction: 'ROUND_TRIP', contractPriceRials: 1_111_111_111_110 },
+      'admin',
+    );
+    expect(h.values).toHaveBeenCalledOnce();
+    expect(h.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        direction: 'ROUND_TRIP',
+        contractPriceRials: 1_111_111_111_110,
+      }),
+    );
+  });
 });

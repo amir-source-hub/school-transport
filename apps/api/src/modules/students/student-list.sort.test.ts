@@ -23,11 +23,18 @@ describe('buildAdminStudentOrderBy', () => {
     const second = renderSql(orders[1]).sql;
     expect(first).toContain('last_name');
     expect(first).toContain('translate(');
+    expect(first).toContain("'آ', 'ا'");
     expect(first).toContain('collate "C"');
     expect(first).toContain('asc');
     expect(second).toContain('first_name');
     expect(second).toContain('asc');
     expect(renderSql(orders[2]).sql).toContain('id');
+  });
+
+  it('normalizes alef variants in the school-name sort too', () => {
+    const school = renderSql(buildAdminStudentOrderBy('schoolName', 'asc')[0]).sql;
+    expect(school).toContain("'آ', 'ا'");
+    expect(school).toContain('collate "C"');
   });
 
   it('applies the requested direction to school name and date sorts', async () => {

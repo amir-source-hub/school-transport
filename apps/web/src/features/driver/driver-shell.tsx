@@ -32,10 +32,10 @@ const navGroups = [
 ] as const;
 
 const mobileDock = [
+  { href: '/driver/vehicle-documents', label: 'مدارک خودروی من', icon: CarFront },
   { href: '/driver/dashboard', label: 'خانه', icon: Home },
+  { href: '/driver/personal-documents', label: 'مدارک شخصی من', icon: FileBadge },
   { href: '/driver/service-runs', label: 'سرویس‌ها', icon: Route },
-  { href: '/driver/students', label: 'دانش‌آموزان', icon: GraduationCap },
-  { href: '/driver/profile', label: 'اطلاعات من', icon: UserRound },
 ] as const;
 
 export function isDriverRouteActive(pathname: string, href: string) {
@@ -81,7 +81,7 @@ function DriverNavigation({ mobile = false }: { mobile?: boolean }) {
 export function DriverShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   return (
-    <div className="min-h-screen overflow-x-clip bg-[var(--paper)] pb-16 lg:pb-0">
+    <div className="min-h-screen overflow-x-clip bg-[var(--paper)] pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-white/90 backdrop-blur-lg">
         <div className="mx-auto flex min-h-16 max-w-[var(--width-portal)] items-center gap-3 px-4 sm:px-6">
           <Drawer>
@@ -108,12 +108,12 @@ export function DriverShell({ children }: { children: ReactNode }) {
         <main className="portal-main min-w-0 flex-1 p-4 sm:p-6 lg:p-8 xl:p-10">{children}</main>
       </div>
 
-      <nav aria-label="ناوبری سریع راننده" className="fixed inset-x-0 bottom-0 z-40 flex min-h-16 items-start justify-around border-t border-border/60 bg-white/95 px-1 shadow-[0_-8px_24px_-20px_rgba(15,23,42,.45)] backdrop-blur-lg lg:hidden">
+      <nav aria-label="ناوبری سریع راننده" className="fixed inset-x-0 bottom-0 z-40 flex min-h-20 items-start justify-around border-t border-border/60 bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-20px_rgba(15,23,42,.45)] backdrop-blur-lg lg:hidden">
         {mobileDock.map(({ href, label, icon: Icon }) => {
           const active = isDriverRouteActive(pathname, href);
           return (
-            <Link key={href} href={href} aria-current={active ? 'page' : undefined} className={cn('flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-bold transition-colors min-[360px]:text-[11px]', active ? 'text-primary' : 'text-muted hover:text-primary')}>
-              <Icon aria-hidden="true" className="size-5 shrink-0" /><span className="max-w-full truncate">{label}</span>
+            <Link key={href} href={href} aria-current={active ? 'page' : undefined} className={cn('flex min-h-20 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[10px] font-bold transition-colors min-[360px]:text-[11px]', active ? 'text-primary' : 'text-muted hover:text-primary')}>
+              <Icon aria-hidden="true" className="size-5 shrink-0" /><span className="max-w-full text-center leading-3.5">{label}</span>
             </Link>
           );
         })}

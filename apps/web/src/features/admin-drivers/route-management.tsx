@@ -186,7 +186,10 @@ export function RouteManagement({
           <Field label="عنوان مسیر">
             <Input name="title" required minLength={2} />
           </Field>
-          <Field label="راننده">
+          <Field
+            label="راننده"
+            hint="ظرفیت خودرو فقط هشدار است؛ ثبت مسیر و تخصیص دانش‌آموز بیش از ظرفیت مجاز است."
+          >
             <Picker
               name="driverId"
               options={drivers
@@ -206,7 +209,7 @@ export function RouteManagement({
                 .map((s) => ({ value: s.id, label: s.name }))}
             />
           </Field>
-          <Field label="جهت">
+          <Field label="جهت" hint="رفت و برگشت هر دو جهت را در یک مسیر پوشش می‌دهد.">
             <Picker
               name="direction"
               options={[
@@ -387,12 +390,15 @@ export function RouteManagement({
     </Card>
   );
 }
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
-    <label className="block text-sm font-bold">
-      {label}
-      <span className="mt-2 block">{children}</span>
-    </label>
+    <div>
+      <label className="block text-sm font-bold">
+        {label}
+        <span className="mt-2 block">{children}</span>
+      </label>
+      {hint && <p className="mt-2 text-xs leading-5 text-muted">{hint}</p>}
+    </div>
   );
 }
 function Picker({

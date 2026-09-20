@@ -72,6 +72,56 @@ it('submits grouped tomans as rials and the selected Jalali contract date', asyn
   );
 });
 
+it('submits a round-trip route as one route and keeps capacity advisory', async () => {
+  render(
+    <RouteManagement
+      routes={[]}
+      students={[]}
+      drivers={
+        [{ id: 'driver', firstName: 'علی', lastName: 'احمدی', status: 'ACTIVE', capacity: 4 }] as never
+      }
+      schools={
+        [
+          {
+            id: 'school',
+            name: 'مدرسه نمونه',
+            isActive: true,
+            schoolType: 'NORMAL',
+            openingTime: '07:15',
+            closingTime: '14:30',
+            closingTimes: [],
+          },
+        ] as never
+      }
+    />,
+  );
+  fireEvent.change(screen.getByRole('textbox', { name: 'عنوان مسیر' }), {
+    target: { value: 'مسیر رفت و برگشت' },
+  });
+  fireEvent.change(screen.getByRole('combobox', { name: 'راننده' }), {
+    target: { value: 'driver' },
+  });
+  fireEvent.change(screen.getByRole('combobox', { name: 'مدرسه مبنا' }), {
+    target: { value: 'school' },
+  });
+  fireEvent.change(screen.getByRole('combobox', { name: 'جهت' }), {
+    target: { value: 'ROUND_TRIP' },
+  });
+  fireEvent.change(screen.getByRole('textbox', { name: 'مبلغ ماهانه قرارداد به تومان' }), {
+    target: { value: '111111111111' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'ایجاد مسیر' }));
+  await waitFor(() =>
+    expect(createRoute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        direction: 'ROUND_TRIP',
+        contractPriceRials: 1_111_111_111_110,
+      }),
+    ),
+  );
+  expect(screen.getByText(/ظرفیت خودرو فقط هشدار است/)).toBeInTheDocument();
+});
+
 it('explains a route rejection and shows its request ID for support', async () => {
   createRoute.mockRejectedValueOnce(
     new ApiClientError(
