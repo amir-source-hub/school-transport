@@ -7,6 +7,7 @@ export type SearchOption = {
   label: string;
   disabled?: boolean;
   reason?: string;
+  detail?: string;
   assignment?: 'TO_SCHOOL' | 'FROM_SCHOOL' | 'BOTH';
 };
 export function SearchPicker({
@@ -26,10 +27,15 @@ export function SearchPicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const optionsKey = JSON.stringify(options);
-  const [remote, setRemote] = useState<{ query: string; source: string; rows: SearchOption[] } | null>(null);
+  const [remote, setRemote] = useState<{
+    query: string;
+    source: string;
+    rows: SearchOption[];
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [active, setActive] = useState(-1);
+  const [hovered, setHovered] = useState(-1);
   useEffect(() => {
     if (!open || !loadOptions) return;
     let cancelled = false;
@@ -57,17 +63,21 @@ export function SearchPicker({
   }, [query, open, loadOptions, optionsKey]);
   const normalize = (text: string) =>
     text.replace(/ي/g, 'ی').replace(/ك/g, 'ک').trim().toLocaleLowerCase();
-  const remoteRows = remote?.query === query && remote.source === optionsKey ? remote.rows : options;
+  const remoteRows =
+    remote?.query === query && remote.source === optionsKey ? remote.rows : options;
   const rows = loadOptions
     ? remoteRows
     : options.filter((o) => normalize(o.label).includes(normalize(query)));
-  const selected = options.find((o) => o.value === value) ?? remote?.rows.find((o) => o.value === value);
+  const selected =
+    options.find((o) => o.value === value) ?? remote?.rows.find((o) => o.value === value);
+  const previewOption = rows[active >= 0 ? active : hovered];
   const choose = (option: SearchOption) => {
     if (option.disabled) return;
     onChange(option.value);
     setOpen(false);
     setQuery('');
     setActive(-1);
+    setHovered(-1);
   };
   return (
     <div
@@ -76,6 +86,7 @@ export function SearchPicker({
         if (!event.currentTarget.contains(event.relatedTarget)) {
           setOpen(false);
           setQuery('');
+          setHovered(-1);
         }
       }}
     >
@@ -96,6 +107,7 @@ export function SearchPicker({
           setOpen(true);
           setQuery('');
           setActive(-1);
+          setHovered(-1);
         }}
         onClick={() => setOpen(true)}
         onChange={(event) => {
@@ -150,6 +162,8 @@ export function SearchPicker({
                   aria-selected={value === option.value}
                   aria-disabled={option.disabled || undefined}
                   onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => setHovered(index)}
+                  onMouseLeave={() => setHovered(-1)}
                   onClick={() => choose(option)}
                   className={`cursor-pointer rounded-lg p-3 text-sm ${option.disabled ? 'cursor-not-allowed text-muted' : option.assignment === 'TO_SCHOOL' ? 'bg-emerald-50 hover:bg-emerald-100' : option.assignment === 'FROM_SCHOOL' ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-primary-soft'} ${active === index ? 'ring-2 ring-primary' : ''}`}
                 >
@@ -175,10 +189,27 @@ export function SearchPicker({
                     </>
                   )}
                   {option.reason && <span className="mt-1 block text-xs">{option.reason}</span>}
+                  {option.detail && (
+                    <span
+                      aria-hidden="true"
+                      className="mt-2 block text-xs leading-5 text-muted md:hidden"
+                    >
+                      {option.detail}
+                    </span>
+                  )}
                 </li>
               ))}
           </ul>
         </div>
+      )}
+      {open && previewOption?.detail && (
+        <aside
+          aria-live="polite"
+          className="absolute right-[calc(100%+0.75rem)] top-10 z-50 hidden w-80 rounded-xl border border-border bg-white p-4 text-sm leading-7 shadow-lg md:block"
+        >
+          <span className="mb-1 block text-xs font-bold text-muted">نشانی دانش‌آموز</span>
+          <span>{previewOption.detail.replace(/^آدرس:\s*/, '')}</span>
+        </aside>
       )}
     </div>
   );

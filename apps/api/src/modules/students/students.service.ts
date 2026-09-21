@@ -60,8 +60,22 @@ export class StudentsService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .where(and(eq(students.userId, userId), eq(students.isActive, true)));
-    const companions = rows.length ? await this.db.db.select().from(studentCompanions).where(inArray(studentCompanions.studentId, rows.map(row => row.id))) : [];
-    return rows.map(row => ({ ...row, companion: companions.find(item => item.studentId === row.id) ?? null, seatCount: companions.some(item => item.studentId === row.id) ? 2 : 1 }));
+    const companions = rows.length
+      ? await this.db.db
+          .select()
+          .from(studentCompanions)
+          .where(
+            inArray(
+              studentCompanions.studentId,
+              rows.map((row) => row.id),
+            ),
+          )
+      : [];
+    return rows.map((row) => ({
+      ...row,
+      companion: companions.find((item) => item.studentId === row.id) ?? null,
+      seatCount: companions.some((item) => item.studentId === row.id) ? 2 : 1,
+    }));
   }
 
   async getById(studentId: string, userId?: string) {
@@ -79,27 +93,97 @@ export class StudentsService {
 
   async getDetailById(studentId: string, userId: string) {
     const student = await this.getById(studentId, userId);
-    const [companion] = await this.db.db.select().from(studentCompanions).where(eq(studentCompanions.studentId, studentId)).limit(1);
+    const [companion] = await this.db.db
+      .select()
+      .from(studentCompanions)
+      .where(eq(studentCompanions.studentId, studentId))
+      .limit(1);
     return { ...student, companion: companion ?? null, seatCount: companion ? 2 : 1 };
   }
 
-  async upsertCompanion(studentId: string, userId: string, data: { firstName:string; lastName:string; fatherName:string; nationalId:string; phoneNumber:string; relationship:'FAMILY'|'CAREGIVER'|'COACH' }) {
+  async upsertCompanion(
+    studentId: string,
+    userId: string,
+    data: {
+      firstName: string;
+      lastName: string;
+      fatherName: string;
+      nationalId: string;
+      phoneNumber: string;
+      relationship: 'FAMILY' | 'CAREGIVER' | 'COACH';
+    },
+  ) {
     await this.getById(studentId, userId);
-    const [duplicate] = await this.db.db.select({ studentId: studentCompanions.studentId }).from(studentCompanions).where(eq(studentCompanions.nationalId, data.nationalId)).limit(1);
-    if (duplicate && duplicate.studentId !== studentId) throw new ConflictError('DUPLICATE_COMPANION_NATIONAL_ID', 'این کد ملی قبلاً برای همراه دانش‌آموز دیگری ثبت شده است.');
-    const [current] = await this.db.db.select({ id: studentCompanions.id }).from(studentCompanions).where(eq(studentCompanions.studentId, studentId)).limit(1);
-    if (current) throw new ConflictError('COMPANION_ADMIN_EDIT_ONLY', 'مراقب همراه پس از ثبت فقط توسط مدیریت قابل تغییر است.');
+    const [duplicate] = await this.db.db
+      .select({ studentId: studentCompanions.studentId })
+      .from(studentCompanions)
+      .where(eq(studentCompanions.nationalId, data.nationalId))
+      .limit(1);
+    if (duplicate && duplicate.studentId !== studentId)
+      throw new ConflictError(
+        'DUPLICATE_COMPANION_NATIONAL_ID',
+        'این کد ملی قبلاً برای همراه دانش‌آموز دیگری ثبت شده است.',
+      );
+    const [current] = await this.db.db
+      .select({ id: studentCompanions.id })
+      .from(studentCompanions)
+      .where(eq(studentCompanions.studentId, studentId))
+      .limit(1);
+    if (current)
+      throw new ConflictError(
+        'COMPANION_ADMIN_EDIT_ONLY',
+        'مراقب همراه پس از ثبت فقط توسط مدیریت قابل تغییر است.',
+      );
     if (!current) {
-      const assignedRoutes = await this.db.db.select({ runId: transportServiceRuns.id, capacity: vehicles.capacity }).from(transportServiceRunStudents).innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId)).innerJoin(vehicles, eq(vehicles.id, transportServiceRuns.vehicleId)).where(and(eq(transportServiceRunStudents.studentId, studentId), eq(transportServiceRunStudents.isActive, true), eq(transportServiceRuns.isActive, true)));
+      const assignedRoutes = await this.db.db
+        .select({ runId: transportServiceRuns.id, capacity: vehicles.capacity })
+        .from(transportServiceRunStudents)
+        .innerJoin(
+          transportServiceRuns,
+          eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId),
+        )
+        .innerJoin(vehicles, eq(vehicles.id, transportServiceRuns.vehicleId))
+        .where(
+          and(
+            eq(transportServiceRunStudents.studentId, studentId),
+            eq(transportServiceRunStudents.isActive, true),
+            eq(transportServiceRuns.isActive, true),
+          ),
+        );
       for (const route of assignedRoutes) {
-        const members = await this.db.db.select({ studentId: transportServiceRunStudents.studentId }).from(transportServiceRunStudents).where(and(eq(transportServiceRunStudents.serviceRunId, route.runId), eq(transportServiceRunStudents.isActive, true)));
-        const ids = members.map(member => member.studentId);
-        const companions = ids.length ? await this.db.db.select({ id: studentCompanions.id }).from(studentCompanions).where(inArray(studentCompanions.studentId, ids)) : [];
-        if (members.length + companions.length + 1 > route.capacity) throw new ConflictError('COMPANION_ROUTE_CAPACITY_UNAVAILABLE', 'در یکی از سرویس‌های فعلی صندلی خالی برای همراه وجود ندارد. ابتدا ظرفیت یا مسیر را در پنل مدیریت تغییر دهید.');
+        const members = await this.db.db
+          .select({ studentId: transportServiceRunStudents.studentId })
+          .from(transportServiceRunStudents)
+          .where(
+            and(
+              eq(transportServiceRunStudents.serviceRunId, route.runId),
+              eq(transportServiceRunStudents.isActive, true),
+            ),
+          );
+        const ids = members.map((member) => member.studentId);
+        const companions = ids.length
+          ? await this.db.db
+              .select({ id: studentCompanions.id })
+              .from(studentCompanions)
+              .where(inArray(studentCompanions.studentId, ids))
+          : [];
+        if (members.length + companions.length + 1 > route.capacity)
+          throw new ConflictError(
+            'COMPANION_ROUTE_CAPACITY_UNAVAILABLE',
+            'در یکی از سرویس‌های فعلی صندلی خالی برای همراه وجود ندارد. ابتدا ظرفیت یا مسیر را در پنل مدیریت تغییر دهید.',
+          );
       }
     }
-    const [saved] = await this.db.db.insert(studentCompanions).values({ id: generateId(), studentId, ...data }).onConflictDoNothing({ target: studentCompanions.studentId }).returning();
-    if (!saved) throw new ConflictError('COMPANION_ADMIN_EDIT_ONLY', 'مراقب همراه قبلاً ثبت شده و فقط مدیریت می‌تواند آن را تغییر دهد.');
+    const [saved] = await this.db.db
+      .insert(studentCompanions)
+      .values({ id: generateId(), studentId, ...data })
+      .onConflictDoNothing({ target: studentCompanions.studentId })
+      .returning();
+    if (!saved)
+      throw new ConflictError(
+        'COMPANION_ADMIN_EDIT_ONLY',
+        'مراقب همراه قبلاً ثبت شده و فقط مدیریت می‌تواند آن را تغییر دهد.',
+      );
     return saved;
   }
 
@@ -109,13 +193,39 @@ export class StudentsService {
     return { removed: true };
   }
 
-  async saveCompanionByAdmin(studentId: string, data: { firstName:string; lastName:string; fatherName:string; nationalId:string; phoneNumber:string; relationship:'FAMILY'|'CAREGIVER'|'COACH' }) {
+  async saveCompanionByAdmin(
+    studentId: string,
+    data: {
+      firstName: string;
+      lastName: string;
+      fatherName: string;
+      nationalId: string;
+      phoneNumber: string;
+      relationship: 'FAMILY' | 'CAREGIVER' | 'COACH';
+    },
+  ) {
     const student = await this.getById(studentId);
-    const [current] = await this.db.db.select({ id: studentCompanions.id }).from(studentCompanions).where(eq(studentCompanions.studentId, studentId)).limit(1);
+    const [current] = await this.db.db
+      .select({ id: studentCompanions.id })
+      .from(studentCompanions)
+      .where(eq(studentCompanions.studentId, studentId))
+      .limit(1);
     if (!current) return this.upsertCompanion(studentId, student.userId, data);
-    const [duplicate] = await this.db.db.select({ studentId: studentCompanions.studentId }).from(studentCompanions).where(eq(studentCompanions.nationalId, data.nationalId)).limit(1);
-    if (duplicate && duplicate.studentId !== studentId) throw new ConflictError('DUPLICATE_COMPANION_NATIONAL_ID', 'این کد ملی قبلاً برای مراقب دیگری ثبت شده است.');
-    const [saved] = await this.db.db.update(studentCompanions).set({ ...data, updatedAt: new Date() }).where(eq(studentCompanions.studentId, studentId)).returning();
+    const [duplicate] = await this.db.db
+      .select({ studentId: studentCompanions.studentId })
+      .from(studentCompanions)
+      .where(eq(studentCompanions.nationalId, data.nationalId))
+      .limit(1);
+    if (duplicate && duplicate.studentId !== studentId)
+      throw new ConflictError(
+        'DUPLICATE_COMPANION_NATIONAL_ID',
+        'این کد ملی قبلاً برای مراقب دیگری ثبت شده است.',
+      );
+    const [saved] = await this.db.db
+      .update(studentCompanions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(studentCompanions.studentId, studentId))
+      .returning();
     return saved;
   }
 
@@ -206,7 +316,12 @@ export class StudentsService {
         .set({ ...editableFields, updatedAt: new Date() })
         .where(eq(students.id, studentId));
       if (editableFields.schoolId && editableFields.schoolId !== current.schoolId) {
-        await this.reconcileSpecialSchoolEnrollment(txn, studentId, userId, editableFields.schoolId);
+        await this.reconcileSpecialSchoolEnrollment(
+          txn,
+          studentId,
+          userId,
+          editableFields.schoolId,
+        );
       }
     });
     return this.getById(studentId);
@@ -232,7 +347,29 @@ export class StudentsService {
       .innerJoin(users, eq(users.id, students.userId))
       .where(and(eq(users.accountStatus, 'ACTIVE'), eq(students.isActive, true)));
 
-    const [parentRows, companionRows] = await Promise.all([this.db.db.select().from(parents), rows.length ? this.db.db.select().from(studentCompanions).where(inArray(studentCompanions.studentId, rows.map(row => row.id))) : Promise.resolve([])]);
+    const userIds = [...new Set(rows.map((row) => row.userId))];
+    const [parentRows, companionRows, addressRows] = await Promise.all([
+      this.db.db.select().from(parents),
+      rows.length
+        ? this.db.db
+            .select()
+            .from(studentCompanions)
+            .where(
+              inArray(
+                studentCompanions.studentId,
+                rows.map((row) => row.id),
+              ),
+            )
+        : Promise.resolve([]),
+      userIds.length
+        ? this.db.db
+            .select()
+            .from(familyAddresses)
+            .where(
+              and(inArray(familyAddresses.userId, userIds), eq(familyAddresses.isActive, true)),
+            )
+        : Promise.resolve([]),
+    ]);
 
     return rows.map((student) => {
       const familyParent =
@@ -240,8 +377,10 @@ export class StudentsService {
         parentRows.find((parent) => parent.userId === student.userId);
       return {
         ...student,
-        companion: companionRows.find(item => item.studentId === student.id) ?? null,
-        seatCount: companionRows.some(item => item.studentId === student.id) ? 2 : 1,
+        companion: companionRows.find((item) => item.studentId === student.id) ?? null,
+        seatCount: companionRows.some((item) => item.studentId === student.id) ? 2 : 1,
+        address:
+          addressRows.find((address) => address.userId === student.userId)?.streetAddress ?? null,
         familyName: familyParent
           ? `${familyParent.firstName} ${familyParent.lastName}`
           : student.username,
@@ -287,15 +426,28 @@ export class StudentsService {
       .offset((page - 1) * pageSize)
       .limit(pageSize);
 
-    const [parentRows, companionRows] = await Promise.all([this.db.db.select().from(parents), rows.length ? this.db.db.select().from(studentCompanions).where(inArray(studentCompanions.studentId, rows.map(row => row.id))) : Promise.resolve([])]);
+    const [parentRows, companionRows] = await Promise.all([
+      this.db.db.select().from(parents),
+      rows.length
+        ? this.db.db
+            .select()
+            .from(studentCompanions)
+            .where(
+              inArray(
+                studentCompanions.studentId,
+                rows.map((row) => row.id),
+              ),
+            )
+        : Promise.resolve([]),
+    ]);
     const items = rows.map((student) => {
       const familyParent =
         parentRows.find((parent) => parent.userId === student.userId && parent.isPrimaryContact) ??
         parentRows.find((parent) => parent.userId === student.userId);
       return {
         ...student,
-        companion: companionRows.find(item => item.studentId === student.id) ?? null,
-        seatCount: companionRows.some(item => item.studentId === student.id) ? 2 : 1,
+        companion: companionRows.find((item) => item.studentId === student.id) ?? null,
+        seatCount: companionRows.some((item) => item.studentId === student.id) ? 2 : 1,
         familyName: familyParent
           ? `${familyParent.firstName} ${familyParent.lastName}`
           : student.username,
@@ -306,7 +458,11 @@ export class StudentsService {
 
   async getForAdmin(studentId: string) {
     const student = await this.getById(studentId);
-    const [companion] = await this.db.db.select().from(studentCompanions).where(eq(studentCompanions.studentId, studentId)).limit(1);
+    const [companion] = await this.db.db
+      .select()
+      .from(studentCompanions)
+      .where(eq(studentCompanions.studentId, studentId))
+      .limit(1);
     const [schoolRow] = await this.db.db
       .select({ schoolType: schools.schoolType })
       .from(schools)
@@ -746,17 +902,46 @@ export class StudentsService {
         }
       }
       if (editable.schoolId && editable.schoolId !== current.schoolId) {
-        const oldAssignments = await txn.select({ id: transportServiceRunStudents.id, driverUserId: drivers.userId })
+        const oldAssignments = await txn
+          .select({ id: transportServiceRunStudents.id, driverUserId: drivers.userId })
           .from(transportServiceRunStudents)
-          .innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId))
+          .innerJoin(
+            transportServiceRuns,
+            eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId),
+          )
           .innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
-          .where(and(eq(transportServiceRunStudents.studentId, studentId), eq(transportServiceRunStudents.isActive, true)));
+          .where(
+            and(
+              eq(transportServiceRunStudents.studentId, studentId),
+              eq(transportServiceRunStudents.isActive, true),
+            ),
+          );
         // Detach before changing schools: the assignment trigger checks school consistency.
         if (oldAssignments.length) {
-          await txn.update(transportServiceRunStudents).set({ isActive: false }).where(inArray(transportServiceRunStudents.id, oldAssignments.map(a => a.id)));
+          await txn
+            .update(transportServiceRunStudents)
+            .set({ isActive: false })
+            .where(
+              inArray(
+                transportServiceRunStudents.id,
+                oldAssignments.map((a) => a.id),
+              ),
+            );
           const eventId = generateId();
-          for (const userId of new Set([current.userId, ...oldAssignments.map(a => a.driverUserId)])) {
-            await this.notifications.enqueueInTransaction(txn, { eventId: `STUDENT_SCHOOL_CHANGED:${eventId}:${userId}`, userId, notificationType: 'STUDENT_DRIVER_ASSIGNED', title: 'مدرسه دانش‌آموز تغییر کرد', message: 'مدرسه دانش‌آموز تغییر کرد و ارتباط مسیرهای قبلی پایان یافت. مسیر جدید باید توسط مدیریت تعیین شود.', relatedEntityType: 'STUDENT', relatedEntityId: studentId });
+          for (const userId of new Set([
+            current.userId,
+            ...oldAssignments.map((a) => a.driverUserId),
+          ])) {
+            await this.notifications.enqueueInTransaction(txn, {
+              eventId: `STUDENT_SCHOOL_CHANGED:${eventId}:${userId}`,
+              userId,
+              notificationType: 'STUDENT_DRIVER_ASSIGNED',
+              title: 'مدرسه دانش‌آموز تغییر کرد',
+              message:
+                'مدرسه دانش‌آموز تغییر کرد و ارتباط مسیرهای قبلی پایان یافت. مسیر جدید باید توسط مدیریت تعیین شود.',
+              relatedEntityType: 'STUDENT',
+              relatedEntityId: studentId,
+            });
           }
         }
       }

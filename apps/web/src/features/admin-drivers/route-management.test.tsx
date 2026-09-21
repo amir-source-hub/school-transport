@@ -239,3 +239,50 @@ it('explains a route rejection and shows its request ID for support', async () =
   expect(await screen.findByRole('alert')).toHaveTextContent('راننده خودروی فعال ندارد.');
   expect(screen.getByRole('alert')).toHaveTextContent('request-123');
 });
+
+it('shows each assigned student address beside the route times', () => {
+  render(
+    <RouteManagement
+      routes={
+        [
+          {
+            id: 'route',
+            driverId: 'driver',
+            title: 'مسیر نمونه',
+            direction: 'TO_SCHOOL',
+            academicYear: '1405-1406',
+            scheduledStartTime: '07:00',
+            scheduledArrivalTime: '07:00',
+            activeWeekdays: [0, 1],
+            areaDescription: null,
+            contractPriceRials: null,
+            contractDate: null,
+            school: { id: 'school', name: 'مدرسه نمونه' },
+            driver: { id: 'driver', firstName: 'رضا', lastName: 'محمدی', capacity: 4 },
+            students: [
+              {
+                id: 'student',
+                firstName: 'سارا',
+                lastName: 'احمدی',
+                address: 'خیابان آزادی، کوچه امید',
+                pickupOrder: 1,
+                scheduledStopTime: '07:00',
+                seatCount: 1,
+                companion: null,
+              },
+            ],
+          },
+        ] as never
+      }
+      students={[]}
+      drivers={[]}
+      schools={[]}
+    />,
+  );
+
+  fireEvent.change(screen.getByRole('combobox', { name: 'مسیر' }), {
+    target: { value: 'route' },
+  });
+  expect(screen.getByRole('option', { name: 'مسیر نمونه · مدرسه نمونه · رضا محمدی' })).toBeInTheDocument();
+  expect(screen.getByText('آدرس: خیابان آزادی، کوچه امید')).toBeInTheDocument();
+});

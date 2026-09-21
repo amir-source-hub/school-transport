@@ -99,6 +99,7 @@ export function RouteManagement({
     (s: AdminStudent) => ({
       value: s.id,
       label: `${s.firstName} ${s.lastName} · ${s.schoolName ?? ''}${s.companion ? ' · دارای همراه (۲ صندلی)' : ''}`,
+      detail: s.address ? `آدرس: ${s.address}` : 'آدرسی برای این دانش‌آموز ثبت نشده است.',
       assignment: assignments.get(s.id),
     }),
     [assignments],
@@ -204,9 +205,10 @@ export function RouteManagement({
               name="driverId"
               options={drivers
                 .filter((d) => d.status === 'ACTIVE')
-                .sort((a, b) =>
-                  a.lastName.localeCompare(b.lastName, 'fa') ||
-                  a.firstName.localeCompare(b.firstName, 'fa'),
+                .sort(
+                  (a, b) =>
+                    a.lastName.localeCompare(b.lastName, 'fa') ||
+                    a.firstName.localeCompare(b.firstName, 'fa'),
                 )
                 .map((d) => ({
                   value: d.id,
@@ -319,7 +321,16 @@ export function RouteManagement({
             <Picker
               value={routeId}
               onChange={setRouteId}
-              options={routes.map((r) => ({ value: r.id, label: `${r.title} · ${r.school.name}` }))}
+              options={routes.map((r) => ({
+                value: r.id,
+                label: [
+                  r.title,
+                  r.school.name,
+                  r.driver ? `${r.driver.firstName} ${r.driver.lastName}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · '),
+              }))}
             />
           </Field>
           <Field label="فیلتر مدرسه دانش‌آموز">
@@ -407,6 +418,9 @@ export function RouteManagement({
                       {student.scheduledReturnStopTime &&
                         ` · برگشت: ${formatPersianTime(student.scheduledReturnStopTime)}`}
                     </small>
+                    <small className="mt-1 block font-normal leading-5 text-muted">
+                      آدرس: {student.address || 'ثبت نشده است'}
+                    </small>
                   </span>
                   <Button
                     type="button"
@@ -441,7 +455,15 @@ export function RouteManagement({
     </Card>
   );
 }
-function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+function Field({
+  label,
+  children,
+  hint,
+}: {
+  label: string;
+  children: React.ReactNode;
+  hint?: string;
+}) {
   return (
     <div>
       <label className="block text-sm font-bold">

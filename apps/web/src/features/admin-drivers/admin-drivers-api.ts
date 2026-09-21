@@ -84,6 +84,7 @@ export type AdminTransportRoute = {
     id: string;
     firstName: string;
     lastName: string;
+    address: string | null;
     pickupOrder: number;
     scheduledStopTime: string | null;
     scheduledReturnStopTime?: string | null;

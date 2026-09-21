@@ -100,4 +100,25 @@ describe('SearchPicker', () => {
     );
     expect(screen.getByRole('option', { name: 'سارا برگشت' })).toHaveClass('bg-amber-50');
   });
+
+  it('previews option details on pointer hover and keyboard highlight', () => {
+    render(
+      <SearchPicker
+        label="دانش‌آموز"
+        value=""
+        onChange={vi.fn()}
+        options={[{ value: 'student', label: 'سارا احمدی', detail: 'آدرس: خیابان آزادی' }]}
+      />,
+    );
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    const option = screen.getByRole('option', { name: 'سارا احمدی' });
+
+    fireEvent.mouseEnter(option);
+    expect(screen.getByText('خیابان آزادی')).toBeInTheDocument();
+
+    fireEvent.mouseLeave(option);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(screen.getByText('خیابان آزادی')).toBeInTheDocument();
+  });
 });

@@ -940,6 +940,7 @@ export class DriverEnrollmentService {
         studentSchoolId: students.schoolId,
         studentFirstName: students.firstName,
         studentLastName: students.lastName,
+        studentAddress: familyAddresses.streetAddress,
         pickupOrder: transportServiceRunStudents.pickupOrder,
         scheduledStopTime: transportServiceRunStudents.scheduledStopTime,
         companionId: studentCompanions.id,
@@ -959,6 +960,10 @@ export class DriverEnrollmentService {
         ),
       )
       .leftJoin(students, eq(students.id, transportServiceRunStudents.studentId))
+      .leftJoin(
+        familyAddresses,
+        and(eq(familyAddresses.userId, students.userId), eq(familyAddresses.isActive, true)),
+      )
       .leftJoin(studentCompanions, eq(studentCompanions.studentId, students.id))
       .where(eq(transportServiceRuns.isActive, true))
       .orderBy(
@@ -1008,6 +1013,7 @@ export class DriverEnrollmentService {
           id: row.studentId,
           firstName: row.studentFirstName,
           lastName: row.studentLastName,
+          address: row.studentAddress,
           pickupOrder: row.pickupOrder,
           ...(row.studentSchoolId && schoolById.has(row.studentSchoolId)
             ? schoolHours(

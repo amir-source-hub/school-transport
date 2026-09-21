@@ -18,9 +18,21 @@ const rawAdminStudentSchema = z.object({
   fieldOfStudy: z.string().nullable().optional(),
   physicalStatus: z.string().nullable().optional(),
   disabilityType: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
   isActive: z.boolean(),
   seatCount: z.number().default(1),
-  companion: z.object({ id:z.string(), firstName:z.string(), lastName:z.string(), fatherName:z.string().optional(), nationalId:z.string().optional(), phoneNumber:z.string().optional(), relationship:z.string() }).nullable().default(null),
+  companion: z
+    .object({
+      id: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      fatherName: z.string().optional(),
+      nationalId: z.string().optional(),
+      phoneNumber: z.string().optional(),
+      relationship: z.string(),
+    })
+    .nullable()
+    .default(null),
 });
 
 export const adminStudentSchema = rawAdminStudentSchema.extend({ status: z.string() });
@@ -211,12 +223,22 @@ export async function getAdminStudentDetail(id: string): Promise<AdminStudentDet
   return adminStudentDetailSchema.parse(response.data);
 }
 
-export async function saveAdminStudentCompanion(id: string, data: { firstName:string; lastName:string; fatherName:string; nationalId:string; phoneNumber:string; relationship:'FAMILY'|'CAREGIVER'|'COACH' }) {
-  await apiRequest(`/admin/students/${id}/companion`, { method:'POST', body:data });
+export async function saveAdminStudentCompanion(
+  id: string,
+  data: {
+    firstName: string;
+    lastName: string;
+    fatherName: string;
+    nationalId: string;
+    phoneNumber: string;
+    relationship: 'FAMILY' | 'CAREGIVER' | 'COACH';
+  },
+) {
+  await apiRequest(`/admin/students/${id}/companion`, { method: 'POST', body: data });
 }
 
 export async function removeAdminStudentCompanion(id: string) {
-  await apiRequest(`/admin/students/${id}/companion`, { method:'DELETE' });
+  await apiRequest(`/admin/students/${id}/companion`, { method: 'DELETE' });
 }
 
 export async function getAdminStudentPhoto(id: string) {
