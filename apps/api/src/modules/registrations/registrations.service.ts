@@ -285,6 +285,14 @@ export class RegistrationsService {
             });
           }
         }
+        const companionIsFamilyContact = Boolean(
+          data.companion &&
+            [
+              data.guardian.nationalId,
+              data.father?.nationalId,
+              data.mother?.nationalId,
+            ].includes(data.companion.nationalId),
+        );
         const submittedPhones = [
           guardianPhone,
           data.homePhone,
@@ -292,7 +300,8 @@ export class RegistrationsService {
           data.father?.phoneNumber,
           data.mother?.phoneNumber,
           data.emergencyContact?.phoneNumber,
-          data.companion?.phoneNumber,
+          // A guardian/parent who is also the companion naturally reuses their phone.
+          companionIsFamilyContact ? undefined : data.companion?.phoneNumber,
         ].filter((value): value is string => Boolean(value));
         if (new Set(submittedPhones).size !== submittedPhones.length) {
           throw new ConflictError(

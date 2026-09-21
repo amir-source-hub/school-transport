@@ -435,6 +435,20 @@
       "when": 1790186400000,
       "tag": "0061_remove_legacy_route_direction_check",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1790272800000,
+      "tag": "0062_school_opening_times",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1790359200000,
+      "tag": "0063_activate_enrolled_driver_accounts",
+      "breakpoints": true
     }
   ]
 }

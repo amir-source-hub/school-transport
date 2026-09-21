@@ -3,7 +3,10 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { RouteManagement } from './route-management';
 import { ApiClientError } from '@/lib/api-client';
 
-const createRoute = vi.fn(async (_body: unknown) => ({}));
+const createRoute = vi.fn(async (...args: unknown[]) => {
+  void args;
+  return {};
+});
 const refresh = vi.fn();
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
@@ -120,6 +123,67 @@ it('submits a round-trip route as one route and keeps capacity advisory', async 
     ),
   );
   expect(screen.getByText(/ظرفیت خودرو فقط هشدار است/)).toBeInTheDocument();
+});
+
+it('shows only the relevant school clocks and submits the selected closing time', async () => {
+  render(
+    <RouteManagement
+      routes={[]}
+      students={[]}
+      drivers={
+        [
+          { id: 'z-driver', firstName: 'رضا', lastName: 'زارعی', status: 'ACTIVE', capacity: 4 },
+          { id: 'a-driver', firstName: 'علی', lastName: 'احمدی', status: 'ACTIVE', capacity: 4 },
+        ] as never
+      }
+      schools={
+        [
+          {
+            id: 'school',
+            name: 'مدرسه چندنوبته',
+            isActive: true,
+            schoolType: 'SPECIAL',
+            openingTime: '07:15',
+            openingTimes: ['07:15', '08:00'],
+            closingTime: '12:30',
+            closingTimes: ['12:30', '14:30'],
+          },
+        ] as never
+      }
+    />,
+  );
+  fireEvent.change(screen.getByRole('textbox', { name: 'عنوان مسیر' }), {
+    target: { value: 'مسیر برگشت دوم' },
+  });
+  const driverOptions = screen
+    .getByRole('combobox', { name: 'راننده' })
+    .querySelectorAll('option');
+  expect(driverOptions[1]).toHaveTextContent('علی احمدی');
+  expect(driverOptions[2]).toHaveTextContent('رضا زارعی');
+  fireEvent.change(screen.getByRole('combobox', { name: 'راننده' }), {
+    target: { value: 'a-driver' },
+  });
+  fireEvent.change(screen.getByRole('combobox', { name: 'مدرسه مبنا' }), {
+    target: { value: 'school' },
+  });
+  fireEvent.change(screen.getByRole('combobox', { name: 'جهت' }), {
+    target: { value: 'FROM_SCHOOL' },
+  });
+  expect(screen.queryByRole('combobox', { name: 'ساعت رفت (شروع مدرسه)' })).toBeNull();
+  fireEvent.change(screen.getByRole('combobox', { name: 'ساعت برگشت (پایان مدرسه)' }), {
+    target: { value: '14:30' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'ایجاد مسیر' }));
+
+  await waitFor(() =>
+    expect(createRoute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        direction: 'FROM_SCHOOL',
+        scheduledStartTime: '14:30',
+        scheduledArrivalTime: '14:30',
+      }),
+    ),
+  );
 });
 
 it('explains a route rejection and shows its request ID for support', async () => {

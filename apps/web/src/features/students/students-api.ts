@@ -48,7 +48,22 @@ export async function getStudent(id: string) {
   return studentSchema.parse(response.data);
 }
 
-export type StudentDriverAssignment = { runId: string; direction: string; title: string; scheduledStartTime: string; scheduledArrivalTime: string; pickupOrder: number; driverId: string; driverFirstName: string; driverLastName: string; driverPhoneNumber: string; vehicleType: string; vehicleSystem: string; plateNumber: string };
+export type StudentDriverAssignment = {
+  runId: string;
+  direction: 'TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP';
+  title: string;
+  scheduledStartTime: string;
+  scheduledArrivalTime: string;
+  pickupOrder: number;
+  driverId: string;
+  driverFirstName: string;
+  driverLastName: string;
+  driverPhoneNumber: string;
+  vehicleType: string;
+  vehicleSystem: string;
+  plateNumber: string;
+  documents: Array<{ documentType: string; mimeType: string; viewUrl: string }>;
+};
 export async function getStudentDriverAssignments(id: string) {
   return (await apiRequest<StudentDriverAssignment[]>(`/students/${id}/driver-assignments`, { cache: 'no-store' })).data;
 }

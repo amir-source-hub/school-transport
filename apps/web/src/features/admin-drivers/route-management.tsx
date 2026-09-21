@@ -43,11 +43,20 @@ export function RouteManagement({
   const [errorMessage, setErrorMessage] = useState('');
   const [contractDateIso, setContractDateIso] = useState(jalaliToIsoDate('1405/07/01') ?? '');
   const [schoolId, setSchoolId] = useState('');
+  const [direction, setDirection] = useState<AdminTransportRoute['direction']>('TO_SCHOOL');
+  const [openingTime, setOpeningTime] = useState('');
+  const [closingTime, setClosingTime] = useState('');
   const [filterSchoolId, setFilterSchoolId] = useState('');
   const [routeId, setRouteId] = useState('');
   const [studentId, setStudentId] = useState('');
   const [choices, setChoices] = useState(students);
   const school = schools.find((s) => s.id === schoolId);
+  const openingTimes = school
+    ? [...new Set([...(school.openingTimes ?? []), school.openingTime].filter(Boolean))].sort()
+    : [];
+  const closingTimes = school
+    ? [...new Set([...school.closingTimes, school.closingTime].filter(Boolean))].sort()
+    : [];
   const route = routes.find((r) => r.id === routeId);
   const assignmentYear =
     route?.academicYear ??
@@ -125,9 +134,8 @@ export function RouteManagement({
   );
   async function create(data: FormData) {
     if (!school) return;
-    const end =
-      [...school.closingTimes, school.closingTime].filter(Boolean).sort().at(-1) ??
-      school.closingTime;
+    const selectedOpeningTime = openingTime || school.openingTime;
+    const selectedClosingTime = closingTime || closingTimes.at(-1) || school.closingTime;
     const special = school.schoolType === 'SPECIAL';
     await perform(
       () =>
@@ -136,9 +144,11 @@ export function RouteManagement({
           driverId: String(data.get('driverId')),
           schoolId: school.id,
           academicYear: String(data.get('academicYear')),
-          direction: String(data.get('direction')) as AdminTransportRoute['direction'],
-          scheduledStartTime: school.openingTime,
-          scheduledArrivalTime: end,
+          direction,
+          scheduledStartTime:
+            direction === 'FROM_SCHOOL' ? selectedClosingTime : selectedOpeningTime,
+          scheduledArrivalTime:
+            direction === 'TO_SCHOOL' ? selectedOpeningTime : selectedClosingTime,
           ...(special
             ? {}
             : {
@@ -173,7 +183,7 @@ export function RouteManagement({
           </p>
         )}
         <p className="mt-2 text-sm leading-7 text-muted">
-          ساعت مسیر از ساعت شروع و آخرین ساعت پایان مدرسه خوانده می‌شود. فیلتر مدرسه فقط جست‌وجوی
+          ساعت رفت یا برگشت را از ساعت‌های ثبت‌شده مدرسه انتخاب کنید. فیلتر مدرسه فقط جست‌وجوی
           دانش‌آموز را آسان می‌کند؛ یک مسیر می‌تواند دانش‌آموزان چند مدرسه را داشته باشد.
         </p>
         <form
@@ -194,6 +204,10 @@ export function RouteManagement({
               name="driverId"
               options={drivers
                 .filter((d) => d.status === 'ACTIVE')
+                .sort((a, b) =>
+                  a.lastName.localeCompare(b.lastName, 'fa') ||
+                  a.firstName.localeCompare(b.firstName, 'fa'),
+                )
                 .map((d) => ({
                   value: d.id,
                   label: `${d.firstName} ${d.lastName} · ظرفیت ${d.capacity ?? 0}`,
@@ -203,7 +217,30 @@ export function RouteManagement({
           <Field label="مدرسه مبنا">
             <Picker
               value={schoolId}
-              onChange={setSchoolId}
+              onChange={(value) => {
+                const selectedSchool = schools.find((item) => item.id === value);
+                const selectedOpeningTimes = selectedSchool
+                  ? [
+                      ...new Set(
+                        [...(selectedSchool.openingTimes ?? []), selectedSchool.openingTime].filter(
+                          Boolean,
+                        ),
+                      ),
+                    ].sort()
+                  : [];
+                const selectedClosingTimes = selectedSchool
+                  ? [
+                      ...new Set(
+                        [...selectedSchool.closingTimes, selectedSchool.closingTime].filter(
+                          Boolean,
+                        ),
+                      ),
+                    ].sort()
+                  : [];
+                setSchoolId(value);
+                setOpeningTime(selectedOpeningTimes[0] ?? '');
+                setClosingTime(selectedClosingTimes[0] ?? '');
+              }}
               options={schools
                 .filter((s) => s.isActive)
                 .map((s) => ({ value: s.id, label: s.name }))}
@@ -212,6 +249,8 @@ export function RouteManagement({
           <Field label="جهت" hint="رفت و برگشت هر دو جهت را در یک مسیر پوشش می‌دهد.">
             <Picker
               name="direction"
+              value={direction}
+              onChange={(value) => setDirection(value as AdminTransportRoute['direction'])}
               options={[
                 { value: 'TO_SCHOOL', label: 'رفت' },
                 { value: 'FROM_SCHOOL', label: 'برگشت' },
@@ -219,20 +258,32 @@ export function RouteManagement({
               ]}
             />
           </Field>
-          <Field label="شروع مدرسه">
-            <Input value={school?.openingTime ?? ''} readOnly />
-          </Field>
-          <Field label="پایان مدرسه">
-            <Input
-              value={
-                school
-                  ? ([...school.closingTimes, school.closingTime].filter(Boolean).sort().at(-1) ??
-                    '')
-                  : ''
-              }
-              readOnly
-            />
-          </Field>
+          {direction !== 'FROM_SCHOOL' && (
+            <Field label="ساعت رفت (شروع مدرسه)">
+              <Picker
+                name="openingTime"
+                value={openingTime}
+                onChange={setOpeningTime}
+                options={openingTimes.map((time) => ({
+                  value: time,
+                  label: formatPersianTime(time),
+                }))}
+              />
+            </Field>
+          )}
+          {direction !== 'TO_SCHOOL' && (
+            <Field label="ساعت برگشت (پایان مدرسه)">
+              <Picker
+                name="closingTime"
+                value={closingTime}
+                onChange={setClosingTime}
+                options={closingTimes.map((time) => ({
+                  value: time,
+                  label: formatPersianTime(time),
+                }))}
+              />
+            </Field>
+          )}
           <Field label="سال تحصیلی">
             <Input name="academicYear" defaultValue="1405-1406" required />
           </Field>

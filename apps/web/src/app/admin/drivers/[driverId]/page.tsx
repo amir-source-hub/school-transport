@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { DriverAdminActions } from '@/features/admin-drivers/driver-admin-actions';
 import { getAdminDriver } from '@/features/admin-drivers/admin-drivers-api';
 import { DriverDocumentCard } from '@/features/admin-drivers/driver-document-card';
+import { buildAdminDriverDocumentSlots } from '@/features/admin-drivers/driver-document-definitions';
 import { driverValueLabel, IranianPlate } from '@/features/admin-drivers/driver-display';
 import { formatJalaliDate, formatJalaliDateTime, formatPersianTime } from '@/lib/formatters';
 
@@ -20,6 +21,7 @@ export default async function Page({ params }: { params: Promise<{ driverId: str
   const data = await getAdminDriver(driverId);
   const d = data.driver;
   const v = data.vehicle;
+  const documentSlots = buildAdminDriverDocumentSlots(data.documents);
   const personal: Array<[string, unknown]> = [
     ['نام پدر', d.fatherName],
     ['کد ملی', d.nationalId],
@@ -148,8 +150,13 @@ export default async function Page({ params }: { params: Promise<{ driverId: str
             خواهد داشت.
           </p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {data.documents.map((document) => (
-              <DriverDocumentCard key={document.id} driverId={driverId} document={document} />
+            {documentSlots.map(({ documentType, document }) => (
+              <DriverDocumentCard
+                key={document?.id ?? documentType}
+                driverId={driverId}
+                documentType={documentType}
+                document={document}
+              />
             ))}
           </div>
         </Card>

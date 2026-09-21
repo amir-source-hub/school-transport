@@ -153,12 +153,22 @@ export function RouteCatalog({
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-sm">
                 <span className="flex items-center gap-2 text-muted">
                   <Clock3 className="size-4" aria-hidden="true" />
-                  زمان حرکت
+                  {route.direction === 'TO_SCHOOL'
+                    ? 'ساعت رفت'
+                    : route.direction === 'FROM_SCHOOL'
+                      ? 'ساعت برگشت'
+                      : 'ساعت رفت و برگشت'}
                 </span>
                 <span className="font-bold tabular-nums">
-                  <bdi>{time(route.scheduledStartTime)}</bdi>{' '}
-                  <span className="px-1 font-normal text-muted">تا</span>{' '}
-                  <bdi>{time(route.scheduledArrivalTime)}</bdi>
+                  {route.direction !== 'FROM_SCHOOL' && (
+                    <bdi>{time(route.scheduledStartTime)}</bdi>
+                  )}
+                  {route.direction === 'ROUND_TRIP' && (
+                    <span className="px-2 font-normal text-muted">/</span>
+                  )}
+                  {route.direction !== 'TO_SCHOOL' && (
+                    <bdi>{time(route.scheduledArrivalTime)}</bdi>
+                  )}
                 </span>
               </div>
               <div className="mt-4">

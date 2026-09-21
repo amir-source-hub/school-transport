@@ -4,13 +4,16 @@ import {
   AlertCircle,
   ArrowLeft,
   Bell,
+  CarFront,
   CheckCircle2,
   Clock,
   CreditCard,
+  ExternalLink,
   FileText,
   GraduationCap,
   Home,
   Route,
+  Phone,
   UserRound,
   UserRoundPlus,
 } from 'lucide-react';
@@ -21,6 +24,9 @@ import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { formatPersianTime } from '@/lib/formatters';
+import { IranianPlate, driverValueLabel } from '@/features/admin-drivers/driver-display';
+import { driverDocumentLabels } from '@/features/admin-drivers/driver-document-definitions';
+import type { StudentDriverAssignment } from '@/features/students/students-api';
 export type StudentDashboard = {
   id: string;
   name: string;
@@ -35,8 +41,126 @@ export type StudentDashboard = {
   paymentSummary: string;
   nextPayment: string;
   notifications: readonly string[];
-  driverAssignments: Array<{ runId: string; direction: string; title: string; scheduledStartTime: string; scheduledArrivalTime: string; driverFirstName: string; driverLastName: string; driverPhoneNumber: string; vehicleSystem: string; plateNumber: string }>;
+  driverAssignments: StudentDriverAssignment[];
 };
+
+function AssignmentTimes({ assignment }: { assignment: StudentDriverAssignment }) {
+  return (
+    <dl className="grid gap-2 text-sm sm:grid-cols-2">
+      {assignment.direction !== 'FROM_SCHOOL' && (
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-primary-soft px-3 py-2">
+          <dt className="text-muted">ساعت رفت</dt>
+          <dd className="font-black tabular-nums">
+            {formatPersianTime(assignment.scheduledStartTime)}
+          </dd>
+        </div>
+      )}
+      {assignment.direction !== 'TO_SCHOOL' && (
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-primary-soft px-3 py-2">
+          <dt className="text-muted">ساعت برگشت</dt>
+          <dd className="font-black tabular-nums">
+            {formatPersianTime(assignment.scheduledArrivalTime)}
+          </dd>
+        </div>
+      )}
+    </dl>
+  );
+}
+
+function DriverAssignmentDetails({ assignments }: { assignments: StudentDriverAssignment[] }) {
+  const first = assignments[0]!;
+  const documents = [
+    ...new Map(
+      assignments.flatMap((assignment) => assignment.documents).map((document) => [
+        document.documentType,
+        document,
+      ]),
+    ).values(),
+  ];
+  return (
+    <article className="overflow-hidden rounded-2xl border border-border bg-surface-paper">
+      <div className="grid gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-start sm:p-5">
+        <div>
+          <p className="text-xs font-bold text-muted">راننده اختصاص‌یافته</p>
+          <h3 className="mt-1 text-lg font-black">
+            {first.driverFirstName} {first.driverLastName}
+          </h3>
+          <a
+            href={`tel:${first.driverPhoneNumber}`}
+            dir="ltr"
+            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary-soft px-3 text-sm font-bold text-primary"
+          >
+            <Phone className="size-4" aria-hidden="true" />
+            {first.driverPhoneNumber}
+          </a>
+        </div>
+        <div className="rounded-xl bg-surface-inset p-3">
+          <div className="mb-2 flex items-center gap-2 text-xs font-bold text-muted">
+            <CarFront className="size-4" aria-hidden="true" />
+            {driverValueLabel(first.vehicleType)} · {first.vehicleSystem}
+          </div>
+          <IranianPlate value={first.plateNumber} />
+        </div>
+      </div>
+      <div className="space-y-3 border-t border-border p-4 sm:p-5">
+        {assignments.map((assignment) => (
+          <section key={assignment.runId} aria-label={assignment.title}>
+            <p className="mb-2 text-sm font-bold">{assignment.title}</p>
+            <AssignmentTimes assignment={assignment} />
+          </section>
+        ))}
+      </div>
+      {documents.length > 0 && (
+        <div className="border-t border-border p-4 sm:p-5">
+          <h4 className="font-black">مدارک و تصاویر راننده</h4>
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+            {documents.map((document) => {
+              const label = driverDocumentLabels[document.documentType] ?? document.documentType;
+              return (
+                <a
+                  key={document.documentType}
+                  href={document.viewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="overflow-hidden rounded-xl border border-border bg-surface-inset transition-colors hover:border-primary/40"
+                >
+                  {document.mimeType === 'application/pdf' ? (
+                    <span className="grid aspect-[4/3] place-items-center gap-2 text-primary">
+                      <FileText className="size-9" aria-hidden="true" />
+                      <span className="inline-flex items-center gap-1 text-xs font-bold">
+                        مشاهده PDF <ExternalLink className="size-3" aria-hidden="true" />
+                      </span>
+                    </span>
+                  ) : (
+                    // Signed object-storage URLs cannot be optimized reliably by Next Image.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={document.viewUrl}
+                      alt={label}
+                      className="aspect-[4/3] w-full object-contain"
+                    />
+                  )}
+                  <span className="block border-t border-border bg-white px-2 py-2 text-xs font-bold">
+                    {label}
+                  </span>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function groupDriverAssignments(assignments: StudentDriverAssignment[]) {
+  const groups = new Map<string, StudentDriverAssignment[]>();
+  for (const assignment of assignments) {
+    const key = `${assignment.driverId}:${assignment.plateNumber}`;
+    groups.set(key, [...(groups.get(key) ?? []), assignment]);
+  }
+  return [...groups.entries()];
+}
 
 const journeySteps = [
   { key: 'request', label: 'درخواست', icon: Route },
@@ -423,9 +547,13 @@ export function StudentDashboard({ students }: { students: readonly StudentDashb
         <EventTimeline notifications={selectedStudent.notifications} />
       </div>
       <div className="rounded-[var(--radius-card)] border border-border/60 bg-surface-paper p-5 shadow-[var(--shadow-raised)]">
-        <div className="flex items-center gap-2"><Route className="size-4 text-primary" /><h2 className="font-black">راننده و سرویس‌های فعال</h2></div>
+        <div className="flex items-center gap-2"><Route aria-hidden="true" className="size-4 text-primary" /><h2 className="font-black">راننده و سرویس‌های فعال {selectedStudent.name}</h2></div>
         {!selectedStudent.driverAssignments.length && <p className="mt-3 text-sm text-muted">هنوز راننده‌ای برای این دانش‌آموز تعیین نشده است.</p>}
-        <div className="mt-4 grid gap-3 md:grid-cols-2">{selectedStudent.driverAssignments.map((assignment) => <div key={assignment.runId} className="rounded-xl bg-primary-soft p-4 text-sm"><p className="font-black">{assignment.driverFirstName} {assignment.driverLastName}</p><p className="mt-1">{assignment.direction === 'TO_SCHOOL' ? 'سرویس رفت' : 'سرویس برگشت'} · {formatPersianTime(assignment.scheduledStartTime)} تا {formatPersianTime(assignment.scheduledArrivalTime)}</p><p className="mt-1 text-muted">{assignment.vehicleSystem} · پلاک {assignment.plateNumber}</p><p className="mt-1 font-mono">{assignment.driverPhoneNumber}</p></div>)}</div>
+        <div className="mt-4 grid gap-4">
+          {groupDriverAssignments(selectedStudent.driverAssignments).map(([key, assignments]) => (
+            <DriverAssignmentDetails key={key} assignments={assignments} />
+          ))}
+        </div>
       </div>
     </div>
   );

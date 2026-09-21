@@ -80,6 +80,9 @@ export function SchoolFormDialog(props: Props) {
     managerName: initial?.managerName ?? '',
     managerPhone: initial?.managerPhone ?? '',
     openingTime: initial?.openingTime ?? '',
+    openingTimes: initial?.openingTimes?.length
+      ? initial.openingTimes
+      : [initial?.openingTime ?? ''],
     closingTime: initial?.closingTime ?? '',
     closingTimes: initial?.closingTimes?.length
       ? initial.closingTimes
@@ -361,19 +364,50 @@ export function SchoolFormDialog(props: Props) {
                 className="mt-1"
               />
             </div>
-            <div>
-              <label htmlFor="school-opening-time" className="text-sm font-bold">
-                ساعت شروع مدرسه *
-              </label>
-              <Input
-                id="school-opening-time"
-                type="time"
-                required
-                dir="ltr"
-                value={form.openingTime}
-                onChange={(event) => update('openingTime', event.target.value)}
-                className="mt-1 text-left"
-              />
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold">ساعت‌های شروع مدرسه *</label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => update('openingTimes', [...form.openingTimes, ''])}
+                >
+                  افزودن ساعت
+                </Button>
+              </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {form.openingTimes.map((time, index) => (
+                  <div key={index} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2">
+                    <Input
+                      aria-label={`ساعت شروع ${index + 1}`}
+                      type="time"
+                      required
+                      dir="ltr"
+                      value={time}
+                      onChange={(event) => {
+                        const times = [...form.openingTimes];
+                        times[index] = event.target.value;
+                        update('openingTimes', times);
+                        update('openingTime', times[0] ?? '');
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={form.openingTimes.length === 1}
+                      onClick={() => {
+                        const times = form.openingTimes.filter((_, i) => i !== index);
+                        update('openingTimes', times);
+                        update('openingTime', times[0] ?? '');
+                      }}
+                    >
+                      حذف
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="sm:col-span-2">
               <div className="flex items-center justify-between">

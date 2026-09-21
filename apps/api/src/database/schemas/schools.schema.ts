@@ -18,6 +18,7 @@ export const schools = pgTable('schools', {
   managerName: varchar('manager_name', { length: 100 }),
   managerPhone: varchar('manager_phone', { length: 20 }),
   openingTime: varchar('opening_time', { length: 5 }).notNull().default('08:00'),
+  openingTimes: jsonb('opening_times').$type<string[]>().notNull().default([]),
   closingTime: varchar('closing_time', { length: 5 }).notNull().default('14:00'),
   closingTimes: jsonb('closing_times').$type<string[]>().notNull().default([]),
   latitude: doublePrecision('latitude'),

@@ -157,6 +157,46 @@ describe('guided enrollment policy', () => {
     expect(result.mother).toBeNull();
   });
 
+  it.each(['guardian', 'mother'] as const)(
+    'allows the %s to also be the student companion',
+    (familyRole) => {
+      const input = validEnrollment();
+      input.student.physicalStatus = 'SPECIAL';
+      input.student.disabilityType = 'حرکتی';
+      const familyMember = familyRole === 'guardian' ? input.guardian : input.mother!;
+      const phoneNumber =
+        familyRole === 'guardian' ? '09121111111' : input.mother!.phoneNumber;
+      input.companion = {
+        firstName: familyMember.firstName,
+        lastName: familyMember.lastName,
+        fatherName: 'حسن',
+        nationalId: familyMember.nationalId,
+        phoneNumber,
+        relationship: 'FAMILY',
+      };
+
+      expect(() => normalizeAndValidateGuidedEnrollment(input)).not.toThrow();
+    },
+  );
+
+  it('reports a specific conflict when the student is entered as their own companion', () => {
+    const input = validEnrollment();
+    input.student.physicalStatus = 'SPECIAL';
+    input.student.disabilityType = 'حرکتی';
+    input.companion = {
+      firstName: input.student.firstName,
+      lastName: input.student.lastName,
+      fatherName: input.student.fatherName,
+      nationalId: input.student.nationalId,
+      phoneNumber: '09124444444',
+      relationship: 'FAMILY',
+    };
+
+    expect(() => normalizeAndValidateGuidedEnrollment(input)).toThrow(
+      'کد ملی مراقب باید با کد ملی دانش‌آموز متفاوت باشد.',
+    );
+  });
+
   it('requires a 021 Tehran home phone', () => {
     const input = validEnrollment();
     input.homePhone = '0';

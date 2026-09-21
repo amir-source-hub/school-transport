@@ -2,46 +2,25 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ExternalLink, FileText } from 'lucide-react';
+import { Camera, ExternalLink, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { rejectAdminDriverDocument, type DriverDetail } from './admin-drivers-api';
-
-const labels: Record<string, string> = {
-  DRIVER_PHOTO: 'عکس راننده',
-  PROFILE_PHOTO: 'عکس پرسنلی',
-  NATIONAL_CARD_FRONT: 'روی کارت ملی',
-  NATIONAL_CARD_BACK: 'پشت کارت ملی',
-  BIRTH_CERTIFICATE_PAGE_1: 'صفحه اول شناسنامه',
-  BIRTH_CERTIFICATE_PAGE_2: 'صفحه دوم شناسنامه',
-  DRIVER_LICENSE_FRONT: 'روی گواهینامه',
-  DRIVER_LICENSE_BACK: 'پشت گواهینامه',
-  CRIMINAL_RECORD_CERTIFICATE: 'گواهی سوءپیشینه',
-  ADDICTION_TEST_CERTIFICATE: 'گواهی عدم اعتیاد',
-  COMMITMENT_LETTER_RETURNED: 'تعهدنامه تکمیل‌شده (قدیمی)',
-  ADDICTION_LETTER_RETURNED: 'نامه عدم اعتیاد تکمیل‌شده (قدیمی)',
-  EDUCATION_CERTIFICATE: 'تصویر مدرک تحصیلی',
-  POSTAL_CODE_CONFIRMATION: 'تأییدیه کدپستی',
-  SCHOOL_SERVICE_INSURANCE_ENDORSEMENT: 'الحاقیه بیمه‌نامه سرویس مدرسه',
-  TAXI_OPERATION_LICENSE: 'پروانه تاکسیرانی (مخصوص خودرو تاکسی)',
-  VEHICLE_PHOTO: 'عکس خودرو',
-  VEHICLE_CARD_FRONT: 'روی کارت خودرو',
-  VEHICLE_CARD_BACK: 'پشت کارت خودرو',
-  VEHICLE_TITLE_DOCUMENT: 'سند خودرو',
-  TECHNICAL_INSPECTION_DOCUMENT: 'معاینه فنی',
-  INSURANCE_POLICY_DOCUMENT: 'بیمه‌نامه شخص ثالث',
-};
+import { driverDocumentLabels } from './driver-document-definitions';
 export function DriverDocumentCard({
   driverId,
+  documentType,
   document,
 }: {
   driverId: string;
-  document: DriverDetail['documents'][number];
+  documentType: string;
+  document?: DriverDetail['documents'][number];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function reject() {
+    if (!document) return;
     setBusy(true);
     setError('');
     try {
@@ -52,6 +31,31 @@ export function DriverDocumentCard({
     } finally {
       setBusy(false);
     }
+  }
+  const label = driverDocumentLabels[documentType] ?? documentType;
+  if (!document) {
+    return (
+      <article className="overflow-hidden rounded-2xl border border-dashed border-border bg-surface-paper">
+        <div
+          className="grid aspect-[4/3] place-items-center gap-3 bg-surface-inset px-4 text-center text-muted"
+          role="img"
+          aria-label={`${label}: بارگذاری نشده`}
+        >
+          <span className="grid size-14 place-items-center rounded-2xl border border-border bg-white">
+            <Camera className="size-7" aria-hidden="true" />
+          </span>
+          <span className="text-sm font-bold">تصویری بارگذاری نشده است</span>
+        </div>
+        <div className="p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-black">{label}</h3>
+            <span className="shrink-0 rounded-full bg-surface-inset px-2 py-1 text-xs font-bold text-muted">
+              بارگذاری نشده
+            </span>
+          </div>
+        </div>
+      </article>
+    );
   }
   return (
     <article className="overflow-hidden rounded-2xl border border-border bg-white">
@@ -66,14 +70,14 @@ export function DriverDocumentCard({
         ) : (
           <img
             src={document.viewUrl}
-            alt={labels[document.documentType] ?? 'تصویر مدرک راننده'}
+            alt={label}
             className="aspect-[4/3] w-full bg-surface-inset object-contain"
           />
         )}
       </a>
       <div className="p-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-black">{labels[document.documentType] ?? document.documentType}</h3>
+          <h3 className="font-black">{label}</h3>
           <span
             className={`rounded-full px-2 py-1 text-xs font-bold ${document.reviewStatus === 'REJECTED' ? 'bg-danger/10 text-danger' : 'bg-success-soft text-success'}`}
           >

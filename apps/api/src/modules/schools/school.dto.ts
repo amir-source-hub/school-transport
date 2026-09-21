@@ -65,6 +65,9 @@ export class CreateSchoolDto {
   @IsString()
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'ساعت شروع باید با قالب ساعت:دقیقه باشد.' })
   openingTime!: string;
+  @IsOptional() @IsArray() @ArrayNotEmpty() @ArrayMaxSize(12)
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { each: true })
+  openingTimes!: string[];
   @IsString()
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'ساعت پایان باید با قالب ساعت:دقیقه باشد.' })
   closingTime!: string;
@@ -105,6 +108,8 @@ export class UpdateSchoolDto {
   managerPhone?: string;
   @IsOptional() @IsString() @Length(1, 100) managerName?: string;
   @IsOptional() @IsString() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) openingTime?: string;
+  @IsOptional() @IsArray() @ArrayNotEmpty() @ArrayMaxSize(12)
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { each: true }) openingTimes?: string[];
   @IsOptional() @IsString() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) closingTime?: string;
   @IsOptional() @IsArray() @ArrayNotEmpty() @ArrayMaxSize(12)
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { each: true }) closingTimes?: string[];

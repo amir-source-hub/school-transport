@@ -90,9 +90,11 @@ export default async function SchoolsPage() {
                 </p>
               </div>
               <div>
-                <dt className="text-muted">ساعت شروع</dt>
+                <dt className="text-muted">ساعت‌های شروع</dt>
                 <dd className="mt-1 font-bold" dir="ltr">
-                  {formatPersianTime(school.openingTime)}
+                  {(school.openingTimes.length ? school.openingTimes : [school.openingTime])
+                    .map(formatPersianTime)
+                    .join('، ')}
                 </dd>
               </div>
               <div>

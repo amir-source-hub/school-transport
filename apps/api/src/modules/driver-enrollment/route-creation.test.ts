@@ -25,7 +25,15 @@ function query(rows: unknown[]) {
 function harness(auditFailure = false) {
   const selections = [
     [{ id: 'driver', status: 'ACTIVE' }],
-    [{ id: 'school', openingTime: '07:00', closingTime: '14:30', closingTimes: [] }],
+    [
+      {
+        id: 'school',
+        openingTime: '07:00',
+        openingTimes: ['07:00', '08:00'],
+        closingTime: '14:30',
+        closingTimes: [],
+      },
+    ],
     [{ id: 'vehicle', status: 'ACTIVE' }],
   ];
   const execute = vi.fn(async () => undefined);
@@ -65,6 +73,9 @@ describe('admin route creation', () => {
     expect(h.transaction).toHaveBeenCalledOnce();
     expect(h.execute).toHaveBeenCalledOnce();
     expect(h.values).toHaveBeenCalledWith(expect.objectContaining({ sequenceNumber: 3 }));
+    expect(h.values).toHaveBeenCalledWith(
+      expect.objectContaining({ scheduledStartTime: '07:00', scheduledArrivalTime: '07:00' }),
+    );
     expect(h.audit).toHaveBeenCalledOnce();
   });
 
@@ -88,5 +99,50 @@ describe('admin route creation', () => {
         contractPriceRials: 1_111_111_111_110,
       }),
     );
+  });
+
+  it('stores the selected school closing time for a return route', async () => {
+    const h = harness();
+    await h.service.createAdminRoute(
+      {
+        ...input,
+        direction: 'FROM_SCHOOL',
+        scheduledStartTime: '12:00',
+        scheduledArrivalTime: '14:30',
+      },
+      'admin',
+    );
+
+    expect(h.values).toHaveBeenCalledWith(
+      expect.objectContaining({ scheduledStartTime: '14:30', scheduledArrivalTime: '14:30' }),
+    );
+  });
+
+  it('stores a selected opening time for a multi-shift school', async () => {
+    const h = harness();
+    await h.service.createAdminRoute(
+      { ...input, scheduledStartTime: '08:00', scheduledArrivalTime: '08:00' },
+      'admin',
+    );
+
+    expect(h.values).toHaveBeenCalledWith(
+      expect.objectContaining({ scheduledStartTime: '08:00', scheduledArrivalTime: '08:00' }),
+    );
+  });
+
+  it('rejects a return time that is not configured for the school', async () => {
+    const h = harness();
+
+    await expect(
+      h.service.createAdminRoute(
+        {
+          ...input,
+          direction: 'FROM_SCHOOL',
+          scheduledArrivalTime: '13:45',
+        },
+        'admin',
+      ),
+    ).rejects.toThrow('ساعت برگشت');
+    expect(h.transaction).not.toHaveBeenCalled();
   });
 });

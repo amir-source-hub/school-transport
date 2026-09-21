@@ -67,6 +67,7 @@ export class SchoolsService {
         address: schools.address,
         phoneNumber: schools.phoneNumber,
         openingTime: schools.openingTime,
+        openingTimes: schools.openingTimes,
         closingTime: schools.closingTime,
         closingTimes: schools.closingTimes,
         latitude: schools.latitude,
@@ -98,6 +99,7 @@ export class SchoolsService {
         address: schools.address,
         phoneNumber: schools.phoneNumber,
         openingTime: schools.openingTime,
+        openingTimes: schools.openingTimes,
         closingTime: schools.closingTime,
         closingTimes: schools.closingTimes,
         latitude: schools.latitude,
@@ -123,6 +125,7 @@ export class SchoolsService {
     managerName?: string;
     managerPhone?: string;
     openingTime: string;
+    openingTimes?: string[];
     closingTime: string;
     closingTimes?: string[];
     latitude?: number;
@@ -138,6 +141,7 @@ export class SchoolsService {
       managerName: data.managerName || null,
       managerPhone: data.managerPhone || null,
       educationOptions: data.educationOptions ?? [],
+      openingTimes: data.openingTimes?.length ? data.openingTimes : [data.openingTime],
       closingTimes: data.closingTimes?.length ? data.closingTimes : [data.closingTime],
       latitude: data.latitude ?? null,
       longitude: data.longitude ?? null,
@@ -159,6 +163,7 @@ export class SchoolsService {
       managerName: string;
       managerPhone: string;
       openingTime: string;
+      openingTimes: string[];
       closingTime: string;
       closingTimes: string[];
       latitude: number;

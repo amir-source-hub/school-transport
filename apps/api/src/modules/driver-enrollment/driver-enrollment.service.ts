@@ -28,6 +28,7 @@ import {
   parents,
   studentPhotoUploads,
   studentCompanions,
+  onboardingSessions,
 } from '../../database/schemas';
 import { S3_CLIENT, type S3Storage } from '../../infrastructure/s3/s3-storage.port';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
@@ -53,6 +54,17 @@ const VEHICLE_DOCUMENT_TYPES = new Set([
   'TECHNICAL_INSPECTION_DOCUMENT',
   'INSURANCE_POLICY_DOCUMENT',
 ]);
+const FAMILY_VISIBLE_DOCUMENT_TYPES = [
+  'DRIVER_PHOTO',
+  'DRIVER_LICENSE_FRONT',
+  'CRIMINAL_RECORD_CERTIFICATE',
+  'ADDICTION_TEST_CERTIFICATE',
+  'TAXI_OPERATION_LICENSE',
+  'VEHICLE_PHOTO',
+  'VEHICLE_CARD_FRONT',
+  'TECHNICAL_INSPECTION_DOCUMENT',
+  'INSURANCE_POLICY_DOCUMENT',
+] as const;
 
 @Injectable()
 export class DriverEnrollmentService {
@@ -290,7 +302,15 @@ export class DriverEnrollmentService {
           grade: row.grade,
           pickupOrder: row.pickupOrder,
           ...(row.studentSchoolId && schoolById.has(row.studentSchoolId)
-            ? schoolHours(schoolById.get(row.studentSchoolId)!, row.direction)
+            ? schoolHours(
+                {
+                  ...schoolById.get(row.studentSchoolId)!,
+                  openingTime: row.scheduledStartTime,
+                  closingTime: row.scheduledArrivalTime,
+                  closingTimes: [row.scheduledArrivalTime],
+                },
+                row.direction,
+              )
             : { scheduledStopTime: row.scheduledStopTime, scheduledReturnStopTime: null }),
           notes: row.stopNotes,
           address: row.studentAddress,
@@ -990,7 +1010,15 @@ export class DriverEnrollmentService {
           lastName: row.studentLastName,
           pickupOrder: row.pickupOrder,
           ...(row.studentSchoolId && schoolById.has(row.studentSchoolId)
-            ? schoolHours(schoolById.get(row.studentSchoolId)!, row.direction)
+            ? schoolHours(
+                {
+                  ...schoolById.get(row.studentSchoolId)!,
+                  openingTime: row.scheduledStartTime,
+                  closingTime: row.scheduledArrivalTime,
+                  closingTimes: [row.scheduledArrivalTime],
+                },
+                row.direction,
+              )
             : { scheduledStopTime: row.scheduledStopTime, scheduledReturnStopTime: null }),
           seatCount: row.companionId ? 2 : 1,
           companion: row.companionId
@@ -1035,12 +1063,27 @@ export class DriverEnrollmentService {
     if (!school) throw new NotFoundError('School', input.schoolId);
     if (!vehicle)
       throw new ConflictError('DRIVER_HAS_NO_ACTIVE_VEHICLE', 'راننده خودروی فعال ندارد.');
-    const scheduledStartTime = school.openingTime;
-    const scheduledArrivalTime = [...(school.closingTimes ?? []), school.closingTime]
+    const openingTimes = [...new Set([...(school.openingTimes ?? []), school.openingTime])]
       .filter(Boolean)
-      .sort()
-      .at(-1)!;
-    if (scheduledStartTime >= scheduledArrivalTime)
+      .sort();
+    const closingTimes = [...new Set([...(school.closingTimes ?? []), school.closingTime])]
+      .filter(Boolean)
+      .sort();
+    const scheduledStartTime =
+      input.direction === 'FROM_SCHOOL' ? input.scheduledArrivalTime : input.scheduledStartTime;
+    const scheduledArrivalTime =
+      input.direction === 'TO_SCHOOL' ? input.scheduledStartTime : input.scheduledArrivalTime;
+    if (
+      input.direction !== 'FROM_SCHOOL' &&
+      !openingTimes.includes(input.scheduledStartTime)
+    )
+      throw new ValidationError('ساعت رفت باید از ساعت‌های شروع مدرسه انتخاب شود.');
+    if (
+      input.direction !== 'TO_SCHOOL' &&
+      !closingTimes.includes(input.scheduledArrivalTime)
+    )
+      throw new ValidationError('ساعت برگشت باید از ساعت‌های پایان مدرسه انتخاب شود.');
+    if (input.direction === 'ROUND_TRIP' && scheduledStartTime >= scheduledArrivalTime)
       throw new ValidationError('ساعت پایان مدرسه باید بعد از ساعت شروع باشد.');
     return this.database.db.transaction(async (txn) => {
       await txn.execute(
@@ -1125,11 +1168,6 @@ export class DriverEnrollmentService {
       schoolId,
       driverId,
       vehicleId: vehicle.id,
-      scheduledStartTime: school.openingTime,
-      scheduledArrivalTime: [...(school.closingTimes ?? []), school.closingTime]
-        .filter(Boolean)
-        .sort()
-        .at(-1)!,
       updatedAt: new Date(),
     };
     const [updated] = await this.database.db
@@ -1354,7 +1392,15 @@ export class DriverEnrollmentService {
     ]);
     if (!studentSchool)
       throw new ConflictError('STUDENT_HAS_NO_SCHOOL', 'مدرسه فعال دانش‌آموز پیدا نشد.');
-    const { scheduledStopTime } = schoolHours(studentSchool, route.direction);
+    const { scheduledStopTime } = schoolHours(
+      {
+        ...studentSchool,
+        openingTime: route.scheduledStartTime,
+        closingTime: route.scheduledArrivalTime,
+        closingTimes: [route.scheduledArrivalTime],
+      },
+      route.direction,
+    );
     if (!vehicle) throw new ConflictError('ROUTE_HAS_NO_VEHICLE', 'خودروی مسیر پیدا نشد.');
     // Admin route planning may intentionally exceed nominal vehicle capacity.
     await this.database.db.transaction(async (txn) => {
@@ -1701,7 +1747,7 @@ export class DriverEnrollmentService {
     if (!student) throw new NotFoundError('Student', studentId);
     if (ownerUserId && student.userId !== ownerUserId)
       throw new AuthorizationError('Access denied.');
-    return this.database.db
+    const assignments = await this.database.db
       .select({
         membershipId: transportServiceRunStudents.id,
         runId: transportServiceRuns.id,
@@ -1715,6 +1761,7 @@ export class DriverEnrollmentService {
         scheduledStopTime: transportServiceRunStudents.scheduledStopTime,
         schoolName: schools.name,
         driverId: drivers.id,
+        vehicleId: vehicles.id,
         driverFirstName: drivers.firstName,
         driverLastName: drivers.lastName,
         driverPhoneNumber: drivers.phoneNumber,
@@ -1738,6 +1785,51 @@ export class DriverEnrollmentService {
         ),
       )
       .orderBy(asc(transportServiceRuns.direction));
+    if (!assignments.length) return [];
+    const driverIds = [...new Set(assignments.map((assignment) => assignment.driverId))];
+    const vehicleIds = [...new Set(assignments.map((assignment) => assignment.vehicleId))];
+    const documents = await this.database.db
+      .select()
+      .from(transportDocuments)
+      .where(
+        and(
+          eq(transportDocuments.reviewStatus, 'ACTIVE'),
+          inArray(transportDocuments.documentType, [...FAMILY_VISIBLE_DOCUMENT_TYPES]),
+          or(
+            inArray(transportDocuments.driverId, driverIds),
+            inArray(transportDocuments.vehicleId, vehicleIds),
+          ),
+        ),
+      )
+      .orderBy(desc(transportDocuments.createdAt));
+    const latestDocuments = documents.filter(
+      (document, index, all) =>
+        all.findIndex(
+          (candidate) =>
+            candidate.documentType === document.documentType &&
+            candidate.driverId === document.driverId &&
+            candidate.vehicleId === document.vehicleId,
+        ) === index,
+    );
+    const visibleDocuments = await Promise.all(
+      latestDocuments.map(async (document) => ({
+        driverId: document.driverId,
+        vehicleId: document.vehicleId,
+        documentType: document.documentType,
+        mimeType: document.mimeType,
+        viewUrl: await this.storage.presignGet(document.objectKey, 300),
+      })),
+    );
+    return assignments.map((assignment) => ({
+      ...assignment,
+      documents: visibleDocuments
+        .filter(
+          (document) =>
+            document.driverId === assignment.driverId ||
+            document.vehicleId === assignment.vehicleId,
+        )
+        .map(({ documentType, mimeType, viewUrl }) => ({ documentType, mimeType, viewUrl })),
+    }));
   }
 
   async assignDriverToStudent(
@@ -2054,6 +2146,33 @@ export class DriverEnrollmentService {
         .update(driverDocumentUploads)
         .set({ status: 'LINKED' })
         .where(inArray(driverDocumentUploads.id, [driverPhoto.id, vehiclePhoto.id]));
+      const activatedAccounts = await txn
+        .update(users)
+        .set({ username: verifiedPhone, accountStatus: 'ACTIVE', updatedAt: acceptedAt })
+        .where(
+          and(
+            eq(users.id, userId),
+            eq(users.accountType, 'DRIVER'),
+            eq(users.accountStatus, 'PENDING'),
+          ),
+        )
+        .returning({ id: users.id });
+      if (!activatedAccounts.length) {
+        throw new ConflictError(
+          'DRIVER_ACCOUNT_NOT_PENDING',
+          'حساب در انتظار راننده برای تکمیل ثبت‌نام پیدا نشد.',
+        );
+      }
+      await txn
+        .update(onboardingSessions)
+        .set({ currentStep: 'DRIVER_CREATED', updatedAt: acceptedAt })
+        .where(
+          and(
+            eq(onboardingSessions.userId, userId),
+            eq(onboardingSessions.portalRole, 'DRIVER'),
+            eq(onboardingSessions.status, 'PENDING'),
+          ),
+        );
       await this.audit.recordInTransaction(txn, {
         actorType: 'DRIVER',
         actorId: userId,

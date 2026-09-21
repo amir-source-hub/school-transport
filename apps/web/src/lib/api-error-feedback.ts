@@ -202,6 +202,10 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
         'این درخواست افزایش ظرفیت دیگر در حالت در انتظار نیست و قابل بررسی نیست.',
       DUPLICATE_ACTIVE_ENROLLMENT:
         'یک ثبت‌نام فعال برای این دانش‌آموز در سال تحصیلی جاری وجود دارد.',
+      COMPANION_MATCHES_STUDENT:
+        'کد ملی مراقب باید با کد ملی دانش‌آموز متفاوت باشد.',
+      DUPLICATE_COMPANION_NATIONAL_ID:
+        'این کد ملی قبلاً برای مراقب دانش‌آموز دیگری ثبت شده است.',
       ACTIVE_ADDRESS_REQUIRED: 'لطفاً ابتدا یک نشانی فعال ثبت کنید.',
       PRICE_ALREADY_ACCEPTED: 'قیمت قبلاً پذیرفته شده است. نسخه جدیدی ایجاد کنید.',
       PAYMENT_ALREADY_COMPLETED: 'این پرداخت قبلاً انجام شده است.',

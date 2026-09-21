@@ -132,8 +132,13 @@ export function normalizeAndValidateGuidedEnrollment(
     throw new ConflictError('COMPANION_REQUIRES_SPECIAL_STATUS', 'اطلاعات مراقب فقط برای دانش‌آموز استثنائی ثبت می‌شود.');
   if (data.companion && (!isIranianNationalId(data.companion.nationalId) || !iranianMobilePattern.test(data.companion.phoneNumber)))
     throw new ConflictError('INVALID_COMPANION', 'کد ملی یا شماره همراه مراقب معتبر نیست.');
-  if (data.companion && [data.student.nationalId,data.guardian.nationalId,data.father?.nationalId,data.mother?.nationalId].includes(data.companion.nationalId))
-    throw new ConflictError('DUPLICATE_COMPANION_NATIONAL_ID', 'کد ملی مراقب باید با دانش‌آموز و والدین متفاوت باشد.');
+  // A parent or guardian may also accompany a student. Only the student must be a
+  // different person; cross-student companion reuse is checked transactionally below.
+  if (data.companion?.nationalId === data.student.nationalId)
+    throw new ConflictError(
+      'COMPANION_MATCHES_STUDENT',
+      'کد ملی مراقب باید با کد ملی دانش‌آموز متفاوت باشد.',
+    );
 
   const required = [
     data.student.firstName,
