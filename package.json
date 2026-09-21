@@ -18,7 +18,7 @@
     "test:load": "node infrastructure/performance/http-load-test.mjs"
   },
   "devDependencies": {
-    "prettier": "3.9.6",
+    "prettier": "3.9.8",
     "turbo": "^2.0.0",
     "typescript": "^5.5.0"
   },
