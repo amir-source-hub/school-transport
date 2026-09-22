@@ -12,7 +12,6 @@ import type { AdminSchool } from '@/features/admin-schools/admin-schools-api';
 import { getAdminStudents, type AdminStudent } from '@/features/admin-students/admin-students-api';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { ApiClientError } from '@/lib/api-client';
-import { formatPersianTime } from '@/lib/formatters';
 import {
   addStudentToAdminRoute,
   archiveAdminRoute,
@@ -24,7 +23,10 @@ import {
 } from './admin-drivers-api';
 import { RouteCatalog } from './route-catalog';
 import { RoutePriceInput, tomanToRials } from './route-price-input';
-import { studentRouteAssignments } from './route-student-assignment';
+import {
+  studentRouteAssignmentConflict,
+  studentRouteAssignments,
+} from './route-student-assignment';
 
 export function RouteManagement({
   routes,
@@ -44,19 +46,11 @@ export function RouteManagement({
   const [contractDateIso, setContractDateIso] = useState(jalaliToIsoDate('1405/07/01') ?? '');
   const [schoolId, setSchoolId] = useState('');
   const [direction, setDirection] = useState<AdminTransportRoute['direction']>('TO_SCHOOL');
-  const [openingTime, setOpeningTime] = useState('');
-  const [closingTime, setClosingTime] = useState('');
   const [filterSchoolId, setFilterSchoolId] = useState('');
   const [routeId, setRouteId] = useState('');
   const [studentId, setStudentId] = useState('');
   const [choices, setChoices] = useState(students);
   const school = schools.find((s) => s.id === schoolId);
-  const openingTimes = school
-    ? [...new Set([...(school.openingTimes ?? []), school.openingTime].filter(Boolean))].sort()
-    : [];
-  const closingTimes = school
-    ? [...new Set([...school.closingTimes, school.closingTime].filter(Boolean))].sort()
-    : [];
   const route = routes.find((r) => r.id === routeId);
   const assignmentYear =
     route?.academicYear ??
@@ -96,13 +90,19 @@ export function RouteManagement({
     }
   }
   const studentOption = useCallback(
-    (s: AdminStudent) => ({
-      value: s.id,
-      label: `${s.firstName} ${s.lastName} · ${s.schoolName ?? ''}${s.companion ? ' · دارای همراه (۲ صندلی)' : ''}`,
-      detail: s.address ? `آدرس: ${s.address}` : 'آدرسی برای این دانش‌آموز ثبت نشده است.',
-      assignment: assignments.get(s.id),
-    }),
-    [assignments],
+    (s: AdminStudent) => {
+      const assignment = assignments.get(s.id);
+      const reason = studentRouteAssignmentConflict(assignment, route?.direction);
+      return {
+        value: s.id,
+        label: `${s.firstName} ${s.lastName} · ${s.schoolName ?? ''}${s.companion ? ' · دارای همراه (۲ صندلی)' : ''}`,
+        detail: s.address ? `آدرس: ${s.address}` : 'آدرسی برای این دانش‌آموز ثبت نشده است.',
+        assignment,
+        disabled: Boolean(reason),
+        reason,
+      };
+    },
+    [assignments, route?.direction],
   );
   const searchStudents = useCallback(
     async (q: string) => {
@@ -135,8 +135,8 @@ export function RouteManagement({
   );
   async function create(data: FormData) {
     if (!school) return;
-    const selectedOpeningTime = openingTime || school.openingTime;
-    const selectedClosingTime = closingTime || closingTimes.at(-1) || school.closingTime;
+    const selectedOpeningTime = school.openingTime;
+    const selectedClosingTime = school.closingTime;
     const special = school.schoolType === 'SPECIAL';
     await perform(
       () =>
@@ -158,7 +158,7 @@ export function RouteManagement({
               }),
           activeWeekdays: [0, 1, 2, 3, 4],
         }),
-      special ? 'مسیر استثنائی بدون قرارداد ایجاد شد.' : 'مسیر با ساعت‌های مدرسه ایجاد شد.',
+      special ? 'مسیر استثنائی بدون قرارداد ایجاد شد.' : 'مسیر ایجاد شد.',
     );
   }
   async function add() {
@@ -184,8 +184,8 @@ export function RouteManagement({
           </p>
         )}
         <p className="mt-2 text-sm leading-7 text-muted">
-          ساعت رفت یا برگشت را از ساعت‌های ثبت‌شده مدرسه انتخاب کنید. فیلتر مدرسه فقط جست‌وجوی
-          دانش‌آموز را آسان می‌کند؛ یک مسیر می‌تواند دانش‌آموزان چند مدرسه را داشته باشد.
+          فیلتر مدرسه فقط جست‌وجوی دانش‌آموز را آسان می‌کند؛ یک مسیر می‌تواند دانش‌آموزان چند
+          مدرسه را داشته باشد.
         </p>
         <form
           onSubmit={(e) => {
@@ -219,30 +219,7 @@ export function RouteManagement({
           <Field label="مدرسه مبنا">
             <Picker
               value={schoolId}
-              onChange={(value) => {
-                const selectedSchool = schools.find((item) => item.id === value);
-                const selectedOpeningTimes = selectedSchool
-                  ? [
-                      ...new Set(
-                        [...(selectedSchool.openingTimes ?? []), selectedSchool.openingTime].filter(
-                          Boolean,
-                        ),
-                      ),
-                    ].sort()
-                  : [];
-                const selectedClosingTimes = selectedSchool
-                  ? [
-                      ...new Set(
-                        [...selectedSchool.closingTimes, selectedSchool.closingTime].filter(
-                          Boolean,
-                        ),
-                      ),
-                    ].sort()
-                  : [];
-                setSchoolId(value);
-                setOpeningTime(selectedOpeningTimes[0] ?? '');
-                setClosingTime(selectedClosingTimes[0] ?? '');
-              }}
+              onChange={setSchoolId}
               options={schools
                 .filter((s) => s.isActive)
                 .map((s) => ({ value: s.id, label: s.name }))}
@@ -260,32 +237,6 @@ export function RouteManagement({
               ]}
             />
           </Field>
-          {direction !== 'FROM_SCHOOL' && (
-            <Field label="ساعت رفت (شروع مدرسه)">
-              <Picker
-                name="openingTime"
-                value={openingTime}
-                onChange={setOpeningTime}
-                options={openingTimes.map((time) => ({
-                  value: time,
-                  label: formatPersianTime(time),
-                }))}
-              />
-            </Field>
-          )}
-          {direction !== 'TO_SCHOOL' && (
-            <Field label="ساعت برگشت (پایان مدرسه)">
-              <Picker
-                name="closingTime"
-                value={closingTime}
-                onChange={setClosingTime}
-                options={closingTimes.map((time) => ({
-                  value: time,
-                  label: formatPersianTime(time),
-                }))}
-              />
-            </Field>
-          )}
           <Field label="سال تحصیلی">
             <Input name="academicYear" defaultValue="1405-1406" required />
           </Field>
@@ -390,10 +341,6 @@ export function RouteManagement({
               </p>
             ) : null;
           })()}
-        <p className="mt-3 text-sm text-muted">
-          ساعت دانش‌آموز به‌صورت خودکار از مدرسه خودش تعیین می‌شود: رفت با ساعت شروع، برگشت با ساعت
-          پایان، و رفت‌وبرگشت با هر دو ساعت.
-        </p>
         {route?.students.length ? (
           <ul className="mt-5 divide-y divide-border rounded-xl border border-border">
             {[...route.students]
@@ -410,14 +357,6 @@ export function RouteManagement({
                         همراه: {student.companion.firstName} {student.companion.lastName} · ۲ صندلی
                       </small>
                     )}
-                    <small className="block font-normal text-muted">
-                      {route.direction === 'FROM_SCHOOL' ? 'برگشت' : 'رفت'}:{' '}
-                      {student.scheduledStopTime
-                        ? formatPersianTime(student.scheduledStopTime)
-                        : '—'}
-                      {student.scheduledReturnStopTime &&
-                        ` · برگشت: ${formatPersianTime(student.scheduledReturnStopTime)}`}
-                    </small>
                     <small className="mt-1 block font-normal leading-5 text-muted">
                       آدرس: {student.address || 'ثبت نشده است'}
                     </small>

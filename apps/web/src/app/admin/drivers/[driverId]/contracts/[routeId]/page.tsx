@@ -6,7 +6,7 @@ import {
   DRIVER_CONTRACT_CLAUSES,
   DRIVER_CONTRACT_NOTES,
 } from '@/features/driver-enrollment/driver-contract';
-import { formatJalaliDate, formatPersianTime } from '@/lib/formatters';
+import { formatJalaliDate } from '@/lib/formatters';
 
 export const metadata = { title: 'قرارداد مسیر راننده' };
 export const dynamic = 'force-dynamic';
@@ -36,8 +36,6 @@ export default async function Page({
     route.school.name,
     direction(route.direction),
     route.areaDescription,
-    formatPersianTime(route.scheduledStartTime),
-    formatPersianTime(route.scheduledArrivalTime),
     route.students.map((student) => `${student.firstName} ${student.lastName}`).join('، '),
   ]
     .filter(Boolean)

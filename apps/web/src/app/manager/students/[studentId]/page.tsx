@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { LocationDisplay } from '@/components/common/location-display';
 import { getManagerStudent, getManagerStudentPhoto } from '@/features/manager/manager-api';
 import { PrintButton } from '@/features/manager/print-button';
-import { formatJalaliDate, formatPersianTime } from '@/lib/formatters';
+import { formatJalaliDate } from '@/lib/formatters';
 export const metadata = { title: 'جزئیات دانش‌آموز' };
 export default async function Page({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
@@ -200,7 +200,7 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
             <p className="mt-4 text-sm text-muted">برای این دانش‌آموز سرویس فعالی ثبت نشده است.</p>
           )}
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {s.transportAssignments.map((assignment) => <div key={assignment.runId} className="rounded-xl bg-primary-soft p-4 text-sm"><p className="font-black">{assignment.driverFirstName} {assignment.driverLastName} · {assignment.direction === 'TO_SCHOOL' ? 'سرویس رفت' : 'سرویس برگشت'}</p><p className="mt-2 text-muted">{assignment.vehicleSystem} · پلاک {assignment.plateNumber}</p><p className="mt-1 text-muted">{formatPersianTime(assignment.scheduledStartTime)} تا {formatPersianTime(assignment.scheduledArrivalTime)} · ترتیب {assignment.pickupOrder.toLocaleString('fa-IR')}</p><p className="mt-1 font-mono">{assignment.driverPhoneNumber}</p></div>)}
+            {s.transportAssignments.map((assignment) => <div key={assignment.runId} className="rounded-xl bg-primary-soft p-4 text-sm"><p className="font-black">{assignment.driverFirstName} {assignment.driverLastName} · {assignment.direction === 'TO_SCHOOL' ? 'سرویس رفت' : 'سرویس برگشت'}</p><p className="mt-2 text-muted">{assignment.vehicleSystem} · پلاک {assignment.plateNumber}</p><p className="mt-1 text-muted">ترتیب {assignment.pickupOrder.toLocaleString('fa-IR')}</p><p className="mt-1 font-mono">{assignment.driverPhoneNumber}</p></div>)}
           </div>
         </Card>
       </div>

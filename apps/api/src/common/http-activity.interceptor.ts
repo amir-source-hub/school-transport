@@ -20,6 +20,15 @@ type ActivityRequest = FastifyRequest & {
   [HTTP_ACTIVITY_RECORDED]?: boolean;
 };
 
+function activityRoute(request: ActivityRequest): string {
+  return request.routeOptions?.url ?? new URL(request.url, 'http://local').pathname;
+}
+
+function shouldRecordActivity(request: ActivityRequest): boolean {
+  const route = activityRoute(request);
+  return route !== '/api/v1/health' && !route.startsWith('/api/v1/health/');
+}
+
 function safeErrorCode(error: unknown): string {
   if (!error || typeof error !== 'object') return 'UNHANDLED_ERROR';
   const candidate =
@@ -80,9 +89,10 @@ export function recordUninterceptedHttpFailure(
   request: ActivityRequest,
   error: unknown,
 ): void {
+  if (!shouldRecordActivity(request)) return;
   if (request[HTTP_ACTIVITY_RECORDED]) return;
   request[HTTP_ACTIVITY_RECORDED] = true;
-  const route = request.routeOptions?.url ?? new URL(request.url, 'http://local').pathname;
+  const route = activityRoute(request);
   const database = translateDatabaseError(error);
   const statusCode = database?.error.status ?? errorStatus(error, 500);
   activity.enqueue({
@@ -122,6 +132,7 @@ export class HttpActivityInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<ActivityRequest>();
+    if (!shouldRecordActivity(request)) return next.handle();
     const reply = context.switchToHttp().getResponse<FastifyReply>();
     const started = process.hrtime.bigint();
     let recorded = false;
@@ -129,7 +140,7 @@ export class HttpActivityInterceptor implements NestInterceptor {
       if (recorded) return;
       recorded = true;
       request[HTTP_ACTIVITY_RECORDED] = true;
-      const route = request.routeOptions?.url ?? new URL(request.url, 'http://local').pathname;
+      const route = activityRoute(request);
       const statusCode = error
         ? errorStatus(error, Number(reply.statusCode))
         : Number(reply.statusCode || 200);

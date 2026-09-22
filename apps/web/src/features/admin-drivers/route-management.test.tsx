@@ -125,7 +125,7 @@ it('submits a round-trip route as one route and keeps capacity advisory', async 
   expect(screen.getByText(/ظرفیت خودرو فقط هشدار است/)).toBeInTheDocument();
 });
 
-it('shows only the relevant school clocks and submits the selected closing time', async () => {
+it('hides school clocks and uses the primary school time internally', async () => {
   render(
     <RouteManagement
       routes={[]}
@@ -170,17 +170,15 @@ it('shows only the relevant school clocks and submits the selected closing time'
     target: { value: 'FROM_SCHOOL' },
   });
   expect(screen.queryByRole('combobox', { name: 'ساعت رفت (شروع مدرسه)' })).toBeNull();
-  fireEvent.change(screen.getByRole('combobox', { name: 'ساعت برگشت (پایان مدرسه)' }), {
-    target: { value: '14:30' },
-  });
+  expect(screen.queryByRole('combobox', { name: 'ساعت برگشت (پایان مدرسه)' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'ایجاد مسیر' }));
 
   await waitFor(() =>
     expect(createRoute).toHaveBeenCalledWith(
       expect.objectContaining({
         direction: 'FROM_SCHOOL',
-        scheduledStartTime: '14:30',
-        scheduledArrivalTime: '14:30',
+        scheduledStartTime: '12:30',
+        scheduledArrivalTime: '12:30',
       }),
     ),
   );
@@ -240,7 +238,7 @@ it('explains a route rejection and shows its request ID for support', async () =
   expect(screen.getByRole('alert')).toHaveTextContent('request-123');
 });
 
-it('shows each assigned student address beside the route times', () => {
+it('shows each assigned student address without route times', () => {
   render(
     <RouteManagement
       routes={

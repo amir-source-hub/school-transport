@@ -10,7 +10,7 @@ import { getAdminDriver } from '@/features/admin-drivers/admin-drivers-api';
 import { DriverDocumentCard } from '@/features/admin-drivers/driver-document-card';
 import { buildAdminDriverDocumentSlots } from '@/features/admin-drivers/driver-document-definitions';
 import { driverValueLabel, IranianPlate } from '@/features/admin-drivers/driver-display';
-import { formatJalaliDate, formatJalaliDateTime, formatPersianTime } from '@/lib/formatters';
+import { formatJalaliDate, formatJalaliDateTime } from '@/lib/formatters';
 
 export const metadata = { title: 'پرونده راننده' };
 export const dynamic = 'force-dynamic';
@@ -116,10 +116,7 @@ export default async function Page({ params }: { params: Promise<{ driverId: str
                         : 'رفت و برگشت'}
                   </Badge>
                 </div>
-                <p className="mt-2 text-sm">
-                  {run.school.name} · {formatPersianTime(run.scheduledStartTime)} تا{' '}
-                  {formatPersianTime(run.scheduledArrivalTime)}
-                </p>
+                <p className="mt-2 text-sm">{run.school.name}</p>
                 <ul className="mt-3 space-y-1 text-sm">
                   {run.students.map((student) => (
                     <li key={student.id}>

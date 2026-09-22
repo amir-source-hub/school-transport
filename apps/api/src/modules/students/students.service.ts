@@ -365,9 +365,8 @@ export class StudentsService {
         ? this.db.db
             .select()
             .from(familyAddresses)
-            .where(
-              and(inArray(familyAddresses.userId, userIds), eq(familyAddresses.isActive, true)),
-            )
+            .where(inArray(familyAddresses.userId, userIds))
+            .orderBy(desc(familyAddresses.isActive), desc(familyAddresses.updatedAt))
         : Promise.resolve([]),
     ]);
 
@@ -426,7 +425,8 @@ export class StudentsService {
       .offset((page - 1) * pageSize)
       .limit(pageSize);
 
-    const [parentRows, companionRows] = await Promise.all([
+    const userIds = [...new Set(rows.map((row) => row.userId))];
+    const [parentRows, companionRows, addressRows] = await Promise.all([
       this.db.db.select().from(parents),
       rows.length
         ? this.db.db
@@ -439,6 +439,13 @@ export class StudentsService {
               ),
             )
         : Promise.resolve([]),
+      userIds.length
+        ? this.db.db
+            .select()
+            .from(familyAddresses)
+            .where(inArray(familyAddresses.userId, userIds))
+            .orderBy(desc(familyAddresses.isActive), desc(familyAddresses.updatedAt))
+        : Promise.resolve([]),
     ]);
     const items = rows.map((student) => {
       const familyParent =
@@ -448,6 +455,8 @@ export class StudentsService {
         ...student,
         companion: companionRows.find((item) => item.studentId === student.id) ?? null,
         seatCount: companionRows.some((item) => item.studentId === student.id) ? 2 : 1,
+        address:
+          addressRows.find((address) => address.userId === student.userId)?.streetAddress ?? null,
         familyName: familyParent
           ? `${familyParent.firstName} ${familyParent.lastName}`
           : student.username,

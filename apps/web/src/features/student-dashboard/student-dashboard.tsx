@@ -23,7 +23,6 @@ import { Alert } from '@/components/feedback/alert';
 import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
-import { formatPersianTime } from '@/lib/formatters';
 import { IranianPlate, driverValueLabel } from '@/features/admin-drivers/driver-display';
 import { driverDocumentLabels } from '@/features/admin-drivers/driver-document-definitions';
 import type { StudentDriverAssignment } from '@/features/students/students-api';
@@ -43,29 +42,6 @@ export type StudentDashboard = {
   notifications: readonly string[];
   driverAssignments: StudentDriverAssignment[];
 };
-
-function AssignmentTimes({ assignment }: { assignment: StudentDriverAssignment }) {
-  return (
-    <dl className="grid gap-2 text-sm sm:grid-cols-2">
-      {assignment.direction !== 'FROM_SCHOOL' && (
-        <div className="flex items-center justify-between gap-3 rounded-xl bg-primary-soft px-3 py-2">
-          <dt className="text-muted">ساعت رفت</dt>
-          <dd className="font-black tabular-nums">
-            {formatPersianTime(assignment.scheduledStartTime)}
-          </dd>
-        </div>
-      )}
-      {assignment.direction !== 'TO_SCHOOL' && (
-        <div className="flex items-center justify-between gap-3 rounded-xl bg-primary-soft px-3 py-2">
-          <dt className="text-muted">ساعت برگشت</dt>
-          <dd className="font-black tabular-nums">
-            {formatPersianTime(assignment.scheduledArrivalTime)}
-          </dd>
-        </div>
-      )}
-    </dl>
-  );
-}
 
 function DriverAssignmentDetails({ assignments }: { assignments: StudentDriverAssignment[] }) {
   const first = assignments[0]!;
@@ -106,7 +82,6 @@ function DriverAssignmentDetails({ assignments }: { assignments: StudentDriverAs
         {assignments.map((assignment) => (
           <section key={assignment.runId} aria-label={assignment.title}>
             <p className="mb-2 text-sm font-bold">{assignment.title}</p>
-            <AssignmentTimes assignment={assignment} />
           </section>
         ))}
       </div>

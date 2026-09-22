@@ -22,3 +22,11 @@ describe('student-photo cleanup scheduling contract', () => {
     expect(source).toContain('throw error');
   });
 });
+
+describe('BullMQ Redis connection contract', () => {
+  it('does not apply the readiness timeout to blocking queue commands', () => {
+    const source = readFileSync(resolve(__dirname, 'queue.service.ts'), 'utf8');
+    expect(source).not.toContain('commandTimeout: config.readinessTimeoutMs');
+    expect(source).toContain('maxRetriesPerRequest: null');
+  });
+});

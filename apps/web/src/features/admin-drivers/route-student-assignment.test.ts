@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { AdminTransportRoute } from './admin-drivers-api';
-import { studentRouteAssignments } from './route-student-assignment';
+import {
+  studentRouteAssignmentConflict,
+  studentRouteAssignments,
+} from './route-student-assignment';
 
 const route = (direction: AdminTransportRoute['direction'], academicYear: string, ids: string[]) =>
   ({ direction, academicYear, students: ids.map((id) => ({ id })) }) as AdminTransportRoute;
@@ -28,5 +31,14 @@ describe('student route assignment badges', () => {
       '1405-1406',
     );
     expect(assignments.has('old')).toBe(false);
+  });
+
+  it('allows opposite single directions but rejects duplicate and round-trip overlaps', () => {
+    expect(studentRouteAssignmentConflict('TO_SCHOOL', 'FROM_SCHOOL')).toBeUndefined();
+    expect(studentRouteAssignmentConflict('FROM_SCHOOL', 'TO_SCHOOL')).toBeUndefined();
+    expect(studentRouteAssignmentConflict('TO_SCHOOL', 'TO_SCHOOL')).toContain('مسیر رفت');
+    expect(studentRouteAssignmentConflict('FROM_SCHOOL', 'FROM_SCHOOL')).toContain('مسیر برگشت');
+    expect(studentRouteAssignmentConflict('BOTH', 'TO_SCHOOL')).toBeTruthy();
+    expect(studentRouteAssignmentConflict('TO_SCHOOL', 'ROUND_TRIP')).toBeTruthy();
   });
 });

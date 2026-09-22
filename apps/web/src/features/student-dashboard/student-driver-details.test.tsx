@@ -72,7 +72,7 @@ describe('student driver details', () => {
     );
 
     expect(screen.getByText('رضا اکبری')).toBeInTheDocument();
-    expect(screen.getByText('ساعت رفت')).toBeInTheDocument();
+    expect(screen.queryByText('ساعت رفت')).toBeNull();
     expect(screen.queryByText('ساعت برگشت')).toBeNull();
     expect(screen.getByAltText('عکس راننده')).toHaveAttribute(
       'src',
@@ -82,7 +82,7 @@ describe('student driver details', () => {
     fireEvent.click(screen.getByRole('button', { name: /سارا احمدی/ }));
 
     expect(screen.getByText('مریم بهشتی')).toBeInTheDocument();
-    expect(screen.getByText('ساعت برگشت')).toBeInTheDocument();
+    expect(screen.queryByText('ساعت برگشت')).toBeNull();
     expect(screen.queryByText('ساعت رفت')).toBeNull();
     expect(screen.queryByText('رضا اکبری')).toBeNull();
   });

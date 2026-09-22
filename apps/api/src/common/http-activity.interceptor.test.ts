@@ -30,7 +30,37 @@ function context(statusCode = 200): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
+function healthContext(route = '/api/v1/health/ready'): ExecutionContext {
+  const request = {
+    id: 'health-check',
+    method: 'GET',
+    url: route,
+    routeOptions: { url: route },
+    headers: { 'user-agent': 'node' },
+    ip: '127.0.0.1',
+  };
+  return {
+    switchToHttp: () => ({
+      getRequest: () => request,
+      getResponse: () => ({ statusCode: 200 }),
+    }),
+  } as unknown as ExecutionContext;
+}
+
 describe('HttpActivityInterceptor', () => {
+  it('does not persist liveness or readiness probes', async () => {
+    const activity = { enqueue: vi.fn() };
+    const interceptor = new HttpActivityInterceptor(activity as never, {} as never);
+
+    await lastValueFrom(
+      interceptor.intercept(healthContext(), {
+        handle: () => of({ status: 'ready' }),
+      } as CallHandler),
+    );
+
+    expect(activity.enqueue).not.toHaveBeenCalled();
+  });
+
   it('records metadata for a successful request without query strings or bodies', async () => {
     const activity = { enqueue: vi.fn() };
     const interceptor = new HttpActivityInterceptor(

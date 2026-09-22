@@ -4,7 +4,6 @@ import { useState } from 'react';
 import {
   BusFront,
   ChevronDown,
-  Clock3,
   GraduationCap,
   Pencil,
   Route,
@@ -22,8 +21,6 @@ import type { AdminTransportRoute } from './admin-drivers-api';
 import { RoutePriceInput, tomanToRials } from './route-price-input';
 
 const number = (value: number) => value.toLocaleString('fa-IR');
-const time = (value: string) =>
-  value.slice(0, 5).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
 const normalize = (value: string) => value.replace(/ي/g, 'ی').replace(/ك/g, 'ک').trim();
 
 export function RouteCatalog({
@@ -59,9 +56,7 @@ export function RouteCatalog({
         </span>
         <span className="flex-1">
           <span className="block font-black">مسیرهای تعریف‌شده</span>
-          <span className="mt-1 block text-xs font-normal text-muted">
-            برنامه حرکت، راننده و ظرفیت هر مسیر
-          </span>
+          <span className="mt-1 block text-xs font-normal text-muted">راننده و ظرفیت هر مسیر</span>
         </span>
         <span className="rounded-full bg-primary-soft px-3 py-1 text-sm font-bold text-primary">
           {number(routes.length)} مسیر
@@ -149,27 +144,6 @@ export function RouteCatalog({
                   <GraduationCap className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                   <span>{route.school.name}</span>
                 </p>
-              </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-sm">
-                <span className="flex items-center gap-2 text-muted">
-                  <Clock3 className="size-4" aria-hidden="true" />
-                  {route.direction === 'TO_SCHOOL'
-                    ? 'ساعت رفت'
-                    : route.direction === 'FROM_SCHOOL'
-                      ? 'ساعت برگشت'
-                      : 'ساعت رفت و برگشت'}
-                </span>
-                <span className="font-bold tabular-nums">
-                  {route.direction !== 'FROM_SCHOOL' && (
-                    <bdi>{time(route.scheduledStartTime)}</bdi>
-                  )}
-                  {route.direction === 'ROUND_TRIP' && (
-                    <span className="px-2 font-normal text-muted">/</span>
-                  )}
-                  {route.direction !== 'TO_SCHOOL' && (
-                    <bdi>{time(route.scheduledArrivalTime)}</bdi>
-                  )}
-                </span>
               </div>
               <div className="mt-4">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">

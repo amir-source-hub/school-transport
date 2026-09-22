@@ -47,7 +47,6 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       maxRetriesPerRequest: null,
       enableReadyCheck: true,
       lazyConnect: true,
-      commandTimeout: config.readinessTimeoutMs,
       retryStrategy: config.queueRequired ? undefined : () => null,
     });
     this.connection.on('error', (error) => {

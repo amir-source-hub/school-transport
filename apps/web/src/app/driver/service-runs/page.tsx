@@ -1,10 +1,9 @@
-import { Clock3, MapPin, Phone, School, Users } from 'lucide-react';
+import { MapPin, Phone, School, Users } from 'lucide-react';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { MapProviderLinks } from '@/components/common/map-provider-links';
 import { getDriverRuns } from '@/features/driver/driver-api';
-import { formatPersianTime } from '@/lib/formatters';
 
 export const metadata = { title: 'سرویس من' };
 export default async function Page() {
@@ -41,12 +40,7 @@ export default async function Page() {
                       : 'رفت و برگشت'}
                 </Badge>
               </div>
-              <div className="mt-4 grid gap-3 rounded-xl bg-surface-inset p-4 text-sm sm:grid-cols-3">
-                <span>
-                  <Clock3 className="mb-1 size-4 text-primary" />
-                  {formatPersianTime(run.scheduledStartTime)} تا{' '}
-                  {formatPersianTime(run.scheduledArrivalTime)}
-                </span>
+              <div className="mt-4 grid gap-3 rounded-xl bg-surface-inset p-4 text-sm sm:grid-cols-2">
                 <span>
                   <MapPin className="mb-1 size-4 text-primary" />
                   {run.areaDescription ?? 'محدوده ثبت نشده'}
@@ -88,23 +82,6 @@ export default async function Page() {
                             {student.companion.lastName} · ۲ صندلی
                           </p>
                         )}
-                        <p className="text-xs text-muted">
-                          {run.direction === 'FROM_SCHOOL' ? 'برگشت' : 'رفت'}:{' '}
-                          <b className="text-foreground">
-                            {student.scheduledStopTime
-                              ? formatPersianTime(student.scheduledStopTime)
-                              : 'ثبت نشده'}
-                          </b>
-                          {student.scheduledReturnStopTime && (
-                            <>
-                              {' '}
-                              · برگشت:{' '}
-                              <b className="text-foreground">
-                                {formatPersianTime(student.scheduledReturnStopTime)}
-                              </b>
-                            </>
-                          )}
-                        </p>
                       </div>
                       <span className="ms-auto text-xs text-muted">
                         {student.grade ?? 'پایه نامشخص'}
