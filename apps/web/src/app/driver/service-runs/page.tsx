@@ -41,10 +41,12 @@ export default async function Page() {
                 </Badge>
               </div>
               <div className="mt-4 grid gap-3 rounded-xl bg-surface-inset p-4 text-sm sm:grid-cols-2">
-                <span>
-                  <MapPin className="mb-1 size-4 text-primary" />
-                  {run.areaDescription ?? 'محدوده ثبت نشده'}
-                </span>
+                {run.areaDescription && (
+                  <span>
+                    <MapPin className="mb-1 size-4 text-primary" />
+                    {run.areaDescription}
+                  </span>
+                )}
                 <span>
                   <Users className="mb-1 size-4 text-primary" />
                   {run.students.length.toLocaleString('fa-IR')} دانش‌آموز
