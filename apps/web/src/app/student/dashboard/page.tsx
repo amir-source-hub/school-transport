@@ -8,6 +8,7 @@ import {
 } from '@/features/student-dashboard/student-dashboard';
 import { getStudentDriverAssignments, getStudents } from '@/features/students/students-api';
 import { formatIrr, formatJalaliDate } from '@/lib/formatters';
+import { buildJourneyStatus } from '@/features/student-dashboard/journey-status';
 
 export const metadata = { title: 'نمای کلی خانواده' };
 export const dynamic = 'force-dynamic';
@@ -38,13 +39,31 @@ export default async function StudentDashboardPage() {
     ]);
   const dashboards: StudentDashboardModel[] = students.map((student) => {
     const enrollment = enrollments.find((item) => item.studentId === student.id);
-    const contract = enrollment && contracts.find((item) => item.registrationId === enrollment.id);
+    const contract =
+      enrollment &&
+      contracts
+        .filter((item) => item.registrationId === enrollment.id)
+        .sort((a, b) => b.versionNumber - a.versionNumber)[0];
     const payment = payments.find((item) => item.studentId === student.id);
     const prepayment = payment?.items.find((item) => item.itemType === 'PREPAYMENT');
     const prepaymentSubmission = prepayment
-      ? offlineSubmissions.find((submission) => submission.paymentScheduleItemId === prepayment.id)
+      ? offlineSubmissions
+          .filter((submission) => submission.paymentScheduleItemId === prepayment.id)
+          .sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime())[0]
       : undefined;
     const nextItem = payment?.items.find((item) => item.itemStatus !== 'PAID');
+    const nextSubmission = nextItem
+      ? offlineSubmissions
+          .filter((submission) => submission.paymentScheduleItemId === nextItem.id)
+          .sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime())[0]
+      : undefined;
+    const awaitingInstallmentSchedule = Boolean(
+      payment &&
+      payment.plan.planType !== 'FULL' &&
+      payment.plan.remainingInstallmentAmount > 0 &&
+      !payment.items.some((item) => item.itemType === 'INSTALLMENT') &&
+      prepayment?.itemStatus === 'PAID',
+    );
     const status = enrollment?.registrationStatus ?? 'DRAFT';
     const lifecycleEvents = [
       ...(payment?.transactions.some((item) => item.transactionStatus === 'SUCCESS')
@@ -73,6 +92,15 @@ export default async function StudentDashboardPage() {
       schoolAndGrade: `${student.schoolName}، پایه ${student.grade ?? '—'}`,
       academicYear: enrollment?.academicYear ?? 'درخواستی ثبت نشده',
       enrollmentCode: status,
+      journey: buildJourneyStatus({
+        enrollmentCode: status,
+        hasEnrollment: Boolean(enrollment),
+        hasContract: Boolean(contract),
+        contractAccepted: contract?.contractStatus === 'ACCEPTED',
+        contractRejected: contract?.contractStatus === 'REJECTED',
+        payment,
+        receipts: offlineSubmissions,
+      }),
       enrollmentStatus:
         prepaymentSubmission?.status === 'PENDING_REVIEW'
           ? 'رسید پیش‌پرداخت در انتظار بررسی'
@@ -84,7 +112,8 @@ export default async function StudentDashboardPage() {
       enrollmentTone:
         status === 'REJECTED' ||
         status === 'NEEDS_CORRECTION' ||
-        prepaymentSubmission?.status === 'REJECTED'
+        prepaymentSubmission?.status === 'REJECTED' ||
+        nextSubmission?.status === 'REJECTED'
           ? 'danger'
           : 'info',
       nextAction: !enrollment
@@ -99,9 +128,20 @@ export default async function StudentDashboardPage() {
                 ? 'رسید نیازمند اصلاح است؛ دلیل را ببینید و رسید تازه ارسال کنید.'
                 : status === 'CONTRACT_ACCEPTED' && prepayment?.itemStatus !== 'PAID'
                   ? 'پیش‌پرداخت را از بخش پرداخت‌ها واریز و تصویر رسید را ارسال کنید.'
-                  : 'وضعیت درخواست را در بخش ثبت‌نام دنبال کنید.',
+                  : awaitingInstallmentSchedule
+                    ? 'پیش‌پرداخت تأیید شده است. برنامه اقساط پس از تنظیم مدیریت نمایش داده می‌شود.'
+                    : nextItem?.itemType === 'INSTALLMENT' &&
+                        nextSubmission?.status === 'PENDING_REVIEW'
+                      ? 'رسید قسط شما ثبت شده و در انتظار بررسی مدیریت است.'
+                      : nextItem?.itemType === 'INSTALLMENT' &&
+                          nextSubmission?.status === 'REJECTED'
+                        ? 'رسید قسط رد شده است؛ از بخش پرداخت‌ها رسید تازه ارسال کنید.'
+                        : nextItem?.itemType === 'INSTALLMENT'
+                          ? 'قسط بعدی را در بخش پرداخت‌ها بررسی و رسید آن را ارسال کنید.'
+                          : 'وضعیت درخواست را در بخش ثبت‌نام دنبال کنید.',
       warning:
         prepaymentSubmission?.rejectionReason ??
+        (nextSubmission?.status === 'REJECTED' ? nextSubmission.rejectionReason : null) ??
         enrollment?.rejectionReason ??
         (status === 'NEEDS_CORRECTION' ? 'اطلاعات درخواست نیازمند اصلاح است.' : null),
       contractStatus: contract?.contractStatus ?? 'هنوز صادر نشده',
@@ -110,14 +150,20 @@ export default async function StudentDashboardPage() {
         : 'برنامه پرداخت هنوز ایجاد نشده',
       nextPayment: nextItem
         ? formatIrr(nextItem.amount)
-        : payment
-          ? 'تسویه‌شده'
-          : 'پس از پذیرش قرارداد مشخص می‌شود',
+        : awaitingInstallmentSchedule
+          ? 'در انتظار تعیین اقساط'
+          : payment
+            ? 'تسویه‌شده'
+            : 'پس از پذیرش قرارداد مشخص می‌شود',
       notifications: recentEvents.slice(0, 5),
       driverAssignments: [],
     };
   });
-  const assignmentGroups = await Promise.all(students.map((student) => getStudentDriverAssignments(student.id)));
-  dashboards.forEach((dashboard, index) => { dashboard.driverAssignments = assignmentGroups[index]; });
+  const assignmentGroups = await Promise.all(
+    students.map((student) => getStudentDriverAssignments(student.id)),
+  );
+  dashboards.forEach((dashboard, index) => {
+    dashboard.driverAssignments = assignmentGroups[index];
+  });
   return <StudentDashboard students={dashboards} />;
 }

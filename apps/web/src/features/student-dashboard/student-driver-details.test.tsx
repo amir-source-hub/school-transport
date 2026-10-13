@@ -1,11 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { StudentDashboard, type StudentDashboard as StudentDashboardModel } from './student-dashboard';
+import {
+  StudentDashboard,
+  type StudentDashboard as StudentDashboardModel,
+} from './student-dashboard';
 
 function student(
   id: string,
   name: string,
-  driver: { id: string; firstName: string; lastName: string; phone: string; direction: 'TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP' },
+  driver: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    direction: 'TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP';
+  },
 ): StudentDashboardModel {
   return {
     id,
@@ -13,6 +22,7 @@ function student(
     schoolAndGrade: 'مدرسه نمونه، پایه اول',
     academicYear: '1405-1406',
     enrollmentCode: 'ENROLLED',
+    journey: { enrollment: [], payments: [] },
     enrollmentStatus: 'خدمت فعال',
     enrollmentTone: 'info',
     nextAction: 'وضعیت درخواست را دنبال کنید.',

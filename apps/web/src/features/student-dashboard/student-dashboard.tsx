@@ -26,12 +26,14 @@ import { cn } from '@/lib/cn';
 import { IranianPlate, driverValueLabel } from '@/features/admin-drivers/driver-display';
 import { driverDocumentLabels } from '@/features/admin-drivers/driver-document-definitions';
 import type { StudentDriverAssignment } from '@/features/students/students-api';
+import type { JourneyItem } from './journey-status';
 export type StudentDashboard = {
   id: string;
   name: string;
   schoolAndGrade: string;
   academicYear: string;
   enrollmentCode: string;
+  journey: { enrollment: JourneyItem[]; payments: JourneyItem[] };
   enrollmentStatus: string;
   enrollmentTone: string;
   nextAction: string;
@@ -47,10 +49,9 @@ function DriverAssignmentDetails({ assignments }: { assignments: StudentDriverAs
   const first = assignments[0]!;
   const documents = [
     ...new Map(
-      assignments.flatMap((assignment) => assignment.documents).map((document) => [
-        document.documentType,
-        document,
-      ]),
+      assignments
+        .flatMap((assignment) => assignment.documents)
+        .map((document) => [document.documentType, document]),
     ).values(),
   ];
   return (
@@ -137,30 +138,6 @@ function groupDriverAssignments(assignments: StudentDriverAssignment[]) {
   return [...groups.entries()];
 }
 
-const journeySteps = [
-  { key: 'request', label: 'درخواست', icon: Route },
-  { key: 'review', label: 'بررسی', icon: Clock },
-  { key: 'price', label: 'قیمت', icon: CreditCard },
-  { key: 'contract', label: 'قرارداد', icon: FileText },
-  { key: 'payment', label: 'پرداخت', icon: CreditCard },
-  { key: 'active', label: 'خدمت فعال', icon: CheckCircle2 },
-] as const;
-
-function getJourneyIndex(enrollmentCode: string): number {
-  const indexes: Record<string, number> = {
-    DRAFT: 0,
-    SUBMITTED: 0,
-    UNDER_REVIEW: 1,
-    NEEDS_CORRECTION: 1,
-    APPROVED: 2,
-    CONTRACT_PENDING: 3,
-    CONTRACT_READY: 3,
-    CONTRACT_ACCEPTED: 4,
-    ENROLLED: 5,
-  };
-  return indexes[enrollmentCode] ?? 0;
-}
-
 function StudentIdentitySwitcher({
   students,
   selectedId,
@@ -223,81 +200,102 @@ function StudentIdentitySwitcher({
   );
 }
 
-function JourneyStatusCanvas({
-  enrollmentCode,
-  enrollmentStatus,
-}: {
-  enrollmentCode: string;
-  enrollmentStatus: string;
-  enrollmentTone: string;
-}) {
-  const current = getJourneyIndex(enrollmentCode);
-  const prefersReduced = useReducedMotion();
+function JourneyStatusCanvas({ journey }: { journey: StudentDashboard['journey'] }) {
+  const stateLabel = {
+    complete: 'تکمیل شده',
+    current: 'در حال انجام',
+    pending: 'در انتظار',
+    attention: 'نیازمند اقدام',
+  } as const;
+  const renderItem = (item: JourneyItem) => {
+    const content = (
+      <>
+        <span
+          className={cn(
+            'flex size-9 shrink-0 items-center justify-center rounded-xl',
+            item.state === 'complete' && 'bg-primary text-white',
+            item.state === 'current' && 'bg-sun/20 text-navy',
+            item.state === 'attention' && 'bg-danger/10 text-danger',
+            item.state === 'pending' && 'bg-surface-inset text-muted',
+          )}
+        >
+          {item.state === 'complete' ? (
+            <CheckCircle2 className="size-5" aria-hidden="true" />
+          ) : item.state === 'attention' ? (
+            <AlertCircle className="size-5" aria-hidden="true" />
+          ) : (
+            <Clock className="size-5" aria-hidden="true" />
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-foreground">{item.label}</span>
+          <span className="mt-0.5 block text-xs leading-5 text-muted">{item.detail}</span>
+          {(item.amount || item.dueDate) && (
+            <span className="mt-1 block text-xs leading-5 text-foreground">
+              {item.amount && <>مبلغ: {item.amount}</>}
+              {item.amount && item.dueDate && ' · '}
+              {item.dueDate && <>سررسید: {item.dueDate}</>}
+            </span>
+          )}
+        </span>
+        <span
+          className={cn(
+            'shrink-0 rounded-full px-2 py-1 text-xs font-bold',
+            item.state === 'complete' && 'bg-primary-soft text-primary',
+            item.state === 'current' && 'bg-sun/15 text-navy',
+            item.state === 'attention' && 'bg-danger/10 text-danger',
+            item.state === 'pending' && 'bg-surface-inset text-muted',
+          )}
+        >
+          {stateLabel[item.state]}
+        </span>
+      </>
+    );
+    const className = cn(
+      'flex min-h-16 items-center gap-3 rounded-2xl border p-3 text-right',
+      item.state === 'current'
+        ? 'border-sun/40 bg-sun/5'
+        : item.state === 'attention'
+          ? 'border-danger/30 bg-danger/5'
+          : 'border-border/60 bg-surface-paper',
+      item.href &&
+        'transition-colors hover:border-primary/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+    );
+    return item.href ? (
+      <a key={item.key} href={item.href} className={className}>
+        {content}
+      </a>
+    ) : (
+      <div key={item.key} className={className}>
+        {content}
+      </div>
+    );
+  };
 
   return (
     <div className="rounded-[var(--radius-card)] border border-border/60 bg-surface-paper p-5 shadow-[var(--shadow-raised)]">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="mb-4 flex items-center gap-2">
         <Route aria-hidden="true" className="size-4 text-primary" />
-        <p className="text-xs font-bold text-muted uppercase tracking-wider">مسیر خدمت</p>
+        <h2 className="text-base font-black">وضعیت درخواست و پرداخت</h2>
       </div>
-      <p className="mb-5 text-sm text-muted">
-        مرحله فعلی: <strong className="text-foreground">{enrollmentStatus}</strong>. مراحل آبی تکمیل
-        شده‌اند و مرحله زرد در حال انجام است.
+      <p className="mb-5 text-sm leading-6 text-muted">
+        وضعیت هر مرحله بر اساس درخواست، قرارداد و پرداخت‌های تأییدشده نمایش داده می‌شود.
       </p>
-      <div
-        className="relative flex items-center justify-between"
-        role="progressbar"
-        aria-valuenow={current}
-        aria-valuemin={0}
-        aria-valuemax={journeySteps.length - 1}
-      >
-        <div
-          className="absolute left-4 right-4 top-4 h-0.5 -translate-y-1/2 bg-border/70"
-          aria-hidden="true"
-        >
-          <motion.div
-            className="absolute right-0 h-full bg-primary"
-            initial={prefersReduced ? false : { width: '0%' }}
-            animate={{ width: `${(current / (journeySteps.length - 1)) * 100}%` }}
-            transition={
-              prefersReduced ? { duration: 0 } : { duration: 0.6, ease: [0.16, 1, 0.3, 1] }
-            }
-          />
-        </div>
-        {journeySteps.map((step, index) => {
-          const isCompleted = index < current;
-          const isCurrent = index === current;
-          return (
-            <div key={step.key} className="relative z-10 flex flex-col items-center gap-1.5">
-              <span
-                className={cn(
-                  'flex size-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-[var(--duration-ui)]',
-                  isCompleted && 'bg-primary text-white shadow-sm shadow-primary/30',
-                  isCurrent && 'border-2 border-sun bg-sun/10 text-sun shadow-sm shadow-sun/20',
-                  !isCompleted &&
-                    !isCurrent &&
-                    'border border-border/60 bg-surface-inset text-muted',
-                )}
-              >
-                {isCompleted ? (
-                  <CheckCircle2 aria-hidden="true" className="size-4" />
-                ) : (
-                  <step.icon aria-hidden="true" className="size-3.5" />
-                )}
-              </span>
-              <span
-                className={cn(
-                  'text-[10px] font-medium whitespace-nowrap',
-                  isCurrent && 'text-sun font-bold',
-                  isCompleted && 'text-primary',
-                  !isCompleted && !isCurrent && 'text-muted',
-                )}
-              >
-                {step.label}
-              </span>
-            </div>
-          );
-        })}
+      <div className="space-y-5">
+        <section aria-label="ثبت‌نام و فعال‌سازی سرویس">
+          <h3 className="mb-2 text-sm font-black">درخواست و قرارداد</h3>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {journey.enrollment.filter((item) => item.key !== 'active').map(renderItem)}
+          </div>
+        </section>
+        <section aria-label="وضعیت پرداخت‌ها">
+          <h3 className="mb-2 text-sm font-black">وضعیت پرداخت‌ها</h3>
+          <div className="grid gap-2 sm:grid-cols-2">{journey.payments.map(renderItem)}</div>
+        </section>
+        <section aria-label="فعال‌سازی سرویس">
+          <h3 className="mb-2 text-sm font-black">فعال‌سازی سرویس</h3>
+          {journey.enrollment.filter((item) => item.key === 'active').map(renderItem)}
+        </section>
       </div>
     </div>
   );
@@ -316,7 +314,7 @@ function NextBestAction({ nextAction, warning }: { nextAction: string; warning: 
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-muted">اقدام بعدی</p>
-          <h3 className="mt-1 text-lg font-black">{warning || 'در انتظار بررسی درخواست'}</h3>
+          <h3 className="mt-1 text-lg font-black">{warning ? 'نیازمند اقدام' : 'مرحله بعدی'}</h3>
           <p className="mt-1 text-sm text-muted">{nextAction}</p>
         </div>
         <span
@@ -431,18 +429,22 @@ export function StudentDashboard({ students }: { students: readonly StudentDashb
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">وضعیت سرویس را دنبال کنید</h1>
         </div>
         <div className="flex flex-wrap gap-2">
-        <ButtonLink
-          href="/student/enrollments"
-          size="sm"
-          className="bg-navy text-white hover:bg-navy/90"
-        >
-          <GraduationCap aria-hidden="true" className="size-4" />
-          ثبت‌نام دانش‌آموز
-        </ButtonLink>
-        <ButtonLink href={`/student/students/${selectedStudent.id}#student-companion`} size="sm" variant="secondary">
-          <UserRoundPlus aria-hidden="true" className="size-4" />
-          {selectedStudent.name} · مراقب همراه
-        </ButtonLink>
+          <ButtonLink
+            href="/student/enrollments"
+            size="sm"
+            className="bg-navy text-white hover:bg-navy/90"
+          >
+            <GraduationCap aria-hidden="true" className="size-4" />
+            ثبت‌نام دانش‌آموز
+          </ButtonLink>
+          <ButtonLink
+            href={`/student/students/${selectedStudent.id}#student-companion`}
+            size="sm"
+            variant="secondary"
+          >
+            <UserRoundPlus aria-hidden="true" className="size-4" />
+            {selectedStudent.name} · مراقب همراه
+          </ButtonLink>
         </div>
       </div>
 
@@ -467,11 +469,7 @@ export function StudentDashboard({ students }: { students: readonly StudentDashb
             nextAction={selectedStudent.nextAction}
             warning={selectedStudent.warning}
           />
-          <JourneyStatusCanvas
-            enrollmentCode={selectedStudent.enrollmentCode}
-            enrollmentStatus={selectedStudent.enrollmentStatus}
-            enrollmentTone={selectedStudent.enrollmentTone}
-          />
+          <JourneyStatusCanvas journey={selectedStudent.journey} />
         </div>
         <div className="space-y-4">
           <MoneyStrip
@@ -522,8 +520,15 @@ export function StudentDashboard({ students }: { students: readonly StudentDashb
         <EventTimeline notifications={selectedStudent.notifications} />
       </div>
       <div className="rounded-[var(--radius-card)] border border-border/60 bg-surface-paper p-5 shadow-[var(--shadow-raised)]">
-        <div className="flex items-center gap-2"><Route aria-hidden="true" className="size-4 text-primary" /><h2 className="font-black">راننده و سرویس‌های فعال {selectedStudent.name}</h2></div>
-        {!selectedStudent.driverAssignments.length && <p className="mt-3 text-sm text-muted">هنوز راننده‌ای برای این دانش‌آموز تعیین نشده است.</p>}
+        <div className="flex items-center gap-2">
+          <Route aria-hidden="true" className="size-4 text-primary" />
+          <h2 className="font-black">راننده و سرویس‌های فعال {selectedStudent.name}</h2>
+        </div>
+        {!selectedStudent.driverAssignments.length && (
+          <p className="mt-3 text-sm text-muted">
+            هنوز راننده‌ای برای این دانش‌آموز تعیین نشده است.
+          </p>
+        )}
         <div className="mt-4 grid gap-4">
           {groupDriverAssignments(selectedStudent.driverAssignments).map(([key, assignments]) => (
             <DriverAssignmentDetails key={key} assignments={assignments} />
