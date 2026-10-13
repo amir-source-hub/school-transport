@@ -131,6 +131,11 @@ const ids = {
   registration4: '00000000-0000-4000-8000-000000000073',
   registration5: '00000000-0000-4000-8000-000000000074',
   registration6: '00000000-0000-4000-8000-000000000075',
+  priceAwaitingSchedule: '00000000-0000-4000-8000-000000000076',
+  planAwaitingSchedule: '00000000-0000-4000-8000-000000000077',
+  prepaymentAwaitingSchedule: '00000000-0000-4000-8000-000000000078',
+  transactionAwaitingSchedule: '00000000-0000-4000-8000-000000000079',
+  contractAwaitingSchedule: '00000000-0000-4000-8000-000000000080',
 } as const;
 
 export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Promise<void> {
@@ -1045,7 +1050,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           serviceType: 'ROUND_TRIP',
           selectedAddressId: ids.address,
           requestedStartDate: new Date('2026-09-23T04:30:00Z'),
-          registrationStatus: 'CONTRACT_ACCEPTED',
+          registrationStatus: 'ENROLLED',
           submittedAt: new Date('2026-07-01T08:00:00Z'),
           reviewedAt: new Date('2026-07-03T08:00:00Z'),
           reviewedByAdminId: ids.admin,
@@ -1080,7 +1085,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           serviceType: 'ROUND_TRIP',
           selectedAddressId: ids.family2Address,
           requestedStartDate: new Date('2026-09-23T04:30:00Z'),
-          registrationStatus: 'CONTRACT_ACCEPTED',
+          registrationStatus: 'ENROLLED',
           submittedAt: new Date('2026-07-13T08:00:00Z'),
           reviewedAt: new Date('2026-07-15T08:00:00Z'),
           reviewedByAdminId: ids.admin,
@@ -1132,7 +1137,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         planType: 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
         totalAmount: 120_000_000,
         prepaymentAmount: 49_978_000,
-        remainingInstallmentAmount: 80_000_000,
+        remainingInstallmentAmount: 70_022_000,
         installmentCount: 4,
         planStatus: 'ACTIVE',
         activatedAt: new Date('2026-07-06T08:00:00Z'),
@@ -1157,7 +1162,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           paymentPlanId: ids.plan,
           itemType: 'INSTALLMENT',
           sequenceNumber: 1,
-          amount: 20_000_000,
+          amount: 17_505_500,
           dueDate: new Date('2026-09-23T08:00:00Z'),
         },
         {
@@ -1165,7 +1170,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           paymentPlanId: ids.plan,
           itemType: 'INSTALLMENT',
           sequenceNumber: 2,
-          amount: 20_000_000,
+          amount: 17_505_500,
           dueDate: new Date('2026-10-23T08:00:00Z'),
         },
         {
@@ -1173,7 +1178,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           paymentPlanId: ids.plan,
           itemType: 'INSTALLMENT',
           sequenceNumber: 3,
-          amount: 20_000_000,
+          amount: 17_505_500,
           dueDate: new Date('2026-11-22T08:00:00Z'),
         },
         {
@@ -1181,7 +1186,7 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
           paymentPlanId: ids.plan,
           itemType: 'INSTALLMENT',
           sequenceNumber: 4,
-          amount: 20_000_000,
+          amount: 17_505_500,
           dueDate: new Date('2026-12-22T08:00:00Z'),
         },
       ])
@@ -1221,6 +1226,86 @@ export async function seedDatabase(databaseUrl = process.env.DATABASE_URL): Prom
         generatedByAdminId: ids.admin,
         generatedAt: new Date('2026-07-06T08:00:00Z'),
         acceptedAt: new Date('2026-07-07T08:00:00Z'),
+      })
+      .onConflictDoNothing();
+    // A second paid prepayment has no schedule yet, so the admin can test creating one.
+    await db
+      .insert(registrationPrices)
+      .values({
+        id: ids.priceAwaitingSchedule,
+        registrationId: ids.registration4,
+        totalAmount: 60_000_000,
+        currency: 'IRR',
+        prepaymentAmount: 20_000_000,
+        installmentCount: 4,
+        priceStatus: 'ACCEPTED',
+        setByAdminId: ids.admin,
+        parentConfirmedAt: new Date('2026-07-16T08:00:00Z'),
+      })
+      .onConflictDoNothing();
+    await db
+      .insert(paymentPlans)
+      .values({
+        id: ids.planAwaitingSchedule,
+        registrationPriceId: ids.priceAwaitingSchedule,
+        planType: 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
+        totalAmount: 60_000_000,
+        prepaymentAmount: 20_000_000,
+        remainingInstallmentAmount: 40_000_000,
+        installmentCount: 0,
+        planStatus: 'ACTIVE',
+        activatedAt: new Date('2026-07-17T08:00:00Z'),
+      })
+      .onConflictDoNothing();
+    await db
+      .insert(paymentScheduleItems)
+      .values({
+        id: ids.prepaymentAwaitingSchedule,
+        paymentPlanId: ids.planAwaitingSchedule,
+        itemType: 'PREPAYMENT',
+        sequenceNumber: 0,
+        amount: 20_000_000,
+        dueDate: new Date('2026-07-17T08:00:00Z'),
+        itemStatus: 'PAID',
+        paidAmount: 20_000_000,
+        paidAt: new Date('2026-07-17T08:00:00Z'),
+      })
+      .onConflictDoNothing();
+    await db
+      .insert(paymentTransactions)
+      .values({
+        id: ids.transactionAwaitingSchedule,
+        paymentPlanId: ids.planAwaitingSchedule,
+        paymentScheduleItemId: ids.prepaymentAwaitingSchedule,
+        userId: ids.family2,
+        amount: 20_000_000,
+        paymentMethod: 'ONLINE',
+        gatewayName: 'SEED_GATEWAY',
+        gatewayTransactionId: 'seed-transaction-awaiting-schedule',
+        idempotencyKey: 'seed-payment-awaiting-schedule',
+        transactionStatus: 'SUCCEEDED',
+        verifiedAt: new Date('2026-07-17T08:01:00Z'),
+      })
+      .onConflictDoNothing();
+    await db
+      .insert(contracts)
+      .values({
+        id: ids.contractAwaitingSchedule,
+        registrationId: ids.registration4,
+        registrationPriceId: ids.priceAwaitingSchedule,
+        paymentPlanId: ids.planAwaitingSchedule,
+        contractNumber: 'ST-1405-0002',
+        contractStatus: 'ACCEPTED',
+        selectedAddressId: ids.family2Address,
+        contractDataSnapshot: JSON.stringify({
+          academicYear: '1405-1406',
+          serviceType: 'ROUND_TRIP',
+          totalAmount: 60_000_000,
+        }),
+        versionNumber: 1,
+        generatedByAdminId: ids.admin,
+        generatedAt: new Date('2026-07-16T08:00:00Z'),
+        acceptedAt: new Date('2026-07-16T12:00:00Z'),
       })
       .onConflictDoNothing();
     await db

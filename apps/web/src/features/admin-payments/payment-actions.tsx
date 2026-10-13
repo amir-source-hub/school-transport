@@ -12,6 +12,7 @@ import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import { ApiClientError } from '@/lib/api-client';
 import { createClientId } from '@/lib/client-id';
+import { normalizeDigits } from '@/features/enrollment/national-id';
 import {
   configureInstallments,
   approvePayment,
@@ -244,39 +245,54 @@ export function ApprovePaymentDialog({
 export function ConfigureInstallmentsDialog({
   planId,
   fullPayment = false,
+  initialItems = [],
 }: {
   planId: string;
   fullPayment?: boolean;
+  initialItems?: {
+    id: string;
+    amount: number;
+    dueDate: string | null;
+    paid: boolean;
+    transaction: unknown;
+  }[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>();
-  const [items, setItems] = useState([{ amount: '', dueDate: '' }]);
-  const [configured, setConfigured] = useState(false);
+  const [items, setItems] = useState(() =>
+    initialItems.length
+      ? initialItems.map((item) => ({
+          id: item.id,
+          amount: String(item.amount),
+          dueDate: item.dueDate?.slice(0, 10) ?? '',
+          locked: item.paid || Boolean(item.transaction),
+        }))
+      : [{ id: undefined as string | undefined, amount: '', dueDate: '', locked: false }],
+  );
   const update = (index: number, key: 'amount' | 'dueDate', value: string) =>
     setItems((current) =>
       current.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: value } : item)),
     );
-  if (configured) {
-    return (
-      <p role="status" className="rounded-xl bg-success-soft p-3 text-sm font-bold text-success">
-        {fullPayment ? 'پرداخت یکجای باقی‌مانده ثبت شد.' : 'برنامه اقساط ثبت شد.'}
-      </p>
-    );
-  }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>{fullPayment ? 'تنظیم پرداخت باقی‌مانده' : 'تنظیم برنامه اقساط'}</Button>
+        <Button>
+          {initialItems.length
+            ? 'ویرایش برنامه پرداخت'
+            : fullPayment
+              ? 'تنظیم پرداخت باقی‌مانده'
+              : 'تنظیم برنامه اقساط'}
+        </Button>
       </DialogTrigger>
       <DialogContent
         title={fullPayment ? 'پرداخت یکجای باقی‌مانده' : 'برنامه اقساط'}
         description={
           fullPayment
             ? 'مبلغ باقی‌مانده و تاریخ پرداخت را تعیین کنید. پیش‌پرداخت ثابت می‌ماند.'
-            : 'تعداد، مبلغ و تاریخ هر قسط را تعیین کنید. پیش‌پرداخت ۴٬۹۹۷٬۸۰۰ تومان ثابت می‌ماند.'
+            : 'تعداد، مبلغ و تاریخ هر قسط را تعیین کنید. اقساط دارای سابقه پرداخت یا رسید قابل تغییر نیستند.'
         }
       >
         <div className="max-h-[65vh] space-y-4 overflow-y-auto">
@@ -297,9 +313,15 @@ export function ConfigureInstallmentsDialog({
                     <Input
                       className="mt-2 bg-white"
                       inputMode="numeric"
-                      value={item.amount}
+                      dir="ltr"
+                      disabled={item.locked}
+                      value={item.amount ? Number(item.amount).toLocaleString('en-US') : ''}
                       onChange={(event) =>
-                        update(index, 'amount', event.target.value.replace(/\D/g, ''))
+                        update(
+                          index,
+                          'amount',
+                          normalizeDigits(event.target.value).replace(/[^0-9]/g, ''),
+                        )
                       }
                     />
                   </label>
@@ -307,11 +329,26 @@ export function ConfigureInstallmentsDialog({
                     سررسید (شمسی)
                     <JalaliDateInput
                       required
+                      disabled={item.locked}
                       value={item.dueDate}
                       onChange={(value) => update(index, 'dueDate', value)}
                     />
                   </label>
                 </div>
+                {!item.locked && items.length > 1 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))
+                    }
+                  >
+                    حذف این قسط
+                  </Button>
+                )}
+                {item.locked && (
+                  <p className="text-xs text-muted">این قسط سابقه پرداخت یا رسید دارد.</p>
+                )}
                 {[...amountErrors, ...dueDateErrors].map((message, messageIndex) => (
                   <p key={messageIndex} className="text-xs text-danger">
                     {message}
@@ -325,18 +362,19 @@ export function ConfigureInstallmentsDialog({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setItems((current) => [...current, { amount: '', dueDate: '' }])}
+                onClick={() =>
+                  setItems((current) => [
+                    ...current,
+                    { id: undefined, amount: '', dueDate: '', locked: false },
+                  ])
+                }
               >
                 افزودن قسط
               </Button>
             )}
-            {!fullPayment && items.length > 1 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setItems((current) => current.slice(0, -1))}
-              >
-                حذف قسط آخر
+            {initialItems.length > 0 && !items.some((item) => item.locked) && (
+              <Button size="sm" variant="ghost" onClick={() => setItems([])}>
+                حذف کل برنامه
               </Button>
             )}
           </div>
@@ -352,10 +390,13 @@ export function ConfigureInstallmentsDialog({
               try {
                 await configureInstallments(
                   planId,
-                  items.map((item) => ({ amount: Number(item.amount), dueDate: item.dueDate })),
+                  items.map((item) => ({
+                    id: item.id,
+                    amount: Number(item.amount),
+                    dueDate: item.dueDate,
+                  })),
                 );
                 setOpen(false);
-                setConfigured(true);
                 router.refresh();
               } catch (caught) {
                 const feedback = getApiErrorFeedback(caught);

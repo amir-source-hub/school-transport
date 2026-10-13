@@ -193,7 +193,7 @@ export async function resetPaymentForResubmission(
 
 export async function configureInstallments(
   planId: string,
-  items: { amount: number; dueDate: string }[],
+  items: { id?: string; amount: number; dueDate: string }[],
 ) {
   await apiRequest(`/admin/payments/plans/${planId}/installments`, {
     method: 'POST',

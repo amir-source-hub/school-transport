@@ -53,7 +53,7 @@ export const paymentPlans = pgTable(
     ),
     installmentStructure: check(
       'payment_plans_installment_structure',
-      sql`(${table.planType} = 'FULL' AND ${table.installmentCount} = 1) OR (${table.planType} IN ('PREPAYMENT_PLUS_FOUR_INSTALLMENTS', 'ADMIN_CONFIGURED') AND ${table.installmentCount} BETWEEN 1 AND 12)`,
+      sql`(${table.planType} = 'FULL' AND ${table.installmentCount} BETWEEN 0 AND 1) OR (${table.planType} IN ('PREPAYMENT_PLUS_FOUR_INSTALLMENTS', 'ADMIN_CONFIGURED') AND ${table.installmentCount} BETWEEN 0 AND 12)`,
     ),
   }),
 );

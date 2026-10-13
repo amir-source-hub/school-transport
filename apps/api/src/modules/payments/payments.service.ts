@@ -159,6 +159,21 @@ export class PaymentsService {
       .limit(1);
 
     if (result.length === 0) throw new NotFoundError('Schedule item');
+    if (result[0].item.itemType === 'INSTALLMENT') {
+      const [prepayment] = await this.db.db
+        .select({ status: paymentScheduleItems.itemStatus })
+        .from(paymentScheduleItems)
+        .where(
+          and(
+            eq(paymentScheduleItems.paymentPlanId, result[0].item.paymentPlanId),
+            eq(paymentScheduleItems.itemType, 'PREPAYMENT'),
+          ),
+        )
+        .limit(1);
+      if (prepayment?.status !== 'PAID') {
+        throw new ConflictError('PREPAYMENT_REQUIRED', 'Prepayment must be approved first.');
+      }
+    }
     return result[0].item;
   }
 
@@ -354,8 +369,14 @@ export class PaymentsService {
         .select()
         .from(paymentScheduleItems)
         .where(eq(paymentScheduleItems.paymentPlanId, tx[0].paymentPlanId));
-
-      const allPaid = planItems.length > 0 && planItems.every((i) => i.itemStatus === 'PAID');
+      const [currentPlan] = await txn
+        .select({ totalAmount: paymentPlans.totalAmount })
+        .from(paymentPlans)
+        .where(eq(paymentPlans.id, tx[0].paymentPlanId));
+      const allPaid =
+        planItems.length > 0 &&
+        planItems.reduce((sum, item) => sum + item.amount, 0) === currentPlan.totalAmount &&
+        planItems.every((i) => i.itemStatus === 'PAID');
       const prepaid = planItems.some((i) => i.itemType === 'PREPAYMENT' && i.itemStatus === 'PAID');
 
       if (prepaid) {
@@ -832,12 +853,17 @@ export class PaymentsService {
         .select()
         .from(paymentScheduleItems)
         .where(eq(paymentScheduleItems.paymentPlanId, submission.paymentPlanId));
+      const [currentPlan] = await txn
+        .select({ totalAmount: paymentPlans.totalAmount })
+        .from(paymentPlans)
+        .where(eq(paymentPlans.id, submission.paymentPlanId));
       const prepaid = planItems.some(
         (scheduleItem) =>
           scheduleItem.itemType === 'PREPAYMENT' && scheduleItem.itemStatus === 'PAID',
       );
       const allPaid =
         planItems.length > 0 &&
+        planItems.reduce((sum, item) => sum + item.amount, 0) === currentPlan.totalAmount &&
         planItems.every((scheduleItem) => scheduleItem.itemStatus === 'PAID');
 
       if (prepaid) {
@@ -1015,11 +1041,17 @@ export class PaymentsService {
           .select()
           .from(paymentScheduleItems)
           .where(eq(paymentScheduleItems.paymentPlanId, submission.paymentPlanId));
+        const [currentPlan] = await txn
+          .select({ totalAmount: paymentPlans.totalAmount })
+          .from(paymentPlans)
+          .where(eq(paymentPlans.id, submission.paymentPlanId));
         const prepaymentPaid = planItems.some(
           (candidate) => candidate.itemType === 'PREPAYMENT' && candidate.itemStatus === 'PAID',
         );
         const allPaid =
-          planItems.length > 0 && planItems.every((candidate) => candidate.itemStatus === 'PAID');
+          planItems.length > 0 &&
+          planItems.reduce((sum, item) => sum + item.amount, 0) === currentPlan.totalAmount &&
+          planItems.every((candidate) => candidate.itemStatus === 'PAID');
         await txn
           .update(paymentPlans)
           .set({
@@ -1380,9 +1412,12 @@ export class PaymentsService {
       .filter((account) => account !== null);
   }
 
-  async configureInstallments(planId: string, items: { amount: number; dueDate: string }[]) {
-    if (items.length < 1 || items.length > 12) {
-      throw new ValidationError('Installment count must be between 1 and 12.');
+  async configureInstallments(
+    planId: string,
+    items: { id?: string; amount: number; dueDate: string }[],
+  ) {
+    if (items.length > 12) {
+      throw new ValidationError('Installment count must be at most 12.');
     }
     const [plan] = await this.db.db
       .select()
@@ -1398,7 +1433,7 @@ export class PaymentsService {
       const key = `items.${index}.dueDate`;
       const messages: string[] = [];
       if (!Number.isInteger(item.amount) || item.amount <= 0) {
-        messages.push('مبلغ قسط باید عددی بزرگ‌تر از صفر باشد.');
+        errors[`items.${index}.amount`] = ['مبلغ قسط باید عددی بزرگ‌تر از صفر باشد.'];
       }
       const dueDate = new Date(item.dueDate);
       if (Number.isNaN(dueDate.getTime())) {
@@ -1420,33 +1455,103 @@ export class PaymentsService {
     }
 
     const result = await this.db.db.transaction(async (txn) => {
-      if (plan.planType === 'FULL' && items.length !== 1) {
+      const [currentPlan] = await txn
+        .select()
+        .from(paymentPlans)
+        .where(eq(paymentPlans.id, planId))
+        .for('update');
+      if (!currentPlan) throw new NotFoundError('Payment plan', planId);
+      const existing = await txn
+        .select()
+        .from(paymentScheduleItems)
+        .where(eq(paymentScheduleItems.paymentPlanId, planId));
+      const prepayment = existing.find((item) => item.itemType === 'PREPAYMENT');
+      if (!prepayment || prepayment.itemStatus !== 'PAID') {
+        throw new ConflictError('PREPAYMENT_REQUIRED', 'Prepayment must be approved first.');
+      }
+      if (currentPlan.planStatus === 'COMPLETED' || currentPlan.planStatus === 'CANCELLED') {
+        throw new ConflictError('PLAN_CLOSED', 'A closed payment plan cannot be changed.');
+      }
+      if (plan.planType === 'FULL' && items.length > 1) {
         throw new ValidationError('Full payment requires exactly one remaining payment.');
       }
+      const previous = existing.filter((item) => item.itemType === 'INSTALLMENT');
+      const previousById = new Map(previous.map((item) => [item.id, item]));
+      const requestedIds = items.map((item) => item.id).filter((id): id is string => Boolean(id));
+      if (
+        new Set(requestedIds).size !== requestedIds.length ||
+        requestedIds.some((id) => !previousById.has(id))
+      ) {
+        throw new ValidationError(
+          'Installment IDs must belong to this payment plan and be unique.',
+        );
+      }
+      const activeIds = previous.map((item) => item.id);
+      const [transactions, submissions] = activeIds.length
+        ? await Promise.all([
+            txn
+              .select({ id: paymentTransactions.paymentScheduleItemId })
+              .from(paymentTransactions)
+              .where(inArray(paymentTransactions.paymentScheduleItemId, activeIds)),
+            txn
+              .select({ id: offlinePaymentSubmissions.paymentScheduleItemId })
+              .from(offlinePaymentSubmissions)
+              .where(inArray(offlinePaymentSubmissions.paymentScheduleItemId, activeIds)),
+          ])
+        : [[], []];
+      const protectedIds = new Set([...transactions, ...submissions].map((row) => row.id));
+      for (const old of previous) {
+        if (!protectedIds.has(old.id) && old.itemStatus !== 'PAID') continue;
+        const index = items.findIndex((item) => item.id === old.id);
+        const candidate = items[index];
+        if (
+          !candidate ||
+          candidate.amount !== old.amount ||
+          index + 1 !== old.sequenceNumber ||
+          new Date(candidate.dueDate).getTime() !== old.dueDate?.getTime()
+        ) {
+          throw new ConflictError(
+            'INSTALLMENT_HAS_PAYMENT_HISTORY',
+            'An installment with payment or receipt history cannot be changed or removed.',
+          );
+        }
+      }
       const remaining = items.reduce((sum, item) => sum + item.amount, 0);
-      const total = plan.prepaymentAmount + remaining;
-      await txn
-        .delete(paymentScheduleItems)
-        .where(
-          and(
-            eq(paymentScheduleItems.paymentPlanId, planId),
-            eq(paymentScheduleItems.itemType, 'INSTALLMENT'),
+      if (remaining > 2_147_483_647 - currentPlan.prepaymentAmount) {
+        throw new ValidationError('Payment plan total exceeds the allowed amount.');
+      }
+      const total = currentPlan.prepaymentAmount + remaining;
+      const replaceable = previous.filter(
+        (item) => !protectedIds.has(item.id) && item.itemStatus !== 'PAID',
+      );
+      if (replaceable.length)
+        await txn.delete(paymentScheduleItems).where(
+          inArray(
+            paymentScheduleItems.id,
+            replaceable.map((item) => item.id),
           ),
         );
-      await txn.insert(paymentScheduleItems).values(
-        items.map((item, index) => ({
-          id: generateId(),
-          paymentPlanId: planId,
-          itemType: 'INSTALLMENT',
-          sequenceNumber: index + 1,
-          amount: item.amount,
-          dueDate: new Date(item.dueDate),
-        })),
-      );
+      for (const [index, item] of items.entries()) {
+        if (!item.id || !protectedIds.has(item.id)) {
+          await txn.insert(paymentScheduleItems).values({
+            id: generateId(),
+            paymentPlanId: planId,
+            itemType: 'INSTALLMENT',
+            sequenceNumber: index + 1,
+            amount: item.amount,
+            dueDate: new Date(item.dueDate),
+          });
+        }
+      }
       await txn
         .update(paymentPlans)
         .set({
-          planType: plan.planType === 'FULL' ? 'FULL' : 'ADMIN_CONFIGURED',
+          planType:
+            currentPlan.planType === 'FULL'
+              ? 'FULL'
+              : items.length
+                ? 'ADMIN_CONFIGURED'
+                : 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
           totalAmount: total,
           remainingInstallmentAmount: remaining,
           installmentCount: items.length,
@@ -1464,9 +1569,9 @@ export class PaymentsService {
         .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
         .where(eq(paymentPlans.id, planId))
         .limit(1);
-      if (owner) {
+      if (owner && items.length) {
         await this.notifications.enqueueInTransaction(txn, {
-          eventId: `PAYMENT_PLAN_READY:${planId}:${owner.userId}`,
+          eventId: `PAYMENT_PLAN_READY:${planId}:${owner.userId}:${generateId()}`,
           userId: owner.userId,
           notificationType: 'PAYMENT_PLAN_READY',
           title: 'برنامه پرداخت آماده است',
