@@ -1469,9 +1469,6 @@ export class PaymentsService {
       if (!prepayment || prepayment.itemStatus !== 'PAID') {
         throw new ConflictError('PREPAYMENT_REQUIRED', 'Prepayment must be approved first.');
       }
-      if (currentPlan.planStatus === 'COMPLETED' || currentPlan.planStatus === 'CANCELLED') {
-        throw new ConflictError('PLAN_CLOSED', 'A closed payment plan cannot be changed.');
-      }
       if (plan.planType === 'FULL' && items.length > 1) {
         throw new ValidationError('Full payment requires exactly one remaining payment.');
       }
@@ -1500,6 +1497,9 @@ export class PaymentsService {
           ])
         : [[], []];
       const protectedIds = new Set([...transactions, ...submissions].map((row) => row.id));
+      for (const item of previous) {
+        if (item.itemStatus === 'PAID') protectedIds.add(item.id);
+      }
       for (const old of previous) {
         if (!protectedIds.has(old.id) && old.itemStatus !== 'PAID') continue;
         const index = items.findIndex((item) => item.id === old.id);
@@ -1521,6 +1521,9 @@ export class PaymentsService {
         throw new ValidationError('Payment plan total exceeds the allowed amount.');
       }
       const total = currentPlan.prepaymentAmount + remaining;
+      const allPaid =
+        items.length > 0 &&
+        items.every((item) => item.id && previousById.get(item.id)?.itemStatus === 'PAID');
       const replaceable = previous.filter(
         (item) => !protectedIds.has(item.id) && item.itemStatus !== 'PAID',
       );
@@ -1555,6 +1558,9 @@ export class PaymentsService {
           totalAmount: total,
           remainingInstallmentAmount: remaining,
           installmentCount: items.length,
+          planStatus: allPaid ? 'COMPLETED' : 'ACTIVE',
+          completedAt: allPaid ? new Date() : null,
+          activatedAt: currentPlan.activatedAt ?? new Date(),
           updatedAt: new Date(),
         })
         .where(eq(paymentPlans.id, planId));

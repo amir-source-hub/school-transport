@@ -213,10 +213,7 @@ export default async function AdminPaymentsPage({
         <div className="grid gap-4">
           {visiblePayments.map((payment) => {
             const prepaymentStatus = payment.prepayment.transaction?.status ?? 'پرداخت نشده';
-            const canConfigure =
-              payment.prepayment.paid &&
-              payment.planStatus !== 'COMPLETED' &&
-              payment.planStatus !== 'CANCELLED';
+            const canConfigure = payment.prepayment.paid;
             return (
               <Card key={payment.planId}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
