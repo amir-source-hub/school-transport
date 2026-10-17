@@ -1,0 +1,13 @@
+{{ define "bale.message" -}}
+[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}
+Severity: {{ .CommonLabels.severity }}
+Service: {{ .CommonLabels.service }}
+Environment: {{ .CommonLabels.environment }}
+{{- with .CommonAnnotations.summary }}
+Summary: {{ . }}
+{{- end }}
+Alerts in group: {{ len .Alerts }}
+{{- with .ExternalURL }}
+Alertmanager: {{ . }}
+{{- end }}
+{{- end }}

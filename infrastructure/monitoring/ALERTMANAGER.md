@@ -4,15 +4,18 @@ Alertmanager runs from the digest-pinned official image in `docker-compose.monit
 groups repeated alerts, sends resolved notifications, routes critical alerts with a shorter delay,
 and inhibits a warning when the same alert is already critical.
 
-## Notification secret
+## Bale notification secrets
 
-Put the approved HTTPS webhook endpoint in a root-owned mode `0600` file. The file must contain only
-the URL. Set `ALERT_WEBHOOK_URL_FILE` to its host path. The URL is mounted as a Docker secret and read
-through Alertmanager's `url_file` setting; do not put it in `.env`, source control, commands, logs, or
+Create the bot with Bale's `@botfather`, add it to the destination chat, and obtain the destination's
+numeric chat ID. Put the token and chat ID in separate root-owned mode `0600` files containing only
+their respective values. Configure their host paths as `BALE_BOT_TOKEN_FILE` and
+`BALE_CHAT_ID_FILE`. Do not put either value directly in `.env`, source control, commands, logs, or
 incident records.
 
-The receiver must accept the standard Alertmanager webhook JSON schema. Place any provider-specific
-translation service behind the webhook endpoint rather than embedding provider credentials here.
+Alertmanager uses its Telegram-compatible notifier with `https://tapi.bale.ai` as the API root.
+Both values are mounted as Docker secrets and read through `bot_token_file` and `chat_id_file`.
+Plain-text messages are used because Bale does not document Telegram parse modes. The concise
+template stays well below Bale's documented 4096-character message limit.
 
 ## Operation
 
@@ -35,4 +38,4 @@ resolution delivery, confirm grouping and inhibition, and record timestamps. A s
 check alone does not prove the notification channel works.
 
 Maintain an out-of-band contact tree that does not depend on this Alertmanager, its host, or the
-configured webhook provider.
+configured Bale chat.

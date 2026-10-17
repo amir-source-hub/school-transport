@@ -59,8 +59,9 @@ services:
       - --web.external-url=${ALERTMANAGER_EXTERNAL_URL:-http://localhost:9093}
     volumes:
       - ./infrastructure/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./infrastructure/monitoring/templates:/etc/alertmanager/templates:ro
       - alertmanager_data:/alertmanager
-    secrets: [alert_webhook_url]
+    secrets: [bale_bot_token, bale_chat_id]
     ports:
       - 127.0.0.1:${ALERTMANAGER_HOST_PORT:-9093}:9093
     healthcheck:
@@ -282,5 +283,7 @@ secrets:
     file: ${REDIS_EXPORTER_PASSWORD_MAP_FILE:?Set REDIS_EXPORTER_PASSWORD_MAP_FILE to a protected JSON password map}
   grafana_admin_password:
     file: ${GRAFANA_ADMIN_PASSWORD_FILE:?Set GRAFANA_ADMIN_PASSWORD_FILE to a protected password file}
-  alert_webhook_url:
-    file: ${ALERT_WEBHOOK_URL_FILE:?Set ALERT_WEBHOOK_URL_FILE to a protected webhook URL file}
+  bale_bot_token:
+    file: ${BALE_BOT_TOKEN_FILE:?Set BALE_BOT_TOKEN_FILE to the protected Bale bot token file}
+  bale_chat_id:
+    file: ${BALE_CHAT_ID_FILE:?Set BALE_CHAT_ID_FILE to the protected numeric Bale chat ID file}

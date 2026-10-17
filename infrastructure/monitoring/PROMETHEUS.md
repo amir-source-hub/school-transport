@@ -75,9 +75,9 @@ The complete preflight should normally be run instead of invoking each validator
 sh infrastructure/monitoring/validate-monitoring.sh
 ```
 
-Preflight rejects weak or malformed monitoring secrets, permissive secret-file modes on Linux, and
-non-HTTPS production webhook endpoints. It reports only the failing variable name or requirement,
-never the secret value.
+Preflight rejects weak or malformed monitoring secrets, non-numeric Bale chat IDs, and permissive
+secret-file modes on Linux. It reports only the failing variable name or requirement, never the
+secret value.
 
 After startup, access Prometheus through an SSH tunnel to `127.0.0.1:9090`. Confirm all ten scrape
 jobs are up, all rule groups load, recording rules return data, backup metrics are present through
@@ -92,4 +92,4 @@ node --env-file=infrastructure/monitoring/.env.monitoring \
 ```
 
 During an approved delivery exercise, add `--send-test-alert` and confirm the notification manually.
-The script never reads or prints the webhook secret.
+The script never reads or prints the Bale bot token or chat ID.

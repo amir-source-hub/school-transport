@@ -1,11 +1,11 @@
 import { readFile, stat } from 'node:fs/promises';
 
-const production = (process.env.DEPLOY_ENV ?? 'production') === 'production';
 const requiredFiles = {
   METRICS_BEARER_TOKEN_FILE: 32,
   POSTGRES_EXPORTER_PASSWORD_FILE: 32,
   GRAFANA_ADMIN_PASSWORD_FILE: 20,
-  ALERT_WEBHOOK_URL_FILE: 1,
+  BALE_BOT_TOKEN_FILE: 20,
+  BALE_CHAT_ID_FILE: 1,
   REDIS_EXPORTER_PASSWORD_MAP_FILE: 1,
 };
 
@@ -25,17 +25,8 @@ for (const [name, minimumLength] of Object.entries(requiredFiles)) {
   contents.set(name, value);
 }
 
-let webhook;
-try {
-  webhook = new URL(contents.get('ALERT_WEBHOOK_URL_FILE'));
-} catch {
-  throw new Error('ALERT_WEBHOOK_URL_FILE must contain a valid URL.');
-}
-if (production && webhook.protocol !== 'https:') {
-  throw new Error('The production alert webhook must use HTTPS.');
-}
-if (!['https:', 'http:'].includes(webhook.protocol)) {
-  throw new Error('The alert webhook must use HTTP or HTTPS.');
+if (!/^-?[1-9]\d*$/.test(contents.get('BALE_CHAT_ID_FILE'))) {
+  throw new Error('BALE_CHAT_ID_FILE must contain one non-zero numeric chat ID.');
 }
 
 let redisPasswordMap;

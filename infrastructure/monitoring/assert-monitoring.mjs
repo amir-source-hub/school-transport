@@ -18,6 +18,7 @@ const exporterAlerts = await readFile(resolve(directory, 'exporter-alerts.yml'),
 const alertmanagerAlerts = await readFile(resolve(directory, 'alertmanager-alerts.yml'), 'utf8');
 const loggingAlerts = await readFile(resolve(directory, 'logging-alerts.yml'), 'utf8');
 const alertmanager = await readFile(resolve(directory, 'alertmanager.yml'), 'utf8');
+const baleTemplate = await readFile(resolve(directory, 'templates/bale.tmpl'), 'utf8');
 const blackbox = await readFile(resolve(directory, 'blackbox.yml'), 'utf8');
 const grafanaDatasource = await readFile(
   resolve(directory, 'grafana/provisioning/datasources/prometheus.yml'),
@@ -104,6 +105,15 @@ for (const required of [
 ]) {
   if (!contract.includes(required)) throw new Error(`Monitoring contract is missing ${required}.`);
 }
+for (const required of [
+  '{{ define "bale.message"',
+  '[{{ .Status | toUpper }}]',
+  'Alerts in group: {{ len .Alerts }}',
+]) {
+  if (!baleTemplate.includes(required)) {
+    throw new Error(`Bale notification template is missing ${required}.`);
+  }
+}
 for (const alertRule of allAlertRules.split(/\n\s+- alert: /).slice(1)) {
   const alertName = alertRule.split('\n', 1)[0];
   for (const required of ['severity:', 'service:', 'owner:', 'summary:', 'impact:', 'runbook:']) {
@@ -115,7 +125,8 @@ for (const alertRule of allAlertRules.split(/\n\s+- alert: /).slice(1)) {
 for (const required of [
   'METRICS_BEARER_TOKEN_FILE: 32',
   'metadata.mode & 0o077',
-  "webhook.protocol !== 'https:'",
+  'BALE_BOT_TOKEN_FILE: 20',
+  "contents.get('BALE_CHAT_ID_FILE')",
   "redisPasswordMap?.['redis://redis:6379']",
 ]) {
   if (!secretValidation.includes(required)) {
@@ -159,7 +170,10 @@ for (const required of [
 for (const required of [
   'receiver: platform-critical',
   'matchers: [\'severity="critical"\']',
-  'url_file: /run/secrets/alert_webhook_url',
+  'telegram_api_url: https://tapi.bale.ai',
+  'bot_token_file: /run/secrets/bale_bot_token',
+  'chat_id_file: /run/secrets/bale_chat_id',
+  'parse_mode: \'\'',
   'send_resolved: true',
   'inhibit_rules:',
 ]) {
@@ -227,7 +241,9 @@ for (const required of [
   'file: ${METRICS_BEARER_TOKEN_FILE:',
   'prom/alertmanager:v0.34.1@sha256:',
   '127.0.0.1:${ALERTMANAGER_HOST_PORT:-9093}:9093',
-  'file: ${ALERT_WEBHOOK_URL_FILE:',
+  './infrastructure/monitoring/templates:/etc/alertmanager/templates:ro',
+  'file: ${BALE_BOT_TOKEN_FILE:',
+  'file: ${BALE_CHAT_ID_FILE:',
   'grafana/loki:3.7.0@sha256:',
   'grafana/alloy:v1.20.1@sha256:',
   '/var/run/docker.sock:/var/run/docker.sock:ro',
@@ -301,13 +317,18 @@ for (const required of [
   'POSTGRES_EXPORTER_PASSWORD_FILE=',
   'REDIS_EXPORTER_PASSWORD_MAP_FILE=',
   'GRAFANA_ADMIN_PASSWORD_FILE=',
-  'ALERT_WEBHOOK_URL_FILE=',
+  'BALE_BOT_TOKEN_FILE=',
+  'BALE_CHAT_ID_FILE=',
 ]) {
   if (!monitoringEnvironmentExample.includes(required)) {
     throw new Error(`Monitoring environment example is missing ${required}.`);
   }
 }
-for (const forbidden of ['GRAFANA_ADMIN_PASSWORD_FILE=', 'ALERT_WEBHOOK_URL_FILE=']) {
+for (const forbidden of [
+  'GRAFANA_ADMIN_PASSWORD_FILE=',
+  'BALE_BOT_TOKEN_FILE=',
+  'BALE_CHAT_ID_FILE=',
+]) {
   const rootEnvironment = await readFile(resolve(root, '.env.example'), 'utf8');
   if (rootEnvironment.includes(forbidden)) {
     throw new Error(`Root application environment must not contain ${forbidden}.`);
