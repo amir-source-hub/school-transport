@@ -3,11 +3,12 @@ import { ContractsService } from './contracts.service';
 import { AuthGuard } from '../access-control/auth.guard';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
 import { RolesGuard } from '../access-control/roles.guard';
-import { Roles } from '../../common/decorators';
+import { OnboardingRole, Roles } from '../../common/decorators';
 import { successResponse } from '../../common/response';
 import { AuthenticatedRequest } from '../../common/http-request';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('PARENT')
 @Controller('contracts')
 export class ContractsController {
   constructor(private readonly contractsService: ContractsService) {}
@@ -46,6 +47,7 @@ export class ContractsController {
 }
 
 @UseGuards(OnboardingGuard)
+@OnboardingRole('PARENT')
 @Controller('onboarding/contracts')
 export class OnboardingContractsController {
   constructor(private readonly contractsService: ContractsService) {}

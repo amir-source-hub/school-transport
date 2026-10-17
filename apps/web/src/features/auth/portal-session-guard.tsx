@@ -14,7 +14,7 @@ export function PortalSessionGuard({
   role,
   children,
 }: {
-  role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER';
+  role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER' | 'DRIVER';
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -26,7 +26,7 @@ export function PortalSessionGuard({
   const verify = useCallback(() => {
     const requestId = ++verificationId.current;
     const isCurrent = () => requestId === verificationId.current;
-    apiRequest<{ user: { role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER' } }>('/auth/me', {
+    apiRequest<{ user: { role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER' | 'DRIVER' } }>('/auth/me', {
       cache: 'no-store',
       redirectOnAuthFailure: false,
     })

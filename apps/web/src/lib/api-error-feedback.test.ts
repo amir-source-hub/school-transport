@@ -64,6 +64,18 @@ describe('API error feedback', () => {
   });
 
   it.each([
+    ['COMPANION_MATCHES_STUDENT', 'دانش‌آموز'],
+    ['DUPLICATE_COMPANION_NATIONAL_ID', 'دانش‌آموز دیگری'],
+  ])('maps %s to specific Persian companion feedback', (code, messageFragment) => {
+    const feedback = getApiErrorFeedback(new ApiClientError(409, code, 'technical detail'));
+
+    expect(feedback.target).toBe('form');
+    expect(feedback.message).toContain(messageFragment);
+    expect(feedback.message).not.toContain('technical detail');
+    expect(feedback.canRetry).toBe(false);
+  });
+
+  it.each([
     [
       'OTP_INVALID',
       'کد تأیید نادرست است',

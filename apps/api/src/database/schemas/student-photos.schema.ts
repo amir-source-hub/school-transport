@@ -8,6 +8,7 @@ import {
   index,
   uniqueIndex,
   check,
+  foreignKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { users } from './auth.schema';
@@ -55,6 +56,11 @@ export const studentPhotoUploads = pgTable(
     oneApprovedPerStudent: uniqueIndex('idx_student_photos_one_approved')
       .on(table.studentId)
       .where(sql`${table.status} = 'APPROVED'`),
+    studentOwnerFk: foreignKey({
+      name: 'student_photo_uploads_student_owner_fk',
+      columns: [table.studentId, table.accountUserId],
+      foreignColumns: [students.id, students.userId],
+    }),
     accountIdx: index('idx_student_photos_account').on(table.accountUserId, table.createdAt),
     studentIdx: index('idx_student_photos_student').on(table.studentId, table.status),
     reviewQueueIdx: index('idx_student_photos_review_queue').on(table.status, table.createdAt),

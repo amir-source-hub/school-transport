@@ -28,7 +28,7 @@ export const registrationStatusGroups = [
   { value: 'waiting_contract', label: 'در انتظار قرارداد' },
   { value: 'contract_ready', label: 'قرارداد آماده' },
   { value: 'accepted_contract', label: 'قرارداد پذیرفته‌شده' },
-  { value: 'prepaid', label: 'پیش‌پرداخت انجام‌شده' },
+  { value: 'prepaid', label: 'ثبت‌نام تکمیل‌شده' },
   { value: 'installments', label: 'در حال پرداخت اقساط' },
   { value: 'completed', label: 'تسویه کامل' },
 ] as const;
@@ -57,7 +57,7 @@ const labels: Record<string, string> = {
   CONTRACT_READY: 'قرارداد آماده',
   CONTRACT_ACCEPTED: 'قرارداد پذیرفته‌شده',
   CANCELLED: 'لغوشده',
-  ENROLLED: 'پیش‌پرداخت انجام‌شده',
+  ENROLLED: 'ثبت‌نام تکمیل‌شده',
   INSTALLMENTS_IN_PROGRESS: 'در حال پرداخت اقساط',
   PAYMENT_COMPLETED: 'تسویه کامل',
 };
@@ -69,7 +69,7 @@ const actions: Record<string, string> = {
   CONTRACT_PENDING: 'صدور قرارداد',
   CONTRACT_READY: 'انتظار برای خانواده',
   CONTRACT_ACCEPTED: 'انتظار برای پیش‌پرداخت',
-  ENROLLED: 'تنظیم مبلغ باقی‌مانده',
+  ENROLLED: 'پیگیری وضعیت پرداخت',
   INSTALLMENTS_IN_PROGRESS: 'پیگیری اقساط باقی‌مانده',
   PAYMENT_COMPLETED: 'پرداخت‌ها تکمیل شده‌اند',
 };
@@ -155,7 +155,7 @@ export const requestCorrection = async (id: string, reason: string) => {
 export function getRegistrationTone(status: string) {
   if (
     status === 'تأییدشده' ||
-    status === 'پیش‌پرداخت انجام‌شده' ||
+    status === 'ثبت‌نام تکمیل‌شده' ||
     status.startsWith('در حال پرداخت اقساط') ||
     status === 'تسویه کامل'
   )

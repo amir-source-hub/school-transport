@@ -31,25 +31,35 @@ export async function getAdminPricingEnrollments() {
   ]);
   const registrations = z.array(registrationSchema).parse(registrationsResponse.data);
   const contracts = z.array(contractSchema).parse(contractsResponse.data);
-  const enrollments = await Promise.all(
-    registrations.map(async (registration) => {
-      const response = await apiRequest<unknown>(`/admin/enrollments/${registration.id}/pricing`, {
-        cache: 'no-store',
-      });
-      const prices = z.array(priceSchema).parse(response.data);
-      const current = prices.findLast(({ priceStatus }) => priceStatus !== 'REPLACED') ?? null;
-      const contract = contracts.find(({ registrationId }) => registrationId === registration.id);
-      return {
-        id: registration.id,
-        studentName: registration.studentName,
-        registrationStatus: registration.registrationStatus,
-        price: current?.totalAmount ?? null,
-        priceStatus: current?.priceStatus ?? null,
-        contractStatus: contract?.contractStatus ?? 'بدون قرارداد',
-        paymentStarted: Boolean(contract?.paymentPlanId),
-      };
-    }),
-  );
+  // Keep the admin contracts page from opening hundreds of simultaneous pricing
+  // requests as production enrollment volume grows.
+  const enrollments = [] as PricingEnrollment[];
+  const concurrency = 8;
+  for (let offset = 0; offset < registrations.length; offset += concurrency) {
+    const batch = await Promise.all(
+      registrations.slice(offset, offset + concurrency).map(async (registration) => {
+        const response = await apiRequest<unknown>(
+          `/admin/enrollments/${registration.id}/pricing`,
+          {
+            cache: 'no-store',
+          },
+        );
+        const prices = z.array(priceSchema).parse(response.data);
+        const current = prices.findLast(({ priceStatus }) => priceStatus !== 'REPLACED') ?? null;
+        const contract = contracts.find(({ registrationId }) => registrationId === registration.id);
+        return {
+          id: registration.id,
+          studentName: registration.studentName,
+          registrationStatus: registration.registrationStatus,
+          price: current?.totalAmount ?? null,
+          priceStatus: current?.priceStatus ?? null,
+          contractStatus: contract?.contractStatus ?? 'بدون قرارداد',
+          paymentStarted: Boolean(contract?.paymentPlanId),
+        };
+      }),
+    );
+    enrollments.push(...batch);
+  }
   return { enrollments };
 }
 

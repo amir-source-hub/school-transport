@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { applyGuardianRelationship, createEnrollmentFormState } from './enrollment-form-model';
 
 describe('enrollment form model', () => {
+  it('reuses the saved Tehran home phone without duplicating its prefix', () => {
+    const result = createEnrollmentFormState({
+      schools: [],
+      savedParents: { father: null, mother: null },
+      existingStudents: [],
+      defaults: { homePhone: '02122113333' },
+    });
+
+    expect(result.homePhone).toBe('22113333');
+  });
+
   it('derives school level and grade from an existing student', () => {
     const result = createEnrollmentFormState({
       schools: [

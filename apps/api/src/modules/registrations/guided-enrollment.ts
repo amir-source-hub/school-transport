@@ -15,6 +15,8 @@ export type StudentEnrollmentData = {
   nationalId: string;
   birthDate?: string;
   gender: string;
+  physicalStatus?: 'HEALTHY' | 'SPECIAL';
+  disabilityType?: string;
   phoneNumber?: string;
 };
 
@@ -43,6 +45,10 @@ export type EmergencyContactData = {
 export type GuidedEnrollmentData = {
   studentPhotoUploadId?: string;
   student: StudentEnrollmentData;
+  companion?: {
+    firstName: string; lastName: string; fatherName: string; nationalId: string;
+    phoneNumber: string; relationship: 'FAMILY' | 'CAREGIVER' | 'COACH';
+  } | null;
   guardian: GuardianEnrollmentData;
   homePhone: string;
   father?: ParentContactData | null;
@@ -52,6 +58,7 @@ export type GuidedEnrollmentData = {
     title: string;
     province: string;
     city: string;
+    district?: string;
     streetAddress: string;
     postalCode: string;
     latitude: number;
@@ -112,6 +119,26 @@ export function normalizeAndValidateGuidedEnrollment(
       phoneNumber: normalizeIranianDigits(input.emergencyContact.phoneNumber).replace(/\D/g, ''),
     };
   }
+  if (input.companion) {
+    data.companion = {
+      ...input.companion,
+      nationalId: normalizeIranianDigits(input.companion.nationalId).trim(),
+      phoneNumber: normalizeIranianDigits(input.companion.phoneNumber).replace(/\D/g, ''),
+    };
+  }
+  if (data.student.physicalStatus === 'SPECIAL' && !data.student.disabilityType?.trim())
+    throw new ConflictError('DISABILITY_TYPE_REQUIRED', 'نوع معلولیت را وارد کنید.');
+  if (data.companion && data.student.physicalStatus !== 'SPECIAL')
+    throw new ConflictError('COMPANION_REQUIRES_SPECIAL_STATUS', 'اطلاعات مراقب فقط برای دانش‌آموز استثنائی ثبت می‌شود.');
+  if (data.companion && (!isIranianNationalId(data.companion.nationalId) || !iranianMobilePattern.test(data.companion.phoneNumber)))
+    throw new ConflictError('INVALID_COMPANION', 'کد ملی یا شماره همراه مراقب معتبر نیست.');
+  // A parent or guardian may also accompany a student. Only the student must be a
+  // different person; cross-student companion reuse is checked transactionally below.
+  if (data.companion?.nationalId === data.student.nationalId)
+    throw new ConflictError(
+      'COMPANION_MATCHES_STUDENT',
+      'کد ملی مراقب باید با کد ملی دانش‌آموز متفاوت باشد.',
+    );
 
   const required = [
     data.student.firstName,
@@ -267,7 +294,8 @@ export function normalizeAndValidateGuidedEnrollment(
     throw new ConflictError('INVALID_PHONE_NUMBER', 'Valid Iranian mobile numbers are required.');
   }
   if (data.student.phoneNumber) phoneNumbers.push(data.student.phoneNumber);
-  if (new Set(phoneNumbers).size !== phoneNumbers.length) {
+  const allContactNumbers = [...phoneNumbers, data.homePhone];
+  if (new Set(allContactNumbers).size !== allContactNumbers.length) {
     throw new ConflictError(
       'DUPLICATE_PHONE_NUMBER',
       'شماره همراه دانش‌آموز، والدین و تماس اضطراری باید متفاوت باشد.',

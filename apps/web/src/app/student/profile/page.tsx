@@ -31,11 +31,11 @@ export default async function ProfilePage() {
         <p className="text-sm font-bold text-primary">پروفایل خانواده</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">اطلاعات خانواده</h1>
         <p className="mt-2 text-sm text-muted">
-          ابتدا اطلاعات ثبت‌شده را بررسی کنید؛ برای تغییر هر بخش از دکمه ویرایش استفاده کنید.
+          اطلاعات ثبت‌شده را بررسی کنید؛ اصلاح مشخصات پس از ثبت‌نام فقط توسط مدیریت انجام می‌شود.
         </p>
       </div>
       {(profile.guardian || profile.mother || profile.father) && profile.addresses.length > 0 ? (
-        <FamilyProfileForm profile={profile} students={studentsWithPhotos} />
+        <FamilyProfileForm profile={profile} students={studentsWithPhotos} readOnly={students.length > 0} />
       ) : (
         <FamilyOnboardingForm />
       )}

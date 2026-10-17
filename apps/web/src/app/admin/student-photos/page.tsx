@@ -3,29 +3,56 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { ButtonLink } from '@/components/ui/button';
 import { AdminPhotoReviewQueue } from '@/features/student-photos/admin-photo-review-queue';
 import { getAdminPhotos } from '@/features/student-photos/admin-student-photos-api';
+import { FilteredCount } from '@/components/data/filtered-count';
+import { getAdminSchools } from '@/features/admin-schools/admin-schools-api';
 
 export const metadata = { title: 'بررسی عکس کارت سرویس' };
+export const dynamic = 'force-dynamic';
 
 export default async function AdminStudentPhotosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; q?: string; schoolId?: string }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
   const status = params.status || 'PENDING_REVIEW';
-  const list = await getAdminPhotos({ page, status });
+  const q = params.q?.trim() ?? '';
+  const schoolId = params.schoolId ?? '';
+  const [{ schools }, list] = await Promise.all([
+    getAdminSchools(),
+    getAdminPhotos({ page, status, q: q || undefined, schoolId: schoolId || undefined }),
+  ]);
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
+  const pageHref = (nextPage: number) => {
+    const query = new URLSearchParams({ status, page: String(nextPage) });
+    if (q) query.set('q', q);
+    if (schoolId) query.set('schoolId', schoolId);
+    return `/admin/student-photos?${query}`;
+  };
   return (
     <div className="space-y-6">
       <Breadcrumbs
         items={[{ label: 'پنل مدیریت', href: '/admin/dashboard' }, { label: 'بررسی عکس‌ها' }]}
       />
-      <div>
-        <p className="text-sm font-bold text-primary">صف مشترک مدیران</p>
-        <h1 className="mt-1 text-2xl font-black sm:text-3xl">بررسی عکس کارت سرویس</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold text-primary">صف مشترک مدیران</p>
+          <h1 className="mt-1 text-2xl font-black sm:text-3xl">بررسی عکس کارت سرویس</h1>
+        </div>
+        <FilteredCount count={list.total} label="تصویر مطابق فیلتر" />
       </div>
       <form className="flex flex-wrap items-end gap-3">
+        <label className="min-w-64 flex-1 text-sm font-bold">
+          جست‌وجوی دانش‌آموز
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="نام، نام خانوادگی، کد ملی یا کد دانش‌آموزی"
+            className="mt-1 block min-h-11 w-full rounded-xl border border-border bg-surface px-3"
+          />
+        </label>
         <label className="text-sm font-bold">
           وضعیت
           <select
@@ -39,6 +66,23 @@ export default async function AdminStudentPhotosPage({
             <option value="FAILED">ناموفق</option>
           </select>
         </label>
+        <label className="text-sm font-bold">
+          مدرسه
+          <select
+            name="schoolId"
+            defaultValue={schoolId}
+            className="mt-1 block min-h-11 rounded-xl border border-border bg-surface px-3"
+          >
+            <option value="">همه مدارس</option>
+            {schools
+              .filter((s) => s.isActive)
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+          </select>
+        </label>
         <button className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white">
           اعمال
         </button>
@@ -49,27 +93,21 @@ export default async function AdminStudentPhotosPage({
           پاک‌کردن
         </Link>
       </form>
-      <AdminPhotoReviewQueue items={list.items} />
+      <AdminPhotoReviewQueue key={`${status}:${schoolId}:${q}:${list.page}`} items={list.items} />
       {totalPages > 1 && (
         <nav aria-label="صفحه‌بندی عکس‌ها" className="flex justify-between">
-          {page > 1 ? (
-            <ButtonLink
-              variant="secondary"
-              href={`/admin/student-photos?status=${status}&page=${page - 1}`}
-            >
+          {list.page > 1 ? (
+            <ButtonLink variant="secondary" href={pageHref(list.page - 1)}>
               قبلی
             </ButtonLink>
           ) : (
             <span />
           )}
           <span className="text-sm text-muted">
-            صفحه {page} از {totalPages}
+            صفحه {list.page} از {totalPages}
           </span>
-          {page < totalPages ? (
-            <ButtonLink
-              variant="secondary"
-              href={`/admin/student-photos?status=${status}&page=${page + 1}`}
-            >
+          {list.page < totalPages ? (
+            <ButtonLink variant="secondary" href={pageHref(list.page + 1)}>
               بعدی
             </ButtonLink>
           ) : (

@@ -34,12 +34,15 @@ export type { GuidedEnrollmentInput };
 const guidedResultSchema = z.object({
   registrationId: z.string(),
   studentId: z.string(),
-  contractId: z.string(),
-  scheduleItemId: z.string(),
+  contractId: z.string().nullable(),
+  scheduleItemId: z.string().nullable(),
   prepaymentAmount: z.number(),
-  contractText: z.string(),
-  contractTemplateHash: z.string(),
-  contractPages: z.array(z.array(z.string())).length(3),
+  contractText: z.string().nullable(),
+  contractTemplateHash: z.string().nullable(),
+  contractPages: z.array(z.array(z.string())),
+  status: z.string(),
+  requiresContract: z.boolean(),
+  requiresPayment: z.boolean(),
 });
 
 export type GuidedEnrollmentResult = z.infer<typeof guidedResultSchema>;
@@ -75,12 +78,12 @@ export async function acceptGuidedContract(
   });
 }
 
-export async function finalizeOnboarding() {
-  const response = await apiRequest<{ accessToken: string }>('/auth/onboarding/finalize', {
+export async function finalizeOnboarding(portalRole?: 'PARENT' | 'DRIVER') {
+  const response = await apiRequest<{ accessToken: string; user: { role: 'PARENT' | 'DRIVER' } }>('/auth/onboarding/finalize', {
     method: 'POST',
-    body: { rememberMe: false },
+    body: { rememberMe: false, portalRole },
   });
-  setAuthSession(response.data.accessToken, 'PARENT');
+  setAuthSession(response.data.accessToken, response.data.user.role);
 }
 
 export async function getEnrollments() {

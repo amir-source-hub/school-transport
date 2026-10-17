@@ -44,6 +44,7 @@ export function AdminFamilyEnrollmentForm({
           : null,
       }}
       defaults={{
+        homePhone: guardian?.homePhone ?? '',
         guardian: guardian
           ? {
               firstName: guardian.firstName,
@@ -57,6 +58,7 @@ export function AdminFamilyEnrollmentForm({
               title: address.title,
               province: address.province,
               city: address.city,
+              district: address.district ?? undefined,
               streetAddress: address.streetAddress,
               postalCode: address.postalCode ?? undefined,
               latitude: address.latitude ?? undefined,

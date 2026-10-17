@@ -13,6 +13,7 @@ const validSchool = {
   managerName: 'مدیر مدرسه',
   managerPhone: '09121234567',
   openingTime: '07:00',
+  openingTimes: ['07:00'],
   closingTime: '12:00',
   closingTimes: ['12:00'],
   latitude: 35.7219,
@@ -21,6 +22,20 @@ const validSchool = {
 };
 
 describe('createSchoolSchema', () => {
+  it('shows a Persian error when an added opening time is empty', () => {
+    const result = createSchoolSchema.safeParse({
+      ...validSchool,
+      openingTimes: ['07:00', ''],
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.issues[0]).toMatchObject({
+      path: ['openingTimes', 1],
+      message: 'همه ساعت‌های شروع مدرسه را وارد کنید',
+    });
+  });
+
   it('shows a Persian error when an added closing time is empty', () => {
     const result = createSchoolSchema.safeParse({
       ...validSchool,

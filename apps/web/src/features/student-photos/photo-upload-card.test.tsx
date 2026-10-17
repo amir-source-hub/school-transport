@@ -161,6 +161,34 @@ describe('PhotoUploadCard', () => {
     expect(screen.getByText('در انتظار تایید')).toBeInTheDocument();
   });
 
+  it('retries once when the API connection drops during upload authorization', async () => {
+    authorizePhotoUpload
+      .mockRejectedValueOnce(new TypeError('API request failed'))
+      .mockResolvedValueOnce({
+        uploadId: 'upload-second-student',
+        objectKey: 'student-photos/raw/second.jpg',
+        uploadUrl: 'https://s3.example/put-second',
+        expiresInSeconds: 300,
+        acceptedFormats: ['image/jpeg', 'image/png'],
+        maxBytes: 5 * 1024 * 1024,
+        status: 'AUTHORIZED',
+      });
+    putPhotoObject.mockResolvedValue(undefined);
+    completePhotoUpload.mockResolvedValue(
+      upload({ uploadId: 'upload-second-student', studentId: null }),
+    );
+
+    const completed = vi.fn();
+    const user = userEvent.setup();
+    render(<PhotoUploadCard initialItems={[]} onUploadCompleted={completed} />);
+    await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile());
+    await user.click(screen.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }));
+
+    await waitFor(() => expect(authorizePhotoUpload).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(completed).toHaveBeenCalledWith('upload-second-student'));
+    expect(putPhotoObject).toHaveBeenCalledTimes(1);
+  });
+
   it('reports a storage failure without completing the upload', async () => {
     authorizePhotoUpload.mockResolvedValue({
       uploadId: 'upload-9',

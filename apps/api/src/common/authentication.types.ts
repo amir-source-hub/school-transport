@@ -1,4 +1,4 @@
-export type UserRole = 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER';
+export type UserRole = 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER' | 'DRIVER';
 
 export interface JwtPayload {
   sub: string;

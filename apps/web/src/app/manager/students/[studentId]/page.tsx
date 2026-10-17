@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { LocationDisplay } from '@/components/common/location-display';
 import { getManagerStudent, getManagerStudentPhoto } from '@/features/manager/manager-api';
 import { PrintButton } from '@/features/manager/print-button';
+import { formatJalaliDate } from '@/lib/formatters';
 export const metadata = { title: 'جزئیات دانش‌آموز' };
 export default async function Page({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
@@ -61,7 +62,7 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
             </div>
             <div>
               <dt className="text-muted">تاریخ تولد</dt>
-              <dd className="mt-1 font-bold">{s.birthDate ?? '—'}</dd>
+              <dd className="mt-1 font-bold">{s.birthDate ? formatJalaliDate(s.birthDate) : '—'}</dd>
             </div>
             <div>
               <dt className="text-muted">جنسیت</dt>
@@ -178,7 +179,7 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
         <Card className="lg:col-span-2">
           <div className="flex justify-between">
             <h2 className="font-black">وضعیت سرویس</h2>
-            <Badge tone="warning">اطلاعات راننده آزمایشی است</Badge>
+            <Badge tone={s.transportAssignments.length ? 'success' : 'neutral'}>{s.transportAssignments.length ? 'راننده متصل است' : 'بدون راننده'}</Badge>
           </div>
           {s.enrollmentSummary ? (
             <dl className="mt-4 grid gap-4 sm:grid-cols-3 text-sm">
@@ -198,6 +199,9 @@ export default async function Page({ params }: { params: Promise<{ studentId: st
           ) : (
             <p className="mt-4 text-sm text-muted">برای این دانش‌آموز سرویس فعالی ثبت نشده است.</p>
           )}
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {s.transportAssignments.map((assignment) => <div key={assignment.runId} className="rounded-xl bg-primary-soft p-4 text-sm"><p className="font-black">{assignment.driverFirstName} {assignment.driverLastName} · {assignment.direction === 'TO_SCHOOL' ? 'سرویس رفت' : 'سرویس برگشت'}</p><p className="mt-2 text-muted">{assignment.vehicleSystem} · پلاک {assignment.plateNumber}</p><p className="mt-1 text-muted">ترتیب {assignment.pickupOrder.toLocaleString('fa-IR')}</p><p className="mt-1 font-mono">{assignment.driverPhoneNumber}</p></div>)}
+          </div>
         </Card>
       </div>
     </div>

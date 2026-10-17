@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { Roles } from '../../common/decorators';
+import { OnboardingRole, Roles } from '../../common/decorators';
 import type { AuthenticatedRequest } from '../../common/http-request';
 import { paginatedResponse, successResponse } from '../../common/response';
 import { AuthGuard } from '../access-control/auth.guard';
@@ -25,7 +25,8 @@ import {
 } from './student-photo.dto';
 import { StudentPhotosService } from './student-photos.service';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('PARENT')
 @Controller('student-photos')
 export class StudentPhotosController {
   constructor(private readonly service: StudentPhotosService) {}
@@ -62,6 +63,7 @@ export class StudentPhotosController {
 }
 
 @UseGuards(OnboardingGuard)
+@OnboardingRole('PARENT')
 @Controller('onboarding/student-photos')
 export class OnboardingStudentPhotosController {
   constructor(private readonly service: StudentPhotosService) {}
@@ -109,6 +111,8 @@ export class AdminStudentPhotosController {
     @Param('familyId', new ParseUUIDPipe()) familyId: string,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
+    // The draft has no studentId until guided enrollment creates the student.
+    // Approval must remain a separate review action after that link is made.
     return successResponse(await this.service.completeUpload(familyId, id, req.ip));
   }
 

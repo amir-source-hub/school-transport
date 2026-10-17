@@ -48,6 +48,10 @@ export class StudentInputDto extends IdentityInputDto {
   birthDate?: string;
   @IsIn(['MALE', 'FEMALE'], { message: 'جنسیت باید پسر یا دختر باشد.' })
   gender!: string;
+  @IsIn(['HEALTHY', 'SPECIAL'], { message: 'وضعیت جسمانی را انتخاب کنید.' })
+  physicalStatus!: 'HEALTHY' | 'SPECIAL';
+  @ValidateIf((o: StudentInputDto) => o.physicalStatus === 'SPECIAL')
+  @IsString() @Length(1, 200) disabilityType?: string;
   @IsOptional()
   @Transform(digits)
   @Matches(/^09\d{9}$/, { message: 'شماره همراه باید با ۰۹ شروع شود و ۱۱ رقم باشد.' })
@@ -101,6 +105,8 @@ export class AddressInputDto {
   @Length(1, 100, { message: 'شهر باید بین ۱ تا ۱۰۰ نویسه باشد.' })
   @Matches(persianOnly, { message: persianOnlyMessage })
   city!: string;
+  @IsIn(['سایر', ...Array.from({ length: 22 }, (_, index) => String(index + 1))], { message: 'منطقه را انتخاب کنید.' })
+  district!: string;
   @IsString({ message: 'نشانی کامل باید متن باشد.' })
   @Length(1, 500, { message: 'نشانی کامل باید بین ۱ تا ۵۰۰ نویسه باشد.' })
   @Matches(persianOnly, { message: persianOnlyMessage })
@@ -118,6 +124,15 @@ export class AddressInputDto {
   @Min(-180, { message: 'طول جغرافیایی باید بین ۱۸۰- و ۱۸۰ باشد.' })
   @Max(180, { message: 'طول جغرافیایی باید بین ۱۸۰- و ۱۸۰ باشد.' })
   longitude!: number;
+}
+
+export class EnrollmentCompanionDto {
+  @IsString() @Length(1, 100) firstName!: string;
+  @IsString() @Length(1, 100) lastName!: string;
+  @IsString() @Length(1, 100) fatherName!: string;
+  @Transform(digits) @Matches(/^\d{10}$/) nationalId!: string;
+  @Transform(digits) @Matches(/^09\d{9}$/) phoneNumber!: string;
+  @IsIn(['FAMILY', 'CAREGIVER', 'COACH']) relationship!: 'FAMILY' | 'CAREGIVER' | 'COACH';
 }
 
 export class SchoolInputDto {
@@ -185,6 +200,7 @@ export class GuidedEnrollmentDto {
   @IsUUID(undefined, { message: 'شناسه عکس معتبر نیست.' })
   studentPhotoUploadId?: string;
   @ValidateNested() @Type(() => StudentInputDto) student!: StudentInputDto;
+  @ValidateNested() @IsOptional() @Type(() => EnrollmentCompanionDto) companion?: EnrollmentCompanionDto;
   @ValidateNested() @Type(() => GuardianInputDto) guardian!: GuardianInputDto;
   @Transform(digits)
   @Matches(/^021\d{8}$/, { message: 'شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.' })

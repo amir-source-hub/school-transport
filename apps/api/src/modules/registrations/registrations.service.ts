@@ -11,6 +11,7 @@ import {
   contracts,
   emergencyContacts,
   studentPhotoUploads,
+  studentCompanions,
   users,
 } from '../../database/schemas';
 import { students } from '../../database/schemas';
@@ -87,6 +88,7 @@ export class RegistrationsService {
       .select({
         id: schools.id,
         name: schools.name,
+        schoolType: schools.schoolType,
         educationOptions: schools.educationOptions,
       })
       .from(schools)
@@ -235,30 +237,37 @@ export class RegistrationsService {
           if (!section) continue;
           const existing = existingFamilyParents.find((item) => item.parentType === parentType);
           if (existing) {
-            const unchanged =
-              existing.firstName === section.firstName &&
-              existing.lastName === section.lastName &&
-              existing.nationalId === section.nationalId &&
-              existing.phoneNumber === section.phoneNumber &&
-              (existing.homePhone ?? null) === (section.homePhone ?? null);
-            if (!unchanged) {
-              throw new ConflictError(
-                'PARENT_PROFILE_CHANGED',
-                'Saved parent information must be changed from the family profile.',
-              );
-            }
+            // An existing family's identity is authoritative. Form drafts can be stale;
+            // never let a second enrollment change a saved parent's identity.
             if (parentType === 'GUARDIAN') {
+              data.guardian.firstName = existing.firstName;
+              data.guardian.lastName = existing.lastName;
+              data.guardian.nationalId = existing.nationalId;
+              data.homePhone = existing.homePhone || data.homePhone;
+              if (
+                existing.relationshipType === 'FATHER' ||
+                existing.relationshipType === 'MOTHER' ||
+                existing.relationshipType === 'OTHER'
+              ) {
+                data.guardian.relationshipType = existing.relationshipType;
+              }
               await txn
                 .update(parents)
                 .set({
-                  relationshipType: section.relationshipType,
-                  relationshipDescription:
-                    section.relationshipType === 'OTHER'
-                      ? (section.relationshipDescription ?? null)
-                      : null,
+                  phoneNumber: guardianPhone,
+                  homePhone: data.homePhone,
                   updatedAt: new Date(),
                 })
                 .where(eq(parents.id, existing.id));
+            } else {
+              const savedContact = {
+                firstName: existing.firstName,
+                lastName: existing.lastName,
+                nationalId: existing.nationalId,
+                phoneNumber: existing.phoneNumber,
+              };
+              if (parentType === 'FATHER') data.father = savedContact;
+              if (parentType === 'MOTHER') data.mother = savedContact;
             }
           } else {
             await txn.insert(parents).values({
@@ -275,6 +284,30 @@ export class RegistrationsService {
               isPrimaryContact: false,
             });
           }
+        }
+        const companionIsFamilyContact = Boolean(
+          data.companion &&
+            [
+              data.guardian.nationalId,
+              data.father?.nationalId,
+              data.mother?.nationalId,
+            ].includes(data.companion.nationalId),
+        );
+        const submittedPhones = [
+          guardianPhone,
+          data.homePhone,
+          data.student.phoneNumber,
+          data.father?.phoneNumber,
+          data.mother?.phoneNumber,
+          data.emergencyContact?.phoneNumber,
+          // A guardian/parent who is also the companion naturally reuses their phone.
+          companionIsFamilyContact ? undefined : data.companion?.phoneNumber,
+        ].filter((value): value is string => Boolean(value));
+        if (new Set(submittedPhones).size !== submittedPhones.length) {
+          throw new ConflictError(
+            'DUPLICATE_PHONE_NUMBER',
+            'شماره‌های سرپرست، والدین، دانش‌آموز، منزل و تماس اضطراری باید متفاوت باشند.',
+          );
         }
         await txn
           .update(parents)
@@ -313,6 +346,11 @@ export class RegistrationsService {
               birthDate: data.student.birthDate || null,
               fatherName: data.student.fatherName,
               gender: data.student.gender || null,
+              physicalStatus: data.student.physicalStatus ?? null,
+              disabilityType:
+                data.student.physicalStatus === 'SPECIAL'
+                  ? (data.student.disabilityType ?? null)
+                  : null,
               phoneNumber: data.student.phoneNumber ?? null,
               grade: data.school.grade,
               className: data.school.educationLevel,
@@ -331,11 +369,31 @@ export class RegistrationsService {
             nationalId: data.student.nationalId,
             birthDate: data.student.birthDate || null,
             gender: data.student.gender || null,
+            physicalStatus: data.student.physicalStatus ?? null,
+            disabilityType:
+              data.student.physicalStatus === 'SPECIAL'
+                ? (data.student.disabilityType ?? null)
+                : null,
             phoneNumber: data.student.phoneNumber ?? null,
             grade: data.school.grade,
             className: data.school.educationLevel,
             fieldOfStudy: data.school.fieldOfStudy ?? null,
           });
+        }
+        if (data.companion) {
+          const [existingCompanion] = await txn
+            .select({ id: studentCompanions.id })
+            .from(studentCompanions)
+            .where(eq(studentCompanions.nationalId, data.companion.nationalId))
+            .limit(1);
+          if (existingCompanion)
+            throw new ConflictError(
+              'DUPLICATE_COMPANION_NATIONAL_ID',
+              'این کد ملی قبلاً برای مراقب ثبت شده است.',
+            );
+          await txn
+            .insert(studentCompanions)
+            .values({ id: generateId(), studentId, ...data.companion });
         }
         if (data.studentPhotoUploadId) {
           const [linkedPhoto] = await txn
@@ -358,6 +416,7 @@ export class RegistrationsService {
           }
         }
         const registrationId = generateId();
+        const isSpecialSchool = school.schoolType === 'SPECIAL';
         await txn.insert(serviceRegistrations).values({
           id: registrationId,
           studentId,
@@ -365,9 +424,54 @@ export class RegistrationsService {
           serviceType: data.service.serviceType,
           selectedAddressId: addressId,
           parentNotes: data.service.parentNotes || null,
-          registrationStatus: 'CONTRACT_READY',
+          registrationStatus: isSpecialSchool ? 'ENROLLED' : 'CONTRACT_READY',
           submittedAt: new Date(),
         });
+        if (isSpecialSchool) {
+          // Completing the required information is the durable enrollment boundary for special
+          // schools. Finalizing onboarding later is only responsible for issuing panel tokens.
+          await txn
+            .update(users)
+            .set({
+              accountStatus: 'ACTIVE',
+              username: sql`${users.phoneNumber}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, userId));
+          if (adminAudit) {
+            await this.auditService.recordInTransaction(txn, {
+              actorType: 'ADMIN',
+              actorId: adminAudit.adminId,
+              action: 'ADMIN_FAMILY_ENROLLMENT_CREATED',
+              entityType: 'REGISTRATION',
+              entityId: registrationId,
+              newValues: { familyId: userId, studentId, status: 'ENROLLED', specialSchool: true },
+              ipAddress: adminAudit.ipAddress,
+            });
+          }
+          await this.notifications.enqueueInTransaction(txn, {
+            eventId: `ENROLLMENT_CREATED:${registrationId}:${userId}`,
+            userId,
+            notificationType: 'ENROLLMENT_CREATED',
+            title: 'ثبت‌نام دانش‌آموز انجام شد',
+            message: `ثبت‌نام دانش‌آموز ${data.student.firstName} ${data.student.lastName} در مدرسه استثنائی تکمیل شد. برای این مدرسه قرارداد و پرداخت لازم نیست.`,
+            relatedEntityType: 'REGISTRATION',
+            relatedEntityId: registrationId,
+          });
+          return {
+            registrationId,
+            studentId,
+            contractId: null,
+            scheduleItemId: null,
+            prepaymentAmount: 0,
+            contractText: null,
+            contractTemplateHash: null,
+            contractPages: [],
+            status: 'ENROLLED',
+            requiresContract: false,
+            requiresPayment: false,
+          };
+        }
         const priceId = generateId();
         const prepaymentAmount = OFFLINE_PREPAYMENT_AMOUNT_IRR;
         await txn.insert(registrationPrices).values({
@@ -611,6 +715,8 @@ export class RegistrationsService {
           contractTemplateHash: snapshot.templateHash,
           contractPages: snapshot.pages,
           status: finalStatus,
+          requiresContract: true,
+          requiresPayment: true,
         };
       }),
     );
@@ -698,7 +804,9 @@ export class RegistrationsService {
       })
       .from(serviceRegistrations)
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .innerJoin(users, eq(users.id, students.userId))
       .innerJoin(schools, eq(schools.id, students.schoolId))
+      .where(and(eq(users.accountStatus, 'ACTIVE'), eq(students.isActive, true)))
       .orderBy(desc(serviceRegistrations.createdAt), desc(serviceRegistrations.id))
       .limit(ADMIN_ENROLLMENT_MATERIALIZATION_LIMIT + 1);
     if (rows.length > ADMIN_ENROLLMENT_MATERIALIZATION_LIMIT) {

@@ -110,12 +110,14 @@ export async function getAdminOfflineSubmissions(params: {
   itemType?: string;
   page?: number;
   pageSize?: number;
+  q?: string;
 }) {
   const query = new URLSearchParams();
   if (params.status) query.set('status', params.status);
   if (params.itemType) query.set('itemType', params.itemType);
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(params.pageSize));
+  if (params.q) query.set('q', params.q);
   const response = await apiRequest<unknown>(`/admin/payments/offline-submissions?${query}`, {
     cache: 'no-store',
   });
@@ -178,9 +180,20 @@ export async function rejectPayment(
   });
 }
 
+export async function resetPaymentForResubmission(
+  submissionId: string,
+  version: number,
+): Promise<void> {
+  await apiRequest(`/admin/payments/offline-submissions/${submissionId}/reset`, {
+    method: 'POST',
+    body: { version },
+    timeoutMs: 8_000,
+  });
+}
+
 export async function configureInstallments(
   planId: string,
-  items: { amount: number; dueDate: string }[],
+  items: { id?: string; amount: number; dueDate: string }[],
 ) {
   await apiRequest(`/admin/payments/plans/${planId}/installments`, {
     method: 'POST',

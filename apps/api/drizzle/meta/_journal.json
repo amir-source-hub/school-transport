@@ -281,6 +281,188 @@
       "when": 1787418000000,
       "tag": "0039_family_erasure_cascades",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1787850000000,
+      "tag": "0040_authorized_family_erasure",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1788242400000,
+      "tag": "0041_public_contact_phone",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1788328800000,
+      "tag": "0042_driver_enrollment",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1788332400000,
+      "tag": "0043_driver_location",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1788505200000,
+      "tag": "0044_driver_routes_and_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1788591600000,
+      "tag": "0045_transport_assignment_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1788678000000,
+      "tag": "0046_cross_school_transport",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1789023600000,
+      "tag": "0047_student_photo_owner_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1789027200000,
+      "tag": "0048_driver_emergency_contact",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1789030800000,
+      "tag": "0049_driver_document_review",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1789034400000,
+      "tag": "0050_student_companions",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1789038000000,
+      "tag": "0051_driver_banking_student_health",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1789297200000,
+      "tag": "0052_route_contract_terms",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1789408000000,
+      "tag": "0053_independent_route_directions",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1789581600000,
+      "tag": "0054_driver_document_files",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1789668000000,
+      "tag": "0055_role_isolated_portal_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1789754400000,
+      "tag": "0056_immutable_http_activity",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1789840800000,
+      "tag": "0057_http_activity_error_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1789927200000,
+      "tag": "0058_vehicle_capacity_defaults",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1790013600000,
+      "tag": "0059_allow_over_capacity_route_assignments",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1790100000000,
+      "tag": "0060_route_contract_price_bigint",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1790186400000,
+      "tag": "0061_remove_legacy_route_direction_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1790272800000,
+      "tag": "0062_school_opening_times",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1790359200000,
+      "tag": "0063_activate_enrolled_driver_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1790445600000,
+      "tag": "0064_repair_transport_assignment_overlaps",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1790528400000,
+      "tag": "0065_nullable_installment_schedule",
+      "breakpoints": true
     }
   ]
 }

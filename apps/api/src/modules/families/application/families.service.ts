@@ -32,6 +32,19 @@ export class FamiliesService {
     private readonly notifications: InAppNotificationService,
   ) {}
 
+  async assertEditableByFamily(userId: string) {
+    const [enrolled] = await this.db.db
+      .select({ id: students.id })
+      .from(students)
+      .where(eq(students.userId, userId))
+      .limit(1);
+    if (enrolled)
+      throw new ConflictError(
+        'FAMILY_ADMIN_EDIT_ONLY',
+        'اطلاعات خانواده پس از ثبت‌نام فقط توسط مدیریت قابل تغییر است.',
+      );
+  }
+
   async createFamily(userId: string, dto: CreateFamilyDto): Promise<FamilyProfile> {
     const [account] = await this.db.db
       .select({ phoneNumber: users.phoneNumber })
@@ -159,6 +172,7 @@ export class FamiliesService {
       lastName: p.lastName,
       nationalId: p.nationalId,
       phoneNumber: p.phoneNumber,
+      homePhone: p.homePhone,
       relationshipType: p.relationshipType ?? undefined,
       relationshipDescription: p.relationshipDescription ?? undefined,
       isPrimaryContact: p.isPrimaryContact,
@@ -237,7 +251,13 @@ export class FamiliesService {
         const phoneOwner = await this.db.db
           .select({ id: users.id })
           .from(users)
-          .where(and(eq(users.phoneNumber, phoneNumber), ne(users.id, userId)))
+          .where(
+            and(
+              eq(users.phoneNumber, phoneNumber),
+              eq(users.accountType, 'PARENT'),
+              ne(users.id, userId),
+            ),
+          )
           .limit(1);
         if (phoneOwner[0]) {
           throw new ConflictError('DUPLICATE_PHONE_NUMBER', 'This phone number is already in use.');
@@ -488,6 +508,7 @@ export class FamiliesService {
         lastName: parent.lastName,
         nationalId: parent.nationalId,
         phoneNumber: parent.phoneNumber,
+        homePhone: parent.homePhone,
         isPrimaryContact: parent.isPrimaryContact,
       })),
       addresses: addressRows.map((address) => ({

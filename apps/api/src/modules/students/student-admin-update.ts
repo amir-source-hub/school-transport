@@ -6,6 +6,8 @@ const EDITABLE_STUDENT_FIELDS = new Set([
   'nationalId',
   'birthDate',
   'gender',
+  'physicalStatus',
+  'disabilityType',
   'schoolId',
   'className',
   'grade',
@@ -17,6 +19,8 @@ export type AdminEditableStudentFields = Partial<{
   nationalId: string;
   birthDate: string;
   gender: string;
+  physicalStatus: string;
+  disabilityType: string;
   schoolId: string;
   className: string;
   grade: string;

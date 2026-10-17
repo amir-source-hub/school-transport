@@ -3,9 +3,25 @@ import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { describe, expect, it } from 'vitest';
-import { CreateFeedbackDto, RespondFeedbackDto } from './feedback.dto';
+import { CreateFeedbackDto, CreatePublicContactDto, RespondFeedbackDto } from './feedback.dto';
 
 describe('CreateFeedbackDto', () => {
+  it('requires a valid Iranian mobile number for public contact requests', async () => {
+    const valid = plainToInstance(CreatePublicContactDto, {
+      name: 'علی رضایی',
+      phoneNumber: '09123456789',
+      topic: 'registration',
+      message: 'برای ثبت نام نیاز به راهنمایی دارم.',
+    });
+    expect(await validate(valid)).toHaveLength(0);
+
+    const invalid = plainToInstance(CreatePublicContactDto, {
+      ...valid,
+      phoneNumber: '02112345678',
+    });
+    expect((await validate(invalid)).map((error) => error.property)).toContain('phoneNumber');
+  });
+
   it('accepts safe Persian text and rejects raw HTML', async () => {
     await expect(
       validate(

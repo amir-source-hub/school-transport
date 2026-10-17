@@ -1,13 +1,13 @@
 import { Type, Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
-  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsDateString,
   IsIn,
   IsInt,
   IsOptional,
+  IsUUID,
   IsString,
   Length,
   Max,
@@ -91,6 +91,9 @@ export class ConfigureOfflineDestinationDto {
 }
 
 export class InstallmentItemDto {
+  @IsOptional()
+  @IsUUID()
+  id?: string;
   @Transform(({ value }) =>
     typeof value === 'string' ? Number(normalizeIranianDigits(value).trim()) : value,
   )
@@ -105,7 +108,6 @@ export class InstallmentItemDto {
 
 export class ConfigureInstallmentsDto {
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(12)
   @ValidateNested({ each: true })
   @Type(() => InstallmentItemDto)
@@ -155,6 +157,10 @@ export class AdminOfflinePaymentListQueryDto {
   @Min(1)
   @Max(50)
   pageSize = 20;
+  @IsOptional()
+  @IsString()
+  @Length(1, 120)
+  q?: string;
 }
 
 @Injectable()

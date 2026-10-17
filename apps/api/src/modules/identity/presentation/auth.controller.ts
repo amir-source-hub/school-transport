@@ -384,6 +384,10 @@ export class FinalizeOnboardingDto {
   @IsOptional()
   @Transform(toBoolean)
   rememberMe?: boolean;
+
+  @IsOptional()
+  @IsIn(['PARENT', 'DRIVER'])
+  portalRole?: 'PARENT' | 'DRIVER';
 }
 
 type CookieRequest = FastifyRequest & {
@@ -432,8 +436,32 @@ export class AuthController {
           expiresAt: result.onboarding.expiresAt,
           currentStep: result.onboarding.currentStep,
           nationalId: result.onboarding.nationalId,
+          portalRole: result.onboarding.portalRole,
         },
       });
+    }
+    this.setRefreshCookie(reply, result.refreshToken, false, dto.rememberMe ?? false);
+    this.setAccessCookie(reply, result.accessToken, false);
+    return successResponse({ user: result.user, accessToken: result.accessToken });
+  }
+
+  @Public()
+  @Post('driver/credentials')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(TrustedOriginGuard)
+  async driverCredentials(
+    @Req() req: FastifyRequest,
+    @Body() dto: ParentCredentialsDto,
+    @Res({ passthrough: true }) reply: CookieReply,
+  ) {
+    const result = await this.authService.authenticateDriver(dto.phoneNumber, dto.nationalId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      deviceName: req.headers['user-agent']?.slice(0, 255),
+    }, dto.rememberMe ?? false, (req as FastifyRequest & { cookies?: Record<string, string> }).cookies?.onboarding_token);
+    if (result.user === null) {
+      this.setOnboardingCookie(reply, result.onboarding.token, result.onboarding.expiresAt);
+      return successResponse({ user: null, onboarding: { sessionId: result.onboarding.sessionId, expiresAt: result.onboarding.expiresAt, currentStep: result.onboarding.currentStep, nationalId: result.onboarding.nationalId, portalRole: result.onboarding.portalRole } });
     }
     this.setRefreshCookie(reply, result.refreshToken, false, dto.rememberMe ?? false);
     this.setAccessCookie(reply, result.accessToken, false);
@@ -574,6 +602,7 @@ export class AuthController {
           sessionId: result.onboarding.sessionId,
           expiresAt: result.onboarding.expiresAt,
           currentStep: result.onboarding.currentStep,
+          portalRole: result.onboarding.portalRole,
         },
       });
     }
@@ -603,6 +632,7 @@ export class AuthController {
       status: 'PENDING',
       expiresAt: req.onboarding.expiresAt,
       currentStep: req.onboarding.currentStep,
+      portalRole: req.onboarding.portalRole,
       nationalId,
     });
   }
@@ -631,6 +661,7 @@ export class AuthController {
       token,
       context,
       dto.rememberMe ?? false,
+      dto.portalRole,
     );
     this.setRefreshCookie(reply, result.refreshToken, false, dto.rememberMe ?? false);
     this.setAccessCookie(reply, result.accessToken, false);

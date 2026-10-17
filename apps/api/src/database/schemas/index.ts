@@ -6,6 +6,7 @@ export { adminUsers, adminAuthChallenges } from './auth.schema';
 export { schoolManagerUsers, schoolManagerAssignments } from './school-managers.schema';
 export { schools } from './schools.schema';
 export { students } from './students.schema';
+export { studentCompanions } from './student-companions.schema';
 export { serviceRegistrations } from './registrations.schema';
 export { registrationSnapshots } from './registrations.schema';
 export { registrationReviews } from './registrations.schema';
@@ -33,4 +34,5 @@ export {
   transportServiceRuns,
   transportServiceRunStudents,
   transportDocuments,
+  driverDocumentUploads,
 } from './transport-operations.schema';

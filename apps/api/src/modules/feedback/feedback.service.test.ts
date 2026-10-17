@@ -11,6 +11,7 @@ function query(rows: QueryRows, orderBy = vi.fn()) {
   const chain: Record<string, unknown> = {};
   Object.assign(chain, {
     from: vi.fn(() => chain),
+    leftJoin: vi.fn(() => chain),
     where: vi.fn(() => chain),
     orderBy: vi.fn((...args: unknown[]) => {
       orderBy(...args);
@@ -132,5 +133,45 @@ describe('FeedbackService security and concurrency', () => {
       expect.objectContaining({ newValues: { status: 'ANSWERED' } }),
     );
     expect(JSON.stringify(audit.recordInTransaction.mock.calls)).not.toContain('پاسخ امن مدیریت');
+  });
+
+  it('enriches the admin queue with the authenticated sender identity', async () => {
+    const { service, audit } = harness({
+      selects: [
+        [
+          {
+            feedback: { ...feedback, senderType: 'PARENT' },
+            parentFirstName: 'فاطمه',
+            parentLastName: 'رضایی',
+            parentPhone: '09123456789',
+            parentUsername: '09123456789',
+            managerFirstName: null,
+            managerLastName: null,
+            managerPhone: null,
+            managerUsername: null,
+            schoolName: 'مدرسه نمونه',
+            studentFirstName: 'علی',
+            studentLastName: 'رضایی',
+          },
+        ],
+        [{ value: 1 }],
+      ],
+    });
+
+    await expect(service.listAdmin({ page: 1, pageSize: 10 }, 'admin-1')).resolves.toMatchObject({
+      total: 1,
+      items: [
+        {
+          senderName: 'فاطمه رضایی',
+          senderPhone: '09123456789',
+          senderUsername: '09123456789',
+          schoolName: 'مدرسه نمونه',
+          studentName: 'علی رضایی',
+        },
+      ],
+    });
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'FEEDBACK_QUEUE_READ' }),
+    );
   });
 });

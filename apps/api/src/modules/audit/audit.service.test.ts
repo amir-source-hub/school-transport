@@ -3,6 +3,21 @@ import { allowlistedAuditValues } from './audit.service';
 import { serializeSafeAuditValues } from '../../common/sensitive-data';
 
 describe('audit value allowlist', () => {
+  it('keeps HTTP mutation metadata but drops request contents', () => {
+    expect(
+      allowlistedAuditValues({
+        httpMethod: 'PATCH',
+        route: '/api/v1/admin/students/:id',
+        outcome: 'SUCCESS',
+        requestBody: { nationalId: '0012345678' },
+      }),
+    ).toEqual({
+      httpMethod: 'PATCH',
+      route: '/api/v1/admin/students/:id',
+      outcome: 'SUCCESS',
+    });
+  });
+
   it('keeps operational student fields and drops direct child identifiers', () => {
     expect(
       allowlistedAuditValues({
@@ -32,6 +47,26 @@ describe('audit value allowlist', () => {
       }),
     );
     expect(serialized).toBe('{"grade":"سوم"}');
+  });
+
+  it('keeps non-sensitive driver trace metadata and drops driver PII', () => {
+    expect(
+      allowlistedAuditValues({
+        nationalId: '0499370899',
+        phoneNumber: '09123456789',
+        changedFields: ['homePhoneNumber', 'city'],
+        documentType: 'DRIVER_PHOTO',
+        vehicleType: 'CAR',
+        ownershipType: 'SELF',
+        usageType: 'PERSONAL',
+      }),
+    ).toEqual({
+      changedFields: ['homePhoneNumber', 'city'],
+      documentType: 'DRIVER_PHOTO',
+      vehicleType: 'CAR',
+      ownershipType: 'SELF',
+      usageType: 'PERSONAL',
+    });
   });
 
   it('returns undefined for non-object values', () => {

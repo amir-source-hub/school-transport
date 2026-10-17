@@ -50,7 +50,7 @@ export default async function PaymentsPage() {
   );
   const unpaid = overviews.flatMap(({ plan, items, studentFirstName, studentLastName }) =>
     items
-      .filter(({ id, itemStatus }) => itemStatus !== 'PAID' && !pendingOfflineItemIds.has(id))
+      .filter(({ id, itemStatus }) => itemStatus === 'PENDING' && !pendingOfflineItemIds.has(id))
       .map((item) => ({
         id: item.id,
         amount: item.amount,
@@ -108,12 +108,18 @@ export default async function PaymentsPage() {
                   </div>
                   <strong>{formatIrr(item.amount)}</strong>
                   <Badge tone={item.itemStatus === 'PAID' ? 'success' : 'warning'}>
-                    {item.itemStatus === 'PAID' ? 'پرداخت‌شده' : 'پرداخت‌نشده'}
+                    {item.itemStatus === 'PAID'
+                      ? 'پرداخت‌شده'
+                      : item.itemStatus === 'CANCELLED'
+                        ? 'معاف از پرداخت'
+                        : 'پرداخت‌نشده'}
                   </Badge>
-                  {item.itemStatus !== 'PAID' ? (
+                  {item.itemStatus === 'PENDING' ? (
                     <OnlinePaymentButton scheduleItemId={item.id} amount={item.amount} />
-                  ) : (
+                  ) : item.itemStatus === 'PAID' ? (
                     <span className="text-sm font-bold text-success">تسویه شد</span>
+                  ) : (
+                    <span className="text-sm font-bold text-muted">نیاز به پرداخت ندارد</span>
                   )}
                 </div>
               ))}

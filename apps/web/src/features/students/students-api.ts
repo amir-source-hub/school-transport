@@ -12,11 +12,15 @@ export const studentSchema = z.object({
   nationalId: z.string(),
   birthDate: z.string().nullable(),
   gender: z.string().nullable(),
+  physicalStatus: z.string().nullable().optional(),
+  disabilityType: z.string().nullable().optional(),
   grade: z.string().nullable(),
   className: z.string().nullable(),
   phoneNumber: z.string().nullable().default(null),
   fieldOfStudy: z.string().nullable().default(null),
   isActive: z.boolean(),
+  seatCount: z.number().default(1),
+  companion: z.object({ id:z.string(), studentId:z.string(), firstName:z.string(), lastName:z.string(), fatherName:z.string(), nationalId:z.string(), phoneNumber:z.string(), relationship:z.enum(['FAMILY','CAREGIVER','COACH']) }).nullable().default(null),
 });
 
 export type Student = z.infer<typeof studentSchema>;
@@ -44,6 +48,26 @@ export async function getStudent(id: string) {
   return studentSchema.parse(response.data);
 }
 
+export type StudentDriverAssignment = {
+  runId: string;
+  direction: 'TO_SCHOOL' | 'FROM_SCHOOL' | 'ROUND_TRIP';
+  title: string;
+  scheduledStartTime: string;
+  scheduledArrivalTime: string;
+  pickupOrder: number;
+  driverId: string;
+  driverFirstName: string;
+  driverLastName: string;
+  driverPhoneNumber: string;
+  vehicleType: string;
+  vehicleSystem: string;
+  plateNumber: string;
+  documents: Array<{ documentType: string; mimeType: string; viewUrl: string }>;
+};
+export async function getStudentDriverAssignments(id: string) {
+  return (await apiRequest<StudentDriverAssignment[]>(`/students/${id}/driver-assignments`, { cache: 'no-store' })).data;
+}
+
 export async function createStudent(input: StudentInput) {
   const response = await apiRequest<unknown>('/students', { method: 'POST', body: input });
   return studentSchema.parse(response.data);
@@ -59,6 +83,10 @@ export async function updateStudent(
   const response = await apiRequest<unknown>(`/students/${id}`, { method: 'PATCH', body: input });
   return studentSchema.parse(response.data);
 }
+
+export type StudentCompanionInput={firstName:string;lastName:string;fatherName:string;nationalId:string;phoneNumber:string;relationship:'FAMILY'|'CAREGIVER'|'COACH'};
+export async function saveStudentCompanion(studentId:string,input:StudentCompanionInput){return (await apiRequest(`/students/${studentId}/companion`,{method:'POST',body:input})).data;}
+export async function removeStudentCompanion(studentId:string){return (await apiRequest(`/students/${studentId}/companion`,{method:'DELETE'})).data;}
 
 export const studentCapacitySchema = z.object({
   studentLimit: z.number(),

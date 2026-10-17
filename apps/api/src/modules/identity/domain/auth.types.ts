@@ -20,6 +20,7 @@ export interface OnboardingSessionResult {
   token: string;
   expiresAt: Date;
   currentStep: string | null;
+  portalRole: 'PARENT' | 'DRIVER';
 }
 
 /** Verified but not yet active: guided-enrollment-only restricted identity. */

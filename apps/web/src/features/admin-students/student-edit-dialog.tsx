@@ -12,6 +12,7 @@ import { Select } from '@/components/ui/select';
 import { Tabs } from '@/components/ui/tabs';
 import {
   getAdminStudentDetail,
+  getAdminStudentPhoto,
   updateAdminStudent,
   type AdminStudentDetail,
 } from '@/features/admin-students/admin-students-api';
@@ -30,6 +31,8 @@ import {
   placeCaretAfterPrefix,
 } from '@/features/enrollment/input-normalizers';
 import { normalizeDigits } from '@/features/enrollment/national-id';
+import { AdminStudentPhotoActions } from '@/features/student-photos/admin-student-photo-actions';
+import { AdminCompanionEditor } from '@/features/admin-students/admin-companion-editor';
 
 const LocationPicker = dynamic(
   () => import('@/components/common/location-picker').then((m) => ({ default: m.LocationPicker })),
@@ -52,7 +55,7 @@ const REGISTRATION_STATUS_LABELS: Record<string, string> = {
   CONTRACT_PENDING: 'در انتظار قرارداد',
   CONTRACT_READY: 'قرارداد آماده',
   CONTRACT_ACCEPTED: 'قرارداد پذیرفته‌شده',
-  ENROLLED: 'پیش‌پرداخت انجام‌شده',
+  ENROLLED: 'ثبت‌نام تکمیل‌شده',
   CANCELLED: 'لغوشده',
   INSTALLMENTS_IN_PROGRESS: 'در حال پرداخت اقساط',
   PAYMENT_COMPLETED: 'تسویه کامل',
@@ -70,11 +73,13 @@ const PLAN_STATUS_LABELS: Record<string, string> = {
   PENDING: 'در انتظار',
   ACTIVE: 'فعال',
   COMPLETED: 'تکمیل‌شده',
+  CANCELLED: 'معاف از پرداخت',
 };
 
 const ITEM_STATUS_LABELS: Record<string, string> = {
   PENDING: 'در انتظار',
   PAID: 'پرداخت‌شده',
+  CANCELLED: 'معاف از پرداخت',
 };
 
 export function StudentEditDialog({
@@ -109,13 +114,22 @@ export function StudentEditDialog({
 
 function StudentEditBody({ studentId, schools }: { studentId: string; schools: SchoolOption[] }) {
   const [detail, setDetail] = useState<AdminStudentDetail | null>(null);
+  const [approvedPhoto, setApprovedPhoto] = useState<{ uploadId: string; version: number } | null>(
+    null,
+  );
   const [error, setError] = useState<string>();
 
   useEffect(() => {
     let active = true;
-    getAdminStudentDetail(studentId)
-      .then((result) => {
-        if (active) setDetail(result);
+    Promise.all([
+      getAdminStudentDetail(studentId),
+      getAdminStudentPhoto(studentId).catch(() => null),
+    ])
+      .then(([result, photo]) => {
+        if (active) {
+          setDetail(result);
+          setApprovedPhoto(photo ? { uploadId: photo.uploadId, version: photo.version } : null);
+        }
       })
       .catch((caught) => {
         if (active) setError(getApiErrorFeedback(caught).message);
@@ -128,20 +142,34 @@ function StudentEditBody({ studentId, schools }: { studentId: string; schools: S
   if (error) return <p className="text-sm text-danger">{error}</p>;
   if (!detail) return <p className="text-sm text-muted">در حال بارگذاری...</p>;
 
-  return <StudentEditForm detail={detail} schools={schools} />;
+  return <StudentEditForm detail={detail} schools={schools} approvedPhoto={approvedPhoto} />;
 }
 
 function StudentEditForm({
-  detail,
+  detail: initialDetail,
   schools,
+  approvedPhoto,
 }: {
   detail: AdminStudentDetail;
   schools: SchoolOption[];
+  approvedPhoto: { uploadId: string; version: number } | null;
 }) {
+  const [detail, setDetail] = useState(initialDetail);
   const [latestUpdatedAt, setLatestUpdatedAt] = useState(detail.updatedAt);
   const router = useRouter();
 
-  const refresh = () => router.refresh();
+  const refresh = () => {
+    router.refresh();
+    // Refresh the dialog too: router.refresh does not replace its local snapshot.
+    void getAdminStudentDetail(detail.id)
+      .then((updated) => {
+        setDetail(updated);
+        setLatestUpdatedAt(updated.updatedAt);
+      })
+      .catch(() => {
+        /* Keep the successful save and its returned revision. */
+      });
+  };
 
   return (
     <Tabs
@@ -187,6 +215,22 @@ function StudentEditForm({
           ),
         },
         {
+          value: 'photo',
+          label: 'عکس دانش‌آموز',
+          content: (
+            <AdminStudentPhotoActions
+              studentId={detail.id}
+              familyId={detail.userId}
+              approvedPhoto={approvedPhoto}
+            />
+          ),
+        },
+        {
+          value: 'companion',
+          label: 'همراه دانش‌آموز',
+          content: <AdminCompanionEditor student={detail} />,
+        },
+        {
           value: 'contract',
           label: 'قرارداد',
           content: <ContractTab detail={detail} />,
@@ -225,6 +269,8 @@ function IdentityTab({
     nationalId: detail.nationalId,
     birthDate: detail.birthDate ?? '',
     gender: detail.gender ?? '',
+    physicalStatus: detail.physicalStatus ?? 'HEALTHY',
+    disabilityType: detail.disabilityType ?? '',
   });
   const set = (key: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -240,6 +286,8 @@ function IdentityTab({
         nationalId: form.nationalId,
         birthDate: form.birthDate || undefined,
         gender: form.gender || undefined,
+        physicalStatus: form.physicalStatus,
+        disabilityType: form.physicalStatus === 'SPECIAL' ? form.disabilityType : '',
         expectedUpdatedAt,
       });
       onSaved(updated.updatedAt);
@@ -277,7 +325,11 @@ function IdentityTab({
             dir="ltr"
             inputMode="numeric"
             value={form.nationalId}
-            onChange={(event) => set('nationalId', event.target.value)}
+            maxLength={10}
+            pattern="[0-9]{10}"
+            onChange={(event) =>
+              set('nationalId', normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, 10))
+            }
           />
         </label>
         <label className="text-sm font-bold">
@@ -296,6 +348,26 @@ function IdentityTab({
             placeholder="انتخاب کنید"
           />
         </label>
+        <label className="text-sm font-bold">
+          وضعیت جسمانی
+          <Select
+            value={form.physicalStatus}
+            onValueChange={(value) => set('physicalStatus', value)}
+            options={[
+              { value: 'HEALTHY', label: 'سالم' },
+              { value: 'SPECIAL', label: 'استثنائی' },
+            ]}
+          />
+        </label>
+        {form.physicalStatus === 'SPECIAL' && (
+          <label className="text-sm font-bold">
+            نوع معلولیت
+            <Input
+              value={form.disabilityType}
+              onChange={(event) => set('disabilityType', event.target.value)}
+            />
+          </label>
+        )}
       </div>
       <SaveFeedback message={feedback?.message} tone={feedback?.tone ?? 'success'} />
       <Button type="submit" loading={pending}>
@@ -405,6 +477,12 @@ function SchoolTab({
       <Button type="submit" loading={pending}>
         ذخیره مدرسه
       </Button>
+      {schoolId !== detail.schoolId && (
+        <p className="text-sm text-muted">
+          با تغییر مدرسه، ارتباط مسیرهای قبلی پایان می‌یابد. مسیر رفت و برگشت جدید را در بخش مسیرها
+          و تخصیص‌ها تعیین کنید.
+        </p>
+      )}
     </form>
   );
 }

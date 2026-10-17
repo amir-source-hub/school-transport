@@ -1,7 +1,16 @@
-import { BadRequestException, type CallHandler, type ExecutionContext } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  type CallHandler,
+  type ExecutionContext,
+} from '@nestjs/common';
 import { lastValueFrom, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
-import { HttpActivityInterceptor } from './http-activity.interceptor';
+import {
+  HttpActivityInterceptor,
+  recordUninterceptedHttpFailure,
+} from './http-activity.interceptor';
+import { ValidationError } from './errors';
 
 function context(statusCode = 200): ExecutionContext {
   const request = {
@@ -21,7 +30,37 @@ function context(statusCode = 200): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
+function healthContext(route = '/api/v1/health/ready'): ExecutionContext {
+  const request = {
+    id: 'health-check',
+    method: 'GET',
+    url: route,
+    routeOptions: { url: route },
+    headers: { 'user-agent': 'node' },
+    ip: '127.0.0.1',
+  };
+  return {
+    switchToHttp: () => ({
+      getRequest: () => request,
+      getResponse: () => ({ statusCode: 200 }),
+    }),
+  } as unknown as ExecutionContext;
+}
+
 describe('HttpActivityInterceptor', () => {
+  it('does not persist liveness or readiness probes', async () => {
+    const activity = { enqueue: vi.fn() };
+    const interceptor = new HttpActivityInterceptor(activity as never, {} as never);
+
+    await lastValueFrom(
+      interceptor.intercept(healthContext(), {
+        handle: () => of({ status: 'ready' }),
+      } as CallHandler),
+    );
+
+    expect(activity.enqueue).not.toHaveBeenCalled();
+  });
+
   it('records metadata for a successful request without query strings or bodies', async () => {
     const activity = { enqueue: vi.fn() };
     const interceptor = new HttpActivityInterceptor(
@@ -72,5 +111,100 @@ describe('HttpActivityInterceptor', () => {
       }),
     );
     expect(JSON.stringify(activity.enqueue.mock.calls)).not.toContain('invalid secret value');
+  });
+
+  it('records validation field paths without storing personal values', async () => {
+    const activity = { enqueue: vi.fn() };
+    const interceptor = new HttpActivityInterceptor(
+      activity as never,
+      { requestId: 'request-3', traceId: '1234567890abcdef1234567890abcdef' } as never,
+    );
+    await expect(
+      lastValueFrom(
+        interceptor.intercept(context(), {
+          handle: () =>
+            throwError(
+              () =>
+                new ValidationError('private-value-should-never-be-logged', {
+                  'guardian.homePhone': ['private-value-should-never-be-logged'],
+                  'guardian.lastName': ['invalid'],
+                }),
+            ),
+        } as CallHandler),
+      ),
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(activity.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errorCode: 'VALIDATION_ERROR',
+        errorCategory: 'APPLICATION',
+        errorFields: ['guardian.homePhone', 'guardian.lastName'],
+      }),
+    );
+    expect(JSON.stringify(activity.enqueue.mock.calls)).not.toContain(
+      'private-value-should-never-be-logged',
+    );
+  });
+
+  it('records database category and SQLSTATE without leaking constraint details', async () => {
+    const activity = { enqueue: vi.fn() };
+    const interceptor = new HttpActivityInterceptor(
+      activity as never,
+      { requestId: 'request-4', traceId: '1234567890abcdef1234567890abcdef' } as never,
+    );
+    const databaseError = {
+      code: '23505',
+      constraint: 'private_constraint',
+      detail: 'private national ID 0012345678',
+    };
+    await expect(
+      lastValueFrom(
+        interceptor.intercept(context(), {
+          handle: () => throwError(() => databaseError),
+        } as CallHandler),
+      ),
+    ).rejects.toBe(databaseError);
+    expect(activity.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errorCode: 'DATABASE_CONFLICT',
+        errorCategory: 'DATABASE.unique',
+        databaseCode: '23505',
+      }),
+    );
+    expect(JSON.stringify(activity.enqueue.mock.calls)).not.toContain('private_constraint');
+    expect(JSON.stringify(activity.enqueue.mock.calls)).not.toContain('0012345678');
+  });
+
+  it('records a guard failure that occurs before the interceptor and avoids duplicates', () => {
+    const activity = { enqueue: vi.fn() };
+    const request = {
+      id: 'fastify-guard',
+      method: 'POST',
+      url: '/api/v1/admin/secret?token=private',
+      routeOptions: { url: '/api/v1/admin/secret' },
+      headers: {},
+      ip: '127.0.0.1',
+    };
+    const context = { requestId: 'request-5', traceId: '1234567890abcdef1234567890abcdef' };
+    recordUninterceptedHttpFailure(
+      activity as never,
+      context as never,
+      request as never,
+      new ForbiddenException(),
+    );
+    recordUninterceptedHttpFailure(
+      activity as never,
+      context as never,
+      request as never,
+      new ForbiddenException(),
+    );
+    expect(activity.enqueue).toHaveBeenCalledTimes(1);
+    expect(activity.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        route: '/api/v1/admin/secret',
+        statusCode: 403,
+        errorCategory: 'HTTP_VALIDATION_OR_GUARD',
+      }),
+    );
+    expect(JSON.stringify(activity.enqueue.mock.calls)).not.toContain('token=private');
   });
 });

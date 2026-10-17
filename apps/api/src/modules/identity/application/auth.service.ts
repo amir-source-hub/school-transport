@@ -16,6 +16,7 @@ import {
   schoolManagerUsers,
   schoolManagerAssignments,
   schools,
+  drivers,
 } from '../../../database/schemas';
 import { AppError, AuthenticationError, ValidationError } from '../../../common/errors';
 import { generateId } from '../../../common/utils';
@@ -316,6 +317,7 @@ export class AuthService {
           id: userId,
           username: pendingUsername,
           phoneNumber,
+          accountType: 'PARENT',
           accountStatus: 'PENDING',
         });
       } else {
@@ -324,9 +326,12 @@ export class AuthService {
             ? await this.onboarding.resolve(onboardingToken)
             : undefined;
         const ownsPendingDraft =
-          account?.username === pendingUsername ||
-          (existingOnboarding?.userId === userId && existingOnboarding.phoneNumber === phoneNumber);
-        if (!ownsPendingDraft) throw genericError();
+          existingOnboarding?.userId === userId &&
+          existingOnboarding.phoneNumber === phoneNumber &&
+          existingOnboarding.portalRole === 'PARENT';
+        if (!ownsPendingDraft) {
+          await this.onboarding?.restartPendingDraft(userId, 'PARENT');
+        }
         // A PENDING row is only a restricted draft owner, not a completed account.
         // Its credentials may be corrected only by the browser that owns the draft.
         // ACTIVE accounts still follow the strict parent match below.
@@ -341,7 +346,7 @@ export class AuthService {
           .where(eq(users.id, userId));
       }
       if (!this.onboarding) throw new AuthenticationError('Onboarding is not configured.');
-      const onboarding = await this.onboarding.beginOrResume(userId, phoneNumber);
+      const onboarding = await this.onboarding.beginOrResume(userId, phoneNumber, 'PARENT');
       this.logger.log('Parent onboarding session issued with fixed credentials.');
       return { user: null, onboarding: { ...onboarding, nationalId } };
     }
@@ -378,6 +383,81 @@ export class AuthService {
     };
   }
 
+  async authenticateDriver(
+    phoneNumber: string,
+    nationalId: string,
+    context?: SessionContext,
+    rememberMe = false,
+    onboardingToken?: string,
+  ): Promise<ParentCredentialResult> {
+    const genericError = () => new AuthenticationError('شماره همراه راننده یا کد ملی صحیح نیست.');
+    const account = await this.findAccountByPhone(phoneNumber, 'DRIVER');
+    const [nationalIdOwner] = await this.db.db
+      .select({ userId: drivers.userId, status: users.accountStatus })
+      .from(drivers)
+      .innerJoin(users, eq(users.id, drivers.userId))
+      .where(eq(drivers.nationalId, nationalId))
+      .limit(1);
+    if (
+      nationalIdOwner?.status === 'ACTIVE' &&
+      (!account || account.id !== nationalIdOwner.userId)
+    ) {
+      throw genericError();
+    }
+
+    if (!account || account.status === 'PENDING' || account.status === 'EXPIRED') {
+      if (this.config.featureOnboarding === false || !this.onboarding) throw genericError();
+      let userId = account?.id;
+      const pendingUsername = `${phoneNumber}:${nationalId}`;
+      if (!userId) {
+        userId = generateId();
+        await this.db.db.insert(users).values({
+          id: userId,
+          username: pendingUsername,
+          phoneNumber,
+          accountType: 'DRIVER',
+          accountStatus: 'PENDING',
+        });
+      } else {
+        const existingOnboarding = onboardingToken
+          ? await this.onboarding.resolve(onboardingToken)
+          : undefined;
+        const ownsPendingDraft =
+          existingOnboarding?.userId === userId &&
+          existingOnboarding.phoneNumber === phoneNumber &&
+          existingOnboarding.portalRole === 'DRIVER';
+        if (!ownsPendingDraft) {
+          await this.onboarding.restartPendingDraft(userId, 'DRIVER');
+        }
+        await this.db.db
+          .update(users)
+          .set({ username: pendingUsername, accountStatus: 'PENDING', updatedAt: new Date() })
+          .where(eq(users.id, userId));
+      }
+      const onboarding = await this.onboarding.beginOrResume(userId, phoneNumber, 'DRIVER');
+      return { user: null, onboarding: { ...onboarding, nationalId } };
+    }
+
+    const [driver] = await this.db.db
+      .select({ id: drivers.id })
+      .from(drivers)
+      .where(
+        and(
+          eq(drivers.userId, account.id),
+          eq(drivers.phoneNumber, phoneNumber),
+          eq(drivers.nationalId, nationalId),
+        ),
+      )
+      .limit(1);
+    if (!driver || account.status !== 'ACTIVE') throw genericError();
+    await this.db.db
+      .update(users)
+      .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, account.id));
+    const tokens = await this.generateTokens(account.id, 'DRIVER', context, undefined, rememberMe);
+    return { user: { id: account.id, username: account.username, phoneNumber, role: 'DRIVER' }, ...tokens };
+  }
+
   async verifyAuthOtp(
     phoneNumber: string,
     code: string,
@@ -408,6 +488,7 @@ export class AuthService {
           id: userId,
           username: phoneNumber,
           phoneNumber,
+          accountType: 'PARENT',
           accountStatus: 'PENDING',
         });
         this.logger.log('Parent onboarding account created after OTP verification.');
@@ -420,7 +501,7 @@ export class AuthService {
       if (!this.onboarding) {
         throw new AuthenticationError('Onboarding is not configured.');
       }
-      const onboardingSession = await this.onboarding.beginOrResume(userId, phoneNumber);
+      const onboardingSession = await this.onboarding.beginOrResume(userId, phoneNumber, 'PARENT');
       this.logger.log('Onboarding session issued for a verified phone.');
       return { user: null, onboarding: onboardingSession };
     }
@@ -467,6 +548,7 @@ export class AuthService {
     token: string,
     context?: SessionContext,
     rememberMe = false,
+    requestedRole?: 'PARENT' | 'DRIVER',
   ): Promise<LoginResult> {
     if (!this.onboarding) {
       throw new AuthenticationError('Onboarding is not configured.');
@@ -475,30 +557,40 @@ export class AuthService {
     if (!session) {
       throw new AuthenticationError('Invalid or expired onboarding session.');
     }
-    if (!(await this.onboarding.isPanelReady(session.userId))) {
+    if (requestedRole && requestedRole !== session.portalRole) {
+      throw new AuthenticationError('This onboarding session belongs to another portal.');
+    }
+    if (!(await this.onboarding.isPanelReady(session.userId, session.portalRole))) {
       throw new ValidationError(
         'Onboarding cannot be completed until an enrollment contract is accepted.',
       );
     }
-    await this.onboarding.completeOnboarding(session.id, session.userId);
+    await this.onboarding.completeOnboarding(session.id, session.userId, session.portalRole);
     await this.db.db
       .update(users)
       .set({ username: session.phoneNumber, updatedAt: new Date() })
       .where(eq(users.id, session.userId));
+    const [[driver], [parent]] = await Promise.all([
+      this.db.db.select({ id: drivers.id }).from(drivers).where(eq(drivers.userId, session.userId)).limit(1),
+      this.db.db.select({ id: parents.id }).from(parents).where(eq(parents.userId, session.userId)).limit(1),
+    ]);
+    if (requestedRole === 'DRIVER' && !driver) throw new ValidationError('پروفایل راننده تکمیل نشده است.');
+    if (requestedRole === 'PARENT' && !parent) throw new ValidationError('پروفایل خانواده تکمیل نشده است.');
+    const role: UserRole = session.portalRole;
     const tokens = await this.generateTokens(
       session.userId,
-      'PARENT',
+      role,
       context,
       undefined,
       rememberMe,
     );
-    this.logger.log('Onboarding completed; parent account activated.');
+    this.logger.log(`${role} onboarding completed; isolated account activated.`);
     return {
       user: {
         id: session.userId,
         username: session.phoneNumber,
         phoneNumber: session.phoneNumber,
-        role: 'PARENT',
+        role,
       },
       ...tokens,
     };
@@ -839,7 +931,9 @@ export class AuthService {
       ? this.normalizeManagerUsername(data.username)
       : current.username;
     const phoneNumber = data.phoneNumber ?? current.phoneNumber;
-    if (!/^[A-Za-z0-9]{8}$/.test(username)) {
+    // Existing accounts may predate the current eight-character policy. Do not
+    // block unrelated school/manager edits unless the admin changes the username.
+    if (data.username !== undefined && !/^[A-Za-z0-9]{8}$/.test(username)) {
       throw new ValidationError('نام کاربری مدیر باید دقیقاً ۸ حرف انگلیسی یا عدد باشد.');
     }
     if (data.password !== undefined && !/^[A-Za-z0-9]{8}$/.test(data.password)) {
@@ -1045,7 +1139,7 @@ export class AuthService {
 
   async refreshTokens(
     refreshToken: string,
-  ): Promise<AuthTokens & { role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER'; remembered: boolean }> {
+  ): Promise<AuthTokens & { role: UserRole; remembered: boolean }> {
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
         secret: this.config.jwtSecret,
@@ -1053,7 +1147,7 @@ export class AuthService {
 
       if (
         payload.type !== 'refresh' ||
-        !['PARENT', 'ADMIN', 'SCHOOL_MANAGER'].includes(payload.role)
+        !['PARENT', 'ADMIN', 'SCHOOL_MANAGER', 'DRIVER'].includes(payload.role)
       ) {
         throw new AuthenticationError('Invalid refresh token.');
       }
@@ -1318,26 +1412,27 @@ export class AuthService {
 
   private async findAccountByPhone(
     phoneNumber: string,
-    _role: 'PARENT' = 'PARENT',
+    role: 'PARENT' | 'DRIVER' = 'PARENT',
   ): Promise<{ id: string; username: string; status: string } | undefined> {
     const direct = await this.db.db
       .select({ id: users.id, username: users.username, status: users.accountStatus })
       .from(users)
-      .where(eq(users.phoneNumber, phoneNumber))
+      .where(and(eq(users.phoneNumber, phoneNumber), eq(users.accountType, role)))
       .limit(1);
     if (direct[0]) return direct[0];
 
     // Compatibility for accounts created before users.phone_number existed.
+    if (role !== 'PARENT') return undefined;
     const legacy = await this.db.db
       .select({ id: users.id, username: users.username, status: users.accountStatus })
       .from(parents)
       .innerJoin(users, eq(parents.userId, users.id))
-      .where(eq(parents.phoneNumber, phoneNumber))
+      .where(and(eq(parents.phoneNumber, phoneNumber), eq(users.accountType, 'PARENT')))
       .limit(1);
     return legacy[0];
   }
 
-  private async findAccountById(userId: string, role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER') {
+  private async findAccountById(userId: string, role: UserRole) {
     if (role === 'ADMIN') {
       return (
         await this.db.db
@@ -1360,14 +1455,19 @@ export class AuthService {
       await this.db.db
         .select({ status: users.accountStatus })
         .from(users)
-        .where(eq(users.id, userId))
+        .where(
+          and(
+            eq(users.id, userId),
+            eq(users.accountType, role === 'DRIVER' ? 'DRIVER' : 'PARENT'),
+          ),
+        )
         .limit(1)
     )[0];
   }
 
   private async generateTokens(
     userId: string,
-    role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER',
+    role: UserRole,
     context?: SessionContext,
     replacedSessionId?: string,
     rememberMe = false,
@@ -1441,7 +1541,7 @@ export class AuthService {
 
   private async revokeAllSessions(
     subjectId: string,
-    role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER',
+    role: UserRole,
     reason: string,
   ): Promise<void> {
     await this.db.db

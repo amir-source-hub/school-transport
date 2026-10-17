@@ -1,7 +1,6 @@
-import { addMonths } from 'date-fns';
 import { eq } from 'drizzle-orm';
 import { ConflictError } from '../common/errors';
-import { calculateInstallmentAmounts, generateId } from '../common/utils';
+import { generateId } from '../common/utils';
 import { DatabaseService } from './database.service';
 import { paymentPlans, paymentScheduleItems, registrationPrices } from './schemas';
 
@@ -40,7 +39,7 @@ export async function createPaymentPlanInTransaction(
       totalAmount: price.totalAmount,
       prepaymentAmount: prepayment,
       remainingInstallmentAmount: price.totalAmount - prepayment,
-      installmentCount: isFull ? 1 : price.installmentCount,
+      installmentCount: isFull ? 1 : 0,
       planStatus: 'PENDING',
     })
     .onConflictDoNothing({ target: paymentPlans.registrationPriceId })
@@ -61,27 +60,13 @@ export async function createPaymentPlanInTransaction(
     return existing.id;
   }
 
-  const now = new Date();
-  const installments = isFull
-    ? []
-    : calculateInstallmentAmounts(price.totalAmount, prepayment, price.installmentCount);
-  await txn.insert(paymentScheduleItems).values([
-    {
-      id: generateId(),
-      paymentPlanId: planId,
-      itemType: 'PREPAYMENT',
-      sequenceNumber: 0,
-      amount: prepayment,
-      dueDate: now,
-    },
-    ...installments.map((amount, index) => ({
-      id: generateId(),
-      paymentPlanId: planId,
-      itemType: 'INSTALLMENT',
-      sequenceNumber: index + 1,
-      amount,
-      dueDate: addMonths(now, index + 1),
-    })),
-  ]);
+  await txn.insert(paymentScheduleItems).values({
+    id: generateId(),
+    paymentPlanId: planId,
+    itemType: 'PREPAYMENT',
+    sequenceNumber: 0,
+    amount: prepayment,
+    dueDate: new Date(),
+  });
   return planId;
 }

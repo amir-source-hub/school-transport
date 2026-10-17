@@ -1,5 +1,14 @@
 # Environment inventory
 
+## Manager and local-test settings
+
+- `FEATURE_MANAGER_PORTAL`, `FEATURE_MANAGER_LOGIN`, `FEATURE_MANAGER_DRIVER_PREVIEW`: optional API runtime boolean gates, default `true`.
+- `NEXT_PUBLIC_FEATURE_MANAGER_PORTAL`, `NEXT_PUBLIC_MANAGER_DRIVER_PREVIEW`: public web build-time manager gates; rebuild after changing them.
+- `MANAGER_MAX_FAILED_LOGIN_ATTEMPTS`: API login lockout threshold, default 5, range 3–20.
+- `MANAGER_LOCKOUT_SECONDS`: API lockout duration, default 1800, range 60–86400 seconds.
+- `SEED_MANAGER_PASSWORD`: demo seed password override; secret, only for explicitly requested demo seeding. Never enable demo seeding in production.
+- `TEST_LOCAL_SCHOOL_CHANGE`: opt-in integration test switch (`1`); use only with a disposable test database, never production.
+
 Real secrets belong in the deployment secret store, never in examples or source control. Build-time
 variables require a rebuild; runtime variables require a process restart.
 

@@ -1,7 +1,9 @@
 import {
+  bigint,
   boolean,
   check,
   date,
+  doublePrecision,
   index,
   integer,
   pgTable,
@@ -15,17 +17,42 @@ import {
 import { sql } from 'drizzle-orm';
 import { schools } from './schools.schema';
 import { students } from './students.schema';
+import { users } from './auth.schema';
 
 export const drivers = pgTable('drivers', {
   id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .unique()
+    .references(() => users.id),
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
-  fatherName: varchar('father_name', { length: 100 }),
+  fatherName: varchar('father_name', { length: 100 }).notNull(),
   nationalId: varchar('national_id', { length: 10 }).notNull().unique(),
-  phoneNumber: varchar('phone_number', { length: 20 }).notNull(),
-  gender: varchar('gender', { length: 10 }),
-  education: varchar('education', { length: 100 }),
+  phoneNumber: varchar('phone_number', { length: 20 }).notNull().unique(),
+  secondaryPhoneNumber: varchar('secondary_phone_number', { length: 20 }),
+  homePhoneNumber: varchar('home_phone_number', { length: 20 }),
+  emergencyPhoneNumber: varchar('emergency_phone_number', { length: 20 }).notNull(),
+  emergencyFirstName: varchar('emergency_first_name', { length: 100 }).notNull(),
+  emergencyLastName: varchar('emergency_last_name', { length: 100 }).notNull(),
+  emergencyRelationship: varchar('emergency_relationship', { length: 100 }).notNull(),
+  gender: varchar('gender', { length: 10 }).notNull(),
+  education: varchar('education', { length: 100 }).notNull(),
+  iban: varchar('iban', { length: 26 }),
+  cardNumber: varchar('card_number', { length: 16 }),
+  bankName: varchar('bank_name', { length: 100 }),
   licenseExpiresAt: date('license_expires_at'),
+  streetAddress: text('street_address').notNull(),
+  postalCode: varchar('postal_code', { length: 10 }).notNull(),
+  province: varchar('province', { length: 100 }).notNull(),
+  city: varchar('city', { length: 100 }).notNull(),
+  municipalityDistrict: varchar('municipality_district', { length: 50 }).notNull(),
+  latitude: doublePrecision('latitude').notNull(),
+  longitude: doublePrecision('longitude').notNull(),
+  referrerName: varchar('referrer_name', { length: 200 }),
+  referrerPhoneNumber: varchar('referrer_phone_number', { length: 20 }),
+  contractVersion: varchar('contract_version', { length: 30 }).notNull(),
+  contractAcceptedAt: timestamp('contract_accepted_at', { withTimezone: true }).notNull(),
   status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -35,12 +62,16 @@ export const vehicles = pgTable(
   'vehicles',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    driverId: uuid('driver_id').notNull().references(() => drivers.id),
+    driverId: uuid('driver_id')
+      .notNull()
+      .references(() => drivers.id),
     vehicleType: varchar('vehicle_type', { length: 50 }).notNull(),
     system: varchar('system', { length: 100 }).notNull(),
     modelYear: integer('model_year').notNull(),
     plateNumber: varchar('plate_number', { length: 30 }).notNull(),
     capacity: integer('capacity').notNull(),
+    usageType: varchar('usage_type', { length: 20 }).notNull(),
+    ownershipType: varchar('ownership_type', { length: 20 }).notNull(),
     status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
     technicalInspectionExpiresAt: date('technical_inspection_expires_at'),
     insuranceExpiresAt: date('insurance_expires_at'),
@@ -59,9 +90,15 @@ export const transportServiceRuns = pgTable(
   'transport_service_runs',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    schoolId: uuid('school_id').notNull().references(() => schools.id),
-    driverId: uuid('driver_id').notNull().references(() => drivers.id),
-    vehicleId: uuid('vehicle_id').notNull().references(() => vehicles.id),
+    schoolId: uuid('school_id')
+      .notNull()
+      .references(() => schools.id),
+    driverId: uuid('driver_id')
+      .notNull()
+      .references(() => drivers.id),
+    vehicleId: uuid('vehicle_id')
+      .notNull()
+      .references(() => vehicles.id),
     academicYear: varchar('academic_year', { length: 20 }).notNull(),
     title: varchar('title', { length: 100 }).notNull(),
     direction: varchar('direction', { length: 12 }).notNull(),
@@ -69,6 +106,8 @@ export const transportServiceRuns = pgTable(
     scheduledStartTime: time('scheduled_start_time').notNull(),
     scheduledArrivalTime: time('scheduled_arrival_time').notNull(),
     areaDescription: text('area_description'),
+    contractPriceRials: bigint('contract_price_rials', { mode: 'number' }),
+    contractDate: varchar('contract_date', { length: 10 }),
     activeWeekdays: integer('active_weekdays').array().notNull().default([]),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -86,12 +125,9 @@ export const transportServiceRuns = pgTable(
     ),
     validDirection: check(
       'transport_runs_direction_check',
-      sql`${table.direction} in ('TO_SCHOOL', 'FROM_SCHOOL')`,
+      sql`${table.direction} in ('TO_SCHOOL', 'FROM_SCHOOL', 'ROUND_TRIP')`,
     ),
-    positiveSequence: check(
-      'transport_runs_sequence_positive',
-      sql`${table.sequenceNumber} > 0`,
-    ),
+    positiveSequence: check('transport_runs_sequence_positive', sql`${table.sequenceNumber} > 0`),
   }),
 );
 
@@ -99,9 +135,14 @@ export const transportServiceRunStudents = pgTable(
   'transport_service_run_students',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    serviceRunId: uuid('service_run_id').notNull().references(() => transportServiceRuns.id),
-    studentId: uuid('student_id').notNull().references(() => students.id),
+    serviceRunId: uuid('service_run_id')
+      .notNull()
+      .references(() => transportServiceRuns.id),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id),
     pickupOrder: integer('pickup_order').notNull(),
+    scheduledStopTime: time('scheduled_stop_time'),
     notes: text('notes'),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -133,6 +174,9 @@ export const transportDocuments = pgTable(
     pageNumber: integer('page_number').notNull().default(1),
     objectKey: varchar('object_key', { length: 500 }).notNull(),
     mimeType: varchar('mime_type', { length: 100 }).notNull(),
+    reviewStatus: varchar('review_status', { length: 20 }).notNull().default('ACTIVE'),
+    rejectionReason: varchar('rejection_reason', { length: 500 }),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
@@ -146,5 +190,22 @@ export const transportDocuments = pgTable(
       'transport_documents_page_number_positive',
       sql`${table.pageNumber} > 0`,
     ),
+  }),
+);
+
+export const driverDocumentUploads = pgTable(
+  'driver_document_uploads',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull(),
+    documentType: varchar('document_type', { length: 50 }).notNull(),
+    objectKey: varchar('object_key', { length: 500 }).notNull().unique(),
+    mimeType: varchar('mime_type', { length: 100 }).notNull(),
+    declaredSize: integer('declared_size').notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('AUTHORIZED'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    ownerIdx: index('idx_driver_document_uploads_owner').on(table.userId, table.status),
   }),
 );

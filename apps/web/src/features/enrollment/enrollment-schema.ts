@@ -8,6 +8,8 @@ import { isAllowedPersianText, persianTextMessage } from './persian-text';
 import { isValidIranianNationalId, nationalIdError } from './national-id';
 
 const required = 'پر کردن این فیلد اجباری است';
+const persianLettersOnly =
+  /^[\u0621-\u063A\u0641-\u065F\u066E-\u0670\u0671-\u06D3\u06D5-\u06ED\u06EE-\u06EF\u06FA-\u06FC\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF\u200c\u200f\s-]+$/;
 
 const name = z
   .string()
@@ -15,7 +17,7 @@ const name = z
   .min(1, required)
   .max(100, 'حداکثر ۱۰۰ نویسه مجاز است.')
   .superRefine((value, ctx) => {
-    if (!value || isAllowedPersianText(value)) return;
+    if (!value || (isAllowedPersianText(value) && persianLettersOnly.test(value))) return;
     ctx.addIssue({ code: 'custom', message: persianTextMessage(value) });
   });
 
@@ -38,24 +40,44 @@ const homePhone = z
     message: 'شماره تلفن منزل باید شامل پیششماره ۰۲۱ و ۸ رقم باشد.',
   });
 
-export const studentSchema = z.object({
-  id: z.string().uuid().optional(),
+export const studentSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    firstName: name,
+    lastName: name,
+    fatherName: name,
+    nationalId,
+    birthDate: z
+      .string()
+      .date('تاریخ تولد معتبر نیست.')
+      .refine((value) => value <= new Date().toISOString().slice(0, 10), {
+        message: 'تاریخ تولد نمی‌تواند در آینده باشد.',
+      })
+      .refine((value) => value >= '1900-01-01', {
+        message: 'تاریخ تولد از بازه مجاز قدیمی‌تر است.',
+      })
+      .optional(),
+    gender: z.enum(['MALE', 'FEMALE'], { message: 'انتخاب جنسیت اجباری است.' }),
+    physicalStatus: z.enum(['HEALTHY', 'SPECIAL'], { message: 'وضعیت جسمانی را انتخاب کنید.' }),
+    disabilityType: name.optional(),
+    phoneNumber: mobile.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.physicalStatus === 'SPECIAL' && !value.disabilityType?.trim())
+      ctx.addIssue({
+        code: 'custom',
+        path: ['disabilityType'],
+        message: 'نوع معلولیت را وارد کنید.',
+      });
+  });
+
+export const enrollmentCompanionSchema = z.object({
   firstName: name,
   lastName: name,
   fatherName: name,
   nationalId,
-  birthDate: z
-    .string()
-    .date('تاریخ تولد معتبر نیست.')
-    .refine((value) => value <= new Date().toISOString().slice(0, 10), {
-      message: 'تاریخ تولد نمی‌تواند در آینده باشد.',
-    })
-    .refine((value) => value >= '1900-01-01', {
-      message: 'تاریخ تولد از بازه مجاز قدیمی‌تر است.',
-    })
-    .optional(),
-  gender: z.enum(['MALE', 'FEMALE'], { message: 'انتخاب جنسیت اجباری است.' }),
-  phoneNumber: mobile.optional(),
+  phoneNumber: mobile,
+  relationship: z.enum(['FAMILY', 'CAREGIVER', 'COACH']),
 });
 
 export const parentContactSchema = z.object({
@@ -101,9 +123,13 @@ export const emergencyContactSchema = z.object({
 });
 
 export const addressSchema = z.object({
-  title: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
-  province: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
-  city: z.string().trim().min(1, required).max(100, 'حداکثر ۱۰۰ نویسه مجاز است.'),
+  title: name,
+  province: name,
+  city: name,
+  district: z.enum(['سایر', ...Array.from({ length: 22 }, (_, index) => String(index + 1))] as [
+    string,
+    ...string[],
+  ]),
   streetAddress: z.string().trim().min(1, required).max(500, 'حداکثر ۵۰۰ نویسه مجاز است.'),
   postalCode: z
     .string()
@@ -139,6 +165,7 @@ export const serviceSchema = z.object({
 export const guidedEnrollmentSchema = z.object({
   studentPhotoUploadId: z.string().uuid().optional(),
   student: studentSchema,
+  companion: enrollmentCompanionSchema.nullable().optional(),
   guardian: guardianSchema,
   father: parentContactSchema.nullable().optional(),
   mother: parentContactSchema.nullable().optional(),

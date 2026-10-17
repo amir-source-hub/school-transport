@@ -7,11 +7,12 @@ import {
   registrationPrices,
   serviceRegistrations,
   students,
+  users,
   parents,
   offlinePaymentDestinations,
   offlinePaymentSubmissions,
 } from '../../database/schemas';
-import { eq, and, count, inArray, desc, max, ne } from 'drizzle-orm';
+import { eq, and, count, ilike, inArray, desc, max, ne, or, sql } from 'drizzle-orm';
 import { AppError, NotFoundError, ConflictError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
@@ -158,6 +159,21 @@ export class PaymentsService {
       .limit(1);
 
     if (result.length === 0) throw new NotFoundError('Schedule item');
+    if (result[0].item.itemType === 'INSTALLMENT') {
+      const [prepayment] = await this.db.db
+        .select({ status: paymentScheduleItems.itemStatus })
+        .from(paymentScheduleItems)
+        .where(
+          and(
+            eq(paymentScheduleItems.paymentPlanId, result[0].item.paymentPlanId),
+            eq(paymentScheduleItems.itemType, 'PREPAYMENT'),
+          ),
+        )
+        .limit(1);
+      if (prepayment?.status !== 'PAID') {
+        throw new ConflictError('PREPAYMENT_REQUIRED', 'Prepayment must be approved first.');
+      }
+    }
     return result[0].item;
   }
 
@@ -204,6 +220,7 @@ export class PaymentsService {
       dateStyle: 'full',
       timeStyle: 'short',
       timeZone: 'Asia/Tehran',
+      hourCycle: 'h23',
     });
     return {
       userId: detail.userId,
@@ -226,8 +243,8 @@ export class PaymentsService {
       );
     }
     const item = await this.getOwnedScheduleItem(scheduleItemId, userId);
-    if (item.itemStatus === 'PAID') {
-      throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'This item has already been paid.');
+    if (item.itemStatus !== 'PENDING') {
+      throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This payment item is not payable.');
     }
 
     const fingerprint = createHash('sha256')
@@ -326,8 +343,8 @@ export class PaymentsService {
         .for('update')
         .limit(1);
 
-      if (item[0].itemStatus === 'PAID') {
-        throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Already paid.');
+      if (item[0].itemStatus !== 'PENDING') {
+        throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This payment item is not payable.');
       }
 
       await txn
@@ -352,8 +369,14 @@ export class PaymentsService {
         .select()
         .from(paymentScheduleItems)
         .where(eq(paymentScheduleItems.paymentPlanId, tx[0].paymentPlanId));
-
-      const allPaid = planItems.length > 0 && planItems.every((i) => i.itemStatus === 'PAID');
+      const [currentPlan] = await txn
+        .select({ totalAmount: paymentPlans.totalAmount })
+        .from(paymentPlans)
+        .where(eq(paymentPlans.id, tx[0].paymentPlanId));
+      const allPaid =
+        planItems.length > 0 &&
+        planItems.reduce((sum, item) => sum + item.amount, 0) === currentPlan.totalAmount &&
+        planItems.every((i) => i.itemStatus === 'PAID');
       const prepaid = planItems.some((i) => i.itemType === 'PREPAYMENT' && i.itemStatus === 'PAID');
 
       if (prepaid) {
@@ -420,8 +443,8 @@ export class PaymentsService {
     },
   ) {
     const item = await this.getOwnedScheduleItem(scheduleItemId, userId);
-    if (item.itemStatus === 'PAID') {
-      throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Already paid.');
+    if (item.itemStatus !== 'PENDING') {
+      throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This payment item is not payable.');
     }
     const destination = await this.getActiveOfflineDestination();
     // The receipt image is the evidence. Legacy metadata is optional and must
@@ -475,6 +498,18 @@ export class PaymentsService {
         )
         .limit(1);
       if (replay?.paymentScheduleItemId === scheduleItemId) return replay.id;
+      const [recoverableDraft] = await this.db.db
+        .select({ id: offlinePaymentSubmissions.id })
+        .from(offlinePaymentSubmissions)
+        .where(
+          and(
+            eq(offlinePaymentSubmissions.payerUserId, userId),
+            eq(offlinePaymentSubmissions.paymentScheduleItemId, scheduleItemId),
+            eq(offlinePaymentSubmissions.status, 'DRAFT'),
+          ),
+        )
+        .limit(1);
+      if (recoverableDraft) return recoverableDraft.id;
       throw new ConflictError(
         'OFFLINE_PAYMENT_PENDING',
         'An offline payment receipt is already awaiting admin review for this installment.',
@@ -597,6 +632,9 @@ export class PaymentsService {
           eq(offlinePaymentSubmissions.status, 'DRAFT'),
         ),
       );
+    if (submission.receiptObjectKey && submission.receiptObjectKey !== key) {
+      await this.storage.deleteObject(submission.receiptObjectKey).catch(() => undefined);
+    }
     return {
       uploadUrl,
       expiresInSeconds: this.config.studentPhotoUploadUrlTtlSeconds,
@@ -751,8 +789,8 @@ export class PaymentsService {
         .for('update')
         .limit(1);
       if (!item) throw new NotFoundError('Schedule item');
-      if (item.itemStatus === 'PAID') {
-        throw new ConflictError('PAYMENT_ALREADY_COMPLETED', 'Schedule item already paid.');
+      if (item.itemStatus !== 'PENDING') {
+        throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'Schedule item is not payable.');
       }
       const [lockedPlan] = await txn
         .select({ id: paymentPlans.id })
@@ -815,12 +853,17 @@ export class PaymentsService {
         .select()
         .from(paymentScheduleItems)
         .where(eq(paymentScheduleItems.paymentPlanId, submission.paymentPlanId));
+      const [currentPlan] = await txn
+        .select({ totalAmount: paymentPlans.totalAmount })
+        .from(paymentPlans)
+        .where(eq(paymentPlans.id, submission.paymentPlanId));
       const prepaid = planItems.some(
         (scheduleItem) =>
           scheduleItem.itemType === 'PREPAYMENT' && scheduleItem.itemStatus === 'PAID',
       );
       const allPaid =
         planItems.length > 0 &&
+        planItems.reduce((sum, item) => sum + item.amount, 0) === currentPlan.totalAmount &&
         planItems.every((scheduleItem) => scheduleItem.itemStatus === 'PAID');
 
       if (prepaid) {
@@ -945,6 +988,116 @@ export class PaymentsService {
     return { rejected: true };
   }
 
+  async resetOfflinePaymentForResubmission(submissionId: string, adminId: string, version: number) {
+    const keys = await this.db.db.transaction(async (txn) => {
+      const [submission] = await txn
+        .select()
+        .from(offlinePaymentSubmissions)
+        .where(eq(offlinePaymentSubmissions.id, submissionId))
+        .for('update')
+        .limit(1);
+      if (!submission) throw new NotFoundError('Offline payment submission');
+      if (submission.version !== version) {
+        throw new ConflictError(
+          'OFFLINE_PAYMENT_CHANGED',
+          'وضعیت رسید تغییر کرده است. صفحه را تازه کنید.',
+        );
+      }
+      const [item] = await txn
+        .select()
+        .from(paymentScheduleItems)
+        .where(eq(paymentScheduleItems.id, submission.paymentScheduleItemId))
+        .for('update')
+        .limit(1);
+      if (!item) throw new NotFoundError('Schedule item');
+
+      await this.audit?.recordInTransaction(txn, {
+        actorType: 'ADMIN',
+        actorId: adminId,
+        action: 'OFFLINE_PAYMENT_RESET_FOR_RESUBMISSION',
+        entityType: 'OFFLINE_PAYMENT_SUBMISSION',
+        entityId: submissionId,
+        previousValues: {
+          status: submission.status,
+          version: submission.version,
+          transactionId: submission.transactionId,
+        },
+        newValues: { resetForResubmission: true },
+      });
+
+      await txn
+        .delete(offlinePaymentSubmissions)
+        .where(eq(offlinePaymentSubmissions.id, submissionId));
+      if (submission.transactionId) {
+        await txn
+          .delete(paymentTransactions)
+          .where(eq(paymentTransactions.id, submission.transactionId));
+        await txn
+          .update(paymentScheduleItems)
+          .set({ itemStatus: 'PENDING', paidAmount: 0, paidAt: null, updatedAt: new Date() })
+          .where(eq(paymentScheduleItems.id, submission.paymentScheduleItemId));
+
+        const planItems = await txn
+          .select()
+          .from(paymentScheduleItems)
+          .where(eq(paymentScheduleItems.paymentPlanId, submission.paymentPlanId));
+        const [currentPlan] = await txn
+          .select({ totalAmount: paymentPlans.totalAmount })
+          .from(paymentPlans)
+          .where(eq(paymentPlans.id, submission.paymentPlanId));
+        const prepaymentPaid = planItems.some(
+          (candidate) => candidate.itemType === 'PREPAYMENT' && candidate.itemStatus === 'PAID',
+        );
+        const allPaid =
+          planItems.length > 0 &&
+          planItems.reduce((sum, item) => sum + item.amount, 0) === currentPlan.totalAmount &&
+          planItems.every((candidate) => candidate.itemStatus === 'PAID');
+        await txn
+          .update(paymentPlans)
+          .set({
+            planStatus: allPaid ? 'COMPLETED' : prepaymentPaid ? 'ACTIVE' : 'PENDING',
+            activatedAt: prepaymentPaid ? new Date() : null,
+            completedAt: allPaid ? new Date() : null,
+            updatedAt: new Date(),
+          })
+          .where(eq(paymentPlans.id, submission.paymentPlanId));
+        if (item.itemType === 'PREPAYMENT') {
+          const [registration] = await txn
+            .select({ id: serviceRegistrations.id })
+            .from(paymentPlans)
+            .innerJoin(
+              registrationPrices,
+              eq(registrationPrices.id, paymentPlans.registrationPriceId),
+            )
+            .innerJoin(
+              serviceRegistrations,
+              eq(serviceRegistrations.id, registrationPrices.registrationId),
+            )
+            .where(eq(paymentPlans.id, submission.paymentPlanId))
+            .limit(1);
+          if (registration) {
+            await txn
+              .update(serviceRegistrations)
+              .set({ registrationStatus: 'CONTRACT_ACCEPTED', updatedAt: new Date() })
+              .where(eq(serviceRegistrations.id, registration.id));
+          }
+        }
+      }
+      await this.notifications.enqueueInTransaction(txn, {
+        eventId: `PAYMENT_RESUBMISSION_REQUESTED:${submissionId}:${submission.payerUserId}`,
+        userId: submission.payerUserId,
+        notificationType: 'OFFLINE_PAYMENT_CORRECTION_REQUIRED',
+        title: 'ارسال دوباره رسید پرداخت',
+        message: 'رسید قبلی توسط مدیریت بازنشانی شد. اکنون می‌توانید رسید جدیدی ارسال کنید.',
+        relatedEntityType: 'PAYMENT_SCHEDULE_ITEM',
+        relatedEntityId: submission.paymentScheduleItemId,
+      });
+      return [submission.receiptObjectKey].filter((key): key is string => Boolean(key));
+    });
+    await Promise.all(keys.map((key) => this.storage?.deleteObject(key).catch(() => undefined)));
+    return { reset: true };
+  }
+
   async listOfflineSubmissions(userId: string) {
     return this.db.db
       .select({
@@ -979,6 +1132,7 @@ export class PaymentsService {
       itemType?: 'PREPAYMENT' | 'INSTALLMENT';
       page?: number;
       pageSize?: number;
+      q?: string;
     } = {},
   ) {
     const page = Math.max(1, query.page ?? 1);
@@ -986,6 +1140,18 @@ export class PaymentsService {
     const filters = [ne(offlinePaymentSubmissions.status, 'DRAFT')];
     if (query.status) filters.push(eq(offlinePaymentSubmissions.status, query.status));
     if (query.itemType) filters.push(eq(paymentScheduleItems.itemType, query.itemType));
+    if (query.q?.trim()) {
+      const pattern = `%${query.q.trim()}%`;
+      filters.push(
+        or(
+          ilike(students.firstName, pattern),
+          ilike(students.lastName, pattern),
+          ilike(students.nationalId, pattern),
+          ilike(offlinePaymentSubmissions.referenceNumber, pattern),
+          ilike(sql<string>`${students.firstName} || ' ' || ${students.lastName}`, pattern),
+        )!,
+      );
+    }
     const where = and(...filters);
     const rows = await this.db.db
       .select({
@@ -1010,7 +1176,8 @@ export class PaymentsService {
         eq(serviceRegistrations.id, registrationPrices.registrationId),
       )
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
-      .where(where)
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(and(where, eq(students.isActive, true), eq(users.accountStatus, 'ACTIVE')))
       .orderBy(desc(offlinePaymentSubmissions.createdAt), desc(offlinePaymentSubmissions.id))
       .limit(pageSize)
       .offset((page - 1) * pageSize);
@@ -1021,7 +1188,15 @@ export class PaymentsService {
         paymentScheduleItems,
         eq(paymentScheduleItems.id, offlinePaymentSubmissions.paymentScheduleItemId),
       )
-      .where(where);
+      .innerJoin(paymentPlans, eq(paymentPlans.id, offlinePaymentSubmissions.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(
+        serviceRegistrations,
+        eq(serviceRegistrations.id, registrationPrices.registrationId),
+      )
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(and(where, eq(students.isActive, true), eq(users.accountStatus, 'ACTIVE')));
     const payerIds = [...new Set(rows.map(({ submission }) => submission.payerUserId))];
     const familyRows = payerIds.length
       ? await this.db.db.select().from(parents).where(inArray(parents.userId, payerIds))
@@ -1115,6 +1290,8 @@ export class PaymentsService {
         eq(serviceRegistrations.id, registrationPrices.registrationId),
       )
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(and(eq(students.isActive, true), eq(users.accountStatus, 'ACTIVE')))
       .orderBy(desc(paymentPlans.createdAt), desc(paymentPlans.id))
       .limit(ADMIN_PAYMENT_PLAN_LIST_LIMIT);
 
@@ -1154,7 +1331,10 @@ export class PaymentsService {
         if (!prepayment) return null;
         const mapItem = (item: typeof paymentScheduleItems.$inferSelect) => {
           const itemSubmissions = submissions
-            .filter((submission) => submission.paymentScheduleItemId === item.id)
+            .filter(
+              (submission) =>
+                submission.paymentScheduleItemId === item.id && submission.status !== 'DRAFT',
+            )
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
           const latestSubmission = itemSubmissions[0];
           const itemTransactions = transactions
@@ -1229,12 +1409,15 @@ export class PaymentsService {
           installments: planItems.filter((item) => item.itemType === 'INSTALLMENT').map(mapItem),
         };
       })
-      .filter((account) => account !== null && account.prepayment.transaction !== null);
+      .filter((account) => account !== null);
   }
 
-  async configureInstallments(planId: string, items: { amount: number; dueDate: string }[]) {
-    if (items.length < 1 || items.length > 12) {
-      throw new ValidationError('Installment count must be between 1 and 12.');
+  async configureInstallments(
+    planId: string,
+    items: { id?: string; amount: number; dueDate: string }[],
+  ) {
+    if (items.length > 12) {
+      throw new ValidationError('Installment count must be at most 12.');
     }
     const [plan] = await this.db.db
       .select()
@@ -1250,7 +1433,7 @@ export class PaymentsService {
       const key = `items.${index}.dueDate`;
       const messages: string[] = [];
       if (!Number.isInteger(item.amount) || item.amount <= 0) {
-        messages.push('مبلغ قسط باید عددی بزرگ‌تر از صفر باشد.');
+        errors[`items.${index}.amount`] = ['مبلغ قسط باید عددی بزرگ‌تر از صفر باشد.'];
       }
       const dueDate = new Date(item.dueDate);
       if (Number.isNaN(dueDate.getTime())) {
@@ -1272,36 +1455,112 @@ export class PaymentsService {
     }
 
     const result = await this.db.db.transaction(async (txn) => {
-      if (plan.planType === 'FULL' && items.length !== 1) {
+      const [currentPlan] = await txn
+        .select()
+        .from(paymentPlans)
+        .where(eq(paymentPlans.id, planId))
+        .for('update');
+      if (!currentPlan) throw new NotFoundError('Payment plan', planId);
+      const existing = await txn
+        .select()
+        .from(paymentScheduleItems)
+        .where(eq(paymentScheduleItems.paymentPlanId, planId));
+      const prepayment = existing.find((item) => item.itemType === 'PREPAYMENT');
+      if (!prepayment || prepayment.itemStatus !== 'PAID') {
+        throw new ConflictError('PREPAYMENT_REQUIRED', 'Prepayment must be approved first.');
+      }
+      if (plan.planType === 'FULL' && items.length > 1) {
         throw new ValidationError('Full payment requires exactly one remaining payment.');
       }
+      const previous = existing.filter((item) => item.itemType === 'INSTALLMENT');
+      const previousById = new Map(previous.map((item) => [item.id, item]));
+      const requestedIds = items.map((item) => item.id).filter((id): id is string => Boolean(id));
+      if (
+        new Set(requestedIds).size !== requestedIds.length ||
+        requestedIds.some((id) => !previousById.has(id))
+      ) {
+        throw new ValidationError(
+          'Installment IDs must belong to this payment plan and be unique.',
+        );
+      }
+      const activeIds = previous.map((item) => item.id);
+      const [transactions, submissions] = activeIds.length
+        ? await Promise.all([
+            txn
+              .select({ id: paymentTransactions.paymentScheduleItemId })
+              .from(paymentTransactions)
+              .where(inArray(paymentTransactions.paymentScheduleItemId, activeIds)),
+            txn
+              .select({ id: offlinePaymentSubmissions.paymentScheduleItemId })
+              .from(offlinePaymentSubmissions)
+              .where(inArray(offlinePaymentSubmissions.paymentScheduleItemId, activeIds)),
+          ])
+        : [[], []];
+      const protectedIds = new Set([...transactions, ...submissions].map((row) => row.id));
+      for (const item of previous) {
+        if (item.itemStatus === 'PAID') protectedIds.add(item.id);
+      }
+      for (const old of previous) {
+        if (!protectedIds.has(old.id) && old.itemStatus !== 'PAID') continue;
+        const index = items.findIndex((item) => item.id === old.id);
+        const candidate = items[index];
+        if (
+          !candidate ||
+          candidate.amount !== old.amount ||
+          index + 1 !== old.sequenceNumber ||
+          new Date(candidate.dueDate).getTime() !== old.dueDate?.getTime()
+        ) {
+          throw new ConflictError(
+            'INSTALLMENT_HAS_PAYMENT_HISTORY',
+            'An installment with payment or receipt history cannot be changed or removed.',
+          );
+        }
+      }
       const remaining = items.reduce((sum, item) => sum + item.amount, 0);
-      const total = plan.prepaymentAmount + remaining;
-      await txn
-        .delete(paymentScheduleItems)
-        .where(
-          and(
-            eq(paymentScheduleItems.paymentPlanId, planId),
-            eq(paymentScheduleItems.itemType, 'INSTALLMENT'),
+      if (remaining > 2_147_483_647 - currentPlan.prepaymentAmount) {
+        throw new ValidationError('Payment plan total exceeds the allowed amount.');
+      }
+      const total = currentPlan.prepaymentAmount + remaining;
+      const allPaid =
+        items.length > 0 &&
+        items.every((item) => item.id && previousById.get(item.id)?.itemStatus === 'PAID');
+      const replaceable = previous.filter(
+        (item) => !protectedIds.has(item.id) && item.itemStatus !== 'PAID',
+      );
+      if (replaceable.length)
+        await txn.delete(paymentScheduleItems).where(
+          inArray(
+            paymentScheduleItems.id,
+            replaceable.map((item) => item.id),
           ),
         );
-      await txn.insert(paymentScheduleItems).values(
-        items.map((item, index) => ({
-          id: generateId(),
-          paymentPlanId: planId,
-          itemType: 'INSTALLMENT',
-          sequenceNumber: index + 1,
-          amount: item.amount,
-          dueDate: new Date(item.dueDate),
-        })),
-      );
+      for (const [index, item] of items.entries()) {
+        if (!item.id || !protectedIds.has(item.id)) {
+          await txn.insert(paymentScheduleItems).values({
+            id: generateId(),
+            paymentPlanId: planId,
+            itemType: 'INSTALLMENT',
+            sequenceNumber: index + 1,
+            amount: item.amount,
+            dueDate: new Date(item.dueDate),
+          });
+        }
+      }
       await txn
         .update(paymentPlans)
         .set({
-          planType: plan.planType === 'FULL' ? 'FULL' : 'ADMIN_CONFIGURED',
+          planType:
+            currentPlan.planType === 'FULL'
+              ? 'FULL'
+              : items.length
+                ? 'ADMIN_CONFIGURED'
+                : 'PREPAYMENT_PLUS_FOUR_INSTALLMENTS',
           totalAmount: total,
           remainingInstallmentAmount: remaining,
           installmentCount: items.length,
+          planStatus: allPaid ? 'COMPLETED' : 'ACTIVE',
+          completedAt: allPaid ? new Date() : null,
+          activatedAt: currentPlan.activatedAt ?? new Date(),
           updatedAt: new Date(),
         })
         .where(eq(paymentPlans.id, planId));
@@ -1316,9 +1575,9 @@ export class PaymentsService {
         .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
         .where(eq(paymentPlans.id, planId))
         .limit(1);
-      if (owner) {
+      if (owner && items.length) {
         await this.notifications.enqueueInTransaction(txn, {
-          eventId: `PAYMENT_PLAN_READY:${planId}:${owner.userId}`,
+          eventId: `PAYMENT_PLAN_READY:${planId}:${owner.userId}:${generateId()}`,
           userId: owner.userId,
           notificationType: 'PAYMENT_PLAN_READY',
           title: 'برنامه پرداخت آماده است',

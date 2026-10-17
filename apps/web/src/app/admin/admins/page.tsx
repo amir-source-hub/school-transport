@@ -4,6 +4,7 @@ import { getAdminAccounts, getCurrentAdminAccount } from '@/features/admin-admin
 import { AdminAccountAction } from '@/features/admin-admins/admin-account-action';
 import { AdminAccountForm } from '@/features/admin-admins/admin-account-form';
 import { formatJalaliDateTime } from '@/lib/formatters';
+import { FilteredCount } from '@/components/data/filtered-count';
 
 export const metadata = { title: 'مدیران سامانه' };
 
@@ -21,7 +22,7 @@ export default async function AdminsPage() {
           <p className="text-sm font-bold text-primary">مدیریت دسترسی</p>
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">مدیران سامانه</h1>
         </div>
-        <AdminAccountForm />
+        <div className="flex flex-wrap items-center gap-3"><FilteredCount count={admins.length} label="مدیر"/><AdminAccountForm /></div>
       </div>
       <div className="grid gap-3 md:hidden" aria-label="فهرست مدیران">
         {admins.map((admin) => (

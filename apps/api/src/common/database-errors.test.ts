@@ -42,6 +42,13 @@ describe('translateDatabaseError', () => {
     expect(translate('23505', constraint)?.error).toMatchObject({ status: 409, code });
   });
 
+  it('explains the legacy round-trip constraint without leaking database details', () => {
+    const result = translate('23514', 'transport_service_runs_direction_check');
+    expect(result?.error).toMatchObject({ status: 400, code: 'VALIDATION_ERROR' });
+    expect(result?.error.message).toContain('رفت‌وبرگشت');
+    expect(result?.error.message).not.toContain('transport_service_runs');
+  });
+
   it('unwraps driver causes and leaves unknown failures to the generic 500 fallback', () => {
     expect(translateDatabaseError({ cause: { code: '40001' } })?.error.code).toBe(
       'DATABASE_RETRY_REQUIRED',

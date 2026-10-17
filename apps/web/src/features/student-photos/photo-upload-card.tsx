@@ -6,7 +6,9 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { UploadCompletionNotice } from '@/components/forms/upload-completion-notice';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { formatJalaliDate } from '@/lib/formatters';
 import { DirectUploadError, DIRECT_UPLOAD_RETRY_MESSAGE } from '@/lib/direct-object-upload';
 import {
   ACCEPTED_PHOTO_MIMES,
@@ -181,9 +183,19 @@ export function PhotoUploadCard({
           declaredMime: selected.mime,
           declaredSize: file.size,
         };
-        const created = familyId
-          ? await authorizePhotoUpload(authorizationInput, mode, familyId, controller.signal)
-          : await authorizePhotoUpload(authorizationInput, mode, undefined, controller.signal);
+        let created;
+        try {
+          created = familyId
+            ? await authorizePhotoUpload(authorizationInput, mode, familyId, controller.signal)
+            : await authorizePhotoUpload(authorizationInput, mode, undefined, controller.signal);
+        } catch (error) {
+          // Authorization is safe to retry: the API expires any previous unconsumed
+          // authorization for the same student/draft before issuing the replacement.
+          if (!(error instanceof TypeError) || controller.signal.aborted) throw error;
+          created = familyId
+            ? await authorizePhotoUpload(authorizationInput, mode, familyId, controller.signal)
+            : await authorizePhotoUpload(authorizationInput, mode, undefined, controller.signal);
+        }
         authorization = {
           uploadId: created.uploadId,
           uploadUrl: created.uploadUrl,
@@ -280,9 +292,13 @@ export function PhotoUploadCard({
           <span className="text-sm font-black">
             {pending ? 'در حال بارگذاری و بررسی…' : 'انتخاب عکس'}
           </span>
-          <span className="text-xs text-muted">فرمت JPG، PNG یا عکس HEIC/HEIF آیفون، حداکثر ۵ مگابایت پس از تبدیل</span>
+          <span className="text-xs text-muted">
+            فرمت JPG، PNG یا عکس HEIC/HEIF آیفون، حداکثر ۵ مگابایت پس از تبدیل
+          </span>
         </label>
       )}
+
+      {!hasCompletedUpload && <UploadCompletionNotice />}
 
       <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-slate-700">
         <p className="font-black text-sky-900">شرایط قابل قبول عکس دانش‌آموز</p>
@@ -305,7 +321,9 @@ export function PhotoUploadCard({
             className="aspect-[3/4] w-full rounded-lg object-cover"
           />
           <div className="space-y-3">
-            <p dir="ltr" className="break-all text-left text-sm font-bold">{selected.file.name}</p>
+            <p dir="ltr" className="break-all text-left text-sm font-bold">
+              {selected.file.name}
+            </p>
             {pending && (
               <div>
                 <div
@@ -379,7 +397,7 @@ export function PhotoUploadCard({
                 <div className="flex items-center gap-3">
                   <Badge tone={meta.tone}>{meta.label}</Badge>
                   <span className="text-xs text-muted">
-                    {item.createdAt.toLocaleDateString('fa-IR')}
+                    {formatJalaliDate(item.createdAt)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

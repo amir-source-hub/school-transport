@@ -24,18 +24,28 @@ export function OnboardingSessionGuard({ children }: { children: ReactNode }) {
       expiresAt: string;
       currentStep: string | null;
       nationalId: string;
+      portalRole?: 'PARENT' | 'DRIVER';
     }>('/auth/onboarding/me', {
       cache: 'no-store',
       redirectOnAuthFailure: false,
     })
       .then((response) => {
         if (!isCurrent()) return;
+        const expectedRole = pathname.startsWith('/onboarding/driver-enrollment')
+          ? 'DRIVER'
+          : 'PARENT';
+        const portalRole = response.data.portalRole ?? expectedRole;
+        if (portalRole !== expectedRole) {
+          router.replace(expectedRole === 'DRIVER' ? '/driver/login' : '/login');
+          return;
+        }
         setOnboardingState({
           sessionId: null,
           phoneNumber: response.data.phoneNumber,
           nationalId: response.data.nationalId,
           expiresAt: response.data.expiresAt,
           currentStep: response.data.currentStep,
+          portalRole,
         });
         setStatus('authorized');
       })

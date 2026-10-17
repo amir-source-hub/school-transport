@@ -14,10 +14,14 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type AuditableRequest = FastifyRequest & {
-  user?: { id: string; role: 'PARENT' | 'ADMIN' };
+  user?: { id: string; role: 'PARENT' | 'ADMIN' | 'SCHOOL_MANAGER' | 'DRIVER' };
   onboarding?: { userId: string };
   params?: Record<string, unknown>;
 };
+
+function boundedRoute(request: AuditableRequest): string {
+  return (request.routeOptions?.url ?? new URL(request.url, 'http://local').pathname).slice(0, 255);
+}
 
 @Injectable()
 export class MutationAuditInterceptor implements NestInterceptor {
@@ -48,7 +52,7 @@ export class MutationAuditInterceptor implements NestInterceptor {
   }
 
   private async recordMutation(request: AuditableRequest, actorId: string) {
-    const route = request.routeOptions?.url ?? new URL(request.url, 'http://local').pathname;
+    const route = boundedRoute(request);
     const entityType =
       route
         .split('/')
@@ -67,6 +71,11 @@ export class MutationAuditInterceptor implements NestInterceptor {
       entityType,
       entityId,
       ipAddress: request.ip,
+      newValues: {
+        httpMethod: request.method.toUpperCase().slice(0, 10),
+        route,
+        outcome: 'SUCCESS',
+      },
     });
   }
 }

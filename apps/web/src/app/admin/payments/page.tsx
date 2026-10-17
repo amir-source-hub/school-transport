@@ -23,9 +23,15 @@ export const dynamic = 'force-dynamic';
 export default async function AdminPaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ receiptStatus?: string; itemType?: string; receiptPage?: string }>;
+  searchParams: Promise<{
+    receiptStatus?: string;
+    itemType?: string;
+    receiptPage?: string;
+    q?: string;
+  }>;
 }) {
   const params = await searchParams;
+  const q = params.q?.trim() || undefined;
   const receiptPage = Math.max(1, Number.parseInt(params.receiptPage ?? '1', 10) || 1);
   const receiptStatus = ['PENDING_REVIEW', 'APPROVED', 'REJECTED'].includes(
     params.receiptStatus ?? '',
@@ -42,9 +48,19 @@ export default async function AdminPaymentsPage({
   const [{ payments }, destination, submissions] = await Promise.all([
     getAdminPayments(),
     getAdminOfflineDestination(),
-    getAdminOfflineSubmissions({ ...receiptFilters, page: receiptPage, pageSize: 20 }),
+    getAdminOfflineSubmissions({ ...receiptFilters, q, page: receiptPage, pageSize: 20 }),
   ]);
-  const allItems = payments.flatMap((payment) => [payment.prepayment, ...payment.installments]);
+  const visiblePayments = q
+    ? payments.filter((payment) =>
+        `${payment.studentName} ${payment.familyName}`
+          .toLocaleLowerCase('fa-IR')
+          .includes(q.toLocaleLowerCase('fa-IR')),
+      )
+    : payments;
+  const allItems = visiblePayments.flatMap((payment) => [
+    payment.prepayment,
+    ...payment.installments,
+  ]);
   const awaitingReview = allItems.filter(
     (item) => item.transaction?.status === 'در انتظار بررسی',
   ).length;
@@ -62,15 +78,21 @@ export default async function AdminPaymentsPage({
       <section className="grid gap-4 sm:grid-cols-3" aria-label="خلاصه پرداخت‌ها">
         <Card>
           <p className="text-sm text-muted">دانش‌آموزان دارای پرداخت</p>
-          <p className="mt-2 text-2xl font-black">{payments.length}</p>
+          <p className="mt-2 text-2xl font-black">
+            {visiblePayments.length.toLocaleString('fa-IR')}
+          </p>
         </Card>
         <Card>
           <p className="text-sm text-muted">در انتظار بررسی</p>
-          <p className="mt-2 text-2xl font-black text-warning">{awaitingReview}</p>
+          <p className="mt-2 text-2xl font-black text-warning">
+            {awaitingReview.toLocaleString('fa-IR')}
+          </p>
         </Card>
         <Card>
           <p className="text-sm text-muted">تأییدشده</p>
-          <p className="mt-2 text-2xl font-black text-success">{approved}</p>
+          <p className="mt-2 text-2xl font-black text-success">
+            {approved.toLocaleString('fa-IR')}
+          </p>
         </Card>
       </section>
       <Card>
@@ -90,7 +112,19 @@ export default async function AdminPaymentsPage({
           </p>
         </div>
         <Card>
-          <form className="grid gap-3 sm:grid-cols-3" aria-label="پالایش رسیدهای پرداخت">
+          <form
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            aria-label="پالایش رسیدهای پرداخت"
+          >
+            <label className="text-sm font-bold">
+              جست‌وجو
+              <input
+                name="q"
+                defaultValue={q ?? ''}
+                placeholder="نام، نام خانوادگی، کد ملی یا مرجع"
+                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-white px-3"
+              />
+            </label>
             <label className="text-sm font-bold">
               وضعیت
               <select
@@ -146,7 +180,7 @@ export default async function AdminPaymentsPage({
           {receiptPage > 1 ? (
             <ButtonLink
               variant="secondary"
-              href={`/admin/payments?${new URLSearchParams({ ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), receiptPage: String(receiptPage - 1) })}`}
+              href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), receiptPage: String(receiptPage - 1) })}`}
             >
               قبلی
             </ButtonLink>
@@ -157,7 +191,7 @@ export default async function AdminPaymentsPage({
           {receiptPage * submissions.pageSize < submissions.total ? (
             <ButtonLink
               variant="secondary"
-              href={`/admin/payments?${new URLSearchParams({ ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), receiptPage: String(receiptPage + 1) })}`}
+              href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), receiptPage: String(receiptPage + 1) })}`}
             >
               بعدی
             </ButtonLink>
@@ -177,9 +211,9 @@ export default async function AdminPaymentsPage({
           </p>
         </div>
         <div className="grid gap-4">
-          {payments.map((payment) => {
+          {visiblePayments.map((payment) => {
             const prepaymentStatus = payment.prepayment.transaction?.status ?? 'پرداخت نشده';
-            const canConfigure = payment.prepayment.paid && !payment.planConfigured;
+            const canConfigure = payment.prepayment.paid;
             return (
               <Card key={payment.planId}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -190,7 +224,11 @@ export default async function AdminPaymentsPage({
                     </p>
                   </div>
                   <Badge tone={payment.planStatus === 'COMPLETED' ? 'success' : 'neutral'}>
-                    {payment.planStatus === 'COMPLETED' ? 'تسویه شده' : 'در حال پرداخت'}
+                    {payment.planStatus === 'COMPLETED'
+                      ? 'تسویه شده'
+                      : payment.planStatus === 'CANCELLED'
+                        ? 'معاف از پرداخت'
+                        : 'در حال پرداخت'}
                   </Badge>
                 </div>
                 <section className="mt-5 rounded-xl border border-border bg-surface-muted/40 p-4">
@@ -260,8 +298,10 @@ export default async function AdminPaymentsPage({
                   {canConfigure && (
                     <div className="mt-4 border-t border-border pt-4">
                       <ConfigureInstallmentsDialog
+                        key={payment.installments.map((item) => item.id).join(',')}
                         planId={payment.planId}
                         fullPayment={payment.planType === 'FULL'}
+                        initialItems={payment.planConfigured ? payment.installments : []}
                       />
                     </div>
                   )}

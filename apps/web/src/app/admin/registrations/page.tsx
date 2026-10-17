@@ -6,6 +6,7 @@ import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { AutoSubmitForm } from '@/components/forms/auto-submit-form';
+import { FilteredCount } from '@/components/data/filtered-count';
 import {
   getAdminRegistrations,
   getRegistrationTone,
@@ -63,9 +64,12 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
           { label: 'درخواست‌های ثبت‌نام' },
         ]}
       />
-      <div>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
         <p className="text-sm font-bold text-primary">صف بررسی مدیریت</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">درخواست‌های ثبت‌نام</h1>
+        </div>
+        <FilteredCount count={pagination.totalItems} label="درخواست مطابق فیلتر" />
       </div>
       <Card>
         <AutoSubmitForm

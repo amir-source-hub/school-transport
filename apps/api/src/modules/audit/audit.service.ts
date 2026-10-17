@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { auditLogs } from '../../database/schemas';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { generateId } from '../../common/utils';
 import { serializeSafeAuditValues } from '../../common/sensitive-data';
 import { AuditPort, AuditRecord } from '../../common/audit.port';
@@ -39,6 +39,15 @@ const ALLOWED_VALUE_FIELDS = new Set([
   'channel',
   'purpose',
   'granted',
+  'changedFields',
+  'documentType',
+  'vehicleId',
+  'vehicleType',
+  'ownershipType',
+  'usageType',
+  'httpMethod',
+  'route',
+  'outcome',
 ]);
 
 @Injectable()
@@ -83,7 +92,9 @@ export class AuditService implements AuditPort {
         createdAt: auditLogs.createdAt,
       })
       .from(auditLogs)
-      .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)));
+      .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)))
+      .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
+      .limit(200);
   }
 }
 

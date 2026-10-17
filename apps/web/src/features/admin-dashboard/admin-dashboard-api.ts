@@ -21,11 +21,14 @@ export type DashboardSummary = z.infer<typeof dashboardSummarySchema>;
 export type RecentEnrollment = z.infer<typeof recentEnrollmentSchema>;
 
 export async function getAdminDashboard() {
-  const [{ registrations }, { contracts }, { payments }] = await Promise.all([
+  const results = await Promise.allSettled([
     getAdminRegistrations({ pageSize: 500 }),
     getAdminContracts(),
     getAdminPayments(),
   ]);
+  const registrations = results[0].status === 'fulfilled' ? results[0].value.registrations : [];
+  const contracts = results[1].status === 'fulfilled' ? results[1].value.contracts : [];
+  const payments = results[2].status === 'fulfilled' ? results[2].value.payments : [];
   const scheduleItems = payments.flatMap(({ prepayment, installments }) => [
     prepayment,
     ...installments,

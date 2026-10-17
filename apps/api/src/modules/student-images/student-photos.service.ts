@@ -1,11 +1,31 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { ConfigService } from '../../config/config.service';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { AUDIT_PORT, type AuditPort } from '../../common/audit.port';
 import { DatabaseService } from '../../database/database.service';
-import { schoolManagerAssignments, students, studentPhotoUploads } from '../../database/schemas';
+import {
+  schoolManagerAssignments,
+  schools,
+  students,
+  studentPhotoUploads,
+  users,
+} from '../../database/schemas';
 import { InAppNotificationService } from '../../infrastructure/notifications/in-app-notification.service';
 import {
   getObjectAfterWrite,
@@ -75,6 +95,21 @@ export class StudentPhotosService {
     await Promise.all(
       abandoned.map(({ rawKey }) => this.storage.deleteObject(rawKey).catch(() => undefined)),
     );
+    // A completed draft photo that has not yet been linked belongs to the current
+    // enrollment attempt. Replacing it must not consume another active-upload slot;
+    // otherwise repeated second-student attempts eventually deadlock at the limit.
+    await this.db.db
+      .update(studentPhotoUploads)
+      .set({ status: 'SUPERSEDED', supersededAt: now, updatedAt: now })
+      .where(
+        and(
+          eq(studentPhotoUploads.accountUserId, userId),
+          eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
+          input.studentId
+            ? eq(studentPhotoUploads.studentId, input.studentId)
+            : isNull(studentPhotoUploads.studentId),
+        ),
+      );
     const active = await this.db.db
       .select({ count: count() })
       .from(studentPhotoUploads)
@@ -356,7 +391,7 @@ export class StudentPhotosService {
       .select()
       .from(studentPhotoUploads)
       .where(where)
-      .orderBy(desc(studentPhotoUploads.createdAt))
+      .orderBy(desc(studentPhotoUploads.createdAt), desc(studentPhotoUploads.id))
       .limit(5);
     return { items: items.map((row) => this.toOwnerView(row)) };
   }
@@ -430,6 +465,7 @@ export class StudentPhotosService {
         id: studentPhotoUploads.id,
         canonicalKey: studentPhotoUploads.canonicalKey,
         status: studentPhotoUploads.status,
+        version: studentPhotoUploads.version,
       })
       .from(studentPhotoUploads)
       .where(
@@ -452,7 +488,9 @@ export class StudentPhotosService {
       ipAddress: ip,
     });
     return {
+      uploadId: upload.id,
       status: 'APPROVED' as const,
+      version: upload.version,
       viewUrl: this.storage.presignGet(
         upload.canonicalKey,
         this.config.studentPhotoViewUrlTtlSeconds,
@@ -467,6 +505,18 @@ export class StudentPhotosService {
     if (query.status === 'PENDING_REVIEW') {
       filters.push(isNotNull(studentPhotoUploads.studentId));
     }
+    if (query.q?.trim()) {
+      const pattern = `%${query.q.trim()}%`;
+      filters.push(
+        or(
+          ilike(students.firstName, pattern),
+          ilike(students.lastName, pattern),
+          ilike(students.nationalId, pattern),
+          ilike(students.studentCode, pattern),
+        )!,
+      );
+    }
+    if (query.schoolId) filters.push(eq(students.schoolId, query.schoolId));
     const where = and(...filters);
     const rows = await this.db.db
       .select({
@@ -474,22 +524,35 @@ export class StudentPhotosService {
         student: {
           firstName: students.firstName,
           lastName: students.lastName,
+          schoolName: schools.name,
         },
       })
       .from(studentPhotoUploads)
       .leftJoin(students, eq(students.id, studentPhotoUploads.studentId))
-      .where(where)
-      .orderBy(desc(studentPhotoUploads.createdAt))
+      .leftJoin(schools, eq(schools.id, students.schoolId))
+      .innerJoin(users, eq(users.id, studentPhotoUploads.accountUserId))
+      .where(and(where, eq(users.accountStatus, 'ACTIVE')))
+      // Bulk uploads may share timestamps; the unique ID keeps pages stable.
+      .orderBy(desc(studentPhotoUploads.createdAt), desc(studentPhotoUploads.id))
       .limit(query.pageSize)
       .offset((query.page - 1) * query.pageSize);
     const [{ value }] = await this.db.db
       .select({ value: count() })
       .from(studentPhotoUploads)
-      .where(where);
+      .leftJoin(students, eq(students.id, studentPhotoUploads.studentId))
+      .leftJoin(schools, eq(schools.id, students.schoolId))
+      .innerJoin(users, eq(users.id, studentPhotoUploads.accountUserId))
+      .where(and(where, eq(users.accountStatus, 'ACTIVE')));
     return {
       items: rows.map(({ upload, student }) => ({
         ...this.toAdminView(upload),
-        student: student ? { firstName: student.firstName, lastName: student.lastName } : null,
+        student: student
+          ? {
+              firstName: student.firstName,
+              lastName: student.lastName,
+              schoolName: student.schoolName,
+            }
+          : null,
       })),
       total: Number(value),
       page: query.page,
@@ -565,7 +628,7 @@ export class StudentPhotosService {
         .where(
           and(
             eq(studentPhotoUploads.id, upload.id),
-            eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
+            eq(studentPhotoUploads.status, upload.status),
             eq(studentPhotoUploads.version, upload.version),
           ),
         )
@@ -619,7 +682,7 @@ export class StudentPhotosService {
         .where(
           and(
             eq(studentPhotoUploads.id, upload.id),
-            eq(studentPhotoUploads.status, 'PENDING_REVIEW'),
+            eq(studentPhotoUploads.status, upload.status),
             eq(studentPhotoUploads.version, input.version),
           ),
         )
@@ -630,7 +693,8 @@ export class StudentPhotosService {
         userId: upload.accountUserId,
         notificationType: 'STUDENT_PHOTO_REJECTED',
         title: 'بررسی مجدد عکس کارت سرویس',
-        message: 'عکس کارت سرویس دانش‌آموز نیازمند بارگذاری مجدد است. جزئیات در پنل شما نیست.',
+        message:
+          'عکس کارت سرویس دانش‌آموز رد شده است. از بخش دانش‌آموزان، عکس جدید را بارگذاری و تا پایان ارسال منتظر بمانید.',
         relatedEntityType: 'STUDENT_PHOTO',
         relatedEntityId: upload.id,
       });
@@ -828,6 +892,7 @@ export class StudentPhotosService {
       rejectionCode: row.rejectionCode,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      version: row.version,
     };
   }
 

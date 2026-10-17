@@ -80,10 +80,6 @@ export class OtpTooManyAttemptsError extends AppError {
 
 export class OtpCooldownError extends AppError {
   constructor(seconds: number) {
-    super(
-      'OTP_COOLDOWN',
-      `برای دریافت کد جدید، ${Math.max(1, seconds)} ثانیه دیگر صبر کنید.`,
-      400,
-    );
+    super('OTP_COOLDOWN', `برای دریافت کد جدید، ${Math.max(1, seconds)} ثانیه دیگر صبر کنید.`, 400);
   }
 }

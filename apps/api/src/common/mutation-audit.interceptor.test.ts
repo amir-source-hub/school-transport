@@ -36,6 +36,11 @@ describe('MutationAuditInterceptor', () => {
       entityType: 'STUDENTS',
       entityId: '00000000-0000-4000-8000-000000000001',
       ipAddress: '127.0.0.1',
+      newValues: {
+        httpMethod: 'PATCH',
+        route: '/api/v1/admin/students/:id',
+        outcome: 'SUCCESS',
+      },
     });
     expect(JSON.stringify(audit.record.mock.calls)).not.toContain('0012345678');
     expect(JSON.stringify(audit.record.mock.calls)).not.toContain('secret');

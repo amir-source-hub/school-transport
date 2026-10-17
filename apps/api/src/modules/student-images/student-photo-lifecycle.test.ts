@@ -17,6 +17,8 @@ const allowedTransitions = [
   ['VALIDATING', 'FAILED'],
   ['PENDING_REVIEW', 'APPROVED'],
   ['PENDING_REVIEW', 'REJECTED'],
+  ['PENDING_REVIEW', 'SUPERSEDED'],
+  ['APPROVED', 'REJECTED'],
   ['APPROVED', 'SUPERSEDED'],
 ] as const;
 
@@ -41,8 +43,7 @@ describe('student photo lifecycle', () => {
     expect(() => assertStudentPhotoTransition('APPROVED', 'APPROVED')).not.toThrow();
   });
 
-  it('rejects moving out of a terminal status', () => {
-    expect(() => assertStudentPhotoTransition('APPROVED', 'REJECTED')).toThrow(ValidationError);
+  it('rejects moving out of terminal statuses', () => {
     expect(() => assertStudentPhotoTransition('REJECTED', 'UPLOADED')).toThrow(ValidationError);
     expect(() => assertStudentPhotoTransition('FAILED', 'UPLOADED')).toThrow(ValidationError);
     expect(() => assertStudentPhotoTransition('EXPIRED', 'AUTHORIZED')).toThrow(ValidationError);

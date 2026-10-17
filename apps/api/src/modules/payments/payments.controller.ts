@@ -9,7 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Roles } from '../../common/decorators';
+import { OnboardingRole, Roles } from '../../common/decorators';
 import { AuthenticatedRequest } from '../../common/http-request';
 import { successResponse } from '../../common/response';
 import { AuthGuard } from '../access-control/auth.guard';
@@ -28,7 +28,8 @@ import {
 } from './payment-request.dto';
 import { PaymentsService } from './payments.service';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('PARENT')
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
@@ -116,6 +117,7 @@ export class PaymentsController {
 }
 
 @UseGuards(OnboardingGuard)
+@OnboardingRole('PARENT')
 @Controller('onboarding/payments')
 export class OnboardingPaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
@@ -295,6 +297,21 @@ export class AdminPaymentsController {
         submissionId,
         req.user.id,
         dto.reason,
+        dto.version,
+      ),
+    );
+  }
+
+  @Post('offline-submissions/:submissionId/reset')
+  async resetForResubmission(
+    @Param('submissionId', new ParseUUIDPipe()) submissionId: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ReviewPaymentDto,
+  ) {
+    return successResponse(
+      await this.paymentsService.resetOfflinePaymentForResubmission(
+        submissionId,
+        req.user.id,
         dto.version,
       ),
     );

@@ -27,7 +27,8 @@ const server = createServer((request, response) => {
   response.req = request;
   const url = new URL(request.url ?? '/', `http://127.0.0.1:${port}`);
   if (request.method === 'OPTIONS') return send(response, 204, null);
-  if (url.pathname === '/health') return send(response, 200, { ok: true });
+  if (url.pathname === '/health' || url.pathname === '/api/v1/health')
+    return send(response, 200, { ok: true });
   if (url.pathname === '/api/v1/auth/me') {
     if (request.headers.cookie?.includes('e2e-auth=anon')) {
       return send(response, 200, {

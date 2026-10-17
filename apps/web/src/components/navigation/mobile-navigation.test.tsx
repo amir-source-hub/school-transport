@@ -45,16 +45,16 @@ describe('phone navigation and compact controls', () => {
   });
 
   it('keeps admin drawer links touch-sized and active on a nested route', async () => {
-    navigation.pathname = '/admin/registrations/42';
+    navigation.pathname = '/admin/students/42';
     const user = userEvent.setup();
     render(<AdminShell>content</AdminShell>);
 
     await user.click(screen.getByRole('button', { name: 'باز کردن منوی مدیریت' }));
     const dialog = screen.getByRole('dialog', { name: 'پنل مدیریت' });
     const nav = within(dialog).getByRole('navigation', { name: 'ناوبری پنل مدیریت' });
-    const registration = within(nav).getByRole('link', { name: 'ثبت‌نام‌ها' });
-    expect(registration).toHaveClass('min-h-11');
-    expect(registration).toHaveAttribute('aria-current', 'page');
+    const students = within(nav).getByRole('link', { name: 'دانش‌آموزان' });
+    expect(students).toHaveClass('min-h-11');
+    expect(students).toHaveAttribute('aria-current', 'page');
     expect(within(dialog).getByRole('button', { name: 'بستن' })).toHaveClass('size-11');
   });
 

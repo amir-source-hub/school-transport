@@ -33,6 +33,7 @@ const schoolTypes = [
   { value: 'BOARDING', label: 'شبانه‌روزی' },
   { value: 'SPECIAL', label: 'استثنائی' },
   { value: 'INTERNATIONAL', label: 'بین‌المللی' },
+  { value: 'PRESCHOOL', label: 'پیش دبستانی و آمادگی' },
 ];
 
 const genderTypes = [
@@ -47,6 +48,7 @@ const normalizeDigits = (value: string) =>
     .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
 
 const educationLevels = [
+  { level: 'پیش دبستانی و آمادگی', grades: ['پیش دبستانی', 'آمادگی'] },
   { level: 'ابتدایی', grades: ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم'] },
   { level: 'متوسطه اول', grades: ['هفتم', 'هشتم', 'نهم'] },
   { level: 'متوسطه دوم', grades: ['دهم', 'یازدهم', 'دوازدهم'] },
@@ -78,6 +80,9 @@ export function SchoolFormDialog(props: Props) {
     managerName: initial?.managerName ?? '',
     managerPhone: initial?.managerPhone ?? '',
     openingTime: initial?.openingTime ?? '',
+    openingTimes: initial?.openingTimes?.length
+      ? initial.openingTimes
+      : [initial?.openingTime ?? ''],
     closingTime: initial?.closingTime ?? '',
     closingTimes: initial?.closingTimes?.length
       ? initial.closingTimes
@@ -104,16 +109,20 @@ export function SchoolFormDialog(props: Props) {
       return;
     }
     const needsInitialPassword = !isEdit || !initial?.managerId;
+    const managerUsernameChanged = managerUsername !== (initial?.managerUsername ?? '');
     if (
-      !/^[A-Za-z0-9]{8}$/.test(managerUsername) ||
-      (needsInitialPassword && !/^[A-Za-z0-9]{8}$/.test(managerPassword)) ||
-      (!needsInitialPassword &&
-        managerPassword.length > 0 &&
-        !/^[A-Za-z0-9]{8}$/.test(managerPassword))
+      (needsInitialPassword || managerUsernameChanged) &&
+      !/^[A-Za-z0-9]{8}$/.test(managerUsername)
     ) {
-      setError(
-        'نام کاربری و رمز عبور مدیر باید دقیقاً ۸ نویسه و فقط شامل حروف انگلیسی و اعداد باشند.',
-      );
+      setError('نام کاربری مدیر باید دقیقاً ۸ نویسه و فقط شامل حروف انگلیسی و اعداد باشد.');
+      return;
+    }
+    if (needsInitialPassword && !/^[A-Za-z0-9]{8}$/.test(managerPassword)) {
+      setError('رمز عبور مدیر باید دقیقاً ۸ نویسه و فقط شامل حروف انگلیسی و اعداد باشد.');
+      return;
+    }
+    if (!needsInitialPassword && managerPassword && !/^[A-Za-z0-9]{8}$/.test(managerPassword)) {
+      setError('رمز عبور جدید مدیر باید دقیقاً ۸ نویسه و فقط شامل حروف انگلیسی و اعداد باشد.');
       return;
     }
     const normalized = {
@@ -125,7 +134,7 @@ export function SchoolFormDialog(props: Props) {
       phoneNumber: normalizeDigits(form.phoneNumber ?? '').replace(/\D/g, ''),
       managerName: form.managerName?.trim() ?? '',
       managerPhone: normalizeDigits(form.managerPhone ?? '').replace(/\D/g, ''),
-      district: undefined,
+      district: form.district?.trim() || undefined,
     };
     const checked = createSchoolSchema.safeParse(normalized);
     if (!checked.success) {
@@ -138,7 +147,9 @@ export function SchoolFormDialog(props: Props) {
       const payload = checked.data;
       const managerParts = payload.managerName.trim().split(/\s+/);
       const managerData = {
-        username: managerUsername,
+        ...(!isEdit || !initial?.managerId || managerUsernameChanged
+          ? { username: managerUsername }
+          : {}),
         firstName: managerParts[0] ?? payload.managerName,
         lastName: managerParts.slice(1).join(' ') || 'مدیر',
         phoneNumber: payload.managerPhone,
@@ -151,6 +162,7 @@ export function SchoolFormDialog(props: Props) {
         } else {
           await provisionSchoolManager({
             ...managerData,
+            username: managerUsername,
             password: managerPassword,
             schoolId: props.school.id,
           });
@@ -159,6 +171,7 @@ export function SchoolFormDialog(props: Props) {
         const school = await createSchool(payload);
         await provisionSchoolManager({
           ...managerData,
+          username: managerUsername,
           password: managerPassword,
           schoolId: school.id,
         });
@@ -351,19 +364,50 @@ export function SchoolFormDialog(props: Props) {
                 className="mt-1"
               />
             </div>
-            <div>
-              <label htmlFor="school-opening-time" className="text-sm font-bold">
-                ساعت شروع مدرسه *
-              </label>
-              <Input
-                id="school-opening-time"
-                type="time"
-                required
-                dir="ltr"
-                value={form.openingTime}
-                onChange={(event) => update('openingTime', event.target.value)}
-                className="mt-1 text-left"
-              />
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold">ساعت‌های شروع مدرسه *</label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => update('openingTimes', [...form.openingTimes, ''])}
+                >
+                  افزودن ساعت
+                </Button>
+              </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {form.openingTimes.map((time, index) => (
+                  <div key={index} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2">
+                    <Input
+                      aria-label={`ساعت شروع ${index + 1}`}
+                      type="time"
+                      required
+                      dir="ltr"
+                      value={time}
+                      onChange={(event) => {
+                        const times = [...form.openingTimes];
+                        times[index] = event.target.value;
+                        update('openingTimes', times);
+                        update('openingTime', times[0] ?? '');
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={form.openingTimes.length === 1}
+                      onClick={() => {
+                        const times = form.openingTimes.filter((_, i) => i !== index);
+                        update('openingTimes', times);
+                        update('openingTime', times[0] ?? '');
+                      }}
+                    >
+                      حذف
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="sm:col-span-2">
               <div className="flex items-center justify-between">

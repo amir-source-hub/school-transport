@@ -8,15 +8,21 @@ import {
   parents,
   paymentPlans,
   paymentScheduleItems,
+  paymentTransactions,
   registrationPrices,
   schools,
   serviceRegistrations,
   studentLimitRequests,
   studentPhotoUploads,
   students,
+  studentCompanions,
+  transportServiceRuns,
+  transportServiceRunStudents,
+  drivers,
+  vehicles,
   users,
 } from '../../database/schemas';
-import { eq, and, sql, desc, inArray } from 'drizzle-orm';
+import { eq, and, sql, desc, ilike, inArray, or } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
 import { NotFoundError, ConflictError } from '../../common/errors';
 import { generateId } from '../../common/utils';
@@ -32,6 +38,7 @@ import { S3_CLIENT, type S3Storage } from '../../infrastructure/s3/s3-storage.po
 import type { AdminStudentListQueryDto } from './student-list.dto';
 import type { AdminUpdateStudentDto } from './student.dto';
 import { buildAdminStudentArchiveWhere, buildAdminStudentOrderBy } from './student-list.sort';
+import type { DatabaseTransaction } from '../../database/payment-plan';
 
 export const MAX_STUDENTS_PER_GUARDIAN = 5;
 export const STUDENT_LIMIT_REQUEST_LIST_LIMIT = 500;
@@ -48,11 +55,27 @@ export class StudentsService {
   ) {}
 
   async getAllByFamily(userId: string) {
-    return this.db.db
+    const rows = await this.db.db
       .select({ ...getTableColumns(students), schoolName: schools.name })
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .where(and(eq(students.userId, userId), eq(students.isActive, true)));
+    const companions = rows.length
+      ? await this.db.db
+          .select()
+          .from(studentCompanions)
+          .where(
+            inArray(
+              studentCompanions.studentId,
+              rows.map((row) => row.id),
+            ),
+          )
+      : [];
+    return rows.map((row) => ({
+      ...row,
+      companion: companions.find((item) => item.studentId === row.id) ?? null,
+      seatCount: companions.some((item) => item.studentId === row.id) ? 2 : 1,
+    }));
   }
 
   async getById(studentId: string, userId?: string) {
@@ -66,6 +89,150 @@ export class StudentsService {
       .limit(1);
     if (result.length === 0) throw new NotFoundError('Student', studentId);
     return result[0];
+  }
+
+  async getDetailById(studentId: string, userId: string) {
+    const student = await this.getById(studentId, userId);
+    const [companion] = await this.db.db
+      .select()
+      .from(studentCompanions)
+      .where(eq(studentCompanions.studentId, studentId))
+      .limit(1);
+    return { ...student, companion: companion ?? null, seatCount: companion ? 2 : 1 };
+  }
+
+  async upsertCompanion(
+    studentId: string,
+    userId: string,
+    data: {
+      firstName: string;
+      lastName: string;
+      fatherName: string;
+      nationalId: string;
+      phoneNumber: string;
+      relationship: 'FAMILY' | 'CAREGIVER' | 'COACH';
+    },
+  ) {
+    await this.getById(studentId, userId);
+    const [duplicate] = await this.db.db
+      .select({ studentId: studentCompanions.studentId })
+      .from(studentCompanions)
+      .where(eq(studentCompanions.nationalId, data.nationalId))
+      .limit(1);
+    if (duplicate && duplicate.studentId !== studentId)
+      throw new ConflictError(
+        'DUPLICATE_COMPANION_NATIONAL_ID',
+        'این کد ملی قبلاً برای همراه دانش‌آموز دیگری ثبت شده است.',
+      );
+    const [current] = await this.db.db
+      .select({ id: studentCompanions.id })
+      .from(studentCompanions)
+      .where(eq(studentCompanions.studentId, studentId))
+      .limit(1);
+    if (current)
+      throw new ConflictError(
+        'COMPANION_ADMIN_EDIT_ONLY',
+        'مراقب همراه پس از ثبت فقط توسط مدیریت قابل تغییر است.',
+      );
+    if (!current) {
+      const assignedRoutes = await this.db.db
+        .select({ runId: transportServiceRuns.id, capacity: vehicles.capacity })
+        .from(transportServiceRunStudents)
+        .innerJoin(
+          transportServiceRuns,
+          eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId),
+        )
+        .innerJoin(vehicles, eq(vehicles.id, transportServiceRuns.vehicleId))
+        .where(
+          and(
+            eq(transportServiceRunStudents.studentId, studentId),
+            eq(transportServiceRunStudents.isActive, true),
+            eq(transportServiceRuns.isActive, true),
+          ),
+        );
+      for (const route of assignedRoutes) {
+        const members = await this.db.db
+          .select({ studentId: transportServiceRunStudents.studentId })
+          .from(transportServiceRunStudents)
+          .where(
+            and(
+              eq(transportServiceRunStudents.serviceRunId, route.runId),
+              eq(transportServiceRunStudents.isActive, true),
+            ),
+          );
+        const ids = members.map((member) => member.studentId);
+        const companions = ids.length
+          ? await this.db.db
+              .select({ id: studentCompanions.id })
+              .from(studentCompanions)
+              .where(inArray(studentCompanions.studentId, ids))
+          : [];
+        if (members.length + companions.length + 1 > route.capacity)
+          throw new ConflictError(
+            'COMPANION_ROUTE_CAPACITY_UNAVAILABLE',
+            'در یکی از سرویس‌های فعلی صندلی خالی برای همراه وجود ندارد. ابتدا ظرفیت یا مسیر را در پنل مدیریت تغییر دهید.',
+          );
+      }
+    }
+    const [saved] = await this.db.db
+      .insert(studentCompanions)
+      .values({ id: generateId(), studentId, ...data })
+      .onConflictDoNothing({ target: studentCompanions.studentId })
+      .returning();
+    if (!saved)
+      throw new ConflictError(
+        'COMPANION_ADMIN_EDIT_ONLY',
+        'مراقب همراه قبلاً ثبت شده و فقط مدیریت می‌تواند آن را تغییر دهد.',
+      );
+    return saved;
+  }
+
+  async removeCompanion(studentId: string, userId: string) {
+    await this.getById(studentId, userId);
+    await this.db.db.delete(studentCompanions).where(eq(studentCompanions.studentId, studentId));
+    return { removed: true };
+  }
+
+  async saveCompanionByAdmin(
+    studentId: string,
+    data: {
+      firstName: string;
+      lastName: string;
+      fatherName: string;
+      nationalId: string;
+      phoneNumber: string;
+      relationship: 'FAMILY' | 'CAREGIVER' | 'COACH';
+    },
+  ) {
+    const student = await this.getById(studentId);
+    const [current] = await this.db.db
+      .select({ id: studentCompanions.id })
+      .from(studentCompanions)
+      .where(eq(studentCompanions.studentId, studentId))
+      .limit(1);
+    if (!current) return this.upsertCompanion(studentId, student.userId, data);
+    const [duplicate] = await this.db.db
+      .select({ studentId: studentCompanions.studentId })
+      .from(studentCompanions)
+      .where(eq(studentCompanions.nationalId, data.nationalId))
+      .limit(1);
+    if (duplicate && duplicate.studentId !== studentId)
+      throw new ConflictError(
+        'DUPLICATE_COMPANION_NATIONAL_ID',
+        'این کد ملی قبلاً برای مراقب دیگری ثبت شده است.',
+      );
+    const [saved] = await this.db.db
+      .update(studentCompanions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(studentCompanions.studentId, studentId))
+      .returning();
+    return saved;
+  }
+
+  async removeCompanionByAdmin(studentId: string) {
+    await this.getById(studentId);
+    await this.db.db.delete(studentCompanions).where(eq(studentCompanions.studentId, studentId));
+    return { removed: true };
   }
 
   async create(
@@ -143,10 +310,20 @@ export class StudentsService {
     ) {
       await this.assertValidSchoolProgram(editableFields, current);
     }
-    await this.db.db
-      .update(students)
-      .set({ ...editableFields, updatedAt: new Date() })
-      .where(eq(students.id, studentId));
+    await this.db.db.transaction(async (txn) => {
+      await txn
+        .update(students)
+        .set({ ...editableFields, updatedAt: new Date() })
+        .where(eq(students.id, studentId));
+      if (editableFields.schoolId && editableFields.schoolId !== current.schoolId) {
+        await this.reconcileSpecialSchoolEnrollment(
+          txn,
+          studentId,
+          userId,
+          editableFields.schoolId,
+        );
+      }
+    });
     return this.getById(studentId);
   }
 
@@ -167,9 +344,31 @@ export class StudentsService {
       })
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
-      .innerJoin(users, eq(users.id, students.userId));
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(and(eq(users.accountStatus, 'ACTIVE'), eq(students.isActive, true)));
 
-    const parentRows = await this.db.db.select().from(parents);
+    const userIds = [...new Set(rows.map((row) => row.userId))];
+    const [parentRows, companionRows, addressRows] = await Promise.all([
+      this.db.db.select().from(parents),
+      rows.length
+        ? this.db.db
+            .select()
+            .from(studentCompanions)
+            .where(
+              inArray(
+                studentCompanions.studentId,
+                rows.map((row) => row.id),
+              ),
+            )
+        : Promise.resolve([]),
+      userIds.length
+        ? this.db.db
+            .select()
+            .from(familyAddresses)
+            .where(inArray(familyAddresses.userId, userIds))
+            .orderBy(desc(familyAddresses.isActive), desc(familyAddresses.updatedAt))
+        : Promise.resolve([]),
+    ]);
 
     return rows.map((student) => {
       const familyParent =
@@ -177,6 +376,10 @@ export class StudentsService {
         parentRows.find((parent) => parent.userId === student.userId);
       return {
         ...student,
+        companion: companionRows.find((item) => item.studentId === student.id) ?? null,
+        seatCount: companionRows.some((item) => item.studentId === student.id) ? 2 : 1,
+        address:
+          addressRows.find((address) => address.userId === student.userId)?.streetAddress ?? null,
         familyName: familyParent
           ? `${familyParent.firstName} ${familyParent.lastName}`
           : student.username,
@@ -187,10 +390,26 @@ export class StudentsService {
   async getStudentsForAdminPage(query: AdminStudentListQueryDto) {
     const { archive, sort, direction, page, pageSize } = query;
     const archiveFilter = buildAdminStudentArchiveWhere(archive) ?? sql`1 = 1`;
+    const search = query.q?.trim();
+    const searchFilter = search
+      ? or(
+          ilike(students.firstName, `%${search}%`),
+          ilike(students.lastName, `%${search}%`),
+          ilike(sql`${students.firstName} || ' ' || ${students.lastName}`, `%${search}%`),
+          ilike(students.nationalId, `%${search}%`),
+          ilike(students.studentCode, `%${search}%`),
+          ilike(users.username, `%${search}%`),
+          ilike(users.phoneNumber, `%${search}%`),
+          ilike(schools.name, `%${search}%`),
+        )
+      : sql`true`;
+    const schoolFilter = query.schoolId ? eq(students.schoolId, query.schoolId) : sql`true`;
     const [countRow] = await this.db.db
       .select({ total: sql<number>`count(*)::int` })
       .from(students)
-      .where(archiveFilter);
+      .innerJoin(schools, eq(schools.id, students.schoolId))
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE')));
 
     const rows = await this.db.db
       .select({
@@ -201,18 +420,43 @@ export class StudentsService {
       .from(students)
       .innerJoin(schools, eq(schools.id, students.schoolId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(archiveFilter)
+      .where(and(archiveFilter, searchFilter, schoolFilter, eq(users.accountStatus, 'ACTIVE')))
       .orderBy(...buildAdminStudentOrderBy(sort, direction))
       .offset((page - 1) * pageSize)
       .limit(pageSize);
 
-    const parentRows = await this.db.db.select().from(parents);
+    const userIds = [...new Set(rows.map((row) => row.userId))];
+    const [parentRows, companionRows, addressRows] = await Promise.all([
+      this.db.db.select().from(parents),
+      rows.length
+        ? this.db.db
+            .select()
+            .from(studentCompanions)
+            .where(
+              inArray(
+                studentCompanions.studentId,
+                rows.map((row) => row.id),
+              ),
+            )
+        : Promise.resolve([]),
+      userIds.length
+        ? this.db.db
+            .select()
+            .from(familyAddresses)
+            .where(inArray(familyAddresses.userId, userIds))
+            .orderBy(desc(familyAddresses.isActive), desc(familyAddresses.updatedAt))
+        : Promise.resolve([]),
+    ]);
     const items = rows.map((student) => {
       const familyParent =
         parentRows.find((parent) => parent.userId === student.userId && parent.isPrimaryContact) ??
         parentRows.find((parent) => parent.userId === student.userId);
       return {
         ...student,
+        companion: companionRows.find((item) => item.studentId === student.id) ?? null,
+        seatCount: companionRows.some((item) => item.studentId === student.id) ? 2 : 1,
+        address:
+          addressRows.find((address) => address.userId === student.userId)?.streetAddress ?? null,
         familyName: familyParent
           ? `${familyParent.firstName} ${familyParent.lastName}`
           : student.username,
@@ -223,6 +467,11 @@ export class StudentsService {
 
   async getForAdmin(studentId: string) {
     const student = await this.getById(studentId);
+    const [companion] = await this.db.db
+      .select()
+      .from(studentCompanions)
+      .where(eq(studentCompanions.studentId, studentId))
+      .limit(1);
     const [schoolRow] = await this.db.db
       .select({ schoolType: schools.schoolType })
       .from(schools)
@@ -242,8 +491,7 @@ export class StudentsService {
         .where(eq(serviceRegistrations.studentId, studentId))
         .orderBy(desc(serviceRegistrations.createdAt)),
     ]);
-    const primaryParent =
-      parentRows.find((parent) => parent.isPrimaryContact) ?? parentRows[0];
+    const primaryParent = parentRows.find((parent) => parent.isPrimaryContact) ?? parentRows[0];
 
     const latestRegistration = registrationRows[0] ?? null;
     let enrollmentSummary: unknown = null;
@@ -335,6 +583,8 @@ export class StudentsService {
 
     return {
       ...student,
+      companion: companion ?? null,
+      seatCount: companion ? 2 : 1,
       familyName: primaryParent
         ? `${primaryParent.firstName} ${primaryParent.lastName}`
         : 'بدون سرپرست',
@@ -644,7 +894,66 @@ export class StudentsService {
 
     const saved = await this.db.db.transaction(async (txn) => {
       const conditions = [eq(students.id, studentId)];
-      if (expectedUpdatedAt) conditions.push(eq(students.updatedAt, expectedUpdatedAt));
+      if (expectedUpdatedAt) {
+        // PostgreSQL retains microseconds, while the API's Date values retain only
+        // milliseconds. Compare the serialized precision under a row lock instead
+        // of comparing a truncated client timestamp directly in SQL.
+        const [locked] = await txn
+          .select({ updatedAt: students.updatedAt })
+          .from(students)
+          .where(eq(students.id, studentId))
+          .for('update');
+        if (!locked || locked.updatedAt.toISOString() !== expectedUpdatedAt.toISOString()) {
+          throw new ConflictError(
+            'STUDENT_CONCURRENT_MODIFIED',
+            'This student was modified by another admin. Refresh the page and try again.',
+          );
+        }
+      }
+      if (editable.schoolId && editable.schoolId !== current.schoolId) {
+        const oldAssignments = await txn
+          .select({ id: transportServiceRunStudents.id, driverUserId: drivers.userId })
+          .from(transportServiceRunStudents)
+          .innerJoin(
+            transportServiceRuns,
+            eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId),
+          )
+          .innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
+          .where(
+            and(
+              eq(transportServiceRunStudents.studentId, studentId),
+              eq(transportServiceRunStudents.isActive, true),
+            ),
+          );
+        // Detach before changing schools: the assignment trigger checks school consistency.
+        if (oldAssignments.length) {
+          await txn
+            .update(transportServiceRunStudents)
+            .set({ isActive: false })
+            .where(
+              inArray(
+                transportServiceRunStudents.id,
+                oldAssignments.map((a) => a.id),
+              ),
+            );
+          const eventId = generateId();
+          for (const userId of new Set([
+            current.userId,
+            ...oldAssignments.map((a) => a.driverUserId),
+          ])) {
+            await this.notifications.enqueueInTransaction(txn, {
+              eventId: `STUDENT_SCHOOL_CHANGED:${eventId}:${userId}`,
+              userId,
+              notificationType: 'STUDENT_DRIVER_ASSIGNED',
+              title: 'مدرسه دانش‌آموز تغییر کرد',
+              message:
+                'مدرسه دانش‌آموز تغییر کرد و ارتباط مسیرهای قبلی پایان یافت. مسیر جدید باید توسط مدیریت تعیین شود.',
+              relatedEntityType: 'STUDENT',
+              relatedEntityId: studentId,
+            });
+          }
+        }
+      }
       const updated = await txn
         .update(students)
         .set({ ...editable, updatedAt: new Date() })
@@ -654,6 +963,14 @@ export class StudentsService {
         throw new ConflictError(
           'STUDENT_CONCURRENT_MODIFIED',
           'This student was modified by another admin. Refresh the page and try again.',
+        );
+      }
+      if (editable.schoolId && editable.schoolId !== current.schoolId) {
+        await this.reconcileSpecialSchoolEnrollment(
+          txn,
+          studentId,
+          current.userId,
+          editable.schoolId,
         );
       }
       await this.auditService.recordInTransaction(txn, {
@@ -669,6 +986,105 @@ export class StudentsService {
       return updated[0];
     });
     return saved;
+  }
+
+  private async reconcileSpecialSchoolEnrollment(
+    txn: DatabaseTransaction,
+    studentId: string,
+    userId: string,
+    schoolId: string,
+  ) {
+    const [school] = await txn
+      .select({ schoolType: schools.schoolType })
+      .from(schools)
+      .where(eq(schools.id, schoolId))
+      .limit(1);
+    if (school?.schoolType !== 'SPECIAL') return;
+
+    const registrations = await txn
+      .select({ id: serviceRegistrations.id })
+      .from(serviceRegistrations)
+      .where(
+        and(
+          eq(serviceRegistrations.studentId, studentId),
+          inArray(serviceRegistrations.registrationStatus, [
+            'CONTRACT_READY',
+            'CONTRACT_ACCEPTED',
+            'ENROLLED',
+          ]),
+        ),
+      );
+    const registrationIds = registrations.map(({ id }) => id);
+    if (registrationIds.length === 0) return;
+
+    const registrationContracts = await txn
+      .select({ paymentPlanId: contracts.paymentPlanId })
+      .from(contracts)
+      .where(inArray(contracts.registrationId, registrationIds));
+    const planIds = registrationContracts
+      .map(({ paymentPlanId }) => paymentPlanId)
+      .filter((value): value is string => Boolean(value));
+    const now = new Date();
+    await txn
+      .update(contracts)
+      .set({ contractStatus: 'CANCELLED', cancelledAt: now, updatedAt: now })
+      .where(
+        and(
+          inArray(contracts.registrationId, registrationIds),
+          eq(contracts.contractStatus, 'GENERATED'),
+        ),
+      );
+    await txn
+      .update(registrationPrices)
+      .set({ priceStatus: 'REPLACED', updatedAt: now })
+      .where(
+        and(
+          inArray(registrationPrices.registrationId, registrationIds),
+          eq(registrationPrices.priceStatus, 'ACCEPTED'),
+        ),
+      );
+    if (planIds.length > 0) {
+      await txn
+        .update(paymentScheduleItems)
+        .set({ itemStatus: 'CANCELLED', updatedAt: now })
+        .where(
+          and(
+            inArray(paymentScheduleItems.paymentPlanId, planIds),
+            eq(paymentScheduleItems.itemStatus, 'PENDING'),
+          ),
+        );
+      await txn
+        .update(paymentPlans)
+        .set({ planStatus: 'CANCELLED', updatedAt: now })
+        .where(
+          and(
+            inArray(paymentPlans.id, planIds),
+            inArray(paymentPlans.planStatus, ['PENDING', 'ACTIVE']),
+          ),
+        );
+      await txn
+        .update(paymentTransactions)
+        .set({
+          transactionStatus: 'FAILED',
+          failureCode: 'SPECIAL_SCHOOL_PAYMENT_WAIVED',
+          failureMessage: 'Payment is not required for SPECIAL-school enrollment.',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            inArray(paymentTransactions.paymentPlanId, planIds),
+            eq(paymentTransactions.transactionStatus, 'CREATED'),
+          ),
+        );
+    }
+    await txn
+      .update(serviceRegistrations)
+      .set({ registrationStatus: 'ENROLLED', updatedAt: now })
+      .where(inArray(serviceRegistrations.id, registrationIds));
+    await txn
+      .update(users)
+      .set({ accountStatus: 'ACTIVE', username: sql`${users.phoneNumber}`, updatedAt: now })
+      .where(eq(users.id, userId));
   }
 
   private async assertValidSchoolProgram(
@@ -746,7 +1162,10 @@ export class StudentsService {
       .where(eq(students.userId, student.userId));
     const deleteFamily = familyStudents.length === 1;
     const photoRows = await this.db.db
-      .select({ rawKey: studentPhotoUploads.rawKey, canonicalKey: studentPhotoUploads.canonicalKey })
+      .select({
+        rawKey: studentPhotoUploads.rawKey,
+        canonicalKey: studentPhotoUploads.canonicalKey,
+      })
       .from(studentPhotoUploads)
       .where(
         deleteFamily
@@ -755,6 +1174,7 @@ export class StudentsService {
       );
 
     await this.db.db.transaction(async (txn) => {
+      await txn.execute(sql`select set_config('app.family_erasure', 'on', true)`);
       await this.auditService.recordInTransaction(txn, {
         actorType: 'ADMIN',
         actorId: context.adminId,

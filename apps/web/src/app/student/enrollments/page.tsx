@@ -83,13 +83,16 @@ export default async function EnrollmentsPage() {
             id: school.id,
             name: school.name,
             city: school.city,
+            schoolType: school.schoolType,
             educationOptions: school.educationOptions,
           }))}
           savedParents={{ father: family.father, mother: family.mother }}
           existingStudents={availableStudents}
+          hasExistingFamilyStudents={students.length > 0}
           guardianPhone={primaryParent?.phoneNumber ?? undefined}
           capacityRemaining={capacity.remaining}
           defaults={{
+            homePhone: primaryParent?.homePhone ?? undefined,
             address: activeAddress,
             emergencyContact: activeEmergency,
             guardian: primaryParent

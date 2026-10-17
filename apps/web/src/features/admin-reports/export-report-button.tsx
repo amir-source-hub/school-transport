@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { downloadApiFile } from '@/lib/api-client';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 
-export function ExportReportButton() {
+export function ExportReportButton({ path = '/admin/reports/comprehensive.xlsx', label = 'خروجی جامع Excel' }: { path?: string; label?: string } = {}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -18,7 +18,7 @@ export function ExportReportButton() {
           setLoading(true);
           setError(undefined);
           try {
-            const { blob, filename } = await downloadApiFile('/admin/reports/comprehensive.xlsx');
+            const { blob, filename } = await downloadApiFile(path);
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement('a');
             anchor.href = url;
@@ -36,7 +36,7 @@ export function ExportReportButton() {
         }}
       >
         <Download aria-hidden="true" className="size-4" />
-        خروجی جامع Excel
+        {label}
       </Button>
       {error && <p className="mt-2 text-sm text-danger">{error}</p>}
     </div>

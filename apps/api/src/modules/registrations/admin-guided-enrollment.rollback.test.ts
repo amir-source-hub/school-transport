@@ -32,9 +32,16 @@ function buildMockDb(selectResults: unknown[][]) {
   }));
   const update = vi.fn((table: unknown) => ({
     set: vi.fn((setValues: Record<string, unknown>) => ({
-      where: vi.fn(async () => {
-        updated.push({ table, set: setValues });
-        return undefined;
+      where: vi.fn(() => {
+        const result = Promise.resolve().then(() => {
+          updated.push({ table, set: setValues });
+        });
+        return Object.assign(result, {
+          returning: async () => {
+            await result;
+            return [{ id: 'linked-photo' }];
+          },
+        });
       }),
     })),
   }));
@@ -364,5 +371,93 @@ describe('admin guided enrollment transaction', () => {
     expect(guardianRow).toBeDefined();
     expect((guardianRow?.values as { [key: string]: unknown }).phoneNumber).toBe('09121111111');
     expect(mock.inserted.some(({ table }) => table === users)).toBe(false);
+  });
+
+  it('enrolls another student using saved family identity despite stale parent form values', async () => {
+    const savedGuardian = {
+      ...father,
+      parentType: 'GUARDIAN',
+      lastName: 'SavedFamilyName',
+      homePhone: '02122113333',
+      relationshipType: 'FATHER',
+    };
+    const mock = buildMockDb([
+      schoolResult,
+      [],
+      [{ studentLimit: 2 }],
+      [{ count: 1 }],
+      [],
+      [{ phoneNumber: '09121111111' }],
+      [savedGuardian, mother],
+      [],
+    ]);
+    const service = new RegistrationsService(
+      mock.database,
+      {
+        create: vi.fn(),
+        enqueueInTransaction: vi.fn(async () => undefined),
+      } as unknown as InAppNotificationService,
+      { recordInTransaction: vi.fn(async () => undefined) } as unknown as AuditPort,
+    );
+    const result = await service.createGuidedEnrollment(
+      'family-1',
+      {
+        ...baseInput,
+        guardian: { ...baseInput.guardian, lastName: 'StaleFamilyName' },
+        homePhone: '02122998877',
+        mother: { ...mother, lastName: 'StaleMotherName' },
+      },
+      adminAudit,
+    );
+    expect(result.studentId).toBeDefined();
+    expect(mock.updated).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          set: expect.objectContaining({ homePhone: '02122113333' }),
+        }),
+      ]),
+    );
+    expect(
+      mock.inserted.some(
+        ({ values }) => (values as { parentType?: string }).parentType === 'MOTHER',
+      ),
+    ).toBe(false);
+  });
+
+  it('allows the parent portal to enroll a second child with saved family details', async () => {
+    const savedGuardian = {
+      ...father,
+      parentType: 'GUARDIAN',
+      lastName: 'SavedFamilyName',
+      homePhone: '02122113333',
+      relationshipType: 'FATHER',
+    };
+    const mock = buildMockDb([
+      [{ status: 'ACTIVE', phoneNumber: '09121111111' }],
+      schoolResult,
+      [],
+      [{ studentLimit: 2 }],
+      [{ count: 1 }],
+      [],
+      [{ phoneNumber: '09121111111' }],
+      [savedGuardian, mother],
+      [],
+    ]);
+    const service = new RegistrationsService(
+      mock.database,
+      {
+        create: vi.fn(),
+        enqueueInTransaction: vi.fn(async () => undefined),
+      } as unknown as InAppNotificationService,
+      { recordInTransaction: vi.fn(async () => undefined) } as unknown as AuditPort,
+    );
+    const result = await service.createGuidedEnrollment('family-1', {
+      ...baseInput,
+      studentPhotoUploadId: 'pending-photo',
+      guardian: { ...baseInput.guardian, lastName: 'StaleFamilyName' },
+      homePhone: '02122998877',
+    });
+    expect(result.studentId).toBeDefined();
+    expect(result.status).toBe('CONTRACT_READY');
   });
 });

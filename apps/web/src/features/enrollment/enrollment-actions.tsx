@@ -7,7 +7,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
   FileCheck2,
   LocateFixed,
   LogOut,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { MapProviderLinks } from '@/components/common/map-provider-links';
 
 const LocationPicker = dynamic(
   () => import('@/components/common/location-picker').then((m) => ({ default: m.LocationPicker })),
@@ -95,6 +95,7 @@ export function CreateEnrollmentForm({
   schools,
   savedParents,
   existingStudents,
+  hasExistingFamilyStudents = false,
   defaults,
   mode = 'panel',
   guardianPhone,
@@ -104,6 +105,7 @@ export function CreateEnrollmentForm({
   schools: SchoolOption[];
   savedParents: SavedParents;
   existingStudents: ExistingStudent[];
+  hasExistingFamilyStudents?: boolean;
   defaults: EnrollmentDefaults;
   mode?: EnrollmentMode;
   guardianPhone?: string;
@@ -133,7 +135,6 @@ export function CreateEnrollmentForm({
   const [reviewedContractPages, setReviewedContractPages] = useState<number[]>([]);
   const [accepted, setAccepted] = useState(false);
   const [paid, setPaid] = useState(false);
-  const [paymentDestinationReady, setPaymentDestinationReady] = useState(false);
   const [photoUploadId, setPhotoUploadId] = useState<string>();
   const [photoCardGeneration, setPhotoCardGeneration] = useState(0);
   const [pending, setPending] = useState(false);
@@ -150,7 +151,7 @@ export function CreateEnrollmentForm({
   useEffect(() => {
     if (mode !== 'onboarding') return;
     let active = true;
-    finalizeOnboarding()
+    finalizeOnboarding('PARENT')
       .then(() => {
         if (active) router.replace('/student/dashboard');
       })
@@ -205,6 +206,10 @@ export function CreateEnrollmentForm({
       'studentFirst',
       'studentLast',
       'studentFatherName',
+      'disabilityType',
+      'companionFirst',
+      'companionLast',
+      'companionFatherName',
       'guardianFirst',
       'guardianLast',
       'guardianRelationshipDescription',
@@ -225,6 +230,10 @@ export function CreateEnrollmentForm({
       'studentFirst',
       'studentLast',
       'studentFatherName',
+      'disabilityType',
+      'companionFirst',
+      'companionLast',
+      'companionFatherName',
       'studentNationalId',
       'birthDate',
       'gender',
@@ -280,7 +289,7 @@ export function CreateEnrollmentForm({
 
   function set(key: keyof typeof form, value: string | number) {
     let normalizedValue = value;
-    const persianOnlyKeys: (keyof typeof form)[] = [
+    const persianLetterOnlyKeys: (keyof typeof form)[] = [
       'studentFirst',
       'studentLast',
       'studentFatherName',
@@ -294,18 +303,26 @@ export function CreateEnrollmentForm({
       'emergencyFirst',
       'emergencyLast',
       'emergencyRelationship',
+      'disabilityType',
+      'companionFirst',
+      'companionLast',
+      'companionFatherName',
       'addressTitle',
       'province',
       'city',
-      'streetAddress',
-      'parentNotes',
     ];
-    if (typeof value === 'string' && persianOnlyKeys.includes(key)) {
+    const persianTextKeys: (keyof typeof form)[] = ['streetAddress', 'parentNotes'];
+    if (typeof value === 'string' && persianLetterOnlyKeys.includes(key)) {
+      normalizedValue = value.replace(
+        /[^\u0621-\u063A\u0641-\u065F\u066E-\u0670\u0671-\u06D3\u06D5-\u06ED\u06EE-\u06EF\u06FA-\u06FC\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF\u200c\u200f\s-]/g,
+        '',
+      );
+    } else if (typeof value === 'string' && persianTextKeys.includes(key)) {
       normalizedValue = value.replace(/[A-Za-z]/g, '');
     }
     if (
       typeof value === 'string' &&
-      ['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)
+      ['fatherPhone', 'motherPhone', 'emergencyPhone', 'companionPhone'].includes(key)
     ) {
       normalizedValue = normalizeMobileInput(value);
     }
@@ -316,6 +333,7 @@ export function CreateEnrollmentForm({
         'guardianNationalId',
         'fatherNationalId',
         'motherNationalId',
+        'companionNationalId',
         'postalCode',
       ].includes(key)
     ) {
@@ -323,7 +341,7 @@ export function CreateEnrollmentForm({
     }
     setForm((current) => {
       const next = { ...current, [key]: normalizedValue };
-      if (current.guardianRelationshipType === 'FATHER') {
+      if (current.guardianRelationshipType === 'FATHER' && !reusingFamilyProfile) {
         if (key === 'studentFatherName') next.guardianFirst = String(normalizedValue);
         if (key === 'studentLast') next.guardianLast = String(normalizedValue);
       }
@@ -356,7 +374,6 @@ export function CreateEnrollmentForm({
           ? ['addressTitle', 'province', 'city', 'streetAddress', 'postalCode']
           : [];
     const inheritedFamilyFields = new Set<keyof typeof form>([
-      'studentFatherName',
       'guardianRelationshipType',
       'guardianRelationshipDescription',
       'guardianFirst',
@@ -397,8 +414,6 @@ export function CreateEnrollmentForm({
   const levelOptions = selectedSchool?.educationOptions ?? [];
   const gradeOptions =
     levelOptions.find(({ level }) => level === form.educationLevel)?.grades ?? [];
-  const googleMapUrl = `https://www.google.com/maps?q=${form.latitude},${form.longitude}&z=16`;
-
   function selectSchool(schoolId: string) {
     const school = schools.find(({ id }) => id === schoolId);
     const firstLevel = school?.educationOptions[0];
@@ -422,6 +437,10 @@ export function CreateEnrollmentForm({
   }
 
   function selectExistingStudent(studentId: string) {
+    // A draft upload without a student id belongs only to the currently entered new
+    // student. Never carry it across a switch to another existing/new student.
+    setPhotoUploadId(undefined);
+    setPhotoCardGeneration((current) => current + 1);
     if (studentId === '__NEW__') studentId = '';
     const student = existingStudents.find((item) => item.id === studentId);
     if (!student) {
@@ -434,6 +453,14 @@ export function CreateEnrollmentForm({
         studentNationalId: '',
         birthDate: '',
         gender: '',
+        physicalStatus: 'HEALTHY',
+        disabilityType: '',
+        companionFirst: '',
+        companionLast: '',
+        companionFatherName: '',
+        companionNationalId: '',
+        companionPhone: '',
+        companionRelationship: '',
         schoolId: '',
         educationLevel: '',
         grade: '',
@@ -454,6 +481,14 @@ export function CreateEnrollmentForm({
       studentNationalId: student.nationalId,
       birthDate: student.birthDate ?? '',
       gender: student.gender ?? '',
+      physicalStatus: student.physicalStatus ?? 'HEALTHY',
+      disabilityType: student.disabilityType ?? '',
+      companionFirst: '',
+      companionLast: '',
+      companionFatherName: '',
+      companionNationalId: '',
+      companionPhone: '',
+      companionRelationship: '',
       schoolId: student.schoolId,
       educationLevel: level?.level ?? '',
       grade: student.grade ?? level?.grades[0] ?? '',
@@ -499,6 +534,27 @@ export function CreateEnrollmentForm({
 
   function validateStep(currentStep: number): string | null {
     if (currentStep === 1) {
+      if (!form.physicalStatus) return 'وضعیت جسمانی را انتخاب کنید.';
+      if (form.physicalStatus === 'SPECIAL' && !form.disabilityType.trim())
+        return 'نوع معلولیت را وارد کنید.';
+      const companionFields = [
+        form.companionFirst,
+        form.companionLast,
+        form.companionFatherName,
+        form.companionNationalId,
+        form.companionPhone,
+        form.companionRelationship,
+      ];
+      if (
+        form.physicalStatus === 'SPECIAL' &&
+        companionFields.some((value) => value.trim()) &&
+        companionFields.some((value) => !value.trim())
+      )
+        return 'برای ثبت مراقب همراه، همه مشخصات او را تکمیل کنید.';
+      if (form.companionNationalId && !isValidIranianNationalId(form.companionNationalId))
+        return 'کد ملی مراقب همراه معتبر نیست.';
+      if (form.companionPhone && !/^09\d{9}$/.test(normalizeDigits(form.companionPhone)))
+        return 'شماره همراه مراقب باید ۱۱ رقم و با ۰۹ شروع شود.';
       const requiredNames = [
         form.studentFirst,
         form.studentLast,
@@ -547,6 +603,12 @@ export function CreateEnrollmentForm({
           return 'شماره همراه تماس اضطراری نامعتبر است.';
       }
       const people = [
+        {
+          label: 'تلفن منزل',
+          name: '',
+          nationalId: '',
+          phone: form.homePhone ? `021${normalizeDigits(form.homePhone)}` : '',
+        },
         {
           label: 'دانش‌آموز',
           name: `${form.studentFirst} ${form.studentLast}`,
@@ -621,7 +683,8 @@ export function CreateEnrollmentForm({
     if (
       currentStep === 2 &&
       !reusingFamilyProfile &&
-      (!form.streetAddress.trim() ||
+      (!form.district ||
+        !form.streetAddress.trim() ||
         !/^\d{10}$/.test(normalizeDigits(form.postalCode)) ||
         !form.locationSelected)
     ) {
@@ -658,8 +721,22 @@ export function CreateEnrollmentForm({
           nationalId: normalizeDigits(form.studentNationalId),
           birthDate: form.birthDate || undefined,
           gender: form.gender as StudentInput['gender'],
+          physicalStatus: form.physicalStatus as StudentInput['physicalStatus'],
+          disabilityType:
+            form.physicalStatus === 'SPECIAL' ? form.disabilityType.trim() : undefined,
           ...(form.studentPhone ? { phoneNumber: composeMobileNumber(form.studentPhone) } : {}),
         },
+        companion:
+          form.physicalStatus === 'SPECIAL' && form.companionFirst.trim()
+            ? {
+                firstName: form.companionFirst.trim(),
+                lastName: form.companionLast.trim(),
+                fatherName: form.companionFatherName.trim(),
+                nationalId: normalizeDigits(form.companionNationalId),
+                phoneNumber: normalizeDigits(form.companionPhone),
+                relationship: form.companionRelationship as 'FAMILY' | 'CAREGIVER' | 'COACH',
+              }
+            : null,
         guardian: {
           firstName: form.guardianFirst,
           lastName: form.guardianLast,
@@ -701,6 +778,7 @@ export function CreateEnrollmentForm({
           title: form.addressTitle,
           province: form.province,
           city: form.city,
+          district: form.district,
           streetAddress: form.streetAddress,
           postalCode: normalizeDigits(form.postalCode),
           latitude: form.latitude,
@@ -722,6 +800,15 @@ export function CreateEnrollmentForm({
         ? (await createAdminFamilyEnrollment(adminFamilyId, enrollmentInput)).data
         : await createGuidedEnrollment(enrollmentInput, mode);
       setResult(created);
+      if (created.requiresContract === false) {
+        if (mode === 'onboarding') {
+          await finalizeOnboarding('PARENT');
+          router.replace('/student/dashboard');
+        } else {
+          setAccepted(true);
+          setPaid(true);
+        }
+      }
     } catch (caught) {
       const feedback = getApiErrorFeedback(caught);
       const pathToField: Record<string, keyof typeof form> = {
@@ -783,10 +870,11 @@ export function CreateEnrollmentForm({
       : []),
   ]);
   const reusingFamilyProfile =
-    existingStudents.length > 0 && !form.existingStudentId && !adminFamilyId;
+    (hasExistingFamilyStudents || existingStudents.length > 0) &&
+    !form.existingStudentId &&
+    !adminFamilyId;
   if (reusingFamilyProfile) {
     for (const key of [
-      'studentFatherName',
       'guardianRelationshipType',
       'guardianRelationshipDescription',
       'guardianFirst',
@@ -843,6 +931,7 @@ export function CreateEnrollmentForm({
         dir={['tel', 'number'].includes(type) ? 'ltr' : undefined}
         disabled={lockedParentFields.has(key)}
         inputMode={type === 'tel' ? 'numeric' : undefined}
+        maxLength={key === 'companionNationalId' ? 10 : key === 'companionPhone' ? 11 : undefined}
         autoComplete={type === 'tel' ? 'off' : undefined}
         onFocus={(event) => {
           if (['fatherPhone', 'motherPhone', 'emergencyPhone'].includes(key)) {
@@ -1207,6 +1296,88 @@ export function CreateEnrollmentForm({
                 {field('emergencyPhone', 'شماره همراه', 'tel')}
               </div>
             </Section>
+            <Section title="وضعیت جسمانی">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <fieldset>
+                  <legend className="text-sm font-bold">وضعیت جسمانی</legend>
+                  <div className="mt-2 flex gap-3">
+                    {[
+                      { value: 'HEALTHY', label: 'سالم' },
+                      { value: 'SPECIAL', label: 'استثنائی' },
+                    ].map((option) => (
+                      <label
+                        key={option.value}
+                        className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-border px-4"
+                      >
+                        <input
+                          type="radio"
+                          name="physicalStatus"
+                          value={option.value}
+                          checked={form.physicalStatus === option.value}
+                          onChange={() => {
+                            set('physicalStatus', option.value);
+                            if (option.value === 'HEALTHY') {
+                              setForm((current) => ({
+                                ...current,
+                                disabilityType: '',
+                                companionFirst: '',
+                                companionLast: '',
+                                companionFatherName: '',
+                                companionNationalId: '',
+                                companionPhone: '',
+                                companionRelationship: '',
+                              }));
+                              setFieldErrors((current) => ({
+                                ...current,
+                                disabilityType: undefined,
+                                companionFirst: undefined,
+                                companionLast: undefined,
+                                companionFatherName: undefined,
+                                companionNationalId: undefined,
+                                companionPhone: undefined,
+                                companionRelationship: undefined,
+                              }));
+                            }
+                          }}
+                        />
+                        {option.label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                {form.physicalStatus === 'SPECIAL' && field('disabilityType', 'نوع معلولیت')}
+              </div>
+              {form.physicalStatus === 'SPECIAL' && (
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <p className="font-bold">مخصوص دانش آموزان استثنائی.</p>
+                    <p className="text-sm text-muted">
+                      اگر دانش آموز نیاز به همراه دارد این اطلاعات را وارد کند.
+                    </p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {field('companionFirst', 'نام مراقب همراه')}
+                    {field('companionLast', 'نام خانوادگی مراقب همراه')}
+                    {field('companionFatherName', 'نام پدر مراقب همراه')}
+                    {field('companionNationalId', 'کد ملی مراقب همراه', 'tel')}
+                    {field('companionPhone', 'شماره همراه مراقب', 'tel')}
+                    <label className="text-sm font-bold">
+                      نسبت مراقب همراه
+                      <Select
+                        className="mt-2"
+                        value={form.companionRelationship}
+                        onValueChange={(value) => set('companionRelationship', value)}
+                        options={[
+                          { value: 'FAMILY', label: 'خانواده' },
+                          { value: 'CAREGIVER', label: 'پرستار' },
+                          { value: 'COACH', label: 'مربی' },
+                        ]}
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+            </Section>
             {validationSummary}
             <WizardFooter
               pending={pending}
@@ -1228,6 +1399,21 @@ export function CreateEnrollmentForm({
                 {field('addressTitle', 'عنوان نشانی')}
                 {field('province', 'استان')}
                 {field('city', 'شهر')}
+                <label className="text-sm font-bold">
+                  منطقه
+                  <Select
+                    className="mt-2"
+                    value={form.district}
+                    onValueChange={(value) => set('district', value)}
+                    options={[
+                      { value: 'سایر', label: 'سایر' },
+                      ...Array.from({ length: 22 }, (_, index) => ({
+                        value: String(index + 1),
+                        label: `منطقه ${index + 1}`,
+                      })),
+                    ]}
+                  />
+                </label>
                 <div className="sm:col-span-2">{field('streetAddress', 'نشانی کامل')}</div>
                 {field('postalCode', 'کد پستی', 'tel')}
               </div>
@@ -1250,20 +1436,12 @@ export function CreateEnrollmentForm({
                     <LocateFixed className="size-4" />
                     دریافت موقعیت من
                   </Button>
-                  <a
-                    href={googleMapUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-bold"
-                  >
-                    <ExternalLink className="size-4" />
-                    باز کردن نقشه
-                  </a>
                 </div>
               </div>
               <LocationPicker
                 latitude={form.latitude}
                 longitude={form.longitude}
+                showCoordinates={false}
                 onChange={(lat, lng) =>
                   setForm((prev) => ({
                     ...prev,
@@ -1274,39 +1452,10 @@ export function CreateEnrollmentForm({
                 }
                 readOnly={reusingFamilyProfile}
               />
-              <div className="mt-3 grid gap-3 sm:grid-cols-2" aria-label="ورود دستی مختصات">
-                <label className="text-sm font-bold">
-                  عرض جغرافیایی
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    dir="ltr"
-                    step="any"
-                    className="mt-1"
-                    value={form.latitude}
-                    disabled={reusingFamilyProfile}
-                    onChange={(event) => set('latitude', Number(event.target.value))}
-                    onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))}
-                  />
-                </label>
-                <label className="text-sm font-bold">
-                  طول جغرافیایی
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    dir="ltr"
-                    step="any"
-                    className="mt-1"
-                    value={form.longitude}
-                    disabled={reusingFamilyProfile}
-                    onChange={(event) => set('longitude', Number(event.target.value))}
-                    onBlur={() => setForm((current) => ({ ...current, locationSelected: true }))}
-                  />
-                </label>
-              </div>
+              <MapProviderLinks latitude={form.latitude} longitude={form.longitude} />
               <p className="mt-2 text-xs leading-6 text-muted">
                 برای دریافت خودکار موقعیت در گوشی، GPS را روشن و اجازه Location مرورگر را تأیید
-                کنید. اگر نقشه در دسترس نیست، نشانی و مختصات را دستی وارد کنید.
+                کنید. همچنین می‌توانید نشانگر را مستقیماً روی نقشه جابه‌جا کنید.
               </p>
               {locationError && <p className="mt-2 text-sm text-danger">{locationError}</p>}
             </div>
@@ -1435,41 +1584,48 @@ export function CreateEnrollmentForm({
                 </p>
               </div>
             )}
-            <Section title="روش پرداخت مبلغ باقی‌مانده">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {[
-                  {
-                    value: 'FULL',
-                    title: 'پرداخت یکجا',
-                    description:
-                      'مدیریت مبلغ باقی‌مانده و یک سررسید را پس از بررسی مسیر تعیین می‌کند.',
-                  },
-                  {
-                    value: 'INSTALLMENTS',
-                    title: 'پرداخت اقساطی',
-                    description:
-                      'مدیریت تعداد اقساط، مبلغ هر قسط و تاریخ‌های شمسی را جداگانه تعیین می‌کند.',
-                  },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => set('paymentPlanType', option.value)}
-                    className={`rounded-2xl border-2 p-5 text-right transition hover:-translate-y-0.5 hover:shadow-md ${
-                      form.paymentPlanType === option.value
-                        ? 'border-primary bg-primary-soft'
-                        : 'border-border bg-white'
-                    }`}
-                  >
-                    <p className="font-black">{option.title}</p>
-                    <p className="mt-2 text-sm leading-7 text-muted">{option.description}</p>
-                  </button>
-                ))}
+            {selectedSchool?.schoolType !== 'SPECIAL' && (
+              <Section title="روش پرداخت مبلغ باقی‌مانده">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {[
+                    {
+                      value: 'FULL',
+                      title: 'پرداخت یکجا',
+                      description:
+                        'مدیریت مبلغ باقی‌مانده و یک سررسید را پس از بررسی مسیر تعیین می‌کند.',
+                    },
+                    {
+                      value: 'INSTALLMENTS',
+                      title: 'پرداخت اقساطی',
+                      description:
+                        'مدیریت تعداد اقساط، مبلغ هر قسط و تاریخ‌های شمسی را جداگانه تعیین می‌کند.',
+                    },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => set('paymentPlanType', option.value)}
+                      className={`rounded-2xl border-2 p-5 text-right transition hover:-translate-y-0.5 hover:shadow-md ${
+                        form.paymentPlanType === option.value
+                          ? 'border-primary bg-primary-soft'
+                          : 'border-border bg-white'
+                      }`}
+                    >
+                      <p className="font-black">{option.title}</p>
+                      <p className="mt-2 text-sm leading-7 text-muted">{option.description}</p>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-sm text-muted">
+                  پیش‌پرداخت ثابت ۴٬۹۹۷٬۸۰۰ تومان در هر دو روش همین حالا پرداخت می‌شود.
+                </p>
+              </Section>
+            )}
+            {selectedSchool?.schoolType === 'SPECIAL' && (
+              <div className="rounded-2xl border border-success/30 bg-success-soft p-5 text-sm leading-7 text-success">
+                برای مدارس استثنائی، قرارداد، پیش‌پرداخت، اقساط و انتخاب روش پرداخت لازم نیست.
               </div>
-              <p className="mt-3 text-sm text-muted">
-                پیش‌پرداخت ثابت ۴٬۹۹۷٬۸۰۰ تومان در هر دو روش همین حالا پرداخت می‌شود.
-              </p>
-            </Section>
+            )}
             <label className="text-sm font-bold">
               توضیحات
               <Textarea
@@ -1480,14 +1636,16 @@ export function CreateEnrollmentForm({
             </label>
             <WizardFooter
               onBack={() => setStep(3)}
-              submitLabel="مشاهده قرارداد"
+              submitLabel={
+                selectedSchool?.schoolType === 'SPECIAL' ? 'تکمیل ثبت‌نام' : 'مشاهده قرارداد'
+              }
               pending={pending}
               error={error}
               onExit={() => router.push(mode === 'onboarding' ? '/' : '/student/dashboard')}
             />
           </form>
         )}
-        {step === 4 && result && !accepted && (
+        {step === 4 && result && result.requiresContract !== false && !accepted && (
           <div className="space-y-5">
             <div className="flex items-center gap-3">
               <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-soft text-primary">
@@ -1501,9 +1659,9 @@ export function CreateEnrollmentForm({
               </div>
             </div>
             <ContractReview
-              contractId={result.contractId}
+              contractId={result.contractId!}
               version={1}
-              templateHash={result.contractTemplateHash}
+              templateHash={result.contractTemplateHash!}
               pages={result.contractPages}
               canAct={false}
               onReviewedPagesChange={setReviewedContractPages}
@@ -1539,14 +1697,14 @@ export function CreateEnrollmentForm({
                     try {
                       if (adminFamilyId) {
                         await acceptAdminFamilyContract(
-                          result.contractId,
-                          result.contractTemplateHash,
+                          result.contractId!,
+                          result.contractTemplateHash!,
                           reviewedContractPages,
                         );
                       } else {
                         await acceptGuidedContract(
-                          result.contractId,
-                          result.contractTemplateHash,
+                          result.contractId!,
+                          result.contractTemplateHash!,
                           reviewedContractPages,
                           mode,
                         );
@@ -1577,7 +1735,7 @@ export function CreateEnrollmentForm({
             </div>
           </div>
         )}
-        {step === 4 && result && accepted && !paid && (
+        {step === 4 && result && result.requiresPayment !== false && accepted && !paid && (
           <div className="mx-auto max-w-xl text-center">
             <span className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-sun text-navy">
               <WalletCards className="size-7" />
@@ -1600,7 +1758,7 @@ export function CreateEnrollmentForm({
                 </div>
                 <OfflinePaymentDestinationCard />
                 <RecordPaymentOnBehalfDialog
-                  scheduleItemId={result.scheduleItemId}
+                  scheduleItemId={result.scheduleItemId!}
                   label="پیش‌پرداخت"
                   onCompleted={() => setPaid(true)}
                 />
@@ -1608,13 +1766,9 @@ export function CreateEnrollmentForm({
             ) : mode === 'onboarding' ? (
               <div className="mt-6 space-y-5 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
-                  اطلاعات کارت و حساب پرداخت در همین صفحه نمایش داده می‌شود. مبلغ را واریز و تصویر
-                  رسید را نگه دارید؛ ارسال رسید پس از ورود به پنل خانواده انجام می‌شود.
+                  قرارداد پذیرفته شد. حساب خانواده را ایجاد کنید و جزئیات پرداخت و ارسال رسید را از
+                  بخش «پرداخت‌ها» در پنل خود انجام دهید.
                 </div>
-                <OfflinePaymentDestinationCard
-                  mode="onboarding"
-                  onReadyChange={setPaymentDestinationReady}
-                />
               </div>
             ) : (
               <div className="mt-6 space-y-5 text-right">
@@ -1622,7 +1776,6 @@ export function CreateEnrollmentForm({
                   قرارداد پذیرفته شد. برای جلوگیری از ثبت تکراری یا گم‌شدن وضعیت پرداخت، پرداخت و
                   ارسال رسید فقط از بخش «پرداخت‌ها» انجام می‌شود.
                 </div>
-                <OfflinePaymentDestinationCard />
                 <Button className="w-full" onClick={() => router.push('/student/payments')}>
                   رفتن به بخش پرداخت‌ها
                 </Button>
@@ -1631,17 +1784,16 @@ export function CreateEnrollmentForm({
             {mode === 'onboarding' && (
               <Button
                 className="mt-4 w-full"
-                variant="secondary"
                 loading={pending}
-                disabled={!paymentDestinationReady || pending}
+                disabled={pending}
                 onClick={async () => {
                   if (submissionLockRef.current) return;
                   submissionLockRef.current = true;
                   setPending(true);
                   setError(undefined);
                   try {
-                    await finalizeOnboarding();
-                    router.replace('/student/dashboard');
+                    await finalizeOnboarding('PARENT');
+                    router.replace('/student/payments');
                   } catch (caught) {
                     setError(getApiErrorFeedback(caught).message);
                   } finally {
@@ -1650,7 +1802,7 @@ export function CreateEnrollmentForm({
                   }
                 }}
               >
-                تأیید اطلاعات پرداخت و ورود به پنل خانواده
+                ایجاد حساب و ورود به پنل خانواده
               </Button>
             )}
             {error && <p className="mt-3 text-sm text-danger">{error}</p>}
@@ -1668,13 +1820,9 @@ export function CreateEnrollmentForm({
             <Button
               className="mt-6"
               onClick={() => {
-                setStep(1);
-                setResult(undefined);
-                setAccepted(false);
-                setPaid(false);
-                setPhotoUploadId(undefined);
-                setPhotoCardGeneration((current) => current + 1);
-                setForm(createInitialForm());
+                // Reload server data so the just-enrolled student is removed from the
+                // available list and capacity/defaults are recalculated for the next child.
+                window.location.reload();
               }}
             >
               ثبت دانش‌آموز دیگر

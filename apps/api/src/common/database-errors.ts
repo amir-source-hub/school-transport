@@ -100,6 +100,15 @@ export function translateDatabaseError(error: unknown): DatabaseErrorTranslation
     );
   }
   if (databaseCode === '23514' || databaseCode === '23502') {
+    if (
+      databaseCode === '23514' &&
+      databaseError.constraint === 'transport_service_runs_direction_check'
+    ) {
+      return result(
+        new ValidationError('ثبت مسیر رفت‌وبرگشت به‌دلیل محدودیت قدیمی پایگاه داده ممکن نیست. لطفاً با پشتیبانی تماس بگیرید.'),
+        'check',
+      );
+    }
     return result(new ValidationError('The submitted data violates a data constraint.'), 'check');
   }
   if (databaseCode === '40001' || databaseCode === '40P01') {

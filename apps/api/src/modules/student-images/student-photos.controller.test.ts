@@ -34,4 +34,18 @@ describe('student photo controller authorization', () => {
 
     expect(authorizeUpload).toHaveBeenCalledWith('family-1', body, '127.0.0.1');
   });
+
+  it('keeps a new-student photo pending until enrollment links it to the student', async () => {
+    const completed = { uploadId: 'upload-1', status: 'PENDING_REVIEW', version: 2 };
+    const completeUpload = vi.fn(async () => completed);
+    const approve = vi.fn();
+    const controller = new AdminStudentPhotosController({ completeUpload, approve } as never);
+    const request = { user: { id: 'admin-1' }, ip: '127.0.0.1' } as never;
+
+    const response = await controller.completeForFamily(request, 'family-1', 'upload-1');
+
+    expect(completeUpload).toHaveBeenCalledWith('family-1', 'upload-1', '127.0.0.1');
+    expect(approve).not.toHaveBeenCalled();
+    expect(response.data).toEqual(completed);
+  });
 });

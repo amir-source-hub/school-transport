@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { ErrorState } from '@/components/feedback/error-state';
 import { Skeleton } from '@/components/feedback/skeleton';
-import { formatIrr, formatJalaliDate, formatPersianNumber } from '@/lib/formatters';
+import { formatIrr, formatJalaliDate, formatJalaliDateTime, formatPersianNumber } from '@/lib/formatters';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 import {
   getReportPreview,
@@ -40,10 +40,11 @@ export function ReportPreviewPanel() {
     };
   }, [page, requestVersion, section]);
 
-  const formatValue = (value: unknown, kind?: 'money' | 'date') => {
+  const formatValue = (value: unknown, kind?: 'money' | 'date' | 'datetime') => {
     if (value === null || value === undefined || value === '') return '—';
     if (kind === 'money' && typeof value === 'number') return formatIrr(value);
     if (kind === 'date') return formatJalaliDate(String(value));
+    if (kind === 'datetime') return formatJalaliDateTime(String(value));
     return String(value);
   };
 

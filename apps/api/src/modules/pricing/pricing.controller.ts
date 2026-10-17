@@ -7,7 +7,8 @@ import { successResponse } from '../../common/response';
 import { AcceptPriceDto, CreatePriceDto } from './pricing.dto';
 import { AuthenticatedRequest } from '../../common/http-request';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('PARENT')
 @Controller('enrollments/:enrollmentId/pricing')
 export class ParentPricingController {
   constructor(private readonly pricingService: PricingService) {}

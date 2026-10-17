@@ -53,8 +53,9 @@ export default async function StudentsPage() {
               variant="secondary"
               className="mt-5 w-full"
             >
-              مشاهده و ویرایش
+              مشاهده اطلاعات و مراقب همراه
             </ButtonLink>
+            {!student.companion && <ButtonLink href={`/student/students/${student.id}#student-companion`} variant="ghost" className="mt-2 w-full">اضافه کردن مراقب همراه دانش‌آموز</ButtonLink>}
           </Card>
         ))}
       </div>

@@ -16,7 +16,23 @@ const rawAdminStudentSchema = z.object({
   fatherName: z.string().nullable().optional(),
   phoneNumber: z.string().nullable().optional(),
   fieldOfStudy: z.string().nullable().optional(),
+  physicalStatus: z.string().nullable().optional(),
+  disabilityType: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
   isActive: z.boolean(),
+  seatCount: z.number().default(1),
+  companion: z
+    .object({
+      id: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      fatherName: z.string().optional(),
+      nationalId: z.string().optional(),
+      phoneNumber: z.string().optional(),
+      relationship: z.string(),
+    })
+    .nullable()
+    .default(null),
 });
 
 export const adminStudentSchema = rawAdminStudentSchema.extend({ status: z.string() });
@@ -25,6 +41,8 @@ export const adminStudentsSchema = z.array(rawAdminStudentSchema);
 export type AdminStudent = z.infer<typeof adminStudentSchema>;
 
 export type AdminStudentListParams = {
+  schoolId?: string;
+  q?: string;
   archive?: 'all' | 'active' | 'archived';
   sort?: 'studentName' | 'schoolName' | 'createdAt';
   direction?: 'asc' | 'desc';
@@ -43,6 +61,8 @@ export async function getAdminStudents(
   params: AdminStudentListParams = {},
 ): Promise<{ students: AdminStudent[]; pagination: AdminStudentListPagination }> {
   const search = new URLSearchParams();
+  if (params.schoolId) search.set('schoolId', params.schoolId);
+  if (params.q) search.set('q', params.q);
   if (params.archive && params.archive !== 'all') search.set('archive', params.archive);
   if (params.sort && params.sort !== 'createdAt') search.set('sort', params.sort);
   if (params.direction && params.direction !== 'desc') search.set('direction', params.direction);
@@ -77,6 +97,8 @@ export type AdminUpdateStudentInput = {
   nationalId?: string;
   birthDate?: string;
   gender?: string;
+  physicalStatus?: string;
+  disabilityType?: string;
   schoolId?: string;
   educationLevel?: string;
   grade?: string;
@@ -201,11 +223,32 @@ export async function getAdminStudentDetail(id: string): Promise<AdminStudentDet
   return adminStudentDetailSchema.parse(response.data);
 }
 
+export async function saveAdminStudentCompanion(
+  id: string,
+  data: {
+    firstName: string;
+    lastName: string;
+    fatherName: string;
+    nationalId: string;
+    phoneNumber: string;
+    relationship: 'FAMILY' | 'CAREGIVER' | 'COACH';
+  },
+) {
+  await apiRequest(`/admin/students/${id}/companion`, { method: 'POST', body: data });
+}
+
+export async function removeAdminStudentCompanion(id: string) {
+  await apiRequest(`/admin/students/${id}/companion`, { method: 'DELETE' });
+}
+
 export async function getAdminStudentPhoto(id: string) {
-  const response = await apiRequest<{ status: 'APPROVED'; viewUrl: string; expiresInSeconds: number }>(
-    `/admin/student-photos/students/${id}/photo`,
-    { cache: 'no-store', timeoutMs: 8_000 },
-  );
+  const response = await apiRequest<{
+    uploadId: string;
+    status: 'APPROVED';
+    version: number;
+    viewUrl: string;
+    expiresInSeconds: number;
+  }>(`/admin/student-photos/students/${id}/photo`, { cache: 'no-store', timeoutMs: 8_000 });
   return response.data;
 }
 

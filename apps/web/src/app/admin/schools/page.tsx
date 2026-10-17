@@ -7,8 +7,10 @@ import {
   GENDER_TYPE_LABELS,
   SCHOOL_TYPE_LABELS,
 } from '@/features/admin-schools/admin-schools-api';
-import { ArchiveSchoolDialog } from '@/features/admin-schools/archive-action';
+import { ArchiveSchoolDialog, DeleteSchoolButton } from '@/features/admin-schools/archive-action';
 import { SchoolFormDialog } from '@/features/admin-schools/school-form-dialog';
+import { FilteredCount } from '@/components/data/filtered-count';
+import { formatPersianTime } from '@/lib/formatters';
 
 export const metadata = { title: 'مدارس ما' };
 export const dynamic = 'force-dynamic';
@@ -28,7 +30,10 @@ export default async function SchoolsPage() {
           <p className="text-sm font-bold text-primary">مدیریت مدارس</p>
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">مدارس ما</h1>
         </div>
-        <SchoolFormDialog mode="create" />
+        <div className="flex flex-wrap items-center gap-3">
+          <FilteredCount count={schools.length} label="مدرسه" />
+          <SchoolFormDialog mode="create" />
+        </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {activeSchools.map((school) => (
@@ -75,16 +80,29 @@ export default async function SchoolsPage() {
                   {school.managerStatus === 'ACTIVE' ? 'فعال' : (school.managerStatus ?? '—')}
                 </dd>
               </div>
+              <div className="sm:col-span-2">
+                <dt className="text-muted">رمز عبور مدیر</dt>
+                <dd className="mt-1 text-sm font-bold">
+                  به‌صورت رمزنگاری یک‌طرفه ذخیره شده و قابل نمایش نیست.
+                </dd>
+                <p className="mt-1 text-xs leading-6 text-muted">
+                  برای تعیین رمز جدید، «ویرایش» را انتخاب کنید و رمز ۸ نویسه‌ای جدید را وارد کنید.
+                </p>
+              </div>
               <div>
-                <dt className="text-muted">ساعت شروع</dt>
+                <dt className="text-muted">ساعت‌های شروع</dt>
                 <dd className="mt-1 font-bold" dir="ltr">
-                  {school.openingTime}
+                  {(school.openingTimes.length ? school.openingTimes : [school.openingTime])
+                    .map(formatPersianTime)
+                    .join('، ')}
                 </dd>
               </div>
               <div>
                 <dt className="text-muted">ساعت‌های پایان</dt>
                 <dd className="mt-1 font-bold" dir="ltr">
-                  {school.closingTimes.join('، ') || school.closingTime}
+                  {(school.closingTimes.length ? school.closingTimes : [school.closingTime])
+                    .map(formatPersianTime)
+                    .join('، ')}
                 </dd>
               </div>
               <div className="sm:col-span-2">
@@ -126,6 +144,7 @@ export default async function SchoolsPage() {
                 </p>
                 <div className="mt-4">
                   <ArchiveSchoolDialog archived schoolId={school.id} schoolName={school.name} />
+                  <DeleteSchoolButton schoolId={school.id} schoolName={school.name} />
                 </div>
               </Card>
             ))}

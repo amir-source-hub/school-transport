@@ -47,7 +47,8 @@ const createContentSecurityPolicy = ({
   ];
 
   if (!production) {
-    connectSources.push('ws:', 'wss:');
+    connectSources.push('http://localhost:9000', 'http://127.0.0.1:9000', 'ws:', 'wss:');
+    imageSources.push('http://localhost:9000', 'http://127.0.0.1:9000');
   }
 
   const scriptSources = ["'self'", "'unsafe-inline'"];
@@ -64,6 +65,7 @@ const createContentSecurityPolicy = ({
     "form-action 'self'",
     "frame-src 'self' https://www.google.com",
     `img-src ${imageSources.filter(Boolean).join(' ')}`,
+    `media-src ${["'self'", 'blob:', publicAssetOrigin].filter(Boolean).join(' ')}`,
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
     `script-src ${scriptSources.join(' ')}`,

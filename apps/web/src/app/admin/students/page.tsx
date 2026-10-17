@@ -2,7 +2,7 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Pagination } from '@/components/navigation/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { AutoSubmitForm } from '@/components/forms/auto-submit-form';
+import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import {
   getAdminStudents,
@@ -18,6 +18,7 @@ import {
 import { StudentEditDialog } from '@/features/admin-students/student-edit-dialog';
 import { getAdminFamilies } from '@/features/admin-families/admin-families-api';
 import { getAdminSchools } from '@/features/admin-schools/admin-schools-api';
+import { FilteredCount } from '@/components/data/filtered-count';
 
 export const metadata = { title: 'دانش‌آموزان' };
 export const dynamic = 'force-dynamic';
@@ -25,14 +26,17 @@ export const dynamic = 'force-dynamic';
 const PAGE_SIZE = 10;
 
 type SearchParams = Promise<{
+  q?: string;
   archive?: string;
   sort?: string;
   direction?: string;
   page?: string;
+  schoolId?: string;
 }>;
 
 export default async function StudentsPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
+  const q = params.q?.trim() ?? '';
   const archive = ['active', 'archived'].includes(params.archive ?? '')
     ? (params.archive as 'active' | 'archived')
     : 'all';
@@ -41,8 +45,17 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
     : 'createdAt';
   const direction = params.direction === 'asc' ? 'asc' : 'desc';
   const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
+  const schoolId = params.schoolId ?? '';
 
-  const query: AdminStudentListParams = { archive, sort, direction, page, pageSize: PAGE_SIZE };
+  const query: AdminStudentListParams = {
+    q: q || undefined,
+    archive,
+    sort,
+    direction,
+    page,
+    pageSize: PAGE_SIZE,
+    schoolId: schoolId || undefined,
+  };
   const [{ students, pagination }, { families }, { schools }, limitRequests] = await Promise.all([
     getAdminStudents(query),
     getAdminFamilies(),
@@ -60,9 +73,11 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
 
   const getPageHref = (nextPage: number) => {
     const next = new URLSearchParams();
+    if (q) next.set('q', q);
     if (archive !== 'all') next.set('archive', archive);
     if (sort !== 'createdAt') next.set('sort', sort);
     if (direction !== 'desc') next.set('direction', direction);
+    if (schoolId) next.set('schoolId', schoolId);
     next.set('page', String(nextPage));
     return `/admin/students?${next.toString()}`;
   };
@@ -77,11 +92,25 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
           <p className="text-sm font-bold text-primary">مدیریت دانش‌آموزان</p>
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">دانش‌آموزان</h1>
         </div>
-        <AdminStudentDialog families={familyOptions} schools={schoolOptions} />
+        <div className="flex flex-wrap items-center gap-3"><FilteredCount count={pagination.totalItems} label="دانش‌آموز مطابق فیلتر"/><AdminStudentDialog families={familyOptions} schools={schoolOptions} /></div>
       </div>
       <AdminLimitRequestSection initialRequests={limitRequests} />
       <Card>
-        <AutoSubmitForm method="get" className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr] md:max-w-2xl">
+        <form
+          method="get"
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto]"
+        >
+          <label className="text-sm font-bold">
+            جست‌وجوی دانش‌آموز
+            <Input
+              className="mt-2"
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="نام، کد ملی، تلفن یا مدرسه"
+            />
+          </label>
+          <label className="text-sm font-bold">مدرسه<select name="schoolId" defaultValue={schoolId} className="mt-2 min-h-12 w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm"><option value="">همه مدارس</option>{schoolOptions.map(school=><option key={school.id} value={school.id}>{school.name}</option>)}</select></label>
           <label className="text-sm font-bold">
             وضعیت
             <select
@@ -117,7 +146,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
               <option value="asc">صعودی</option>
             </select>
           </label>
-        </AutoSubmitForm>
+          <button className="min-h-12 self-end rounded-xl bg-primary px-5 text-sm font-bold text-white">
+            جست‌وجو و اعمال
+          </button>
+        </form>
       </Card>
       {students.length === 0 ? (
         <Card>
@@ -130,7 +162,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
             {students.map((student) => (
               <Card key={student.id}>
                 <div className="flex items-start justify-between gap-3">
-                  <Link href={`/admin/students/${student.id}`} className="font-black text-primary hover:underline">
+                  <Link
+                    href={`/admin/students/${student.id}`}
+                    className="font-black text-primary hover:underline"
+                  >
                     {student.firstName} {student.lastName}
                   </Link>
                   <Badge tone={student.isActive ? 'success' : 'neutral'}>{student.status}</Badge>
@@ -188,7 +223,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                 {students.map((student) => (
                   <tr key={student.id} className="border-b border-border last:border-0">
                     <td className="px-3 py-3 font-bold">
-                      <Link href={`/admin/students/${student.id}`} className="text-primary hover:underline">
+                      <Link
+                        href={`/admin/students/${student.id}`}
+                        className="text-primary hover:underline"
+                      >
                         {student.firstName}
                       </Link>
                     </td>
