@@ -8,9 +8,9 @@ out-of-band contact tree.
 2. Inspect Alertmanager logs for status codes and error classes without printing the bot token or
    request payload. Confirm DNS and outbound HTTPS connectivity to `tapi.bale.ai` from the
    `probe_egress` network.
-3. Verify the protected Bale token and chat-ID files exist, are readable by the container, contain
-   exactly one value each, and have mode `0600`. Confirm the chat ID is numeric and the bot remains a
-   member of the destination. Never paste either value into an incident ticket or command line.
+3. Verify the protected monitoring environment has mode `0600`, contains a non-empty Bale token and
+   numeric chat ID, and is readable by the Compose operator. Confirm the bot remains a member of the
+   destination. Never paste either value into an incident ticket or command line.
 4. For rate limiting, preserve the configured grouping and repeat intervals. Do not disable alert
    grouping or create retry loops that amplify provider throttling.
 5. Use the approved out-of-band contact tree while delivery is impaired. Do not rely on the same

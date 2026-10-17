@@ -9,7 +9,7 @@ Create a random administrator password in a root-owned mode `0600` file and set:
 
 ```text
 GRAFANA_ADMIN_USER=admin
-GRAFANA_ADMIN_PASSWORD_FILE=/etc/school-transport/secrets/grafana-admin-password
+GRAFANA_ADMIN_PASSWORD=<strong-unique-password>
 GRAFANA_HOST_PORT=3001
 GRAFANA_ROOT_URL=http://localhost:3001
 ```

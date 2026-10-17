@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises';
-
 const prometheusUrl = process.env.PROMETHEUS_SMOKE_URL ?? 'http://127.0.0.1:9090';
 const alertmanagerUrl = process.env.ALERTMANAGER_SMOKE_URL ?? 'http://127.0.0.1:9093';
 const grafanaUrl = process.env.GRAFANA_SMOKE_URL ?? 'http://127.0.0.1:3001';
@@ -61,10 +59,9 @@ if (discovered.length === 0 || discovered.some((sample) => Number(sample.value?.
 await fetchChecked(new URL('/-/healthy', alertmanagerUrl));
 await fetchChecked(new URL('/api/health', grafanaUrl));
 
-const adminPasswordPath = process.env.GRAFANA_ADMIN_PASSWORD_FILE;
-if (!adminPasswordPath) throw new Error('GRAFANA_ADMIN_PASSWORD_FILE is required for smoke tests.');
+const adminPassword = process.env.GRAFANA_ADMIN_PASSWORD;
+if (!adminPassword) throw new Error('GRAFANA_ADMIN_PASSWORD is required for smoke tests.');
 const adminUser = process.env.GRAFANA_ADMIN_USER ?? 'admin';
-const adminPassword = (await readFile(adminPasswordPath, 'utf8')).trim();
 const authorization = `Basic ${Buffer.from(`${adminUser}:${adminPassword}`).toString('base64')}`;
 for (const uid of ['prometheus', 'loki']) {
   await fetchChecked(new URL(`/api/datasources/uid/${uid}`, grafanaUrl), {

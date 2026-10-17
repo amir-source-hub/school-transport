@@ -123,10 +123,9 @@ for (const alertRule of allAlertRules.split(/\n\s+- alert: /).slice(1)) {
   }
 }
 for (const required of [
-  'METRICS_BEARER_TOKEN_FILE: 32',
-  'metadata.mode & 0o077',
-  'BALE_BOT_TOKEN_FILE: 20',
-  "contents.get('BALE_CHAT_ID_FILE')",
+  'METRICS_BEARER_TOKEN: 32',
+  'BALE_BOT_TOKEN: 20',
+  "contents.get('BALE_CHAT_ID')",
   "redisPasswordMap?.['redis://redis:6379']",
 ]) {
   if (!secretValidation.includes(required)) {
@@ -238,12 +237,12 @@ for (const required of [
   'grafana/grafana:13.1.0@sha256:',
   'GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password',
   '127.0.0.1:${GRAFANA_HOST_PORT:-3001}:3000',
-  'file: ${METRICS_BEARER_TOKEN_FILE:',
+  'environment: METRICS_BEARER_TOKEN',
   'prom/alertmanager:v0.34.1@sha256:',
   '127.0.0.1:${ALERTMANAGER_HOST_PORT:-9093}:9093',
   './infrastructure/monitoring/templates:/etc/alertmanager/templates:ro',
-  'file: ${BALE_BOT_TOKEN_FILE:',
-  'file: ${BALE_CHAT_ID_FILE:',
+  'environment: BALE_BOT_TOKEN',
+  'environment: BALE_CHAT_ID',
   'grafana/loki:3.7.0@sha256:',
   'grafana/alloy:v1.20.1@sha256:',
   '/var/run/docker.sock:/var/run/docker.sock:ro',
@@ -312,22 +311,22 @@ for (const metric of [
   }
 }
 for (const required of [
-  'METRICS_BEARER_TOKEN_FILE=',
+  'METRICS_BEARER_TOKEN=',
   'APPLICATION_BACKEND_NETWORK=',
-  'POSTGRES_EXPORTER_PASSWORD_FILE=',
-  'REDIS_EXPORTER_PASSWORD_MAP_FILE=',
-  'GRAFANA_ADMIN_PASSWORD_FILE=',
-  'BALE_BOT_TOKEN_FILE=',
-  'BALE_CHAT_ID_FILE=',
+  'POSTGRES_EXPORTER_PASSWORD=',
+  'REDIS_EXPORTER_PASSWORD_MAP=',
+  'GRAFANA_ADMIN_PASSWORD=',
+  'BALE_BOT_TOKEN=',
+  'BALE_CHAT_ID=',
 ]) {
   if (!monitoringEnvironmentExample.includes(required)) {
     throw new Error(`Monitoring environment example is missing ${required}.`);
   }
 }
 for (const forbidden of [
-  'GRAFANA_ADMIN_PASSWORD_FILE=',
-  'BALE_BOT_TOKEN_FILE=',
-  'BALE_CHAT_ID_FILE=',
+  'GRAFANA_ADMIN_PASSWORD=',
+  'BALE_BOT_TOKEN=',
+  'BALE_CHAT_ID=',
 ]) {
   const rootEnvironment = await readFile(resolve(root, '.env.example'), 'utf8');
   if (rootEnvironment.includes(forbidden)) {

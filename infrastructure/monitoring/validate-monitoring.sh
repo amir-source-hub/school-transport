@@ -9,6 +9,17 @@ if [ ! -f "$monitoring_env_file" ] || [ ! -r "$monitoring_env_file" ]; then
   exit 1
 fi
 
+if [ "$(uname -s)" = "Linux" ]; then
+  env_mode="$(stat -c '%a' "$monitoring_env_file")"
+  case "$env_mode" in
+    600|400) ;;
+    *)
+      printf 'Monitoring environment file must have mode 0600 or 0400, found %s.\n' "$env_mode" >&2
+      exit 1
+      ;;
+  esac
+fi
+
 node --env-file="$monitoring_env_file" infrastructure/monitoring/validate-monitoring-secrets.mjs
 
 compose() {

@@ -7,13 +7,13 @@ and inhibits a warning when the same alert is already critical.
 ## Bale notification secrets
 
 Create the bot with Bale's `@botfather`, add it to the destination chat, and obtain the destination's
-numeric chat ID. Put the token and chat ID in separate root-owned mode `0600` files containing only
-their respective values. Configure their host paths as `BALE_BOT_TOKEN_FILE` and
-`BALE_CHAT_ID_FILE`. Do not put either value directly in `.env`, source control, commands, logs, or
+numeric chat ID. Set `BALE_BOT_TOKEN` and `BALE_CHAT_ID` in the root-owned mode `0600` production
+monitoring environment file. Never commit that file or copy its values into commands, logs, or
 incident records.
 
 Alertmanager uses its Telegram-compatible notifier with `https://tapi.bale.ai` as the API root.
-Both values are mounted as Docker secrets and read through `bot_token_file` and `chat_id_file`.
+Docker Compose converts both environment values into per-service mounted secrets, which Alertmanager
+reads through `bot_token_file` and `chat_id_file`.
 Plain-text messages are used because Bale does not document Telegram parse modes. The concise
 template stays well below Bale's documented 4096-character message limit.
 

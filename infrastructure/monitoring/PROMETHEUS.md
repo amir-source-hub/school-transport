@@ -17,7 +17,7 @@ The monitoring environment is separate from the application environment. Copy
 Required monitoring values:
 
 ```text
-METRICS_BEARER_TOKEN_FILE=/etc/school-transport/secrets/metrics-bearer-token
+METRICS_BEARER_TOKEN=<same random token configured in the API>
 RELEASE_ID=<monitored application release>
 DEPLOY_ENV=production
 ```
@@ -35,9 +35,8 @@ The same Compose project runs five digest-pinned images. None publishes a host p
 - cAdvisor collects Docker container resource metrics. Its official deployment requires privileged
   host access and read-only Docker/runtime mounts. Restrict control of this Compose project to host
   administrators.
-- PostgreSQL Exporter connects as `POSTGRES_EXPORTER_USER` using the password file selected by
-  `POSTGRES_EXPORTER_PASSWORD_FILE`.
-- Redis Exporter uses `REDIS_EXPORTER_PASSWORD_MAP_FILE`. This file must be JSON in the exact form
+- PostgreSQL Exporter connects as `POSTGRES_EXPORTER_USER` using `POSTGRES_EXPORTER_PASSWORD`.
+- Redis Exporter uses `REDIS_EXPORTER_PASSWORD_MAP`. Its value must be JSON in the exact form
   `{"redis://redis:6379":"<password>"}` and mode `0600`; it is not a raw password file.
 - Blackbox Exporter probes the public website and the internal API health endpoint. Change the
   `https://samingasht.ir/` target in `prometheus.yml` when the production domain changes.
@@ -54,7 +53,7 @@ GRANT pg_monitor TO postgres_exporter;
 ```
 
 Set its password with `psql`'s interactive `\password postgres_exporter` command, then place the same
-value in the protected file referenced by `POSTGRES_EXPORTER_PASSWORD_FILE`. Rotate both exporter
+value in `POSTGRES_EXPORTER_PASSWORD` in the protected monitoring environment. Rotate both exporter
 secrets independently of application releases. Do not reuse the application database account.
 
 Before startup, validate using the same pinned image:
@@ -76,7 +75,7 @@ sh infrastructure/monitoring/validate-monitoring.sh
 ```
 
 Preflight rejects weak or malformed monitoring secrets, non-numeric Bale chat IDs, and permissive
-secret-file modes on Linux. It reports only the failing variable name or requirement, never the
+monitoring-environment permissions on Linux. It reports only the failing variable name or requirement, never the
 secret value.
 
 After startup, access Prometheus through an SSH tunnel to `127.0.0.1:9090`. Confirm all ten scrape

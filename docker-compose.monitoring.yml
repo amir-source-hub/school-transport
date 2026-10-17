@@ -276,14 +276,14 @@ volumes:
 
 secrets:
   metrics_bearer_token:
-    file: ${METRICS_BEARER_TOKEN_FILE:?Set METRICS_BEARER_TOKEN_FILE to the protected API metrics token file}
+    environment: METRICS_BEARER_TOKEN
   postgres_exporter_password:
-    file: ${POSTGRES_EXPORTER_PASSWORD_FILE:?Set POSTGRES_EXPORTER_PASSWORD_FILE to a protected password file}
+    environment: POSTGRES_EXPORTER_PASSWORD
   redis_exporter_password_map:
-    file: ${REDIS_EXPORTER_PASSWORD_MAP_FILE:?Set REDIS_EXPORTER_PASSWORD_MAP_FILE to a protected JSON password map}
+    environment: REDIS_EXPORTER_PASSWORD_MAP
   grafana_admin_password:
-    file: ${GRAFANA_ADMIN_PASSWORD_FILE:?Set GRAFANA_ADMIN_PASSWORD_FILE to a protected password file}
+    environment: GRAFANA_ADMIN_PASSWORD
   bale_bot_token:
-    file: ${BALE_BOT_TOKEN_FILE:?Set BALE_BOT_TOKEN_FILE to the protected Bale bot token file}
+    environment: BALE_BOT_TOKEN
   bale_chat_id:
-    file: ${BALE_CHAT_ID_FILE:?Set BALE_CHAT_ID_FILE to the protected numeric Bale chat ID file}
+    environment: BALE_CHAT_ID
