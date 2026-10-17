@@ -1,0 +1,11 @@
+groups:
+  - name: school-transport-log-pipeline
+    rules:
+      - alert: LokiDiscardingSamples
+        expr: sum(rate(loki_discarded_samples_total[10m])) > 0
+        for: 10m
+        labels: { severity: warning, service: loki, owner: platform-on-call }
+        annotations:
+          summary: 'Loki is discarding log samples'
+          impact: 'Centralized logs are incomplete even though the Loki target may be reachable.'
+          runbook: 'infrastructure/monitoring/runbooks/logging.md'

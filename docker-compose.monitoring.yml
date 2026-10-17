@@ -1,0 +1,286 @@
+name: school-transport-monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.14.0-distroless@sha256:50c707e96da5ade383cb1707790576480485e93de06aa60ad8802cb5f744bd0a
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-30d}
+      - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-8GB}
+      - --storage.tsdb.wal-compression
+      - --web.listen-address=0.0.0.0:9090
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-production}
+      RELEASE_ID: ${RELEASE_ID:?Set RELEASE_ID to the monitored application release}
+    secrets:
+      - metrics_bearer_token
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/monitoring/recording-rules.yml:/etc/prometheus/recording-rules.yml:ro
+      - ./infrastructure/monitoring/platform-alerts.yml:/etc/prometheus/platform-alerts.yml:ro
+      - ./infrastructure/monitoring/messaging-alerts.yml:/etc/prometheus/messaging-alerts.yml:ro
+      - ./infrastructure/monitoring/prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml:ro
+      - ./infrastructure/monitoring/exporter-alerts.yml:/etc/prometheus/exporter-alerts.yml:ro
+      - ./infrastructure/monitoring/alertmanager-alerts.yml:/etc/prometheus/alertmanager-alerts.yml:ro
+      - ./infrastructure/monitoring/logging-alerts.yml:/etc/prometheus/logging-alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - 127.0.0.1:${PROMETHEUS_HOST_PORT:-9090}:9090
+    healthcheck:
+      test: ['CMD', '/bin/promtool', 'check', 'healthy']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    init: true
+    user: '65532:65532'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 150
+    mem_limit: 768m
+    cpus: 0.75
+    stop_grace_period: 30s
+    networks:
+      - monitoring
+      - application_backend
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.1@sha256:e9733bafb1bdef9b00e25a21f8f99dc26a22224bf16641ad754d1649f4c3357a
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --data.retention=${ALERTMANAGER_RETENTION_TIME:-120h}
+      - --web.listen-address=0.0.0.0:9093
+      - --web.external-url=${ALERTMANAGER_EXTERNAL_URL:-http://localhost:9093}
+    volumes:
+      - ./infrastructure/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    secrets: [alert_webhook_url]
+    ports:
+      - 127.0.0.1:${ALERTMANAGER_HOST_PORT:-9093}:9093
+    healthcheck:
+      test: ['CMD', '/bin/amtool', '--alertmanager.url=http://127.0.0.1:9093', 'alert', 'query']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    user: '65534:65534'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 100
+    mem_limit: 256m
+    cpus: 0.25
+    networks: [monitoring, probe_egress]
+
+  node-exporter:
+    image: prom/node-exporter:v1.12.1-distroless@sha256:8c9bac11973b94b59be88d6e11fee4429aa743c8846cdc75d65b18db33f6a106
+    command:
+      - --path.rootfs=/host
+      - --collector.textfile.directory=/textfile
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/containers/storage/.+)($|/)
+    volumes:
+      - /:/host:ro,rslave
+      - /var/lib/node_exporter/textfile_collector:/textfile:ro
+    restart: unless-stopped
+    pid: host
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 100
+    mem_limit: 128m
+    cpus: 0.25
+    networks: [monitoring]
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:0.60.5@sha256:763aecf1c32c2be8a1a75f9abfc2fc461005c9dbbaa39cb356b354aac1296dbe
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --store_container_labels=false
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    privileged: true
+    restart: unless-stopped
+    read_only: true
+    pids_limit: 200
+    mem_limit: 256m
+    cpus: 0.5
+    networks: [monitoring]
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1@sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e
+    environment:
+      DATA_SOURCE_URI: postgres:5432/${POSTGRES_DB:-school_transport}?sslmode=disable
+      DATA_SOURCE_USER: ${POSTGRES_EXPORTER_USER:-postgres_exporter}
+      DATA_SOURCE_PASS_FILE: /run/secrets/postgres_exporter_password
+      PG_EXPORTER_COLLECTION_TIMEOUT: 10s
+    secrets: [postgres_exporter_password]
+    restart: unless-stopped
+    user: '65534:65534'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 100
+    mem_limit: 128m
+    cpus: 0.25
+    networks: [monitoring, application_backend]
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.90.0-alpine@sha256:136a6aac1258bcb41449272fe0de1d71e65f8cd69514efb2a410b2fd2239a3ba
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD_FILE: /run/secrets/redis_exporter_password_map
+      REDIS_EXPORTER_PING_ON_CONNECT: 'true'
+    secrets: [redis_exporter_password_map]
+    restart: unless-stopped
+    user: '65534:65534'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 100
+    mem_limit: 128m
+    cpus: 0.25
+    networks: [monitoring, application_backend]
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.28.0@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc
+    command: [--config.file=/etc/blackbox_exporter/config.yml]
+    volumes:
+      - ./infrastructure/monitoring/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    restart: unless-stopped
+    user: '65534:65534'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 100
+    mem_limit: 128m
+    cpus: 0.25
+    networks: [monitoring, application_backend, probe_egress]
+
+  grafana:
+    image: grafana/grafana:13.1.0@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+      GF_SECURITY_COOKIE_SECURE: 'false'
+      GF_SECURITY_COOKIE_SAMESITE: strict
+      GF_SECURITY_DISABLE_GRAVATAR: 'true'
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
+    secrets: [grafana_admin_password]
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infrastructure/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - 127.0.0.1:${GRAFANA_HOST_PORT:-3001}:3000
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:3000/api/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    restart: unless-stopped
+    user: '472:0'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 200
+    mem_limit: 512m
+    cpus: 0.5
+    networks: [monitoring]
+
+  loki:
+    image: grafana/loki:3.7.0@sha256:c316b7c7589a5eeca843b6926c7446149d18300b79ac8538dc4ae063bc478da2
+    command: [--config.file=/etc/loki/config.yml]
+    volumes:
+      - ./infrastructure/monitoring/loki.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    restart: unless-stopped
+    user: '10001:10001'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 150
+    mem_limit: 768m
+    cpus: 0.75
+    networks: [monitoring]
+
+  alloy:
+    image: grafana/alloy:v1.20.1@sha256:2aa2099af76c0098d4af7a4d6e48f86cb66dc1a000222ad927a1c67c6542d13f
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./infrastructure/monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+    depends_on: [loki]
+    restart: unless-stopped
+    user: '0:0'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 150
+    mem_limit: 256m
+    cpus: 0.5
+    networks: [monitoring]
+
+networks:
+  monitoring:
+    internal: true
+  application_backend:
+    external: true
+    name: ${APPLICATION_BACKEND_NETWORK:-school-transport-production_backend}
+  probe_egress:
+
+volumes:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:
+  loki_data:
+  alloy_data:
+
+secrets:
+  metrics_bearer_token:
+    file: ${METRICS_BEARER_TOKEN_FILE:?Set METRICS_BEARER_TOKEN_FILE to the protected API metrics token file}
+  postgres_exporter_password:
+    file: ${POSTGRES_EXPORTER_PASSWORD_FILE:?Set POSTGRES_EXPORTER_PASSWORD_FILE to a protected password file}
+  redis_exporter_password_map:
+    file: ${REDIS_EXPORTER_PASSWORD_MAP_FILE:?Set REDIS_EXPORTER_PASSWORD_MAP_FILE to a protected JSON password map}
+  grafana_admin_password:
+    file: ${GRAFANA_ADMIN_PASSWORD_FILE:?Set GRAFANA_ADMIN_PASSWORD_FILE to a protected password file}
+  alert_webhook_url:
+    file: ${ALERT_WEBHOOK_URL_FILE:?Set ALERT_WEBHOOK_URL_FILE to a protected webhook URL file}

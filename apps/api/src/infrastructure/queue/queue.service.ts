@@ -23,12 +23,17 @@ export const QUEUE_NAMES = {
   maintenance: 'maintenance',
 } as const;
 
+const WORKER_HEARTBEAT_KEY = 'school-transport:worker:last-heartbeat';
+const WORKER_HEARTBEAT_INTERVAL_MS = 15_000;
+const WORKER_HEARTBEAT_TTL_SECONDS = 45;
+
 @Injectable()
 export class QueueService implements OnModuleInit, OnModuleDestroy {
   private readonly connection: IORedis;
   private readonly queues: Queue[] = [];
   private readonly workers: Worker[] = [];
   private closePromise?: Promise<void>;
+  private heartbeatTimer?: NodeJS.Timeout;
 
   constructor(
     @Inject(forwardRef(() => ConfigService)) private readonly config: ConfigService,
@@ -75,6 +80,12 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     );
 
     if (this.config.serviceRole === 'worker') {
+      await this.publishWorkerHeartbeat();
+      this.heartbeatTimer = setInterval(
+        () => void this.publishWorkerHeartbeat(),
+        WORKER_HEARTBEAT_INTERVAL_MS,
+      );
+      this.heartbeatTimer.unref();
       this.workers.push(
         new Worker(QUEUE_NAMES.notifications, (job) => this.processNotification(job), {
           connection: this.connection,
@@ -128,6 +139,13 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
           removeOnFail: 100,
         },
       );
+    } else {
+      await this.observeWorkerHeartbeat();
+      this.heartbeatTimer = setInterval(
+        () => void this.observeWorkerHeartbeat(),
+        WORKER_HEARTBEAT_INTERVAL_MS,
+      );
+      this.heartbeatTimer.unref();
     }
   }
 
@@ -175,10 +193,30 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async close(): Promise<void> {
+    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     await Promise.all(this.workers.map((worker) => worker.close()));
     await Promise.all(this.queues.map((queue) => queue.close()));
     if (this.connection.status === 'ready') await this.connection.quit();
     else this.connection.disconnect();
+  }
+
+  private async publishWorkerHeartbeat(): Promise<void> {
+    const timestamp = Math.floor(Date.now() / 1_000);
+    await this.connection.set(
+      WORKER_HEARTBEAT_KEY,
+      String(timestamp),
+      'EX',
+      WORKER_HEARTBEAT_TTL_SECONDS,
+    );
+  }
+
+  private async observeWorkerHeartbeat(): Promise<void> {
+    try {
+      const value = await this.connection.get(WORKER_HEARTBEAT_KEY);
+      this.metrics?.setWorkerHeartbeat(value === null ? 0 : Number(value));
+    } catch {
+      this.metrics?.setWorkerHeartbeat(0);
+    }
   }
 
   private queue(name: string): Queue {

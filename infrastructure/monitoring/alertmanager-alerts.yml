@@ -1,0 +1,35 @@
+groups:
+  - name: school-transport-alert-delivery
+    rules:
+      - alert: PrometheusCannotReachAlertmanager
+        expr: prometheus_notifications_alertmanagers_discovered < 1
+        for: 5m
+        labels: { severity: critical, service: monitoring, owner: platform-on-call }
+        annotations:
+          summary: 'Prometheus has no discovered Alertmanager endpoint'
+          impact: 'Alerts can evaluate but cannot be delivered to responders.'
+          runbook: 'infrastructure/monitoring/runbooks/alert-delivery.md'
+      - alert: AlertmanagerNotificationFailures
+        expr: increase(alertmanager_notifications_failed_total[10m]) > 0
+        for: 5m
+        labels: { severity: critical, service: alertmanager, owner: platform-on-call }
+        annotations:
+          summary: 'Alertmanager notification delivery is failing'
+          impact: 'Responders may not receive active alerts.'
+          runbook: 'infrastructure/monitoring/runbooks/alert-delivery.md'
+      - alert: AlertmanagerConfigurationReloadFailed
+        expr: alertmanager_config_last_reload_successful != 1
+        for: 5m
+        labels: { severity: critical, service: alertmanager, owner: platform-on-call }
+        annotations:
+          summary: 'Alertmanager rejected its configuration'
+          impact: 'Alert routing may differ from the version-controlled configuration.'
+          runbook: 'infrastructure/monitoring/runbooks/alert-delivery.md'
+      - alert: AlertmanagerNotificationLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(alertmanager_notification_latency_seconds_bucket[10m]))) > 10
+        for: 15m
+        labels: { severity: warning, service: alertmanager, owner: platform-on-call }
+        annotations:
+          summary: 'Alertmanager notification p95 latency exceeds 10 seconds'
+          impact: 'Time-sensitive incident notification is delayed.'
+          runbook: 'infrastructure/monitoring/runbooks/alert-delivery.md'

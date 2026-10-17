@@ -1,0 +1,12 @@
+[Unit]
+Description=Clean expired School Transport backups daily
+
+[Timer]
+OnCalendar=*-*-* 05:30:00 UTC
+Persistent=true
+RandomizedDelaySec=20m
+AccuracySec=5m
+Unit=school-transport-backup-retention.service
+
+[Install]
+WantedBy=timers.target

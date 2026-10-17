@@ -1,0 +1,12 @@
+[Unit]
+Description=Validate the latest School Transport remote backup weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 04:30:00 UTC
+Persistent=true
+RandomizedDelaySec=15m
+AccuracySec=1m
+Unit=school-transport-restore-validation.service
+
+[Install]
+WantedBy=timers.target

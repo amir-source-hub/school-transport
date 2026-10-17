@@ -1,0 +1,33 @@
+[Unit]
+Description=School Transport encrypted PostgreSQL backup
+Documentation=file:/usr/local/share/doc/school-transport/database-backup.md
+After=network-online.target docker.service
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=school-transport-backup
+Group=school-transport-backup
+EnvironmentFile=/etc/school-transport/backup.env
+ExecStart=/usr/local/libexec/school-transport/run-backup.sh
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=3h
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+SupplementaryGroups=docker school-transport-metrics
+ReadWritePaths=/var/lib/school-transport/backups /var/lib/node_exporter/textfile_collector
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

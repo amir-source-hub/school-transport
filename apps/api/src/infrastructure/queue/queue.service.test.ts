@@ -22,3 +22,14 @@ describe('student-photo cleanup scheduling contract', () => {
     expect(source).toContain('throw error');
   });
 });
+
+describe('worker heartbeat contract', () => {
+  it('publishes a short-lived Redis heartbeat and observes it from the API process', () => {
+    const source = readFileSync(resolve(__dirname, 'queue.service.ts'), 'utf8');
+    expect(source).toContain("WORKER_HEARTBEAT_KEY = 'school-transport:worker:last-heartbeat'");
+    expect(source).toContain('WORKER_HEARTBEAT_TTL_SECONDS = 45');
+    expect(source).toContain('await this.publishWorkerHeartbeat()');
+    expect(source).toContain('await this.observeWorkerHeartbeat()');
+    expect(source).toContain('this.metrics?.setWorkerHeartbeat');
+  });
+});

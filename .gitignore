@@ -14,8 +14,10 @@ coverage/
 .env.*
 !.env.example
 !**/.env.example
+!**/.env.monitoring.example
 .env.local
 .env.production
+infrastructure/monitoring/secrets/
 *.pem
 *.key
 

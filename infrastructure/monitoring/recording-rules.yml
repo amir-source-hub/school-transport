@@ -1,0 +1,18 @@
+groups:
+  - name: school-transport-recording
+    interval: 30s
+    rules:
+      - record: school_transport:http_request_rate:5m
+        expr: sum(rate(school_transport_http_requests_total[5m]))
+      - record: school_transport:http_error_ratio:5m
+        expr: sum(rate(school_transport_http_requests_total{status_class="5xx"}[5m])) / clamp_min(sum(rate(school_transport_http_requests_total[5m])), 0.001)
+      - record: school_transport:http_latency_p95_seconds:10m
+        expr: histogram_quantile(0.95, sum by (le) (rate(school_transport_http_duration_seconds_bucket[10m])))
+      - record: school_transport:queue_failure_ratio:15m
+        expr: sum by (queue) (rate(school_transport_queue_jobs_total{outcome="failed"}[15m])) / clamp_min(sum by (queue) (rate(school_transport_queue_jobs_total{outcome=~"completed|failed"}[15m])), 0.001)
+      - record: school_transport:worker_heartbeat_age_seconds
+        expr: time() - school_transport_worker_last_heartbeat_timestamp_seconds
+      - record: school_transport:backup_age_seconds
+        expr: time() - school_transport_backup_last_success_timestamp_seconds
+      - record: school_transport:restore_validation_age_seconds
+        expr: time() - school_transport_restore_validation_last_success_timestamp_seconds

@@ -14,6 +14,7 @@ describe('OperationalMetricsService', () => {
     metrics.recordDatabase('ready');
     metrics.recordStudentPhotoCleanup('completed');
     metrics.setStudentPhotoStaleCounts({ AUTHORIZED: 2, UPLOADED: 1, VALIDATING: 0 });
+    metrics.setWorkerHeartbeat(1_785_000_000.9);
     metrics.registerDatabasePool(() => ({ total: 4, idle: 3, waiting: 0 }));
 
     const output = metrics.renderPrometheus();
@@ -37,14 +38,22 @@ describe('OperationalMetricsService', () => {
     expect(output).toContain('school_transport_broadcast_estimated_spend_rial_total 12000');
     expect(output).toContain('school_transport_student_photo_stale_rows{status="AUTHORIZED"} 2');
     expect(output).toContain('school_transport_student_photo_cleanup_total{outcome="completed"} 1');
+    expect(output).toContain('school_transport_worker_last_heartbeat_timestamp_seconds 1785000000');
+    expect(output).toMatch(/school_transport_process_uptime_seconds [0-9.]+/);
+    expect(output).toMatch(/school_transport_process_resident_memory_bytes [1-9][0-9]*/);
+    expect(output).toMatch(/school_transport_process_cpu_seconds_total [0-9.]+/);
     expect(output).not.toMatch(/phone|user|message_body|api_key|token=/i);
   });
 
   it('clamps negative queue ages and never accepts arbitrary metric labels', () => {
     const metrics = new OperationalMetricsService();
     metrics.setNotificationQueueAge(-10);
+    metrics.setWorkerHeartbeat(-10);
     expect(metrics.renderPrometheus()).toContain(
       'school_transport_notification_queue_oldest_age_seconds 0',
+    );
+    expect(metrics.renderPrometheus()).toContain(
+      'school_transport_worker_last_heartbeat_timestamp_seconds 0',
     );
   });
 });

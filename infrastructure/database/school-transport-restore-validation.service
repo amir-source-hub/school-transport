@@ -1,0 +1,31 @@
+[Unit]
+Description=School Transport isolated remote backup restore validation
+Documentation=file:/usr/local/share/doc/school-transport/database-backup.md
+After=network-online.target docker.service
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=school-transport-recovery
+Group=school-transport-recovery
+SupplementaryGroups=docker school-transport-metrics
+EnvironmentFile=/etc/school-transport/restore-validation.env
+ExecStart=/usr/local/libexec/school-transport/validate-remote-backup.sh
+UMask=0077
+TimeoutStartSec=4h
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadOnlyPaths=/etc/school-transport/keys
+ReadWritePaths=/var/lib/school-transport/restore-validation /var/lib/node_exporter/textfile_collector
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

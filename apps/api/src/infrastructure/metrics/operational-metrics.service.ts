@@ -25,6 +25,7 @@ const HTTP_BUCKETS = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5] as const;
 
 @Injectable()
 export class OperationalMetricsService {
+  private readonly processStartTimeSeconds = Math.floor(Date.now() / 1_000 - process.uptime());
   private readonly outcomes = new Map<string, number>();
   private readonly latencyCounts = new Map<string, number[]>();
   private readonly latencySums = new Map<string, number>();
@@ -39,6 +40,7 @@ export class OperationalMetricsService {
   private readonly studentPhotoStale = new Map<string, number>();
   private readonly studentPhotoCleanupOutcomes = new Map<string, number>();
   private databasePool?: () => { total: number; idle: number; waiting: number };
+  private workerHeartbeatTimestampSeconds = 0;
 
   recordHttp(method: string, route: string, status: number, seconds: number) {
     const statusClass = `${Math.floor(status / 100)}xx`;
@@ -76,6 +78,10 @@ export class OperationalMetricsService {
     this.databasePool = snapshot;
   }
 
+  setWorkerHeartbeat(timestampSeconds: number) {
+    this.workerHeartbeatTimestampSeconds = Math.max(0, Math.floor(timestampSeconds));
+  }
+
   recordMessage(category: MessageCategory, outcome: MessageOutcome, latencySeconds?: number) {
     const key = `${category}:${outcome}`;
     this.outcomes.set(key, (this.outcomes.get(key) ?? 0) + 1);
@@ -102,7 +108,30 @@ export class OperationalMetricsService {
   }
 
   renderPrometheus(): string {
+    const memory = process.memoryUsage();
+    const cpu = process.cpuUsage();
     const lines = [
+      '# HELP school_transport_process_start_time_seconds Start time of this application process.',
+      '# TYPE school_transport_process_start_time_seconds gauge',
+      `school_transport_process_start_time_seconds ${this.processStartTimeSeconds}`,
+      '# HELP school_transport_process_uptime_seconds Uptime of this application process.',
+      '# TYPE school_transport_process_uptime_seconds gauge',
+      `school_transport_process_uptime_seconds ${process.uptime()}`,
+      '# HELP school_transport_process_resident_memory_bytes Resident memory used by this application process.',
+      '# TYPE school_transport_process_resident_memory_bytes gauge',
+      `school_transport_process_resident_memory_bytes ${memory.rss}`,
+      '# HELP school_transport_process_heap_used_bytes V8 heap memory currently used.',
+      '# TYPE school_transport_process_heap_used_bytes gauge',
+      `school_transport_process_heap_used_bytes ${memory.heapUsed}`,
+      '# HELP school_transport_process_heap_total_bytes V8 heap memory currently allocated.',
+      '# TYPE school_transport_process_heap_total_bytes gauge',
+      `school_transport_process_heap_total_bytes ${memory.heapTotal}`,
+      '# HELP school_transport_process_cpu_seconds_total CPU time consumed by this application process.',
+      '# TYPE school_transport_process_cpu_seconds_total counter',
+      `school_transport_process_cpu_seconds_total ${(cpu.user + cpu.system) / 1_000_000}`,
+      '# HELP school_transport_worker_last_heartbeat_timestamp_seconds Last worker heartbeat observed through Redis.',
+      '# TYPE school_transport_worker_last_heartbeat_timestamp_seconds gauge',
+      `school_transport_worker_last_heartbeat_timestamp_seconds ${this.workerHeartbeatTimestampSeconds}`,
       '# HELP school_transport_message_outcomes_total Bounded SMS and OTP outcomes.',
       '# TYPE school_transport_message_outcomes_total counter',
     ];

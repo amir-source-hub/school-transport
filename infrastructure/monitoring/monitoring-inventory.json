@@ -1,0 +1,144 @@
+{
+  "version": "2026-08-31",
+  "metricPrefix": "school_transport_",
+  "owners": [
+    "platform-on-call",
+    "application-owner",
+    "security-lead",
+    "finance-operations",
+    "messaging-operations"
+  ],
+  "allowedSeverities": ["critical", "warning", "info"],
+  "prohibitedTelemetry": [
+    "credentials",
+    "cookies",
+    "tokens",
+    "otp-values",
+    "signed-urls",
+    "request-response-bodies",
+    "names",
+    "phone-numbers",
+    "national-ids",
+    "addresses-and-precise-locations",
+    "student-family-or-account-identifiers",
+    "object-keys",
+    "payment-references",
+    "contract-message-or-feedback-text",
+    "raw-provider-payloads"
+  ],
+  "services": [
+    {
+      "name": "web",
+      "owner": "application-owner",
+      "signals": ["external-availability", "response-duration", "tls-expiry"],
+      "state": "implemented"
+    },
+    {
+      "name": "api",
+      "owner": "application-owner",
+      "signals": ["request-rate", "error-ratio", "request-duration"],
+      "state": "implemented"
+    },
+    {
+      "name": "worker-queues",
+      "owner": "platform-on-call",
+      "signals": ["job-outcomes", "notification-oldest-age", "heartbeat", "depth", "dead-letters"],
+      "state": "partial"
+    },
+    {
+      "name": "postgresql",
+      "owner": "platform-on-call",
+      "signals": ["readiness", "pool-connections", "locks", "disk", "slow-queries"],
+      "state": "partial"
+    },
+    {
+      "name": "redis",
+      "owner": "platform-on-call",
+      "signals": ["availability", "memory", "evictions", "persistence"],
+      "state": "implemented"
+    },
+    {
+      "name": "object-storage",
+      "owner": "platform-on-call",
+      "signals": ["operation-outcomes", "operation-duration", "cleanup-failures"],
+      "state": "planned"
+    },
+    {
+      "name": "messaging",
+      "owner": "messaging-operations",
+      "signals": ["provider-outcomes", "provider-duration", "backlog", "spend"],
+      "state": "implemented"
+    },
+    {
+      "name": "payments",
+      "owner": "finance-operations",
+      "signals": ["operation-outcomes", "gateway-duration", "integrity-inconsistencies"],
+      "state": "planned"
+    },
+    {
+      "name": "authentication",
+      "owner": "security-lead",
+      "signals": ["attempt-outcomes", "lockouts", "throttling", "refresh-reuse"],
+      "state": "planned"
+    },
+    {
+      "name": "host-containers",
+      "owner": "platform-on-call",
+      "signals": ["cpu", "memory", "disk", "inodes", "restarts", "oom"],
+      "state": "implemented"
+    },
+    {
+      "name": "backup-recovery",
+      "owner": "platform-on-call",
+      "signals": ["last-success", "duration", "size", "remote-verification", "restore-validation"],
+      "state": "implemented"
+    },
+    {
+      "name": "centralized-logs",
+      "owner": "platform-on-call",
+      "signals": ["container-logs", "error-patterns", "ingestion-health", "retention"],
+      "state": "implemented"
+    }
+  ],
+  "implementedMetrics": [
+    "school_transport_http_requests_total",
+    "school_transport_http_duration_seconds",
+    "school_transport_database_pool_connections",
+    "school_transport_database_readiness_total",
+    "school_transport_queue_jobs_total",
+    "school_transport_notification_queue_oldest_age_seconds",
+    "school_transport_message_outcomes_total",
+    "school_transport_message_provider_latency_seconds",
+    "school_transport_broadcast_estimated_spend_rial_total",
+    "school_transport_student_photo_stale_rows",
+    "school_transport_student_photo_cleanup_total",
+    "school_transport_process_start_time_seconds",
+    "school_transport_process_uptime_seconds",
+    "school_transport_process_resident_memory_bytes",
+    "school_transport_process_heap_used_bytes",
+    "school_transport_process_heap_total_bytes",
+    "school_transport_process_cpu_seconds_total",
+    "school_transport_worker_last_heartbeat_timestamp_seconds",
+    "school_transport_backup_last_run_success",
+    "school_transport_backup_last_success_timestamp_seconds",
+    "school_transport_backup_duration_seconds",
+    "school_transport_backup_size_bytes",
+    "school_transport_backup_remote_verification_success",
+    "school_transport_restore_validation_last_run_success",
+    "school_transport_restore_validation_last_success_timestamp_seconds",
+    "school_transport_restore_validation_duration_seconds"
+  ],
+  "exporterMetricFamilies": ["node_", "container_", "pg_", "redis_", "probe_"],
+  "allowedApplicationLabels": [
+    "method",
+    "route",
+    "status_class",
+    "queue",
+    "outcome",
+    "category",
+    "state",
+    "status",
+    "le"
+  ],
+  "requiredExternalLabels": ["environment", "service", "release"]
+}

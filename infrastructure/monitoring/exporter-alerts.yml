@@ -1,0 +1,82 @@
+groups:
+  - name: school-transport-exporters
+    rules:
+      - alert: HostFilesystemSpaceLow
+        expr: node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} < 0.15
+        for: 15m
+        labels: { severity: warning, service: host, owner: platform-on-call }
+        annotations:
+          summary: 'Host filesystem has less than 15% free space'
+          impact: 'Database, logs, metrics, or backups may fail as storage is exhausted.'
+          runbook: 'infrastructure/monitoring/runbooks/exporters.md'
+      - alert: HostFilesystemSpaceCritical
+        expr: node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} < 0.05
+        for: 5m
+        labels: { severity: critical, service: host, owner: platform-on-call }
+        annotations:
+          summary: 'Host filesystem has less than 5% free space'
+          impact: 'The host is at immediate risk of application and data-service failure.'
+          runbook: 'infrastructure/monitoring/runbooks/exporters.md'
+      - alert: HostMemoryPressure
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 15m
+        labels: { severity: warning, service: host, owner: platform-on-call }
+        annotations:
+          summary: 'Host has less than 10% available memory'
+          impact: 'Processes or containers may be killed or experience severe latency.'
+          runbook: 'infrastructure/monitoring/runbooks/exporters.md'
+      - alert: NodeTextfileCollectorError
+        expr: node_textfile_scrape_error != 0
+        for: 5m
+        labels: { severity: critical, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'Node Exporter cannot parse one or more operational metric files'
+          impact: 'Backup and recovery status may be missing or stale.'
+          runbook: 'infrastructure/monitoring/runbooks/exporters.md'
+      - alert: ContainerMetricsMissing
+        expr: absent(container_last_seen{name!=""})
+        for: 10m
+        labels: { severity: warning, service: containers, owner: platform-on-call }
+        annotations:
+          summary: 'cAdvisor is not reporting named containers'
+          impact: 'Per-container resource consumption and failure evidence are unavailable.'
+          runbook: 'infrastructure/monitoring/runbooks/exporters.md'
+      - alert: PostgreSQLExporterCannotConnect
+        expr: pg_up != 1
+        for: 5m
+        labels: { severity: critical, service: postgresql, owner: platform-on-call }
+        annotations:
+          summary: 'PostgreSQL Exporter cannot query PostgreSQL'
+          impact: 'Database capacity and health telemetry are incomplete.'
+          runbook: 'infrastructure/monitoring/runbooks/exporters.md'
+      - alert: RedisExporterCannotConnect
+        expr: redis_up != 1
+        for: 5m
+        labels: { severity: critical, service: redis, owner: platform-on-call }
+        annotations:
+          summary: 'Redis Exporter cannot query Redis'
+          impact: 'Cache and queue dependency health cannot be evaluated.'
+          runbook: 'infrastructure/monitoring/runbooks/exporters.md'
+      - alert: RedisEvictionsDetected
+        expr: increase(redis_evicted_keys_total[15m]) > 0
+        labels: { severity: warning, service: redis, owner: platform-on-call }
+        annotations:
+          summary: 'Redis evicted keys during the last 15 minutes'
+          impact: 'Queue or cache data may be lost because Redis reached its memory policy limit.'
+          runbook: 'infrastructure/monitoring/runbooks/exporters.md'
+      - alert: BlackboxProbeFailed
+        expr: probe_success{job="blackbox-http"} != 1
+        for: 5m
+        labels: { severity: critical, service: availability, owner: platform-on-call }
+        annotations:
+          summary: 'HTTP probe failed for {{ $labels.instance }}'
+          impact: 'The public site or internal API health endpoint is unavailable to its probe.'
+          runbook: 'infrastructure/monitoring/runbooks/exporters.md'
+      - alert: PublicTlsCertificateExpiring
+        expr: probe_ssl_earliest_cert_expiry{instance=~"https://.*"} - time() < 14 * 24 * 60 * 60
+        for: 1h
+        labels: { severity: warning, service: availability, owner: platform-on-call }
+        annotations:
+          summary: 'TLS certificate for {{ $labels.instance }} expires in less than 14 days'
+          impact: 'Clients will reject the public HTTPS endpoint if the certificate expires.'
+          runbook: 'infrastructure/monitoring/runbooks/exporters.md'

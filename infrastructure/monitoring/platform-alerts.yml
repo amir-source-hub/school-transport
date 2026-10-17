@@ -4,37 +4,144 @@ groups:
       - alert: ApiServerErrorRateHigh
         expr: sum(rate(school_transport_http_requests_total{status_class="5xx"}[5m])) / clamp_min(sum(rate(school_transport_http_requests_total[5m])), 0.001) > 0.01
         for: 10m
-        labels: { severity: critical, owner: platform }
-        annotations: { summary: 'API 5xx rate exceeds 1%' }
+        labels: { severity: critical, service: api, owner: platform-on-call }
+        annotations:
+          summary: 'API 5xx rate exceeds 1%'
+          impact: 'Users are receiving sustained server errors.'
+          runbook: 'infrastructure/monitoring/INCIDENT_RUNBOOK.md'
       - alert: ApiLatencyHigh
         expr: histogram_quantile(0.95, sum(rate(school_transport_http_duration_seconds_bucket[10m])) by (le)) > 0.75
         for: 15m
-        labels: { severity: warning, owner: platform }
-        annotations: { summary: 'API p95 latency exceeds 750ms' }
+        labels: { severity: warning, service: api, owner: platform-on-call }
+        annotations:
+          summary: 'API p95 latency exceeds 750ms'
+          impact: 'User-facing requests are responding slowly.'
+          runbook: 'infrastructure/monitoring/INCIDENT_RUNBOOK.md'
       - alert: DatabaseUnavailable
         expr: increase(school_transport_database_readiness_total{outcome="unavailable"}[5m]) > 0
         for: 5m
-        labels: { severity: critical, owner: platform }
-        annotations: { summary: 'PostgreSQL readiness failed' }
+        labels: { severity: critical, service: postgresql, owner: platform-on-call }
+        annotations:
+          summary: 'PostgreSQL readiness failed'
+          impact: 'Database-dependent application operations may fail.'
+          runbook: 'infrastructure/monitoring/INCIDENT_RUNBOOK.md'
       - alert: DatabasePoolWaiting
         expr: school_transport_database_pool_connections{state="waiting"} > 5
         for: 10m
-        labels: { severity: warning, owner: platform }
-        annotations: { summary: 'PostgreSQL pool has sustained waiters' }
+        labels: { severity: warning, service: postgresql, owner: platform-on-call }
+        annotations:
+          summary: 'PostgreSQL pool has sustained waiters'
+          impact: 'Requests are waiting for database connections.'
+          runbook: 'infrastructure/monitoring/INCIDENT_RUNBOOK.md'
       - alert: QueueFailuresHigh
-        expr: sum(rate(school_transport_queue_jobs_total{outcome="failed"}[15m])) by (queue) / clamp_min(sum(rate(school_transport_queue_jobs_total{outcome="completed"}[15m])) by (queue), 0.001) > 0.01
+        expr: sum(rate(school_transport_queue_jobs_total{outcome="failed"}[15m])) by (queue) / clamp_min(sum(rate(school_transport_queue_jobs_total{outcome=~"completed|failed"}[15m])) by (queue), 0.001) > 0.01
         for: 15m
-        labels: { severity: critical, owner: platform }
-        annotations: { summary: 'Queue failure rate exceeds 1% for {{ $labels.queue }}' }
+        labels: { severity: critical, service: worker-queues, owner: platform-on-call }
+        annotations:
+          summary: 'Queue failure rate exceeds 1% for {{ $labels.queue }}'
+          impact: 'Asynchronous work may be delayed or lost after retry exhaustion.'
+          runbook: 'infrastructure/monitoring/INCIDENT_RUNBOOK.md'
       - alert: StudentPhotoStaleAuthorizations
         expr: school_transport_student_photo_stale_rows{status="AUTHORIZED"} > 10
         for: 30m
-        labels: { severity: warning, owner: platform }
+        labels: { severity: warning, service: student-images, owner: platform-on-call }
         annotations:
-          { summary: 'Overdue student-photo authorizations are accumulating and need review' }
+          summary: 'Overdue student-photo authorizations are accumulating and need review'
+          impact: 'Authorized uploads may remain incomplete beyond their expected window.'
+          runbook: 'infrastructure/monitoring/INCIDENT_RUNBOOK.md'
       - alert: StudentPhotoStaleProcessing
         expr: school_transport_student_photo_stale_rows{status="UPLOADED"} > 3 or school_transport_student_photo_stale_rows{status="VALIDATING"} > 3
         for: 30m
-        labels: { severity: warning, owner: platform }
+        labels: { severity: warning, service: student-images, owner: platform-on-call }
         annotations:
-          { summary: 'Student-photo uploads are stalled in processing and require investigation' }
+          summary: 'Student-photo uploads are stalled in processing and require investigation'
+          impact: 'Student-photo processing is not completing normally.'
+          runbook: 'infrastructure/monitoring/INCIDENT_RUNBOOK.md'
+      - alert: DatabaseBackupStale
+        expr: time() - school_transport_backup_last_success_timestamp_seconds > 25200
+        for: 5m
+        labels: { severity: critical, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'No remotely verified PostgreSQL backup has succeeded for seven hours'
+          impact: 'The service can no longer demonstrate its six-hour recovery point objective.'
+          runbook: 'infrastructure/monitoring/runbooks/backup-recovery.md'
+      - alert: DatabaseBackupMetricMissing
+        expr: absent(school_transport_backup_last_success_timestamp_seconds) and on() (up{job="node-exporter"} == 1)
+        for: 15m
+        labels: { severity: critical, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'PostgreSQL backup metrics are missing'
+          impact: 'Backup freshness and remote verification cannot be observed.'
+          runbook: 'infrastructure/monitoring/runbooks/backup-recovery.md'
+      - alert: DatabaseBackupRemoteVerificationFailed
+        expr: school_transport_backup_remote_verification_success != 1
+        for: 5m
+        labels: { severity: critical, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'The latest PostgreSQL backup was not verified in remote storage'
+          impact: 'The newest backup does not count toward the recovery point objective.'
+          runbook: 'infrastructure/monitoring/runbooks/backup-recovery.md'
+      - alert: DatabaseBackupRunFailed
+        expr: school_transport_backup_last_run_success != 1
+        for: 1m
+        labels: { severity: critical, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'The most recent PostgreSQL backup run failed'
+          impact: 'No new encrypted and remotely verified recovery artifact was produced.'
+          runbook: 'infrastructure/monitoring/runbooks/backup-recovery.md'
+      - alert: DatabaseBackupDurationHigh
+        expr: school_transport_backup_duration_seconds > 18000
+        for: 5m
+        labels: { severity: warning, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'PostgreSQL backup duration is approaching the six-hour schedule interval'
+          impact: 'The next backup may overlap or the recovery point objective may be missed.'
+          runbook: 'infrastructure/monitoring/runbooks/backup-recovery.md'
+      - alert: DatabaseBackupSizeAnomalous
+        expr: school_transport_backup_size_bytes < 0.5 * avg_over_time(school_transport_backup_size_bytes[7d]) or school_transport_backup_size_bytes > 2 * avg_over_time(school_transport_backup_size_bytes[7d])
+        for: 10m
+        labels: { severity: warning, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'Encrypted PostgreSQL backup size differs substantially from its seven-day baseline'
+          impact: 'Unexpected data loss, growth, or a malformed dump may have occurred.'
+          runbook: 'infrastructure/monitoring/runbooks/backup-recovery.md'
+      - alert: DatabaseRestoreValidationFailed
+        expr: school_transport_restore_validation_last_run_success != 1
+        for: 1m
+        labels: { severity: critical, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'The latest isolated backup restore validation failed'
+          impact: 'The available recovery artifact or recovery procedure may be unusable.'
+          runbook: 'infrastructure/monitoring/runbooks/backup-recovery.md'
+      - alert: DatabaseRestoreValidationStale
+        expr: time() - school_transport_restore_validation_last_success_timestamp_seconds > 691200
+        for: 15m
+        labels: { severity: critical, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'No isolated backup restore validation has succeeded for eight days'
+          impact: 'Backup recoverability is no longer proven by the weekly validation.'
+          runbook: 'infrastructure/monitoring/runbooks/backup-recovery.md'
+      - alert: DatabaseRestoreValidationMetricMissing
+        expr: absent(school_transport_restore_validation_last_run_success) and on() (up{job="node-exporter"} == 1)
+        for: 30m
+        labels: { severity: warning, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'Backup restore-validation metrics are missing'
+          impact: 'Operators cannot determine whether off-site backups remain recoverable.'
+          runbook: 'infrastructure/monitoring/runbooks/backup-recovery.md'
+      - alert: DatabaseBackupRetentionFailed
+        expr: school_transport_backup_retention_last_run_success != 1
+        for: 5m
+        labels: { severity: warning, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'The latest remote backup-retention cleanup failed'
+          impact: 'Expired object versions may continue accumulating and increasing storage cost.'
+          runbook: 'infrastructure/monitoring/runbooks/backup-recovery.md'
+      - alert: DatabaseBackupRetentionStale
+        expr: time() - school_transport_backup_retention_last_success_timestamp_seconds > 172800
+        for: 15m
+        labels: { severity: warning, service: backup-recovery, owner: platform-on-call }
+        annotations:
+          summary: 'No remote backup-retention cleanup has succeeded for two days'
+          impact: 'Retention enforcement is not operating on its daily schedule.'
+          runbook: 'infrastructure/monitoring/runbooks/backup-recovery.md'

@@ -1,0 +1,30 @@
+[Unit]
+Description=School Transport expired backup retention cleanup
+Documentation=file:/usr/local/share/doc/school-transport/database-backup.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=school-transport-retention
+Group=school-transport-retention
+SupplementaryGroups=school-transport-metrics
+EnvironmentFile=/etc/school-transport/backup-retention.env
+Environment=CONFIRM_BACKUP_RETENTION_CLEANUP=DELETE_EXPIRED_LOCKED_BACKUPS
+ExecStart=/usr/local/libexec/school-transport/cleanup-remote-backups.sh --apply
+UMask=0077
+TimeoutStartSec=2h
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/school-transport/backup-retention /var/lib/node_exporter/textfile_collector
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

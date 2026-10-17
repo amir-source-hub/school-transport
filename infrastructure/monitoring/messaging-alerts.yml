@@ -4,37 +4,56 @@ groups:
       - alert: MessagingPermanentFailureRateHigh
         expr: sum(rate(school_transport_message_outcomes_total{outcome="permanent_failure"}[10m])) by (category) > 0.05
         for: 10m
-        labels: { severity: warning }
+        labels: { severity: warning, service: messaging, owner: messaging-operations }
         annotations:
-          { summary: 'Permanent messaging failures are elevated for {{ $labels.category }}' }
+          summary: 'Permanent messaging failures are elevated for {{ $labels.category }}'
+          impact: 'User notifications are being rejected permanently.'
+          runbook: 'infrastructure/monitoring/runbooks/messaging.md'
       - alert: MessagingTimeoutRateHigh
         expr: sum(rate(school_transport_message_outcomes_total{outcome="timeout"}[10m])) by (category) > 0.1
         for: 10m
-        labels: { severity: warning }
-        annotations: { summary: 'Messaging timeouts are elevated for {{ $labels.category }}' }
+        labels: { severity: warning, service: messaging, owner: messaging-operations }
+        annotations:
+          summary: 'Messaging timeouts are elevated for {{ $labels.category }}'
+          impact: 'Notification delivery is delayed and may exhaust retries.'
+          runbook: 'infrastructure/monitoring/runbooks/messaging.md'
       - alert: MessagingDeadLetters
         expr: increase(school_transport_message_outcomes_total{outcome="dead_letter"}[15m]) > 0
         for: 5m
-        labels: { severity: critical }
-        annotations: { summary: 'Messaging dead letters require review' }
+        labels: { severity: critical, service: messaging, owner: messaging-operations }
+        annotations:
+          summary: 'Messaging dead letters require review'
+          impact: 'Messages exhausted automated retries and require controlled intervention.'
+          runbook: 'infrastructure/monitoring/runbooks/messaging.md'
       - alert: NotificationBacklogOld
         expr: school_transport_notification_queue_oldest_age_seconds > 900
         for: 10m
-        labels: { severity: critical }
-        annotations: { summary: 'The notification queue oldest item exceeds 15 minutes' }
+        labels: { severity: critical, service: messaging, owner: messaging-operations }
+        annotations:
+          summary: 'The notification queue oldest item exceeds 15 minutes'
+          impact: 'Time-sensitive notifications are substantially delayed.'
+          runbook: 'infrastructure/monitoring/runbooks/messaging.md'
       - alert: OtpRateLimitSpike
         expr: increase(school_transport_message_outcomes_total{category="otp",outcome="rate_limited"}[10m]) > 50
         for: 5m
-        labels: { severity: warning }
-        annotations: { summary: 'OTP rate-limit outcomes are elevated' }
+        labels: { severity: warning, service: messaging, owner: security-lead }
+        annotations:
+          summary: 'OTP rate-limit outcomes are elevated'
+          impact: 'Users may be unable to authenticate, or abusive OTP traffic may be active.'
+          runbook: 'infrastructure/monitoring/runbooks/messaging.md'
       - alert: BroadcastVolumeHigh
         expr: increase(school_transport_message_outcomes_total{category="broadcast_campaign",outcome="accepted"}[1h]) > 5000
         for: 5m
-        labels: { severity: warning }
-        annotations: { summary: 'Broadcast campaign volume exceeded the reviewed hourly threshold' }
+        labels: { severity: warning, service: messaging, owner: messaging-operations }
+        annotations:
+          summary: 'Broadcast campaign volume exceeded the reviewed hourly threshold'
+          impact: 'Unexpected campaign activity may increase provider load and cost.'
+          runbook: 'infrastructure/monitoring/runbooks/messaging.md'
       - alert: BroadcastEstimatedSpendHigh
         expr: increase(school_transport_broadcast_estimated_spend_rial_total[1h]) > 10000000
         for: 5m
-        labels: { severity: warning }
+        labels: { severity: warning, service: messaging, owner: messaging-operations }
         annotations:
-          { summary: 'Approved estimated broadcast spend exceeded the reviewed hourly threshold' }
+          summary: 'Approved estimated broadcast spend exceeded the reviewed hourly threshold'
+          impact: 'Messaging spend is above the reviewed operational threshold.'
+          runbook: 'infrastructure/monitoring/runbooks/messaging.md'

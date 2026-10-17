@@ -8,6 +8,7 @@ const roots = [
   'Dockerfile',
   'docker-compose.local.yml',
   'docker-compose.production.yml',
+  'docker-compose.monitoring.yml',
 ];
 const sourceFiles = [];
 const visit = (path) => {
@@ -44,7 +45,7 @@ const inventory = readFileSync('docs/ENVIRONMENT.md', 'utf8');
 const documented = new Set(
   [...inventory.matchAll(/`([A-Z][A-Z0-9_]*)`/g)].map((match) => match[1]),
 );
-const examples = ['.env.example'];
+const examples = ['.env.example', 'infrastructure/monitoring/.env.monitoring.example'];
 const exampleVariables = new Set(
   examples.flatMap((file) =>
     [...readFileSync(file, 'utf8').matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((match) => match[1]),

@@ -1,0 +1,35 @@
+groups:
+  - name: school-transport-monitoring-health
+    rules:
+      - alert: PrometheusTargetDown
+        expr: up{job=~"prometheus|school-transport-api|alertmanager|node-exporter|cadvisor|postgres-exporter|redis-exporter|blackbox-http|loki|alloy"} == 0
+        for: 5m
+        labels: { severity: critical, service: monitoring, owner: platform-on-call }
+        annotations:
+          summary: 'Prometheus target {{ $labels.job }} is down'
+          impact: 'Metrics and alerts for the affected target are incomplete.'
+          runbook: 'infrastructure/monitoring/runbooks/prometheus.md'
+      - alert: PrometheusApiTargetMissing
+        expr: absent(up{job="school-transport-api"})
+        for: 5m
+        labels: { severity: critical, service: monitoring, owner: platform-on-call }
+        annotations:
+          summary: 'The API scrape target is missing from Prometheus'
+          impact: 'API availability, latency, security, queue, and provider signals cannot be evaluated.'
+          runbook: 'infrastructure/monitoring/runbooks/prometheus.md'
+      - alert: PrometheusRuleEvaluationFailures
+        expr: increase(prometheus_rule_evaluation_failures_total[10m]) > 0
+        for: 5m
+        labels: { severity: critical, service: monitoring, owner: platform-on-call }
+        annotations:
+          summary: 'Prometheus rule evaluation is failing'
+          impact: 'Recording rules or alerts may be stale or absent.'
+          runbook: 'infrastructure/monitoring/runbooks/prometheus.md'
+      - alert: PrometheusConfigurationReloadFailed
+        expr: prometheus_config_last_reload_successful != 1
+        for: 5m
+        labels: { severity: critical, service: monitoring, owner: platform-on-call }
+        annotations:
+          summary: 'Prometheus rejected its latest configuration reload'
+          impact: 'The running scrape and alert configuration differs from the intended configuration.'
+          runbook: 'infrastructure/monitoring/runbooks/prometheus.md'
