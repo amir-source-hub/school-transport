@@ -32,6 +32,7 @@ install -d -o school-transport-backup -g school-transport-backup -m 0700 /var/li
 install -d -o root -g school-transport-metrics -m 0770 /var/lib/node_exporter/textfile_collector
 install -d -o root -g root -m 0755 /etc/school-transport
 install -D -o root -g root -m 0755 "$script_dir/run-backup.sh" /usr/local/libexec/school-transport/run-backup.sh
+install -D -o root -g root -m 0755 "$script_dir/run-local-backup.sh" /usr/local/libexec/school-transport/run-local-backup.sh
 install -D -o root -g root -m 0755 "$script_dir/backup.sh" /usr/local/libexec/school-transport/backup.sh
 install -D -o root -g root -m 0755 "$script_dir/lib.sh" /usr/local/libexec/school-transport/lib.sh
 install -D -o root -g root -m 0644 "$script_dir/README.md" /usr/local/share/doc/school-transport/database-backup.md

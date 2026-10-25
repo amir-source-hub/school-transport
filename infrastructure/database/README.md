@@ -58,6 +58,42 @@ is not recovery evidence.
 
 ## Six-hour production backup service
 
+### Local-only deployment
+
+Use this mode when remote storage and monitoring are not deployed. It requires Docker, Bash,
+`flock`, and standard Linux utilities; neither AWS CLI nor age is required. Dumps are unencrypted
+and protected by directory/file permissions. Keep a separate off-server copy.
+
+From the project directory, install the service and select the local configuration:
+
+```sh
+sudo env CONFIRM_BACKUP_INSTALL=INSTALL_SCHOOL_TRANSPORT_BACKUP \
+  bash infrastructure/database/install-backup.sh --apply
+# First-time configuration only: preserve an existing configured backup.env before replacing it.
+sudo install -o root -g school-transport-backup -m 0640 \
+  infrastructure/database/backup-local.env.example /etc/school-transport/backup.env
+sudo systemctl start school-transport-backup.service
+sudo journalctl -u school-transport-backup.service -n 50 --no-pager
+```
+
+Only after the manual service run succeeds, enable scheduling:
+
+```sh
+sudo systemctl enable --now school-transport-backup.timer
+systemctl list-timers school-transport-backup.timer
+```
+
+Local mode uses the running container `school-transport-production-postgres-1` directly. It reads
+database authentication inside the container, validates the dump archive listing, and writes a
+SHA-256 sidecar. It retains seven days of completed pairs and refuses to start below 1 GiB of free
+space. Local configuration is in `backup-local.env.example`; the existing remote configuration
+continues to use remote mode by default. The remote retention and restore-validator installers
+require remote storage and are not part of this local setup. Archive listing validation does not
+replace a complete isolated restore test. No automatic failure notifications are provided in local
+mode; check the systemd service result and journal regularly.
+
+### Encrypted remote deployment
+
 The host service runs at 02:00, 08:00, 14:00, and 20:00 UTC. `Persistent=true` catches a missed timer
 after host recovery, and `flock` prevents overlap. Backups are online PostgreSQL snapshots; ordinary
 application reads and writes continue, although operators must monitor I/O and latency and must not

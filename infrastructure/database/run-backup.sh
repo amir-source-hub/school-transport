@@ -5,6 +5,12 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
 source "$SCRIPT_DIR/lib.sh"
 
+case "${BACKUP_STORAGE_MODE:-remote}" in
+  local) exec bash "$SCRIPT_DIR/run-local-backup.sh" ;;
+  remote) ;;
+  *) die 'BACKUP_STORAGE_MODE must be local or remote' ;;
+esac
+
 require_command aws
 require_command age
 require_command flock

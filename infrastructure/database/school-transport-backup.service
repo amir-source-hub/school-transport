@@ -1,5 +1,5 @@
 [Unit]
-Description=School Transport encrypted PostgreSQL backup
+Description=School Transport PostgreSQL backup
 Documentation=file:/usr/local/share/doc/school-transport/database-backup.md
 After=network-online.target docker.service
 Requires=docker.service
