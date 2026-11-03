@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
-const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png']);
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png', 'application/pdf']);
 
 export async function PUT(request: Request) {
   const targetValue = request.headers.get('x-upload-target');
@@ -31,25 +31,24 @@ export async function PUT(request: Request) {
   if ((target.protocol !== 'https:' && !targetIsLoopback) || target.origin !== allowedOrigin || !target.searchParams.has('X-Amz-Signature')) {
     return NextResponse.json({ error: 'Upload target is not allowed.' }, { status: 403 });
   }
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_PHOTO_BYTES) {
-    return NextResponse.json({ error: 'Photo is too large.' }, { status: 413 });
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: 'File is too large.' }, { status: 413 });
   }
 
-  const bytes = await request.arrayBuffer();
-  if (bytes.byteLength === 0 || bytes.byteLength > MAX_PHOTO_BYTES) {
-    return NextResponse.json(
-      { error: bytes.byteLength === 0 ? 'Photo is empty.' : 'Photo is too large.' },
-      { status: bytes.byteLength === 0 ? 400 : 413 },
-    );
+  if (!request.body || declaredLength === 0) {
+    return NextResponse.json({ error: 'File is empty.' }, { status: 400 });
   }
 
   try {
+    // Forward the request stream instead of materializing another full copy of the file in
+    // Next.js memory. This matters on memory-constrained driver phones and server containers.
     const upstream = await fetch(target, {
       method: 'PUT',
-      body: bytes,
+      body: request.body,
       headers: { 'Content-Type': contentType },
       cache: 'no-store',
-    });
+      duplex: 'half',
+    } as RequestInit & { duplex: 'half' });
     if (!upstream.ok) {
       await upstream.body?.cancel();
       return NextResponse.json({ error: 'Storage rejected the photo.' }, { status: upstream.status });

@@ -119,6 +119,25 @@ export function PublicFooter() {
           ))}
         </div>
 
+        <div className="flex justify-center pb-8">
+          <a
+            href="https://trustseal.enamad.ir/?id=8409048&Code=1YOxBbSIU93fIgFXLsGGC1V8Q7ztkvqg"
+            target="_blank"
+            rel="noopener noreferrer"
+            referrerPolicy="origin"
+            aria-label="مشاهده نماد اعتماد الکترونیکی"
+          >
+            {/* The seal image is served directly by eNamad so its current status stays visible. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://trustseal.enamad.ir/logo.aspx?id=8409048&Code=1YOxBbSIU93fIgFXLsGGC1V8Q7ztkvqg"
+              alt="نماد اعتماد الکترونیکی"
+              referrerPolicy="origin"
+              className="h-auto max-h-32 w-auto"
+            />
+          </a>
+        </div>
+
         {!prefersReduced && (
           <div className="relative h-px" aria-hidden="true">
             <svg viewBox="0 0 1200 1" className="w-full h-px" preserveAspectRatio="none">

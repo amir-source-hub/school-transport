@@ -86,4 +86,25 @@ describe('student photo same-site upload fallback', () => {
     expect(response.status).toBe(204);
     expect(upstream).toHaveBeenCalledOnce();
   });
+
+  it('streams PDF driver documents through the same-site fallback', async () => {
+    process.env.NEXT_PUBLIC_PRIVATE_UPLOAD_ORIGIN = 'https://storage.example.com';
+    const upstream = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', upstream);
+    const target =
+      'https://storage.example.com/bucket/document.pdf?X-Amz-Signature=signature';
+    const request = new Request('https://site.example.com/api/private-object-upload', {
+      method: 'PUT',
+      body: new Uint8Array([37, 80, 68, 70, 45]),
+      headers: { 'Content-Type': 'application/pdf', 'X-Upload-Target': target },
+    });
+
+    const response = await PUT(request);
+
+    expect(response.status).toBe(204);
+    expect(upstream).toHaveBeenCalledWith(
+      new URL(target),
+      expect.objectContaining({ body: request.body, duplex: 'half' }),
+    );
+  });
 });

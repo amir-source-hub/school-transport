@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MapProviderLinks } from '@/components/common/map-provider-links';
 
 const LocationPicker = dynamic(
   () => import('@/components/common/location-picker').then((m) => ({ default: m.LocationPicker })),
@@ -688,7 +687,7 @@ export function CreateEnrollmentForm({
         !/^\d{10}$/.test(normalizeDigits(form.postalCode)) ||
         !form.locationSelected)
     ) {
-      return 'نشانی کامل، کد پستی ۱۰ رقمی معتبر و موقعیت مکانی را وارد کنید.';
+      return 'منطقه، نشانی کامل، کد پستی ۱۰ رقمی معتبر و موقعیت مکانی را وارد کنید.';
     }
     if (currentStep === 3 && (!form.schoolId || !form.educationLevel || !form.grade)) {
       return 'مدرسه، مقطع و پایه تحصیلی را انتخاب کنید.';
@@ -1405,6 +1404,7 @@ export function CreateEnrollmentForm({
                     className="mt-2"
                     value={form.district}
                     onValueChange={(value) => set('district', value)}
+                    placeholder="انتخاب کنید"
                     options={[
                       { value: 'سایر', label: 'سایر' },
                       ...Array.from({ length: 22 }, (_, index) => ({
@@ -1452,7 +1452,6 @@ export function CreateEnrollmentForm({
                 }
                 readOnly={reusingFamilyProfile}
               />
-              <MapProviderLinks latitude={form.latitude} longitude={form.longitude} />
               <p className="mt-2 text-xs leading-6 text-muted">
                 برای دریافت خودکار موقعیت در گوشی، GPS را روشن و اجازه Location مرورگر را تأیید
                 کنید. همچنین می‌توانید نشانگر را مستقیماً روی نقشه جابه‌جا کنید.

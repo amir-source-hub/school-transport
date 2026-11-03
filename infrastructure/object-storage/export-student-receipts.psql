@@ -1,0 +1,38 @@
+select coalesce(
+  json_agg(
+    json_build_object(
+      'student', to_jsonb(s),
+      'registration', to_jsonb(sr),
+      'registrationPrice', to_jsonb(rp),
+      'paymentPlan', to_jsonb(pp),
+      'scheduleItem', to_jsonb(psi),
+      'submission', to_jsonb(ops),
+      'payerParents', coalesce(
+        (
+          select json_agg(to_jsonb(p) order by p.is_primary_contact desc, p.created_at)
+          from parents p
+          where p.user_id = ops.payer_user_id
+        ),
+        '[]'::json
+      ),
+      'receipt', json_build_object(
+        'objectKey', ops.receipt_object_key,
+        'mimeType', ops.receipt_mime,
+        'size', ops.receipt_size,
+        'width', ops.receipt_width,
+        'height', ops.receipt_height,
+        'checksum', ops.receipt_checksum,
+        'arvanAddress', rtrim(:'arvan_base', '/') || '/' || ops.receipt_object_key
+      )
+    )
+    order by s.first_name, s.last_name, ops.created_at, ops.id
+  ),
+  '[]'::json
+)
+from offline_payment_submissions ops
+left join payment_schedule_items psi on psi.id = ops.payment_schedule_item_id
+left join payment_plans pp on pp.id = ops.payment_plan_id
+left join registration_prices rp on rp.id = pp.registration_price_id
+left join service_registrations sr on sr.id = rp.registration_id
+left join students s on s.id = sr.student_id
+where ops.receipt_object_key is not null;

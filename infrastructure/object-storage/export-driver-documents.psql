@@ -1,0 +1,44 @@
+select coalesce(
+  json_agg(
+    json_build_object(
+      'driver', to_jsonb(d),
+      'vehicles', coalesce(
+        (
+          select json_agg(to_jsonb(v) order by v.created_at)
+          from vehicles v
+          where v.driver_id = d.id
+        ),
+        '[]'::json
+      ),
+      'documents', coalesce(
+        (
+          select json_agg(
+            json_build_object(
+              'documentId', td.id,
+              'documentType', td.document_type,
+              'mimeType', td.mime_type,
+              'reviewStatus', td.review_status,
+              'rejectionReason', td.rejection_reason,
+              'pageNumber', td.page_number,
+              'createdAt', td.created_at,
+              'objectKey', td.object_key,
+              'arvanAddress', rtrim(:'arvan_base', '/') || '/' || td.object_key
+            )
+            order by td.created_at, td.document_type
+          )
+          from transport_documents td
+          where td.driver_id = d.id
+             or td.vehicle_id in (
+               select v.id
+               from vehicles v
+               where v.driver_id = d.id
+             )
+        ),
+        '[]'::json
+      )
+    )
+    order by d.first_name, d.last_name
+  ),
+  '[]'::json
+)
+from drivers d;

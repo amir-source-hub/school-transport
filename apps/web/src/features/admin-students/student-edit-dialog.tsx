@@ -142,17 +142,26 @@ function StudentEditBody({ studentId, schools }: { studentId: string; schools: S
   if (error) return <p className="text-sm text-danger">{error}</p>;
   if (!detail) return <p className="text-sm text-muted">در حال بارگذاری...</p>;
 
-  return <StudentEditForm detail={detail} schools={schools} approvedPhoto={approvedPhoto} />;
+  return (
+    <StudentEditForm
+      detail={detail}
+      schools={schools}
+      approvedPhoto={approvedPhoto}
+      onApprovedPhotoRejected={() => setApprovedPhoto(null)}
+    />
+  );
 }
 
 function StudentEditForm({
   detail: initialDetail,
   schools,
   approvedPhoto,
+  onApprovedPhotoRejected,
 }: {
   detail: AdminStudentDetail;
   schools: SchoolOption[];
   approvedPhoto: { uploadId: string; version: number } | null;
+  onApprovedPhotoRejected: () => void;
 }) {
   const [detail, setDetail] = useState(initialDetail);
   const [latestUpdatedAt, setLatestUpdatedAt] = useState(detail.updatedAt);
@@ -222,6 +231,7 @@ function StudentEditForm({
               studentId={detail.id}
               familyId={detail.userId}
               approvedPhoto={approvedPhoto}
+              onApprovedPhotoRejected={onApprovedPhotoRejected}
             />
           ),
         },

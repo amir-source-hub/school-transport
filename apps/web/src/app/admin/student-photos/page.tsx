@@ -97,7 +97,7 @@ export default async function AdminStudentPhotosPage({
       {totalPages > 1 && (
         <nav aria-label="صفحه‌بندی عکس‌ها" className="flex justify-between">
           {list.page > 1 ? (
-            <ButtonLink variant="secondary" href={pageHref(list.page - 1)}>
+            <ButtonLink native variant="secondary" href={pageHref(list.page - 1)}>
               قبلی
             </ButtonLink>
           ) : (
@@ -107,7 +107,7 @@ export default async function AdminStudentPhotosPage({
             صفحه {list.page} از {totalPages}
           </span>
           {list.page < totalPages ? (
-            <ButtonLink variant="secondary" href={pageHref(list.page + 1)}>
+            <ButtonLink native variant="secondary" href={pageHref(list.page + 1)}>
               بعدی
             </ButtonLink>
           ) : (

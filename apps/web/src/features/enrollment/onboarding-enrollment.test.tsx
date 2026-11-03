@@ -285,7 +285,7 @@ describe('onboarding guided enrollment funnel', () => {
 
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
     expect(
-      await screen.findByText('نشانی کامل، کد پستی ۱۰ رقمی معتبر و موقعیت مکانی را وارد کنید.'),
+      await screen.findByText('منطقه، نشانی کامل، کد پستی ۱۰ رقمی معتبر و موقعیت مکانی را وارد کنید.'),
     ).toBeInTheDocument();
     expect(screen.getByText('نشانی محل سوار شدن')).toBeInTheDocument();
 

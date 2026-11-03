@@ -114,20 +114,21 @@ export function RouteManagement({
         sort: 'studentName',
         direction: 'asc',
       });
-      const pages = await Promise.all(
-        Array.from({ length: Math.max(0, first.pagination.totalPages - 1) }, (_, index) =>
-          getAdminStudents({
-            q,
-            schoolId: filterSchoolId || undefined,
-            archive: 'active',
-            pageSize: 100,
-            page: index + 2,
-            sort: 'studentName',
-            direction: 'asc',
-          }),
-        ),
-      );
-      const rows = [...first.students, ...pages.flatMap((page) => page.students)];
+      const rows = [...first.students];
+      // Fetching every page concurrently intermittently trips API/proxy rate and connection
+      // limits when "all schools" is selected. Keep the requests bounded and ordered.
+      for (let page = 2; page <= first.pagination.totalPages; page += 1) {
+        const result = await getAdminStudents({
+          q,
+          schoolId: filterSchoolId || undefined,
+          archive: 'active',
+          pageSize: 100,
+          page,
+          sort: 'studentName',
+          direction: 'asc',
+        });
+        rows.push(...result.students);
+      }
       setChoices((current) => [...new Map([...current, ...rows].map((s) => [s.id, s])).values()]);
       return rows.map(studentOption);
     },

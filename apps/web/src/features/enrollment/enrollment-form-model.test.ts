@@ -13,6 +13,17 @@ describe('enrollment form model', () => {
     expect(result.homePhone).toBe('22113333');
   });
 
+  it('starts a new enrollment with no district selected', () => {
+    const result = createEnrollmentFormState({
+      schools: [],
+      savedParents: { father: null, mother: null },
+      existingStudents: [],
+      defaults: {},
+    });
+
+    expect(result.district).toBe('');
+  });
+
   it('derives school level and grade from an existing student', () => {
     const result = createEnrollmentFormState({
       schools: [

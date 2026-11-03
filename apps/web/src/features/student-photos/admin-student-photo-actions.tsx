@@ -24,10 +24,12 @@ export function AdminStudentPhotoActions({
   studentId,
   familyId,
   approvedPhoto,
+  onApprovedPhotoRejected,
 }: {
   studentId: string;
   familyId: string;
   approvedPhoto: { uploadId: string; version: number } | null;
+  onApprovedPhotoRejected?: () => void;
 }) {
   const router = useRouter();
   const [reason, setReason] = useState('');
@@ -41,6 +43,7 @@ export function AdminStudentPhotoActions({
     setMessage(undefined);
     try {
       await rejectAdminPhoto(approvedPhoto.uploadId, approvedPhoto.version, reason, detail);
+      onApprovedPhotoRejected?.();
       setMessage('تأیید عکس لغو شد و درخواست بارگذاری مجدد برای خانواده ارسال شد.');
       router.refresh();
     } catch (error) {

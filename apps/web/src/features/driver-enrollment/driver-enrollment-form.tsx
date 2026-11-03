@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert } from '@/components/feedback/alert';
-import { MapProviderLinks } from '@/components/common/map-provider-links';
 import { Field } from '@/components/forms/field';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { Button } from '@/components/ui/button';
@@ -605,6 +604,7 @@ export function DriverEnrollmentForm() {
                   <Select
                     value={field.value}
                     onValueChange={field.onChange}
+                    placeholder="انتخاب کنید"
                     options={[
                       { value: 'سایر', label: 'سایر' },
                       ...Array.from({ length: 22 }, (_, i) => ({
@@ -666,10 +666,6 @@ export function DriverEnrollmentForm() {
                   form.setValue('longitude', longitude, { shouldValidate: true });
                   form.setValue('locationSelected', true, { shouldValidate: true });
                 }}
-              />
-              <MapProviderLinks
-                latitude={form.watch('latitude')}
-                longitude={form.watch('longitude')}
               />
               {e('locationSelected') && (
                 <p className="text-xs text-danger">{e('locationSelected')}</p>
