@@ -1453,6 +1453,24 @@ export class PaymentsService {
       .select()
       .from(parents)
       .where(inArray(parents.userId, [...new Set(plans.map(({ userId }) => userId))]));
+    const planContracts = await this.db.db.select({ paymentPlanId: contracts.paymentPlanId, contractStatus: contracts.contractStatus })
+      .from(contracts).where(inArray(contracts.paymentPlanId, planIds));
+    const assignments = await this.db.db
+      .select({
+        studentId: transportServiceRunStudents.studentId,
+        routeId: transportServiceRuns.id,
+        routeName: transportServiceRuns.title,
+        driverId: drivers.id,
+        driverName: sql<string>`${drivers.firstName} || ' ' || ${drivers.lastName}`,
+      })
+      .from(transportServiceRunStudents)
+      .innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId))
+      .innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
+      .where(and(
+        inArray(transportServiceRunStudents.studentId, plans.map(({ studentId }) => studentId)),
+        eq(transportServiceRunStudents.isActive, true),
+        eq(transportServiceRuns.isActive, true),
+      ));
 
     return plans
       .map(({ plan, studentId, studentFirstName, studentLastName, userId }) => {
@@ -1468,8 +1486,6 @@ export class PaymentsService {
                 submission.paymentScheduleItemId === item.id && submission.status !== 'DRAFT',
             )
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    const planContracts = await this.db.db.select({ paymentPlanId: contracts.paymentPlanId, contractStatus: contracts.contractStatus })
-      .from(contracts).where(inArray(contracts.paymentPlanId, planIds));
           const latestSubmission = itemSubmissions[0];
           const itemTransactions = transactions
             .filter((transaction) => transaction.paymentScheduleItemId === item.id)
@@ -1493,22 +1509,6 @@ export class PaymentsService {
                   latestSubmission.status === 'APPROVED'
                     ? 'تأییدشده'
                     : latestSubmission.status === 'REJECTED'
-    const assignments = await this.db.db
-      .select({
-        studentId: transportServiceRunStudents.studentId,
-        routeId: transportServiceRuns.id,
-        routeName: transportServiceRuns.title,
-        driverId: drivers.id,
-        driverName: sql<string>`${drivers.firstName} || ' ' || ${drivers.lastName}`,
-      })
-      .from(transportServiceRunStudents)
-      .innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId))
-      .innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
-      .where(and(
-        inArray(transportServiceRunStudents.studentId, plans.map(({ studentId }) => studentId)),
-        eq(transportServiceRunStudents.isActive, true),
-        eq(transportServiceRuns.isActive, true),
-      ));
                       ? 'ردشده'
                       : 'در انتظار بررسی',
               }
@@ -1552,8 +1552,11 @@ export class PaymentsService {
           planType: plan.planType,
           planStatus: plan.planStatus,
           planConfigured: planItems.some((item) => item.itemType === 'INSTALLMENT'),
+          canEditPrepayment: prepayment.itemStatus === 'PENDING' && plan.planStatus === 'PENDING' &&
+            planContracts.some((contract) => contract.paymentPlanId === plan.id && contract.contractStatus === 'GENERATED'),
           studentName: `${studentFirstName} ${studentLastName}`,
           familyName: parent ? `${parent.firstName} ${parent.lastName}` : '—',
+          routes: assignments.filter((assignment) => assignment.studentId === studentId).map(({ studentId: _studentId, ...assignment }) => assignment),
           totalAmount: plan.totalAmount,
           prepayment: mapItem(prepayment),
           installments: planItems.filter((item) => item.itemType === 'INSTALLMENT').map(mapItem),
@@ -1590,11 +1593,8 @@ export class PaymentsService {
         messages.push('تاریخ این قسط معتبر نیست.');
       } else {
         const dueDay = dueDate.toISOString().slice(0, 10);
-          canEditPrepayment: prepayment.itemStatus === 'PENDING' && plan.planStatus === 'PENDING' &&
-            planContracts.some((contract) => contract.paymentPlanId === plan.id && contract.contractStatus === 'GENERATED'),
         if (previousDay !== null && dueDay <= previousDay) {
           messages.push('تاریخ این قسط باید پس از تاریخ قسط قبلی باشد و تکرار نشود.');
-          routes: assignments.filter((assignment) => assignment.studentId === studentId).map(({ studentId: _studentId, ...assignment }) => assignment),
         }
         if (dueDay < startDay) {
           messages.push('تاریخ سررسید نمی‌تواند پیش از تاریخ شروع برنامه پرداخت باشد.');
@@ -1624,6 +1624,9 @@ export class PaymentsService {
       }
       if (plan.planType === 'FULL' && items.length > 1) {
         throw new ValidationError('Full payment requires exactly one remaining payment.');
+      }
+      if (currentPlan.planType === 'FULL' && currentPlan.totalAmount === currentPlan.prepaymentAmount && items.length > 0) {
+        throw new ConflictError('PLAN_ALREADY_PAID_IN_FULL', 'This full-payment plan has no remaining balance.');
       }
       const previous = existing.filter((item) => item.itemType === 'INSTALLMENT');
       const previousById = new Map(previous.map((item) => [item.id, item]));
@@ -1663,9 +1666,6 @@ export class PaymentsService {
           index + 1 !== old.sequenceNumber ||
           new Date(candidate.dueDate).getTime() !== old.dueDate?.getTime()
         ) {
-      if (currentPlan.planType === 'FULL' && currentPlan.totalAmount === currentPlan.prepaymentAmount && items.length > 0) {
-        throw new ConflictError('PLAN_ALREADY_PAID_IN_FULL', 'This full-payment plan has no remaining balance.');
-      }
           throw new ConflictError(
             'INSTALLMENT_HAS_PAYMENT_HISTORY',
             'An installment with payment or receipt history cannot be changed or removed.',

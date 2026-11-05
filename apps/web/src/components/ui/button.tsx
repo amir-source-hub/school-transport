@@ -58,15 +58,21 @@ export function ButtonLink({
   variant = 'primary',
   size = 'md',
   className = '',
+  native = false,
 }: {
   href: string;
   children: ReactNode;
   variant?: Variant;
   size?: Size;
   className?: string;
+  native?: boolean;
 }) {
+  const classes = cn(base, variantStyles[variant], sizeStyles[size], className);
+  if (native) {
+    return <a href={href} className={classes}>{children}</a>;
+  }
   return (
-    <Link href={href} className={cn(base, variantStyles[variant], sizeStyles[size], className)}>
+    <Link href={href} className={classes}>
       {children}
     </Link>
   );

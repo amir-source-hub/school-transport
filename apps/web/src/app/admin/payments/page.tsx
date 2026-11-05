@@ -192,6 +192,7 @@ export default async function AdminPaymentsPage({
         >
           {receiptPage > 1 ? (
             <ButtonLink
+              native
               variant="secondary"
               href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), ...(params.routeId ? { routeId: params.routeId } : {}), ...(params.driverId ? { driverId: params.driverId } : {}), receiptPage: String(receiptPage - 1) })}`}
             >
@@ -203,6 +204,7 @@ export default async function AdminPaymentsPage({
           <span className="text-xs text-muted">صفحه {receiptPage.toLocaleString('fa-IR')}</span>
           {receiptPage * submissions.pageSize < submissions.total ? (
             <ButtonLink
+              native
               variant="secondary"
               href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), ...(params.routeId ? { routeId: params.routeId } : {}), ...(params.driverId ? { driverId: params.driverId } : {}), receiptPage: String(receiptPage + 1) })}`}
             >
