@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { getManagerInfo, getManagerStudents } from '@/features/manager/manager-api';
 import { ManagerStudentFilters } from '@/features/manager/student-filters';
+import { Pagination } from '@/components/navigation/pagination';
 export const metadata = { title: 'دانش‌آموزان' };
 export default async function Page({
   searchParams,
@@ -19,6 +20,14 @@ export default async function Page({
     getManagerStudents(p.toString()),
     getManagerInfo(),
   ]);
+  const page = Math.max(1, Number.parseInt(p.get('page') ?? '1', 10) || 1);
+  const pageSize = Math.max(1, Number.parseInt(p.get('pageSize') ?? '20', 10) || 20);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageHref = (nextPage: number) => {
+    const query = new URLSearchParams(p);
+    query.set('page', String(nextPage));
+    return `/manager/students?${query}`;
+  };
   const school =
     settings.schools.find((x) => x.id === settings.primarySchoolId) ?? settings.schools[0];
   return (
@@ -119,6 +128,7 @@ export default async function Page({
           </div>
         </>
       )}
+      <Pagination currentPage={page} totalPages={totalPages} getHref={pageHref} />
     </div>
   );
 }

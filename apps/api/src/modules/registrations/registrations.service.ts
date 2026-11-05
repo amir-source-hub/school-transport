@@ -7,6 +7,7 @@ import {
   registrationPrices,
   paymentPlans,
   paymentScheduleItems,
+  paymentSettings,
   paymentTransactions,
   contracts,
   emergencyContacts,
@@ -473,7 +474,8 @@ export class RegistrationsService {
           };
         }
         const priceId = generateId();
-        const prepaymentAmount = OFFLINE_PREPAYMENT_AMOUNT_IRR;
+        const [settings] = await txn.select({ amount: paymentSettings.defaultPrepaymentAmount }).from(paymentSettings).where(eq(paymentSettings.id, 1)).limit(1);
+        const prepaymentAmount = settings?.amount ?? OFFLINE_PREPAYMENT_AMOUNT_IRR;
         await txn.insert(registrationPrices).values({
           id: priceId,
           registrationId,
@@ -514,6 +516,7 @@ export class RegistrationsService {
           generatedAt,
           studentId,
           '1405-1406',
+          prepaymentAmount,
         );
         await txn.insert(contracts).values({
           id: contractId,

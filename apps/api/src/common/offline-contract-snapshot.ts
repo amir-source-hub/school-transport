@@ -1,4 +1,5 @@
 import { OFFLINE_PREPAYMENT_AMOUNT_IRR, renderOfflineContract } from './offline-contract-template';
+import { persianNumberWords } from './persian-number-words';
 
 type Person = { firstName: string; lastName: string; nationalId: string; phoneNumber?: string };
 export type OfflineContractEnrollmentData = {
@@ -53,6 +54,7 @@ export function buildOfflineContractSnapshot(
   generatedAt: Date,
   studentId?: string,
   academicYear = '1405-1406',
+  prepaymentAmount = OFFLINE_PREPAYMENT_AMOUNT_IRR,
 ) {
   const guardianRole =
     data.guardian.relationshipType === 'OTHER'
@@ -67,9 +69,9 @@ export function buildOfflineContractSnapshot(
     grade: data.school.grade,
     fieldOfStudy: data.school.fieldOfStudy || 'ندارد',
     academicYear: academicYear.replace('-', '–'),
-    serviceAmountRial: OFFLINE_PREPAYMENT_AMOUNT_IRR.toLocaleString('fa-IR'),
-    serviceAmountToman: (OFFLINE_PREPAYMENT_AMOUNT_IRR / 10).toLocaleString('fa-IR'),
-    serviceAmountTomanWords: 'چهار میلیون و نهصد و نود و هفت هزار و هشتصد',
+    serviceAmountRial: prepaymentAmount.toLocaleString('fa-IR'),
+    serviceAmountToman: (prepaymentAmount / 10).toLocaleString('fa-IR'),
+    serviceAmountTomanWords: persianNumberWords(prepaymentAmount / 10),
     paymentState: 'در انتظار پرداخت پیش‌ثبت‌نام',
     homeAddress: `${data.address.province}، ${data.address.city}، ${data.address.streetAddress}`,
     postalCode: data.address.postalCode,

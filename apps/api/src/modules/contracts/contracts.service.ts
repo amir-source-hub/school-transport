@@ -22,7 +22,6 @@ import { InAppNotificationService } from '../../infrastructure/notifications/in-
 import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import {
   OFFLINE_CONTRACT_TEMPLATE_HASH,
-  OFFLINE_PREPAYMENT_AMOUNT_IRR,
 } from '../../common/offline-contract-template';
 import {
   buildOfflineContractSnapshot,
@@ -250,9 +249,6 @@ export class ContractsService {
       const newContractId = generateId();
       const contractNumber = generateContractNumber();
 
-      if (price[0].prepaymentAmount !== OFFLINE_PREPAYMENT_AMOUNT_IRR) {
-        throw new ValidationError('مبلغ پیش‌پرداخت با نسخه مصوب قرارداد همخوانی ندارد.');
-      }
       const [contractSource] = await txn
         .select({
           studentId: students.id,
@@ -361,6 +357,7 @@ export class ContractsService {
         generatedAt,
         contractSource.studentId,
         reg[0].academicYear,
+        price[0].prepaymentAmount,
       );
 
       await txn.insert(contracts).values({

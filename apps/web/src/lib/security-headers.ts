@@ -42,6 +42,7 @@ const createContentSecurityPolicy = ({
     'blob:',
     'https://tile.openstreetmap.org',
     'https://*.tile.openstreetmap.org',
+    'https://trustseal.enamad.ir',
     privateStorageOrigin,
     publicAssetOrigin,
   ];

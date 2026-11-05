@@ -7,9 +7,13 @@ import {
   getAdminOfflineDestination,
   getAdminOfflineSubmissions,
   getAdminPayments,
+  getPrepaymentSettings,
   getPaymentTone,
 } from '@/features/admin-payments/admin-payments-api';
 import { OfflineDestinationForm } from '@/features/admin-payments/offline-destination-form';
+import { PrepaymentSettingsForm } from '@/features/admin-payments/prepayment-settings-form';
+import { StudentPrepaymentDialog } from '@/features/admin-payments/student-prepayment-dialog';
+import { ImageArchiveButton } from '@/features/admin-payments/image-archive-button';
 import {
   ConfigureInstallmentsDialog,
   RecordPaymentOnBehalfDialog,
@@ -28,6 +32,8 @@ export default async function AdminPaymentsPage({
     itemType?: string;
     receiptPage?: string;
     q?: string;
+    routeId?: string;
+    driverId?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -45,18 +51,19 @@ export default async function AdminPaymentsPage({
     status: receiptStatus,
     itemType,
   };
-  const [{ payments }, destination, submissions] = await Promise.all([
+  const [{ payments }, destination, submissions, prepaymentSettings] = await Promise.all([
     getAdminPayments(),
     getAdminOfflineDestination(),
     getAdminOfflineSubmissions({ ...receiptFilters, q, page: receiptPage, pageSize: 20 }),
+    getPrepaymentSettings(),
   ]);
-  const visiblePayments = q
-    ? payments.filter((payment) =>
-        `${payment.studentName} ${payment.familyName}`
-          .toLocaleLowerCase('fa-IR')
-          .includes(q.toLocaleLowerCase('fa-IR')),
-      )
-    : payments;
+  const routes = [...new Map(payments.flatMap((payment) => payment.routes).map((route) => [route.routeId, route])).values()];
+  const drivers = [...new Map(payments.flatMap((payment) => payment.routes).map((route) => [route.driverId, route])).values()];
+  const visiblePayments = payments.filter((payment) =>
+    (!q || `${payment.studentName} ${payment.familyName}`.toLocaleLowerCase('fa-IR').includes(q.toLocaleLowerCase('fa-IR')))
+    && (!params.routeId || payment.routes.some((route) => route.routeId === params.routeId))
+    && (!params.driverId || payment.routes.some((route) => route.driverId === params.driverId))
+  );
   const allItems = visiblePayments.flatMap((payment) => [
     payment.prepayment,
     ...payment.installments,
@@ -101,7 +108,11 @@ export default async function AdminPaymentsPage({
           هر تغییر یک نسخه جدید ایجاد می‌کند و رسیدهای قبلی به نسخه مقصد زمان ارسال وابسته می‌مانند.
         </p>
         <OfflineDestinationForm current={destination} />
+        <div className="mt-6 border-t border-border pt-5">
+          <PrepaymentSettingsForm current={prepaymentSettings} />
+        </div>
       </Card>
+      <ImageArchiveButton kind="receipts" />
       <section className="space-y-4" aria-labelledby="receipt-review-heading">
         <div>
           <h2 id="receipt-review-heading" className="text-xl font-black">
@@ -116,6 +127,8 @@ export default async function AdminPaymentsPage({
             className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
             aria-label="پالایش رسیدهای پرداخت"
           >
+            {params.routeId && <input type="hidden" name="routeId" value={params.routeId} />}
+            {params.driverId && <input type="hidden" name="driverId" value={params.driverId} />}
             <label className="text-sm font-bold">
               جست‌وجو
               <input
@@ -180,7 +193,7 @@ export default async function AdminPaymentsPage({
           {receiptPage > 1 ? (
             <ButtonLink
               variant="secondary"
-              href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), receiptPage: String(receiptPage - 1) })}`}
+              href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), ...(params.routeId ? { routeId: params.routeId } : {}), ...(params.driverId ? { driverId: params.driverId } : {}), receiptPage: String(receiptPage - 1) })}`}
             >
               قبلی
             </ButtonLink>
@@ -191,7 +204,7 @@ export default async function AdminPaymentsPage({
           {receiptPage * submissions.pageSize < submissions.total ? (
             <ButtonLink
               variant="secondary"
-              href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), receiptPage: String(receiptPage + 1) })}`}
+              href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), ...(params.routeId ? { routeId: params.routeId } : {}), ...(params.driverId ? { driverId: params.driverId } : {}), receiptPage: String(receiptPage + 1) })}`}
             >
               بعدی
             </ButtonLink>
@@ -212,8 +225,29 @@ export default async function AdminPaymentsPage({
         </div>
         <div className="grid gap-4">
           {visiblePayments.map((payment) => {
+        <Card>
+          <form className="grid gap-3 sm:grid-cols-3" aria-label="پالایش برنامه‌های پرداخت">
+            {q && <input type="hidden" name="q" value={q} />}
+            {receiptFilters.status && <input type="hidden" name="receiptStatus" value={receiptFilters.status} />}
+            {receiptFilters.itemType && <input type="hidden" name="itemType" value={receiptFilters.itemType} />}
+            <label className="text-sm font-bold">مسیر
+              <select name="routeId" defaultValue={params.routeId ?? ''} className="mt-2 min-h-11 w-full rounded-xl border border-border bg-white px-3">
+                <option value="">همه مسیرها</option>
+                {routes.map((route) => <option key={route.routeId} value={route.routeId}>{route.routeName}</option>)}
+              </select>
+            </label>
+            <label className="text-sm font-bold">راننده
+              <select name="driverId" defaultValue={params.driverId ?? ''} className="mt-2 min-h-11 w-full rounded-xl border border-border bg-white px-3">
+                <option value="">همه رانندگان</option>
+                {drivers.map((driver) => <option key={driver.driverId} value={driver.driverId}>{driver.driverName}</option>)}
+              </select>
+            </label>
+            <button type="submit" className="min-h-11 self-end rounded-xl bg-primary px-4 text-sm font-bold text-white">اعمال فیلتر</button>
+          </form>
+        </Card>
             const prepaymentStatus = payment.prepayment.transaction?.status ?? 'پرداخت نشده';
-            const canConfigure = payment.prepayment.paid;
+            const canConfigure = payment.prepayment.paid &&
+              (payment.planType !== 'FULL' || payment.totalAmount > payment.prepayment.amount);
             return (
               <Card key={payment.planId}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -297,6 +331,11 @@ export default async function AdminPaymentsPage({
                     )}
                   {canConfigure && (
                     <div className="mt-4 border-t border-border pt-4">
+                  {payment.canEditPrepayment && (
+                    <div className="mt-4 border-t border-border pt-4">
+                      <StudentPrepaymentDialog planId={payment.planId} currentAmount={payment.prepayment.amount} />
+                    </div>
+                  )}
                       <ConfigureInstallmentsDialog
                         key={payment.installments.map((item) => item.id).join(',')}
                         planId={payment.planId}

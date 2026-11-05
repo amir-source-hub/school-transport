@@ -20,7 +20,7 @@ describe('createSecurityHeaders', () => {
       "connect-src 'self' https://api.example.test https://s3.example.test blob:",
     );
     expect(headerMap.get('Content-Security-Policy')).toContain(
-      "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://s3.example.test https://assets.example.test",
+      "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://trustseal.enamad.ir https://s3.example.test https://assets.example.test",
     );
     expect(headerMap.get('Content-Security-Policy')).toContain(
       "media-src 'self' blob: https://assets.example.test",

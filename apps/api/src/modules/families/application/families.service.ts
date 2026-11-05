@@ -640,14 +640,25 @@ export class FamiliesService {
             lastName: data.lastName?.trim() ?? existing.lastName,
             nationalId,
             phoneNumber,
+            phoneVerifiedAt:
+              phoneNumber === existing.phoneNumber ? existing.phoneVerifiedAt : null,
             isPrimaryContact: data.isPrimaryContact ?? existing.isPrimaryContact,
             updatedAt: new Date(),
           })
           .where(eq(parents.id, parentId));
         if (data.isPrimaryContact || existing.isPrimaryContact) {
+          const [account] = await txn
+            .select({ username: users.username, phoneNumber: users.phoneNumber })
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
           await txn
             .update(users)
-            .set({ phoneNumber, updatedAt: new Date() })
+            .set({
+              phoneNumber,
+              ...(account?.username === account?.phoneNumber ? { username: phoneNumber } : {}),
+              updatedAt: new Date(),
+            })
             .where(eq(users.id, userId));
         }
       }),

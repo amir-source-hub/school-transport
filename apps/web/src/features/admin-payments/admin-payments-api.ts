@@ -45,8 +45,10 @@ export const paymentSchema = z.object({
   planType: z.string(),
   planStatus: z.string(),
   planConfigured: z.boolean(),
+  canEditPrepayment: z.boolean().default(false),
   studentName: z.string(),
   familyName: z.string(),
+  routes: z.array(z.object({ routeId: z.string(), routeName: z.string(), driverId: z.string(), driverName: z.string() })).default([]),
   totalAmount: z.number(),
   prepayment: scheduleItemSchema,
   installments: z.array(scheduleItemSchema),
@@ -68,6 +70,29 @@ export const offlineDestinationSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 export type AdminOfflineDestination = z.infer<typeof offlineDestinationSchema>;
+
+const prepaymentSettingsSchema = z.object({
+  defaultPrepaymentAmount: z.number(),
+  version: z.number(),
+  updatedAt: z.string().or(z.date()),
+});
+export type PrepaymentSettings = z.infer<typeof prepaymentSettingsSchema>;
+
+export async function getPrepaymentSettings() {
+  const response = await apiRequest<unknown>('/admin/payments/prepayment-settings', { cache: 'no-store' });
+  return prepaymentSettingsSchema.parse(response.data);
+}
+
+export async function updateDefaultPrepayment(amount: number, expectedVersion: number) {
+  const response = await apiRequest<unknown>('/admin/payments/prepayment-settings', {
+    method: 'POST', body: { amount, expectedVersion },
+  });
+  return prepaymentSettingsSchema.parse(response.data);
+}
+
+export async function updateStudentPrepayment(planId: string, amount: number) {
+  await apiRequest(`/admin/payments/plans/${planId}/prepayment`, { method: 'POST', body: { amount } });
+}
 
 const offlineSubmissionSchema = z.object({
   id: z.string(),

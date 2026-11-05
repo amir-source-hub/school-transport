@@ -2,7 +2,7 @@ import { MapPinned } from 'lucide-react';
 
 export function MapProviderLinks({ latitude, longitude }: { latitude: number; longitude: number }) {
   const links = [
-    { label: 'نشان', href: `https://neshan.org/maps/@${latitude},${longitude},16z,0p` },
+    { label: 'نشان', href: `https://neshan.org/maps/share/${latitude},${longitude}` },
     {
       label: 'بلد',
       href: `https://balad.ir/location?latitude=${latitude}&longitude=${longitude}&zoom=16`,

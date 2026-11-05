@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Get,
   Param,
@@ -7,6 +8,7 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { OnboardingRole, Roles } from '../../common/decorators';
@@ -18,6 +20,8 @@ import { RolesGuard } from '../access-control/roles.guard';
 import {
   ConfigureInstallmentsDto,
   ConfigureOfflineDestinationDto,
+  ConfigureDefaultPrepaymentDto,
+  ConfigureStudentPrepaymentDto,
   AuthorizeReceiptUploadDto,
   IdempotencyKey,
   OfflinePaymentDto,
@@ -27,6 +31,7 @@ import {
   VerifyOnlinePaymentDto,
 } from './payment-request.dto';
 import { PaymentsService } from './payments.service';
+import type { FastifyReply } from 'fastify';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('PARENT')
@@ -196,6 +201,38 @@ export class OnboardingPaymentsController {
 @Controller('admin/payments')
 export class AdminPaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
+
+  @Get('images/:kind.zip')
+  async exportImages(@Param('kind') kind: string, @Res() reply: FastifyReply) {
+    if (kind !== 'photos' && kind !== 'receipts') throw new BadRequestException('Unknown image export type.');
+    const archive = await this.paymentsService.exportStudentImages(kind);
+    reply.header('Content-Type', 'application/zip')
+      .header('Content-Disposition', `attachment; filename="school-transport-${kind}.zip"`)
+      .header('Cache-Control', 'private, no-store')
+      .send(archive);
+  }
+
+  @Get('prepayment-settings')
+  async prepaymentSettings() {
+    return successResponse(await this.paymentsService.getPrepaymentSettings());
+  }
+
+  @Post('prepayment-settings')
+  async configurePrepaymentSettings(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ConfigureDefaultPrepaymentDto,
+  ) {
+    return successResponse(await this.paymentsService.configureDefaultPrepayment(req.user.id, dto.amount, dto.expectedVersion));
+  }
+
+  @Post('plans/:planId/prepayment')
+  async configureStudentPrepayment(
+    @Req() req: AuthenticatedRequest,
+    @Param('planId', new ParseUUIDPipe()) planId: string,
+    @Body() dto: ConfigureStudentPrepaymentDto,
+  ) {
+    return successResponse(await this.paymentsService.configureStudentPrepayment(req.user.id, planId, dto.amount));
+  }
 
   @Get()
   async getAll() {

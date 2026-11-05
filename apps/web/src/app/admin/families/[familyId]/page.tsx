@@ -64,7 +64,7 @@ export default async function FamilyDetailPage({
         </p>
         <AdminFamilyEnrollmentForm family={family} schools={schools} />
       </Card>
-      <Card>
+      <Card id="parents">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-black">والدین</h2>
           {family.parents.length < 2 && <ParentEditor familyId={family.id} />}

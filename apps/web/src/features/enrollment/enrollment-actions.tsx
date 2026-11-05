@@ -27,6 +27,7 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { requestCurrentLocation } from '@/lib/current-location';
 import { getOnboardingState } from '@/features/auth/onboarding-session';
 import { isValidIranianNationalId, nationalIdError, normalizeDigits } from './national-id';
 import {
@@ -496,25 +497,15 @@ export function CreateEnrollmentForm({
 
   function useCurrentLocation() {
     setLocationError(undefined);
-    if (!navigator.geolocation) {
-      setLocationError('مرورگر شما امکان دریافت موقعیت مکانی را ندارد.');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) =>
+    requestCurrentLocation().then(
+      (coords) =>
         setForm((current) => ({
           ...current,
           latitude: coords.latitude,
           longitude: coords.longitude,
           locationSelected: true,
         })),
-      (positionError) =>
-        setLocationError(
-          positionError.code === positionError.PERMISSION_DENIED
-            ? 'GPS گوشی را روشن کنید و در تنظیمات مرورگر، دسترسی Location این سایت را روی Allow قرار دهید؛ سپس دوباره تلاش کنید.'
-            : 'موقعیت دریافت نشد. GPS را روشن کنید، در فضای دارای آنتن بمانید و دوباره تلاش کنید.',
-        ),
-      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 30_000 },
+      (error) => setLocationError(error instanceof Error ? error.message : 'موقعیت دریافت نشد.'),
     );
   }
 

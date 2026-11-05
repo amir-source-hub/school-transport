@@ -9,10 +9,16 @@ import {
   students,
   users,
   parents,
+  transportServiceRuns,
+  transportServiceRunStudents,
+  drivers,
+  paymentSettings,
+  contracts,
+  studentPhotoUploads,
   offlinePaymentDestinations,
   offlinePaymentSubmissions,
 } from '../../database/schemas';
-import { eq, and, count, ilike, inArray, desc, max, ne, or, sql } from 'drizzle-orm';
+import { eq, and, count, ilike, inArray, desc, max, ne, or, sql, isNotNull } from 'drizzle-orm';
 import { AppError, NotFoundError, ConflictError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
@@ -22,6 +28,8 @@ import { AUDIT_PORT, AuditPort } from '../../common/audit.port';
 import { ConfigService } from '../../config/config.service';
 import { getObjectAfterWrite, S3_CLIENT, S3Storage } from '../../infrastructure/s3/s3-storage.port';
 import { processReceiptImage } from './receipt-image-processor';
+import { buildOfflineContractSnapshot, type OfflineContractEnrollmentData } from '../../common/offline-contract-snapshot';
+import { zipStream } from '../../common/zip-stream';
 
 const onlinePaymentResult = {
   id: paymentTransactions.id,
@@ -50,6 +58,130 @@ export class PaymentsService {
     private readonly config?: ConfigService,
     @Optional() @Inject(S3_CLIENT) private readonly storage?: S3Storage,
   ) {}
+
+  async getPrepaymentSettings() {
+    const [settings] = await this.db.db.select().from(paymentSettings).where(eq(paymentSettings.id, 1)).limit(1);
+    if (!settings) throw new AppError('PAYMENT_SETTINGS_UNAVAILABLE', 'Payment settings are not initialized.', 503);
+    return settings;
+  }
+
+  async exportStudentImages(kind: 'photos' | 'receipts') {
+    if (!this.storage) throw new AppError('STORAGE_UNAVAILABLE', 'Object storage is not configured.', 503);
+    const safe = (value: string) => value.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').trim();
+    if (kind === 'photos') {
+      const rows = await this.db.db.select({
+        studentId: students.id, firstName: students.firstName, lastName: students.lastName,
+        uploadId: studentPhotoUploads.id, rawKey: studentPhotoUploads.rawKey,
+        canonicalKey: studentPhotoUploads.canonicalKey, actualMime: studentPhotoUploads.actualMime,
+      }).from(studentPhotoUploads).innerJoin(students, eq(students.id, studentPhotoUploads.studentId))
+        .where(isNotNull(studentPhotoUploads.actualSize));
+      const entries = rows.flatMap((row) => {
+        const key = row.canonicalKey ?? row.rawKey;
+        if (!key) return [];
+        const folder = `${safe(`${row.firstName} ${row.lastName}`)}-${row.studentId}`;
+        const extension = row.canonicalKey || row.actualMime === 'image/jpeg' ? 'jpg' : row.actualMime === 'image/png' ? 'png' : 'bin';
+        return [{ name: `${folder}/student-photo-${row.uploadId}.${extension}`,
+          read: () => this.storage!.getObject(key, 10 * 1024 * 1024) }];
+      });
+      return zipStream(entries);
+    }
+    const rows = await this.db.db.select({
+      studentId: students.id, firstName: students.firstName, lastName: students.lastName,
+      submissionId: offlinePaymentSubmissions.id, key: offlinePaymentSubmissions.receiptObjectKey,
+      mime: offlinePaymentSubmissions.receiptMime,
+    }).from(offlinePaymentSubmissions)
+      .innerJoin(paymentPlans, eq(paymentPlans.id, offlinePaymentSubmissions.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, registrationPrices.registrationId))
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId));
+    const entries = rows.flatMap((row) => row.key ? [{
+      name: `${safe(`${row.firstName} ${row.lastName}`)}-${row.studentId}/payment-receipt-${row.submissionId}.${row.mime === 'image/jpeg' ? 'jpg' : row.mime === 'image/png' ? 'png' : 'bin'}`,
+      read: () => this.storage!.getObject(row.key!, 10 * 1024 * 1024),
+    }] : []);
+    return zipStream(entries);
+  }
+
+  async configureDefaultPrepayment(adminId: string, amount: number, expectedVersion: number) {
+    if (!Number.isInteger(amount) || amount <= 0 || amount > 2_147_483_640 || amount % 10 !== 0) {
+      throw new ValidationError('Prepayment must be a positive whole toman amount.');
+    }
+    return this.db.db.transaction(async (txn) => {
+      const [current] = await txn.select().from(paymentSettings).where(eq(paymentSettings.id, 1)).for('update');
+      if (!current || current.version !== expectedVersion) {
+        throw new ConflictError('STALE_PAYMENT_SETTINGS', 'Payment settings changed. Refresh the page.');
+      }
+      const [updated] = await txn.update(paymentSettings).set({
+        defaultPrepaymentAmount: amount,
+        version: current.version + 1,
+        updatedByAdminId: adminId,
+        updatedAt: new Date(),
+      }).where(eq(paymentSettings.id, 1)).returning();
+      await this.audit?.recordInTransaction(txn, {
+        actorType: 'ADMIN', actorId: adminId, action: 'DEFAULT_PREPAYMENT_UPDATED',
+        entityType: 'PAYMENT_SETTINGS', entityId: String(current.id),
+        previousValues: { amount: current.defaultPrepaymentAmount },
+        newValues: { amount },
+      });
+      return updated;
+    });
+  }
+
+  async configureStudentPrepayment(adminId: string, planId: string, amount: number) {
+    if (!Number.isInteger(amount) || amount <= 0 || amount > 2_147_483_640 || amount % 10 !== 0) {
+      throw new ValidationError('Prepayment must be a positive whole toman amount.');
+    }
+    return this.db.db.transaction(async (txn) => {
+      const [plan] = await txn.select().from(paymentPlans).where(eq(paymentPlans.id, planId)).for('update');
+      if (!plan) throw new NotFoundError('Payment plan', planId);
+      const [price] = await txn.select().from(registrationPrices).where(eq(registrationPrices.id, plan.registrationPriceId)).for('update');
+      const [registration] = price
+        ? await txn.select({ academicYear: serviceRegistrations.academicYear }).from(serviceRegistrations).where(eq(serviceRegistrations.id, price.registrationId)).limit(1)
+        : [];
+      const [contract] = await txn.select().from(contracts).where(eq(contracts.paymentPlanId, planId)).for('update').limit(1);
+      const items = await txn.select().from(paymentScheduleItems).where(eq(paymentScheduleItems.paymentPlanId, planId)).for('update');
+      const prepayment = items.find((item) => item.itemType === 'PREPAYMENT');
+      if (!price || !registration || !contract || contract.contractStatus !== 'GENERATED' || !contract.contractDataSnapshot ||
+          !prepayment || prepayment.itemStatus !== 'PENDING' || items.some((item) => item.itemType === 'INSTALLMENT') ||
+          plan.planStatus !== 'PENDING' || price.priceStatus !== 'ACCEPTED') {
+        throw new ConflictError('PREPAYMENT_LOCKED', 'The contract or payment has already progressed.');
+      }
+      const [paymentHistory, receiptHistory] = await Promise.all([
+        txn.select({ id: paymentTransactions.id }).from(paymentTransactions).where(eq(paymentTransactions.paymentScheduleItemId, prepayment.id)).limit(1),
+        txn.select({ id: offlinePaymentSubmissions.id }).from(offlinePaymentSubmissions).where(eq(offlinePaymentSubmissions.paymentScheduleItemId, prepayment.id)).limit(1),
+      ]);
+      if (paymentHistory.length || receiptHistory.length) {
+        throw new ConflictError('PREPAYMENT_HAS_HISTORY', 'A payment attempt or receipt already exists.');
+      }
+      const snapshot = JSON.parse(contract.contractDataSnapshot) as { enrollment?: OfflineContractEnrollmentData & { guardian: { phoneNumber: string }; school: OfflineContractEnrollmentData['school'] & { name?: string } } };
+      if (!snapshot.enrollment?.school?.name) throw new ValidationError('Contract enrollment snapshot is incomplete.');
+      const newPriceId = generateId();
+      const now = new Date();
+      await txn.update(registrationPrices).set({ priceStatus: 'REPLACED', replacedByPriceId: newPriceId, updatedAt: now }).where(eq(registrationPrices.id, price.id));
+      await txn.insert(registrationPrices).values({
+        id: newPriceId, registrationId: price.registrationId, versionNumber: price.versionNumber + 1,
+        totalAmount: amount, prepaymentAmount: amount, installmentCount: price.installmentCount,
+        fullPaymentAllowed: price.fullPaymentAllowed, installmentPaymentAllowed: price.installmentPaymentAllowed,
+        priceStatus: 'ACCEPTED', setByAdminId: adminId,
+      });
+      await txn.update(paymentPlans).set({ registrationPriceId: newPriceId, totalAmount: amount, prepaymentAmount: amount, remainingInstallmentAmount: 0, updatedAt: now }).where(eq(paymentPlans.id, planId));
+      await txn.update(paymentScheduleItems).set({ amount, updatedAt: now }).where(eq(paymentScheduleItems.id, prepayment.id));
+      const regenerated = buildOfflineContractSnapshot(
+        snapshot.enrollment,
+        snapshot.enrollment.guardian.phoneNumber ?? '',
+        snapshot.enrollment.school.name,
+        now,
+        snapshot.enrollment.student.id,
+        registration.academicYear,
+        amount,
+      );
+      await txn.update(contracts).set({ registrationPriceId: newPriceId, contractDataSnapshot: JSON.stringify(regenerated), generatedAt: now, updatedAt: now }).where(eq(contracts.id, contract.id));
+      await this.audit?.recordInTransaction(txn, {
+        actorType: 'ADMIN', actorId: adminId, action: 'STUDENT_PREPAYMENT_UPDATED', entityType: 'PAYMENT_PLAN', entityId: planId,
+        previousValues: { amount: plan.prepaymentAmount, priceId: price.id }, newValues: { amount, priceId: newPriceId },
+      });
+      return { amount, planId };
+    });
+  }
 
   async getActiveOfflineDestination(includeInactive = false) {
     const [destination] = await this.db.db
@@ -1336,6 +1468,8 @@ export class PaymentsService {
                 submission.paymentScheduleItemId === item.id && submission.status !== 'DRAFT',
             )
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const planContracts = await this.db.db.select({ paymentPlanId: contracts.paymentPlanId, contractStatus: contracts.contractStatus })
+      .from(contracts).where(inArray(contracts.paymentPlanId, planIds));
           const latestSubmission = itemSubmissions[0];
           const itemTransactions = transactions
             .filter((transaction) => transaction.paymentScheduleItemId === item.id)
@@ -1359,6 +1493,22 @@ export class PaymentsService {
                   latestSubmission.status === 'APPROVED'
                     ? 'تأییدشده'
                     : latestSubmission.status === 'REJECTED'
+    const assignments = await this.db.db
+      .select({
+        studentId: transportServiceRunStudents.studentId,
+        routeId: transportServiceRuns.id,
+        routeName: transportServiceRuns.title,
+        driverId: drivers.id,
+        driverName: sql<string>`${drivers.firstName} || ' ' || ${drivers.lastName}`,
+      })
+      .from(transportServiceRunStudents)
+      .innerJoin(transportServiceRuns, eq(transportServiceRuns.id, transportServiceRunStudents.serviceRunId))
+      .innerJoin(drivers, eq(drivers.id, transportServiceRuns.driverId))
+      .where(and(
+        inArray(transportServiceRunStudents.studentId, plans.map(({ studentId }) => studentId)),
+        eq(transportServiceRunStudents.isActive, true),
+        eq(transportServiceRuns.isActive, true),
+      ));
                       ? 'ردشده'
                       : 'در انتظار بررسی',
               }
@@ -1440,8 +1590,11 @@ export class PaymentsService {
         messages.push('تاریخ این قسط معتبر نیست.');
       } else {
         const dueDay = dueDate.toISOString().slice(0, 10);
+          canEditPrepayment: prepayment.itemStatus === 'PENDING' && plan.planStatus === 'PENDING' &&
+            planContracts.some((contract) => contract.paymentPlanId === plan.id && contract.contractStatus === 'GENERATED'),
         if (previousDay !== null && dueDay <= previousDay) {
           messages.push('تاریخ این قسط باید پس از تاریخ قسط قبلی باشد و تکرار نشود.');
+          routes: assignments.filter((assignment) => assignment.studentId === studentId).map(({ studentId: _studentId, ...assignment }) => assignment),
         }
         if (dueDay < startDay) {
           messages.push('تاریخ سررسید نمی‌تواند پیش از تاریخ شروع برنامه پرداخت باشد.');
@@ -1510,6 +1663,9 @@ export class PaymentsService {
           index + 1 !== old.sequenceNumber ||
           new Date(candidate.dueDate).getTime() !== old.dueDate?.getTime()
         ) {
+      if (currentPlan.planType === 'FULL' && currentPlan.totalAmount === currentPlan.prepaymentAmount && items.length > 0) {
+        throw new ConflictError('PLAN_ALREADY_PAID_IN_FULL', 'This full-payment plan has no remaining balance.');
+      }
           throw new ConflictError(
             'INSTALLMENT_HAS_PAYMENT_HISTORY',
             'An installment with payment or receipt history cannot be changed or removed.',

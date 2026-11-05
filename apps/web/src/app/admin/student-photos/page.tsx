@@ -5,6 +5,7 @@ import { AdminPhotoReviewQueue } from '@/features/student-photos/admin-photo-rev
 import { getAdminPhotos } from '@/features/student-photos/admin-student-photos-api';
 import { FilteredCount } from '@/components/data/filtered-count';
 import { getAdminSchools } from '@/features/admin-schools/admin-schools-api';
+import { ImageArchiveButton } from '@/features/admin-payments/image-archive-button';
 
 export const metadata = { title: 'بررسی عکس کارت سرویس' };
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,7 @@ export default async function AdminStudentPhotosPage({
         </div>
         <FilteredCount count={list.total} label="تصویر مطابق فیلتر" />
       </div>
+      <ImageArchiveButton kind="photos" />
       <form className="flex flex-wrap items-end gap-3">
         <label className="min-w-64 flex-1 text-sm font-bold">
           جست‌وجوی دانش‌آموز

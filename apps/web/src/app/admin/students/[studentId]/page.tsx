@@ -3,6 +3,7 @@ import { LocationDisplay } from '@/components/common/location-display';
 import { PrintPageButton } from '@/components/common/print-page-button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { ButtonLink } from '@/components/ui/button';
 import {
   getAdminStudentDetail,
   getAdminStudentPhoto,
@@ -128,7 +129,12 @@ export default async function AdminStudentPage({
           </dl>
         </Card>
         <Card>
-          <h2 className="font-black">سرپرستان و تماس اضطراری</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-black">سرپرستان و تماس اضطراری</h2>
+            <ButtonLink href={`/admin/families/${student.userId}#parents`} variant="secondary" size="sm">
+              ویرایش شماره والدین
+            </ButtonLink>
+          </div>
           <div className="mt-4 space-y-3 text-sm">
             {student.parents.map((parent) => (
               <div key={parent.id} className="rounded-xl bg-surface-muted p-3">

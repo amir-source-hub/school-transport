@@ -5,7 +5,7 @@ import type { InAppNotificationService } from '../../infrastructure/notification
 import { RegistrationsService } from './registrations.service';
 import type { GuidedEnrollmentData } from './guided-enrollment';
 import type { AdminEnrollmentActions } from './admin-guided-enrollment';
-import { users } from '../../database/schemas';
+import { paymentSettings, registrationPrices, users } from '../../database/schemas';
 
 function terminal(rows: unknown[]) {
   return {
@@ -16,12 +16,14 @@ function terminal(rows: unknown[]) {
   };
 }
 
-function buildMockDb(selectResults: unknown[][]) {
+function buildMockDb(selectResults: unknown[][], defaultAmount?: number) {
   const rows = [...selectResults];
-  const select = vi.fn(() => {
-    const current = rows.shift() ?? [];
-    return { from: () => ({ where: () => terminal(current) }) };
-  });
+  const select = vi.fn(() => ({
+    from: (table: unknown) => {
+      const current = table === paymentSettings && defaultAmount ? [{ amount: defaultAmount }] : rows.shift() ?? [];
+      return { where: () => terminal(current) };
+    },
+  }));
   const inserted: Array<{ table: unknown; values: unknown }> = [];
   const updated: Array<{ table: unknown; set: Record<string, unknown> }> = [];
   const insert = vi.fn((table: unknown) => ({
@@ -139,6 +141,18 @@ const standardSelectResults = [
 const adminAudit = { adminId: 'admin-1', ipAddress: '127.0.0.1' };
 
 describe('admin guided enrollment transaction', () => {
+  it('uses a changed global amount for a new price, payment item, and contract', async () => {
+    const mock = buildMockDb(standardSelectResults, 65_000_000);
+    const service = new RegistrationsService(mock.database,
+      { enqueueInTransaction: vi.fn(async () => undefined) } as unknown as InAppNotificationService,
+      { recordInTransaction: vi.fn(async () => undefined) } as unknown as AuditPort);
+    await service.createGuidedEnrollment('family-1', baseInput, adminAudit);
+    const price = mock.inserted.find(({ table }) => table === registrationPrices)?.values as { prepaymentAmount: number };
+    expect(price.prepaymentAmount).toBe(65_000_000);
+    expect(mock.inserted.some(({ values }) => (values as { amount?: number }).amount === 65_000_000)).toBe(true);
+    const snapshot = mock.inserted.find(({ values }) => Boolean((values as { contractDataSnapshot?: string }).contractDataSnapshot))?.values as { contractDataSnapshot: string };
+    expect(snapshot.contractDataSnapshot).toContain('شش میلیون و پانصد هزار');
+  });
   it('rolls back and emits no notification when the required audit write fails', async () => {
     const mock = buildMockDb(standardSelectResults);
     const createNotification = vi.fn();

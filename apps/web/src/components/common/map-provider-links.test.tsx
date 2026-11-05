@@ -9,7 +9,7 @@ describe('MapProviderLinks', () => {
 
     expect(screen.getByRole('link', { name: 'باز کردن موقعیت در نشان' })).toHaveAttribute(
       'href',
-      'https://neshan.org/maps/@35.6892,51.389,16z,0p',
+      'https://neshan.org/maps/share/35.6892,51.389',
     );
     expect(screen.getByRole('link', { name: 'باز کردن موقعیت در بلد' })).toHaveAttribute(
       'href',

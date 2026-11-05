@@ -22,6 +22,7 @@ import {
 } from '@/features/enrollment/input-normalizers';
 import { finalizeOnboarding } from '@/features/enrollment/enrollments-api';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { requestCurrentLocation } from '@/lib/current-location';
 import { submitDriverEnrollment, uploadDriverDocument } from './driver-enrollment-api';
 import {
   driverEnrollmentSchema,
@@ -219,17 +220,13 @@ export function DriverEnrollmentForm() {
   }
   function useCurrentLocation() {
     setLocationError(undefined);
-    if (!navigator.geolocation) {
-      setLocationError('مرورگر امکان دریافت موقعیت مکانی را ندارد.');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
+    requestCurrentLocation().then(
+      (coords) => {
         form.setValue('latitude', coords.latitude, { shouldValidate: true });
         form.setValue('longitude', coords.longitude, { shouldValidate: true });
         form.setValue('locationSelected', true, { shouldValidate: true });
       },
-      () => setLocationError('موقعیت دریافت نشد. مکان‌یاب دستگاه و دسترسی مرورگر را بررسی کنید.'),
+      (error) => setLocationError(error instanceof Error ? error.message : 'موقعیت دریافت نشد.'),
     );
   }
   async function upload(

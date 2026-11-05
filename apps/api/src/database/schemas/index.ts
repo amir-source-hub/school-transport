@@ -12,6 +12,7 @@ export { registrationSnapshots } from './registrations.schema';
 export { registrationReviews } from './registrations.schema';
 export { registrationNotes } from './registrations.schema';
 export { registrationPrices } from './pricing.schema';
+export { paymentSettings } from './payment-settings.schema';
 export { paymentPlans } from './payments.schema';
 export { paymentScheduleItems } from './payments.schema';
 export { paymentTransactions } from './payments.schema';

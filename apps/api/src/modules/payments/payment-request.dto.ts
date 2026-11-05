@@ -90,6 +90,26 @@ export class ConfigureOfflineDestinationDto {
   confirmed!: boolean;
 }
 
+export class ConfigureDefaultPrepaymentDto {
+  @Transform(({ value }) => typeof value === 'string' ? Number(normalizeIranianDigits(value)) : value)
+  @IsInt()
+  @Min(10)
+  @Max(2_147_483_640)
+  amount!: number;
+
+  @IsInt()
+  @Min(1)
+  expectedVersion!: number;
+}
+
+export class ConfigureStudentPrepaymentDto {
+  @Transform(({ value }) => typeof value === 'string' ? Number(normalizeIranianDigits(value)) : value)
+  @IsInt()
+  @Min(10)
+  @Max(2_147_483_640)
+  amount!: number;
+}
+
 export class InstallmentItemDto {
   @IsOptional()
   @IsUUID()

@@ -5,6 +5,7 @@ import {
   getAdminOfflineDestination,
   getAdminOfflineSubmissions,
   getAdminPayments,
+  getPrepaymentSettings,
 } from '@/features/admin-payments/admin-payments-api';
 
 vi.mock('@/features/admin-payments/admin-payments-api', async (importOriginal) => {
@@ -15,10 +16,14 @@ vi.mock('@/features/admin-payments/admin-payments-api', async (importOriginal) =
     getAdminPayments: vi.fn(),
     getAdminOfflineDestination: vi.fn(),
     getAdminOfflineSubmissions: vi.fn(),
+    getPrepaymentSettings: vi.fn(),
   };
 });
 vi.mock('@/features/admin-payments/offline-destination-form', () => ({
   OfflineDestinationForm: () => <div aria-label="فرم مقصد" />,
+}));
+vi.mock('@/features/admin-payments/prepayment-settings-form', () => ({
+  PrepaymentSettingsForm: () => <div aria-label="فرم پیش‌پرداخت" />,
 }));
 vi.mock('@/features/admin-payments/payment-actions', () => ({
   ApprovePaymentDialog: () => <button>تأیید رسید</button>,
@@ -31,6 +36,7 @@ describe('admin offline receipt review queue', () => {
   it('passes validated page filters and renders context/actions for pending receipts', async () => {
     vi.mocked(getAdminPayments).mockResolvedValue({ payments: [] });
     vi.mocked(getAdminOfflineDestination).mockResolvedValue(null);
+    vi.mocked(getPrepaymentSettings).mockResolvedValue({ defaultPrepaymentAmount: 49_978_000, version: 1, updatedAt: '2026-11-05T00:00:00.000Z' });
     vi.mocked(getAdminOfflineSubmissions).mockResolvedValue({
       total: 21,
       page: 2,

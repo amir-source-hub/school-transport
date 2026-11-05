@@ -142,7 +142,7 @@ export async function getManagerDashboard() {
   return (await apiRequest<ManagerDashboard>('/manager/dashboard')).data;
 }
 export async function getManagerStudents(query: string) {
-  const result = await apiRequest<ManagerStudent[]>(`/manager/students?${query}`);
+  const result = await apiRequest<ManagerStudent[]>(`/manager/students?${query}`, { cache: 'no-store' });
   return { items: result.data, total: Number(result.pagination?.totalItems ?? result.data.length) };
 }
 export async function getManagerStudent(id: string) {
