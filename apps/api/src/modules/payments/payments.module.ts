@@ -5,7 +5,8 @@ import {
   PaymentsController,
   AdminPaymentsController,
 } from './payments.controller';
-import { PAYMENT_GATEWAY, UnconfiguredPaymentGateway } from './payment-gateway';
+import { PAYMENT_GATEWAY, UnconfiguredPaymentGateway, ZibalPaymentGateway } from './payment-gateway';
+import { ConfigService } from '../../config/config.service';
 import { OnboardingGuard } from '../access-control/onboarding.guard';
 import { S3Module } from '../../infrastructure/s3/s3.module';
 
@@ -16,10 +17,12 @@ import { S3Module } from '../../infrastructure/s3/s3.module';
     PaymentsService,
     OnboardingGuard,
     UnconfiguredPaymentGateway,
+    ZibalPaymentGateway,
     {
       provide: PAYMENT_GATEWAY,
-      inject: [UnconfiguredPaymentGateway],
-      useFactory: (unavailableGateway: UnconfiguredPaymentGateway) => unavailableGateway,
+      inject: [UnconfiguredPaymentGateway, ZibalPaymentGateway, ConfigService],
+      useFactory: (unavailableGateway: UnconfiguredPaymentGateway, zibal: ZibalPaymentGateway, config: ConfigService) =>
+        config.onlinePaymentEnabled && config.paymentGatewayProvider === 'zibal' ? zibal : unavailableGateway,
     },
   ],
   exports: [PaymentsService],

@@ -144,7 +144,7 @@ export class OnboardingPaymentsController {
     @IdempotencyKey() idempotencyKey: string,
   ) {
     return successResponse(
-      await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey),
+      await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey, 'onboarding'),
     );
   }
 

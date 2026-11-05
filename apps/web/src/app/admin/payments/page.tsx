@@ -225,8 +225,6 @@ export default async function AdminPaymentsPage({
             داده می‌شوند.
           </p>
         </div>
-        <div className="grid gap-4">
-          {visiblePayments.map((payment) => {
         <Card>
           <form className="grid gap-3 sm:grid-cols-3" aria-label="پالایش برنامه‌های پرداخت">
             {q && <input type="hidden" name="q" value={q} />}
@@ -247,6 +245,8 @@ export default async function AdminPaymentsPage({
             <button type="submit" className="min-h-11 self-end rounded-xl bg-primary px-4 text-sm font-bold text-white">اعمال فیلتر</button>
           </form>
         </Card>
+        <div className="grid gap-4">
+          {visiblePayments.map((payment) => {
             const prepaymentStatus = payment.prepayment.transaction?.status ?? 'پرداخت نشده';
             const canConfigure = payment.prepayment.paid &&
               (payment.planType !== 'FULL' || payment.totalAmount > payment.prepayment.amount);
@@ -331,13 +331,13 @@ export default async function AdminPaymentsPage({
                         />
                       </div>
                     )}
-                  {canConfigure && (
-                    <div className="mt-4 border-t border-border pt-4">
                   {payment.canEditPrepayment && (
                     <div className="mt-4 border-t border-border pt-4">
                       <StudentPrepaymentDialog planId={payment.planId} currentAmount={payment.prepayment.amount} />
                     </div>
                   )}
+                  {canConfigure && (
+                    <div className="mt-4 border-t border-border pt-4">
                       <ConfigureInstallmentsDialog
                         key={payment.installments.map((item) => item.id).join(',')}
                         planId={payment.planId}

@@ -145,16 +145,18 @@ export async function completeReceiptUpload(
   });
 }
 
-export async function startOnlinePayment(scheduleItemId: string) {
-  const response = await apiRequest<{ id: string }>(`/payments/${scheduleItemId}/online/start`, {
+export async function startOnlinePayment(scheduleItemId: string, mode: 'panel' | 'onboarding' = 'panel') {
+  const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
+  const response = await apiRequest<{ id: string; checkoutUrl: string }>(`${prefix}/${scheduleItemId}/online/start`, {
     method: 'POST',
     headers: { 'Idempotency-Key': createClientId() },
   });
   return response.data;
 }
 
-export async function verifyOnlinePayment(transactionId: string, gatewayTransactionId: string) {
-  await apiRequest(`/payments/${transactionId}/online/verify`, {
+export async function verifyOnlinePayment(transactionId: string, gatewayTransactionId: string, mode: 'panel' | 'onboarding' = 'panel') {
+  const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
+  await apiRequest(`${prefix}/${transactionId}/online/verify`, {
     method: 'POST',
     body: { gatewayTransactionId },
   });

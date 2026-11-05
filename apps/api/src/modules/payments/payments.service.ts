@@ -360,7 +360,7 @@ export class PaymentsService {
     };
   }
 
-  async startOnlinePayment(scheduleItemId: string, userId: string, idempotencyKey: string) {
+  async startOnlinePayment(scheduleItemId: string, userId: string, idempotencyKey: string, mode: 'panel' | 'onboarding' = 'panel') {
     if (this.gateway.enabled === false) {
       throw new AppError(
         'PAYMENT_GATEWAY_UNAVAILABLE',
@@ -382,7 +382,7 @@ export class PaymentsService {
     const fingerprint = createHash('sha256')
       .update(`${userId}\0ONLINE_GATEWAY\0${scheduleItemId}\0${item.amount}`)
       .digest('hex');
-    return this.db.db.transaction(async (txn) => {
+    const created = await this.db.db.transaction(async (txn) => {
       const [inserted] = await txn
         .insert(paymentTransactions)
         .values({
@@ -415,10 +415,14 @@ export class PaymentsService {
         )
         .limit(1);
       if (!existing) {
-        throw new ConflictError(
-          'IDEMPOTENCY_CONFLICT',
-          'The payment request conflicts with an existing operation.',
-        );
+        const [active] = await txn.select(onlinePaymentResult).from(paymentTransactions)
+          .where(and(eq(paymentTransactions.paymentScheduleItemId, scheduleItemId),
+            eq(paymentTransactions.userId, userId),
+            eq(paymentTransactions.paymentMethod, 'ONLINE_GATEWAY'),
+            inArray(paymentTransactions.transactionStatus, ['CREATED', 'REQUESTING', 'PENDING'])))
+          .limit(1);
+        if (active) return active;
+        throw new ConflictError('IDEMPOTENCY_CONFLICT', 'The payment request conflicts with an existing operation.');
       }
       const legacyMatch =
         existing.idempotencyFingerprint === null &&
@@ -440,6 +444,36 @@ export class PaymentsService {
         requestedAt: existing.requestedAt,
       };
     });
+    if (!this.gateway.request || !this.config?.zibalCallbackBaseUrl) throw new AppError('PAYMENT_GATEWAY_UNAVAILABLE', 'Gateway callback is not configured.', 503);
+    const [current] = await this.db.db.select().from(paymentTransactions).where(eq(paymentTransactions.id, created.id)).limit(1);
+    if (current.gatewayAuthority && current.transactionStatus === 'PENDING') return { ...created, checkoutUrl: `https://gateway.zibal.ir/start/${current.gatewayAuthority}` };
+    if (current.transactionStatus === 'REQUESTING') {
+      if (Date.now() - current.updatedAt.getTime() > 120_000) {
+        await this.db.db.update(paymentTransactions).set({ transactionStatus: 'FAILED', failureCode: 'GATEWAY_REQUEST_TIMEOUT', updatedAt: new Date() })
+          .where(and(eq(paymentTransactions.id, created.id), eq(paymentTransactions.transactionStatus, 'REQUESTING')));
+      }
+      throw new ConflictError('PAYMENT_START_IN_PROGRESS', 'Payment checkout is being prepared. Please retry shortly.');
+    }
+    if (current.transactionStatus !== 'CREATED') throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This checkout is no longer available.');
+    const [claimed] = await this.db.db.update(paymentTransactions).set({ transactionStatus: 'REQUESTING', updatedAt: new Date() })
+      .where(and(eq(paymentTransactions.id, created.id), eq(paymentTransactions.transactionStatus, 'CREATED')))
+      .returning({ id: paymentTransactions.id });
+    if (!claimed) throw new ConflictError('PAYMENT_START_IN_PROGRESS', 'Payment checkout is being prepared. Please retry shortly.');
+    const callbackUrl = new URL('/payment-return', this.config.zibalCallbackBaseUrl);
+    callbackUrl.searchParams.set('txId', created.id);
+    callbackUrl.searchParams.set('mode', mode);
+    try {
+      const request = await this.gateway.request({ amount: created.amount, callbackUrl: callbackUrl.toString(), orderId: created.id });
+      const [saved] = await this.db.db.update(paymentTransactions).set({ gatewayName: 'ZIBAL', gatewayAuthority: request.authority, transactionStatus: 'PENDING', updatedAt: new Date() })
+        .where(and(eq(paymentTransactions.id, created.id), eq(paymentTransactions.transactionStatus, 'REQUESTING')))
+        .returning({ id: paymentTransactions.id });
+      if (!saved) throw new ConflictError('PAYMENT_START_IN_PROGRESS', 'Checkout state changed during setup.');
+      return { ...created, transactionStatus: 'PENDING', checkoutUrl: request.checkoutUrl };
+    } catch (error) {
+      await this.db.db.update(paymentTransactions).set({ transactionStatus: 'FAILED', failureCode: 'GATEWAY_REQUEST_FAILED', updatedAt: new Date() })
+        .where(and(eq(paymentTransactions.id, created.id), eq(paymentTransactions.transactionStatus, 'REQUESTING')));
+      throw error;
+    }
   }
 
   async verifyOnlinePayment(txId: string, userId: string, gatewayAuthority: string) {
@@ -461,8 +495,9 @@ export class PaymentsService {
       return tx[0];
     }
 
+    if (tx[0].paymentMethod !== 'ONLINE_GATEWAY' || !tx[0].gatewayAuthority || tx[0].gatewayAuthority !== gatewayAuthority) throw new ValidationError('Gateway tracking ID does not match this payment.');
     const gatewayResult = await this.gateway.verify({
-      authority: gatewayAuthority,
+      authority: tx[0].gatewayAuthority,
       amount: tx[0].amount,
     });
     const gatewayTransactionId = assertGatewayVerification(tx[0].amount, gatewayResult);
@@ -474,6 +509,9 @@ export class PaymentsService {
         .where(eq(paymentScheduleItems.id, tx[0].paymentScheduleItemId))
         .for('update')
         .limit(1);
+
+      const [latest] = await txn.select().from(paymentTransactions).where(eq(paymentTransactions.id, txId)).for('update').limit(1);
+      if (latest.transactionStatus === 'SUCCEEDED') return latest;
 
       if (item[0].itemStatus !== 'PENDING') {
         throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This payment item is not payable.');
@@ -1430,6 +1468,8 @@ export class PaymentsService {
     if (plans.length === 0) return [];
 
     const planIds = plans.map(({ plan }) => plan.id);
+    const planContracts = await this.db.db.select({ paymentPlanId: contracts.paymentPlanId, contractStatus: contracts.contractStatus })
+      .from(contracts).where(inArray(contracts.paymentPlanId, planIds));
     const items = await this.db.db
       .select()
       .from(paymentScheduleItems)
@@ -1453,8 +1493,6 @@ export class PaymentsService {
       .select()
       .from(parents)
       .where(inArray(parents.userId, [...new Set(plans.map(({ userId }) => userId))]));
-    const planContracts = await this.db.db.select({ paymentPlanId: contracts.paymentPlanId, contractStatus: contracts.contractStatus })
-      .from(contracts).where(inArray(contracts.paymentPlanId, planIds));
     const assignments = await this.db.db
       .select({
         studentId: transportServiceRunStudents.studentId,

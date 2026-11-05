@@ -108,7 +108,10 @@ const envSchema = z
     SMS_BROADCAST_PRICE_PER_SEGMENT_RIAL: z.coerce.number().int().min(0).default(0),
     SMS_BROADCAST_MAX_COST_RIAL: z.coerce.number().int().min(0).default(0),
     SMS_BROADCAST_TEST_NUMBERS: z.string().default(''),
-    PAYMENT_GATEWAY_PROVIDER: z.literal('none').default('none'),
+    PAYMENT_GATEWAY_PROVIDER: z.enum(['none', 'zibal']).default('none'),
+    ONLINE_PAYMENT_ENABLED: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
+    ZIBAL_MERCHANT: z.string().optional(),
+    ZIBAL_CALLBACK_BASE_URL: z.string().url().optional(),
     ARVAN_S3_ENDPOINT: z.string().trim().optional(),
     ARVAN_S3_REGION: z.string().trim().optional(),
     ARVAN_S3_BUCKET: z.string().trim().optional(),
@@ -143,6 +146,14 @@ const envSchema = z
     if (env.NODE_ENV !== 'production') return;
     const issue = (path: string, message: string) =>
       context.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+    if (env.ONLINE_PAYMENT_ENABLED && env.PAYMENT_GATEWAY_PROVIDER === 'zibal') {
+      if (!env.ZIBAL_MERCHANT || env.ZIBAL_MERCHANT === 'zibal') {
+        issue('ZIBAL_MERCHANT', 'A live Zibal merchant ID is required in production.');
+      }
+      if (!env.ZIBAL_CALLBACK_BASE_URL || new URL(env.ZIBAL_CALLBACK_BASE_URL).protocol !== 'https:') {
+        issue('ZIBAL_CALLBACK_BASE_URL', 'A public HTTPS callback URL is required in production.');
+      }
+    }
     if (env.DEPLOYMENT_PROFILE === 'development') {
       issue('DEPLOYMENT_PROFILE', 'Production runtime requires preview or production profile.');
     }
@@ -390,9 +401,12 @@ export class ConfigService implements OnApplicationShutdown {
       .map((value) => value.trim())
       .filter(Boolean);
   }
-  get paymentGatewayProvider(): 'none' {
+  get paymentGatewayProvider(): 'none' | 'zibal' {
     return this.env.PAYMENT_GATEWAY_PROVIDER;
   }
+  get onlinePaymentEnabled(): boolean { return this.env.ONLINE_PAYMENT_ENABLED; }
+  get zibalMerchant(): string | undefined { return this.env.ZIBAL_MERCHANT; }
+  get zibalCallbackBaseUrl(): string | undefined { return this.env.ZIBAL_CALLBACK_BASE_URL; }
   get arvanS3Endpoint(): string | undefined {
     return this.env.ARVAN_S3_ENDPOINT;
   }

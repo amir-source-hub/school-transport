@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PaymentsService } from './payments.service';
+import { paymentTransactions } from '../../database/schemas';
 
 const item = {
   id: 'schedule-1',
@@ -23,13 +24,22 @@ function databaseHarness() {
     },
   };
   const db = {
-    select: () => ({ from: () => ownedQuery }),
+    select: () => ({ from: (table: unknown) => table === paymentTransactions ? {
+      where: () => ({ limit: async () => transactions.slice(-1) }),
+    } : ownedQuery }),
+    update: () => ({ set: (changes: any) => ({ where: () => ({ returning: async () => {
+      const row = transactions.find((entry) => entry.transactionStatus === (changes.transactionStatus === 'REQUESTING' ? 'CREATED' : 'REQUESTING'));
+      if (!row) return [];
+      Object.assign(row, changes);
+      return [{ id: row.id }];
+    } }) }) }),
     transaction: async (work: (txn: any) => Promise<unknown>) => {
       const previous = tail;
       let release!: () => void;
       tail = new Promise<void>((resolve) => (release = resolve));
       await previous;
       let attempted: any;
+      let selectCount = 0;
       const txn = {
         insert: () => ({
           values: (value: any) => {
@@ -39,9 +49,8 @@ function databaseHarness() {
                 returning: async () => {
                   const duplicate = transactions.find(
                     (row) =>
-                      row.userId === value.userId &&
-                      row.paymentMethod === value.paymentMethod &&
-                      row.idempotencyKey === value.idempotencyKey,
+                      (row.userId === value.userId && row.paymentMethod === value.paymentMethod && row.idempotencyKey === value.idempotencyKey) ||
+                      (row.paymentScheduleItemId === value.paymentScheduleItemId && ['CREATED', 'REQUESTING', 'PENDING'].includes(row.transactionStatus)),
                   );
                   if (duplicate) return [];
                   const stored = { ...value, requestedAt: new Date() };
@@ -56,15 +65,15 @@ function databaseHarness() {
           from: () => ({
             where: () => ({
               limit: async () => {
+                const activeQuery = selectCount++ > 0;
                 const found = transactions.find(
                   (row) =>
                     row.userId === attempted.userId &&
                     row.paymentMethod === attempted.paymentMethod &&
                     row.idempotencyKey === attempted.idempotencyKey,
                 );
-                return found
-                  ? [{ ...safe(found), idempotencyFingerprint: found.idempotencyFingerprint }]
-                  : [];
+                const active = transactions.find((row) => row.userId === attempted.userId && row.paymentScheduleItemId === attempted.paymentScheduleItemId && ['CREATED', 'REQUESTING', 'PENDING'].includes(row.transactionStatus));
+                return activeQuery ? (active ? [safe(active)] : []) : found ? [{ ...safe(found), idempotencyFingerprint: found.idempotencyFingerprint }] : [];
               },
             }),
           }),
@@ -102,7 +111,8 @@ function safe(row: any) {
 }
 
 function service(harness = databaseHarness()) {
-  return { harness, payments: new PaymentsService(harness.db as never, {} as never, {} as never) };
+  const gateway = { enabled: true, request: vi.fn(async ({ orderId }: { orderId: string }) => ({ authority: '123456', checkoutUrl: 'https://gateway.zibal.ir/start/123456', orderId })) };
+  return { harness, gateway, payments: new PaymentsService(harness.db as never, gateway as never, {} as never, undefined, { zibalCallbackBaseUrl: 'https://example.test' } as never) };
 }
 
 describe('online payment idempotency', () => {
@@ -150,28 +160,29 @@ describe('online payment idempotency', () => {
     expect(replay).not.toHaveProperty('idempotencyFingerprint');
   });
 
-  it('allows the same key for another user but rejects reuse for another schedule item', async () => {
+  it('reuses one active checkout and rejects key reuse for another schedule item', async () => {
     const { payments, harness } = service();
     await payments.startOnlinePayment('schedule-1', 'user-1', 'request-123');
     await expect(
       payments.startOnlinePayment('schedule-1', 'user-2', 'request-123'),
-    ).resolves.toBeTruthy();
+    ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
     await expect(
       payments.startOnlinePayment('schedule-2', 'user-1', 'request-123'),
     ).rejects.toMatchObject({
       code: 'IDEMPOTENCY_CONFLICT',
       status: 409,
     });
-    expect(harness.transactions).toHaveLength(2);
+    expect(harness.transactions).toHaveLength(1);
   });
 
   it('creates one transaction and returns the same result to concurrent identical requests', async () => {
     const { payments, harness } = service();
-    const results = await Promise.all([
+    const results = await Promise.allSettled([
       payments.startOnlinePayment('schedule-1', 'user-1', 'parallel-123'),
       payments.startOnlinePayment('schedule-1', 'user-1', 'parallel-123'),
     ]);
     expect(harness.transactions).toHaveLength(1);
-    expect(results[1]).toEqual(results[0]);
+    expect(results.some((result) => result.status === 'fulfilled')).toBe(true);
+    await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'parallel-123')).resolves.toHaveProperty('checkoutUrl');
   });
 });

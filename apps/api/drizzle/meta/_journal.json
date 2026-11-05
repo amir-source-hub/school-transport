@@ -470,6 +470,13 @@
       "when": 1793995200000,
       "tag": "0066_payment_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1793995260000,
+      "tag": "0067_one_active_online_checkout",
+      "breakpoints": true
     }
   ]
 }

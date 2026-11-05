@@ -137,6 +137,9 @@ export const paymentTransactions = pgTable(
     oneSuccessfulPaymentIdx: uniqueIndex('idx_transactions_one_success_per_schedule_item')
       .on(table.paymentScheduleItemId)
       .where(sql`${table.transactionStatus} = 'SUCCEEDED'`),
+    oneActiveOnlineIdx: uniqueIndex('idx_transactions_one_active_online_per_item')
+      .on(table.paymentScheduleItemId)
+      .where(sql`${table.paymentMethod} = 'ONLINE_GATEWAY' AND ${table.transactionStatus} IN ('CREATED', 'REQUESTING', 'PENDING')`),
     onePendingOfflinePaymentIdx: uniqueIndex('idx_transactions_one_pending_offline_per_item')
       .on(table.paymentScheduleItemId)
       .where(

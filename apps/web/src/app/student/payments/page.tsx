@@ -5,7 +5,6 @@ import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
 import { getOfflineSubmissions, getPayments } from '@/features/finance/payments-api';
 import { formatIrr } from '@/lib/formatters';
 import { formatJalaliDate } from '@/lib/formatters';
-import { OnlinePaymentButton } from '@/features/finance/online-payment-button';
 
 export const metadata = { title: 'پرداخت‌ها' };
 export const dynamic = 'force-dynamic';
@@ -114,13 +113,11 @@ export default async function PaymentsPage() {
                         ? 'معاف از پرداخت'
                         : 'پرداخت‌نشده'}
                   </Badge>
-                  {item.itemStatus === 'PENDING' ? (
-                    <OnlinePaymentButton scheduleItemId={item.id} amount={item.amount} />
-                  ) : item.itemStatus === 'PAID' ? (
+                  {item.itemStatus === 'PAID' ? (
                     <span className="text-sm font-bold text-success">تسویه شد</span>
-                  ) : (
+                  ) : item.itemStatus === 'CANCELLED' ? (
                     <span className="text-sm font-bold text-muted">نیاز به پرداخت ندارد</span>
-                  )}
+                  ) : null}
                 </div>
               ))}
             </div>
