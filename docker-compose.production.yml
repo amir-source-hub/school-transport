@@ -81,6 +81,7 @@ services:
 
   api:
     image: school-transport-api:server
+    init: true
     build:
       context: .
       dockerfile: Dockerfile
@@ -129,6 +130,7 @@ services:
 
   worker:
     image: school-transport-api:server
+    init: true
     pull_policy: never
     command: ['node', 'dist/worker.js']
     env_file: *production-environment
@@ -160,6 +162,7 @@ services:
 
   bootstrap:
     image: school-transport-api:server
+    init: true
     pull_policy: never
     command: ['node', 'dist/database/bootstrap-db.js']
     env_file: *production-environment
@@ -181,6 +184,7 @@ services:
 
   web:
     image: school-transport-web:server
+    init: true
     build:
       context: .
       dockerfile: Dockerfile
