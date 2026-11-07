@@ -1180,6 +1180,26 @@ export class PaymentsService {
         .for('update')
         .limit(1);
       if (!item) throw new NotFoundError('Schedule item');
+      const approved = submission.status === 'APPROVED';
+      if (approved !== Boolean(submission.transactionId) ||
+          item.paymentPlanId !== submission.paymentPlanId ||
+          (approved && item.itemStatus !== 'PAID') ||
+          !['APPROVED', 'PENDING_REVIEW', 'REJECTED'].includes(submission.status)) {
+        throw new ConflictError('OFFLINE_PAYMENT_NOT_RESETTABLE', 'وضعیت رسید برای بازنشانی معتبر نیست.');
+      }
+
+      if (approved) {
+        const [transaction] = await txn.select().from(paymentTransactions)
+          .where(eq(paymentTransactions.id, submission.transactionId!)).for('update').limit(1);
+        if (!transaction || transaction.transactionStatus !== 'SUCCEEDED' ||
+            transaction.paymentMethod !== 'OFFLINE_RECEIPT' ||
+            transaction.paymentScheduleItemId !== submission.paymentScheduleItemId ||
+            transaction.paymentPlanId !== submission.paymentPlanId ||
+            transaction.userId !== submission.payerUserId ||
+            transaction.amount !== item.amount) {
+          throw new ConflictError('OFFLINE_PAYMENT_NOT_RESETTABLE', 'ثبت مالی رسید با پرداخت مورد انتظار همخوانی ندارد.');
+        }
+      }
 
       await this.audit?.recordInTransaction(txn, {
         actorType: 'ADMIN',
@@ -1192,16 +1212,17 @@ export class PaymentsService {
           version: submission.version,
           transactionId: submission.transactionId,
         },
-        newValues: { resetForResubmission: true },
+        newValues: { resetForResubmission: true, status: approved ? 'SUPERSEDED' : 'DELETED', transactionStatus: approved ? 'REVERSED' : null },
       });
 
-      await txn
-        .delete(offlinePaymentSubmissions)
-        .where(eq(offlinePaymentSubmissions.id, submissionId));
-      if (submission.transactionId) {
-        await txn
-          .delete(paymentTransactions)
-          .where(eq(paymentTransactions.id, submission.transactionId));
+      if (approved) {
+        await txn.update(offlinePaymentSubmissions)
+          .set({ status: 'SUPERSEDED', version: version + 1, updatedAt: new Date() })
+          .where(eq(offlinePaymentSubmissions.id, submissionId));
+        await txn.execute(sql`SELECT set_config('app.offline_payment_reset', 'on', true)`);
+        await txn.update(paymentTransactions)
+          .set({ transactionStatus: 'REVERSED', failureCode: 'ADMIN_RECEIPT_RESET', updatedAt: new Date() })
+          .where(eq(paymentTransactions.id, submission.transactionId!));
         await txn
           .update(paymentScheduleItems)
           .set({ itemStatus: 'PENDING', paidAmount: 0, paidAt: null, updatedAt: new Date() })
@@ -1252,6 +1273,8 @@ export class PaymentsService {
               .where(eq(serviceRegistrations.id, registration.id));
           }
         }
+      } else {
+        await txn.delete(offlinePaymentSubmissions).where(eq(offlinePaymentSubmissions.id, submissionId));
       }
       await this.notifications.enqueueInTransaction(txn, {
         eventId: `PAYMENT_RESUBMISSION_REQUESTED:${submissionId}:${submission.payerUserId}`,
@@ -1262,7 +1285,7 @@ export class PaymentsService {
         relatedEntityType: 'PAYMENT_SCHEDULE_ITEM',
         relatedEntityId: submission.paymentScheduleItemId,
       });
-      return [submission.receiptObjectKey].filter((key): key is string => Boolean(key));
+      return approved ? [] : [submission.receiptObjectKey].filter((key): key is string => Boolean(key));
     });
     await Promise.all(keys.map((key) => this.storage?.deleteObject(key).catch(() => undefined)));
     return { reset: true };
@@ -1290,7 +1313,7 @@ export class PaymentsService {
         eq(serviceRegistrations.id, registrationPrices.registrationId),
       )
       .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
-      .where(eq(offlinePaymentSubmissions.payerUserId, userId))
+      .where(and(eq(offlinePaymentSubmissions.payerUserId, userId), ne(offlinePaymentSubmissions.status, 'SUPERSEDED')))
       .orderBy(desc(offlinePaymentSubmissions.createdAt), desc(offlinePaymentSubmissions.id))
       .limit(100)
       .then((rows) => rows.map(({ submission, ...context }) => ({ ...submission, ...context })));
@@ -1307,7 +1330,7 @@ export class PaymentsService {
   ) {
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(50, Math.max(1, query.pageSize ?? 20));
-    const filters = [ne(offlinePaymentSubmissions.status, 'DRAFT')];
+    const filters = [inArray(offlinePaymentSubmissions.status, ['PENDING_REVIEW', 'APPROVED', 'REJECTED'])];
     if (query.status) filters.push(eq(offlinePaymentSubmissions.status, query.status));
     if (query.itemType) filters.push(eq(paymentScheduleItems.itemType, query.itemType));
     if (query.q?.trim()) {
@@ -1481,14 +1504,14 @@ export class PaymentsService {
         : await this.db.db
             .select()
             .from(paymentTransactions)
-            .where(inArray(paymentTransactions.paymentScheduleItemId, itemIds));
+            .where(and(inArray(paymentTransactions.paymentScheduleItemId, itemIds), ne(paymentTransactions.transactionStatus, 'REVERSED')));
     const submissions =
       itemIds.length === 0
         ? []
         : await this.db.db
             .select()
             .from(offlinePaymentSubmissions)
-            .where(inArray(offlinePaymentSubmissions.paymentScheduleItemId, itemIds));
+            .where(and(inArray(offlinePaymentSubmissions.paymentScheduleItemId, itemIds), ne(offlinePaymentSubmissions.status, 'SUPERSEDED')));
     const parentRows = await this.db.db
       .select()
       .from(parents)

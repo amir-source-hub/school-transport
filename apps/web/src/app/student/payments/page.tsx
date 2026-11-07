@@ -127,7 +127,9 @@ export default async function PaymentsPage() {
                 {overview.transactions.map((transaction) => (
                   <p key={transaction.id} className="mt-2 text-sm text-muted">
                     {transaction.gatewayTransactionId ?? transaction.id} —{' '}
-                    {transaction.transactionStatus}
+                    {transaction.transactionStatus === 'REVERSED'
+                      ? 'بازنشانی‌شده برای ارسال دوباره رسید'
+                      : transaction.transactionStatus}
                   </p>
                 ))}
               </div>
