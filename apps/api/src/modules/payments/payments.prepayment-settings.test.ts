@@ -44,9 +44,30 @@ describe('student prepayment override', () => {
     expect(updates.find(({ table }) => table === contracts)?.values.contractDataSnapshot).toContain('شش میلیون و پانصد هزار');
   });
 
+  it('accepts a whole-rial amount that is not a multiple of ten', async () => {
+    const { service, updates, inserts } = harness();
+    await service.configureStudentPrepayment('admin-1', 'plan-1', 1_230_001);
+    expect(inserts.find(({ table }) => table === registrationPrices)?.values.prepaymentAmount).toBe(1_230_001);
+    expect(updates.find(({ table }) => table === paymentScheduleItems)?.values.amount).toBe(1_230_001);
+  });
+
   it.each([['ACCEPTED', 'PENDING'], ['GENERATED', 'PAID']])('refuses a signed contract or paid prepayment', async (contractStatus, itemStatus) => {
     const { service, updates } = harness(contractStatus, itemStatus);
     await expect(service.configureStudentPrepayment('admin-1', 'plan-1', 65_000_000)).rejects.toMatchObject({ code: 'PREPAYMENT_LOCKED' });
     expect(updates).toHaveLength(0);
+  });
+});
+
+describe('global prepayment setting', () => {
+  it('saves an arbitrary positive rial amount with the next version', async () => {
+    const returning = vi.fn().mockResolvedValue([{ defaultPrepaymentAmount: 1_230_001, version: 2 }]);
+    const txn = {
+      select: () => ({ from: () => ({ where: () => ({ for: async () => [{ id: 1, defaultPrepaymentAmount: 49_978_000, version: 1 }] }) }) }),
+      update: () => ({ set: () => ({ where: () => ({ returning }) }) }),
+    };
+    const transaction = async (work: (value: typeof txn) => Promise<unknown>) => work(txn);
+    const service = new PaymentsService({ db: { transaction } } as never, {} as never, {} as never);
+    await expect(service.configureDefaultPrepayment('admin-1', 1_230_001, 1)).resolves.toMatchObject({ defaultPrepaymentAmount: 1_230_001, version: 2 });
+    expect(returning).toHaveBeenCalledOnce();
   });
 });

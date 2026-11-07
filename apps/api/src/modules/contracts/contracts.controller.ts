@@ -88,6 +88,11 @@ export class AdminContractsController {
     return successResponse(list);
   }
 
+  @Get('contracts/:id')
+  async getDetails(@Param('id', new ParseUUIDPipe()) id: string) {
+    return successResponse(await this.contractsService.getDetails(id));
+  }
+
   @Post('contracts/:id/accept')
   async acceptOnBehalf(
     @Req() req: AuthenticatedRequest,

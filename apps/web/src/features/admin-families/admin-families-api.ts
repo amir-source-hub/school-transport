@@ -99,13 +99,13 @@ export async function createFamilyParent(
 export async function updateFamilyParent(
   familyId: string,
   parentId: string,
-  data: {
+  data: Partial<{
     firstName: string;
     lastName: string;
     nationalId: string;
     phoneNumber: string;
     isPrimaryContact?: boolean;
-  },
+  }>,
 ) {
   await apiRequest(`/admin/families/${familyId}/parents/${parentId}`, {
     method: 'PATCH',

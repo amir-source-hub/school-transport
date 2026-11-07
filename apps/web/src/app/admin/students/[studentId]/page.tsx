@@ -1,4 +1,5 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
+import Link from 'next/link';
 import { LocationDisplay } from '@/components/common/location-display';
 import { PrintPageButton } from '@/components/common/print-page-button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +10,7 @@ import {
   getAdminStudentPhoto,
 } from '@/features/admin-students/admin-students-api';
 import { formatJalaliDate } from '@/lib/formatters';
+import { ParentPhoneEditor } from '@/features/admin-students/parent-phone-editor';
 
 export const metadata = { title: 'جزئیات دانش‌آموز' };
 export const dynamic = 'force-dynamic';
@@ -132,7 +134,7 @@ export default async function AdminStudentPage({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-black">سرپرستان و تماس اضطراری</h2>
             <ButtonLink href={`/admin/families/${student.userId}#parents`} variant="secondary" size="sm">
-              ویرایش شماره والدین
+              ویرایش کامل اطلاعات والدین
             </ButtonLink>
           </div>
           <div className="mt-4 space-y-3 text-sm">
@@ -147,6 +149,7 @@ export default async function AdminStudentPage({
                 <p className="mt-1 font-mono">
                   {parent.nationalId} · {parent.phoneNumber}
                 </p>
+                <ParentPhoneEditor familyId={student.userId} parentId={parent.id} phoneNumber={parent.phoneNumber} />
               </div>
             ))}
             {student.emergencyContacts.map((contact) => (
@@ -210,6 +213,8 @@ export default async function AdminStudentPage({
                 value={student.enrollmentSummary.plan?.paidInstallmentCount?.toString()}
               />
             </dl>
+            {student.enrollmentSummary.contract && <Link className="mt-4 inline-block font-bold text-primary underline" href={`/admin/contracts/${student.enrollmentSummary.contract.id}`}>مشاهده متن قرارداد</Link>}
+            {student.contracts.length > 0 && <div className="mt-4 space-y-2"><h3 className="font-bold">تاریخچه قراردادها</h3>{student.contracts.map((contract) => <Link key={contract.id} className="block text-primary underline" href={`/admin/contracts/${contract.id}`}>{contract.contractNumber} · نسخه {contract.versionNumber} · {contract.contractStatus === 'ACCEPTED' ? 'امضاشده' : contract.contractStatus}</Link>)}</div>}
           </Card>
         )}
       </div>

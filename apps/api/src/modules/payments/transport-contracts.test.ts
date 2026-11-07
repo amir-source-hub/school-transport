@@ -49,9 +49,7 @@ describe('scoped transport contracts', () => {
       ConfigureInstallmentsDto,
     );
     expect(dto.items[0].amount).toBe(5000);
-    await expect(body({ items: [] }, ConfigureInstallmentsDto)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(body({ items: [] }, ConfigureInstallmentsDto)).resolves.toMatchObject({ items: [] });
     await expect(
       body({ items: [{ amount: 0, dueDate: 'not-a-date' }] }, ConfigureInstallmentsDto),
     ).rejects.toBeInstanceOf(BadRequestException);

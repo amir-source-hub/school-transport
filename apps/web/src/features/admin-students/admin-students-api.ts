@@ -149,6 +149,7 @@ export const adminEmergencyContactSchema = z.object({
 });
 
 export const adminStudentDetailSchema = rawAdminStudentSchema.extend({
+  contracts: z.array(z.object({ id: z.string(), contractNumber: z.string(), contractStatus: z.string(), versionNumber: z.number(), acceptedAt: z.string().nullable() })),
   birthDate: z.string().nullable(),
   gender: z.string().nullable(),
   updatedAt: z.string(),

@@ -34,7 +34,7 @@ export function PrepaymentSettingsForm({ current }: { current: PrepaymentSetting
       <Input className="mt-2" inputMode="numeric" dir="ltr" value={amount ? numericAmount.toLocaleString('en-US') : ''}
         onChange={(event) => setAmount(normalizeDigits(event.target.value).replace(/\D/g, ''))} />
     </label>
-    <Button type="submit" loading={pending} disabled={!Number.isInteger(numericAmount) || numericAmount <= 0 || numericAmount % 10 !== 0}>ذخیره مبلغ</Button>
+    <Button type="submit" loading={pending} disabled={!Number.isInteger(numericAmount) || numericAmount <= 0 || numericAmount > 2_147_483_640}>ذخیره مبلغ</Button>
     {error && <p role="alert" className="w-full text-sm text-danger">{error}</p>}
     {saved && <p role="status" className="w-full text-sm text-success">مبلغ جدید برای ثبت‌نام‌های بعدی ذخیره شد.</p>}
   </form>;

@@ -131,6 +131,8 @@ const offlineSubmissionListSchema = z.object({
 export type AdminOfflineSubmission = z.infer<typeof offlineSubmissionSchema>;
 
 export async function getAdminOfflineSubmissions(params: {
+  routeId?: string;
+  driverId?: string;
   status?: string;
   itemType?: string;
   page?: number;
@@ -139,6 +141,8 @@ export async function getAdminOfflineSubmissions(params: {
 }) {
   const query = new URLSearchParams();
   if (params.status) query.set('status', params.status);
+  if (params.routeId) query.set('routeId', params.routeId);
+  if (params.driverId) query.set('driverId', params.driverId);
   if (params.itemType) query.set('itemType', params.itemType);
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(params.pageSize));

@@ -119,6 +119,13 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     primaryHeading: 'تکمیل ثبت‌نام سرویس مدرسه',
   },
   {
+    path: '/payment-return',
+    audience: 'onboarding',
+    title: 'نتیجه پرداخت',
+    description: 'نمایش نتیجه بازگشت از درگاه پرداخت.',
+    primaryHeading: 'نتیجه پرداخت',
+  },
+  {
     path: '/student',
     audience: 'parent',
     title: 'پنل دانش‌آموز',
@@ -248,6 +255,13 @@ export const routeDocumentPolicies: readonly RouteDocumentPolicy[] = [
     title: 'قراردادها',
     description: 'بررسی و صدور قراردادهای سرویس.',
     primaryHeading: 'قراردادها',
+  },
+  {
+    path: '/admin/contracts/[contractId]',
+    audience: 'admin',
+    title: 'قرارداد دانش‌آموز',
+    description: 'مشاهده متن و وضعیت قرارداد دانش‌آموز.',
+    primaryHeading: 'قرارداد',
   },
   {
     path: '/admin/families',

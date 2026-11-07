@@ -1475,6 +1475,21 @@
         "tags": ["AdminContracts"]
       }
     },
+    "/api/v1/admin/contracts/{id}": {
+      "get": {
+        "operationId": "AdminContractsController_getDetails",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminContracts"]
+      }
+    },
     "/api/v1/admin/contracts/{id}/accept": {
       "post": {
         "operationId": "AdminContractsController_acceptOnBehalf",
@@ -1660,6 +1675,70 @@
         ],
         "responses": { "200": { "description": "" } },
         "tags": ["Payments"]
+      }
+    },
+    "/api/v1/admin/payments/images/{kind}.zip": {
+      "get": {
+        "operationId": "AdminPaymentsController_exportImages",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminPayments"]
+      }
+    },
+    "/api/v1/admin/payments/prepayment-settings": {
+      "get": {
+        "operationId": "AdminPaymentsController_prepaymentSettings",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminPayments"]
+      },
+      "post": {
+        "operationId": "AdminPaymentsController_configurePrepaymentSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigureDefaultPrepaymentDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminPayments"]
+      }
+    },
+    "/api/v1/admin/payments/plans/{planId}/prepayment": {
+      "post": {
+        "operationId": "AdminPaymentsController_configureStudentPrepayment",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigureStudentPrepaymentDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminPayments"]
       }
     },
     "/api/v1/admin/payments": {
@@ -3243,6 +3322,8 @@
       "VerifyOnlinePaymentDto": { "type": "object", "properties": {} },
       "OfflinePaymentDto": { "type": "object", "properties": {} },
       "AuthorizeReceiptUploadDto": { "type": "object", "properties": {} },
+      "ConfigureDefaultPrepaymentDto": { "type": "object", "properties": {} },
+      "ConfigureStudentPrepaymentDto": { "type": "object", "properties": {} },
       "ConfigureOfflineDestinationDto": { "type": "object", "properties": {} },
       "ConfigureInstallmentsDto": { "type": "object", "properties": {} },
       "ReviewPaymentDto": { "type": "object", "properties": {} },

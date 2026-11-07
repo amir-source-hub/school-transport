@@ -51,11 +51,14 @@ export default async function AdminPaymentsPage({
     status: receiptStatus,
     itemType,
   };
-  const [{ payments }, destination, submissions, prepaymentSettings] = await Promise.all([
+  const [{ payments }, destination, submissions, prepaymentSettings, approvedReceipts, rejectedReceipts, pendingReceipts] = await Promise.all([
     getAdminPayments(),
     getAdminOfflineDestination(),
-    getAdminOfflineSubmissions({ ...receiptFilters, q, page: receiptPage, pageSize: 20 }),
+    getAdminOfflineSubmissions({ ...receiptFilters, q, routeId: params.routeId, driverId: params.driverId, page: receiptPage, pageSize: 20 }),
     getPrepaymentSettings(),
+    getAdminOfflineSubmissions({ ...receiptFilters, status: 'APPROVED', q, routeId: params.routeId, driverId: params.driverId, pageSize: 1 }),
+    getAdminOfflineSubmissions({ ...receiptFilters, status: 'REJECTED', q, routeId: params.routeId, driverId: params.driverId, pageSize: 1 }),
+    getAdminOfflineSubmissions({ ...receiptFilters, status: 'PENDING_REVIEW', q, routeId: params.routeId, driverId: params.driverId, pageSize: 1 }),
   ]);
   const routes = [...new Map(payments.flatMap((payment) => payment.routes).map((route) => [route.routeId, route])).values()];
   const drivers = [...new Map(payments.flatMap((payment) => payment.routes).map((route) => [route.driverId, route])).values()];
@@ -84,7 +87,7 @@ export default async function AdminPaymentsPage({
       </div>
       <section className="grid gap-4 sm:grid-cols-3" aria-label="خلاصه پرداخت‌ها">
         <Card>
-          <p className="text-sm text-muted">دانش‌آموزان دارای پرداخت</p>
+          <p className="text-sm text-muted">دانش‌آموزان دارای برنامه پرداخت</p>
           <p className="mt-2 text-2xl font-black">
             {visiblePayments.length.toLocaleString('fa-IR')}
           </p>
@@ -113,6 +116,7 @@ export default async function AdminPaymentsPage({
         </div>
       </Card>
       <ImageArchiveButton kind="receipts" />
+      <p className="text-sm text-muted">رسیدها: {approvedReceipts.total.toLocaleString('fa-IR')} تأییدشده، {rejectedReceipts.total.toLocaleString('fa-IR')} ردشده، {pendingReceipts.total.toLocaleString('fa-IR')} در انتظار بررسی. یک دانش‌آموز ممکن است چند قسط و چند بار ارسال رسید داشته باشد.</p>
       <section className="space-y-4" aria-labelledby="receipt-review-heading">
         <div>
           <h2 id="receipt-review-heading" className="text-xl font-black">

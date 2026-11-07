@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 import { JalaliDateInput } from '@/components/forms/jalali-date-input';
 import { Button } from '@/components/ui/button';
@@ -502,6 +503,7 @@ type ParentFormValue = {
   lastName: string;
   nationalId: string;
   phoneNumber: string;
+  isPrimaryContact: boolean;
 };
 
 function ParentFields({
@@ -519,6 +521,7 @@ function ParentFields({
     lastName: string;
     nationalId: string;
     phoneNumber: string;
+    isPrimaryContact: boolean;
   };
   parentType: 'FATHER' | 'MOTHER';
 }) {
@@ -532,8 +535,9 @@ function ParentFields({
     lastName: parent?.lastName ?? '',
     nationalId: parent?.nationalId ?? '',
     phoneNumber: parent?.phoneNumber ?? '09',
+    isPrimaryContact: parent?.isPrimaryContact ?? false,
   });
-  const set = (key: keyof ParentFormValue, value: string) =>
+  const set = (key: keyof ParentFormValue, value: string | boolean) =>
     setForm((current) => ({ ...current, [key]: value }));
 
   async function submit(event: React.FormEvent) {
@@ -542,7 +546,13 @@ function ParentFields({
     setFeedback(undefined);
     try {
       if (parent) {
-        await updateFamilyParent(familyId, parent.id, form);
+        const changed = Object.fromEntries(
+          (Object.keys(form) as (keyof ParentFormValue)[])
+            .filter((key) => form[key] !== parent[key])
+            .map((key) => [key, form[key]]),
+        );
+        if (Object.keys(changed).length === 0) return;
+        await updateFamilyParent(familyId, parent.id, changed);
       } else {
         await createFamilyParent(familyId, { ...form, parentType });
       }
@@ -615,6 +625,7 @@ function ParentFields({
           />
         </label>
       </div>
+      <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.isPrimaryContact} disabled={parent?.isPrimaryContact} onChange={(event) => set('isPrimaryContact', event.target.checked)} />سرپرست اصلی و شماره ورود</label>
       <SaveFeedback message={feedback?.message} tone={feedback?.tone ?? 'success'} />
       <div className="flex items-center gap-3">
         <Button type="submit" loading={pending}>
@@ -881,6 +892,8 @@ function ContractTab({ detail }: { detail: AdminStudentDetail }) {
   }
   return (
     <div className="space-y-2 text-sm">
+      {detail.contracts.map((item) => <Link key={item.id} href={`/admin/contracts/${item.id}`} target="_blank" className="block font-bold text-primary underline">{item.contractNumber} · نسخه {item.versionNumber} · {CONTRACT_STATUS_LABELS[item.contractStatus] ?? item.contractStatus}</Link>)}
+      <Link href={`/admin/contracts/${contract.id}`} target="_blank" className="inline-block rounded-xl bg-primary px-4 py-2 font-bold text-white">مشاهده متن قرارداد</Link>
       <Row label="شماره قرارداد" value={contract.contractNumber} />
       <Row
         label="وضعیت قرارداد"

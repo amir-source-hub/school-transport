@@ -204,7 +204,7 @@ export class AdminPaymentsController {
 
   @Get('images/:kind.zip')
   async exportImages(@Param('kind') kind: string, @Res() reply: FastifyReply) {
-    if (kind !== 'photos' && kind !== 'receipts') throw new BadRequestException('Unknown image export type.');
+    if (kind !== 'photos' && kind !== 'receipts' && kind !== 'driver-documents') throw new BadRequestException('Unknown image export type.');
     const archive = await this.paymentsService.exportStudentImages(kind);
     reply.header('Content-Type', 'application/zip')
       .header('Content-Disposition', `attachment; filename="school-transport-${kind}.zip"`)

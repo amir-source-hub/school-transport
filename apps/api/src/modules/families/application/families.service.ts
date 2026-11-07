@@ -625,6 +625,11 @@ export class FamiliesService {
     if (!/^\d{10}$/.test(nationalId) || !/^09\d{9}$/.test(phoneNumber)) {
       throw new ValidationError('A valid national ID and Iranian mobile number are required.');
     }
+    if (phoneNumber !== existing.phoneNumber && (data.isPrimaryContact || existing.isPrimaryContact)) {
+      const [occupied] = await this.db.db.select({ id: users.id }).from(users)
+        .where(and(eq(users.accountType, 'PARENT'), eq(users.phoneNumber, phoneNumber), ne(users.id, userId))).limit(1);
+      if (occupied) throw new ConflictError('PARENT_PHONE_IN_USE', 'This phone number belongs to another account.');
+    }
     await withParentNationalIdConflict(() =>
       this.db.db.transaction(async (txn) => {
         if (data.isPrimaryContact) {

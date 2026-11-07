@@ -120,7 +120,7 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
       ...base,
       target: 'field',
       title: 'اطلاعات نیاز به اصلاح دارد',
-      message: 'لطفاً موارد مشخص‌شده را بررسی و اصلاح کنید.',
+      message: Object.entries(error.fieldErrors).map(([field, messages]) => `${field}: ${messages.join('، ')}`).join('؛ '),
       fieldErrors: error.fieldErrors,
       canRetry: false,
     };
@@ -186,6 +186,7 @@ export function getApiErrorFeedback(error: unknown): ErrorFeedback {
       INVALID_PAYMENT_PLAN: 'روش پرداخت مبلغ باقی‌مانده را انتخاب کنید.',
       INVALID_SCHOOL_PROGRAM: 'مقطع یا پایه تحصیلی انتخاب‌شده در این مدرسه ارائه نمی‌شود.',
       DUPLICATE_NATIONAL_ID: 'این کد ملی قبلاً در سامانه ثبت شده است.',
+      PARENT_PHONE_IN_USE: 'این شماره همراه برای حساب دیگری ثبت شده است. حساب تکراری را بررسی کنید.',
       DUPLICATE_PHONE_NUMBER: 'این شماره همراه قبلاً برای حساب دیگری ثبت شده است.',
       LOGIN_PHONE_MUST_MATCH_PARENT:
         'شماره ورود باید با شماره همراه پدر یا مادر یکسان باشد؛ همان والد به‌عنوان تماس اصلی ثبت می‌شود.',

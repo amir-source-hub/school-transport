@@ -581,8 +581,17 @@ export class StudentsService {
       };
     }
 
+    const contractHistory = registrationRows.length
+      ? await this.db.db.select({ id: contracts.id, contractNumber: contracts.contractNumber,
+        contractStatus: contracts.contractStatus, versionNumber: contracts.versionNumber,
+        acceptedAt: contracts.acceptedAt })
+        .from(contracts).where(inArray(contracts.registrationId, registrationRows.map((row) => row.id)))
+        .orderBy(desc(contracts.createdAt), desc(contracts.id))
+      : [];
+
     return {
       ...student,
+      contracts: contractHistory,
       companion: companion ?? null,
       seatCount: companion ? 2 : 1,
       familyName: primaryParent

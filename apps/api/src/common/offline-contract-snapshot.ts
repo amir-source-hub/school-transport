@@ -71,7 +71,9 @@ export function buildOfflineContractSnapshot(
     academicYear: academicYear.replace('-', '–'),
     serviceAmountRial: prepaymentAmount.toLocaleString('fa-IR'),
     serviceAmountToman: (prepaymentAmount / 10).toLocaleString('fa-IR'),
-    serviceAmountTomanWords: persianNumberWords(prepaymentAmount / 10),
+    serviceAmountTomanWords: prepaymentAmount % 10 === 0
+      ? persianNumberWords(prepaymentAmount / 10)
+      : `${persianNumberWords(Math.floor(prepaymentAmount / 10))} تومان و ${persianNumberWords(prepaymentAmount % 10)} ریال`,
     paymentState: 'در انتظار پرداخت پیش‌ثبت‌نام',
     homeAddress: `${data.address.province}، ${data.address.city}، ${data.address.streetAddress}`,
     postalCode: data.address.postalCode,

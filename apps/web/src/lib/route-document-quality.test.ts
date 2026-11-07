@@ -6,6 +6,7 @@ import { routeDocumentPolicies } from './route-metadata';
 
 const appRoot = resolve(process.cwd(), 'src/app');
 const headingProviders: Record<string, string> = {
+  '/payment-return': resolve(process.cwd(), 'src/features/finance/payment-return-result.tsx'),
   '/': resolve(process.cwd(), 'src/features/public-home/public-hero.tsx'),
   '/student/dashboard': resolve(
     process.cwd(),

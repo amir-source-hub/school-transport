@@ -32,6 +32,7 @@ describe('admin student detail API', () => {
     gender: 'MALE',
     updatedAt: '2026-08-08T10:00:00.000Z',
     schoolType: 'PRIVATE',
+    contracts: [],
     parents: [
       {
         id: 'parent-1',

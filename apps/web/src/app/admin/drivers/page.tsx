@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { FilteredCount } from '@/components/data/filtered-count';
 import { getAdminDrivers } from '@/features/admin-drivers/admin-drivers-api';
+import { ImageArchiveButton } from '@/features/admin-payments/image-archive-button';
 import { sortAdminDrivers, type DriverSort } from '@/features/admin-drivers/admin-driver-sort';
 import { driverValueLabel, IranianPlate } from '@/features/admin-drivers/driver-display';
 
@@ -51,6 +52,7 @@ export default async function Page({
         </div>
         <FilteredCount count={visible.length} label="راننده مطابق فیلتر" />
       </header>
+      <ImageArchiveButton kind="driver-documents" />
       <form className="grid gap-3 rounded-2xl border border-border bg-white p-4 md:grid-cols-[minmax(0,1fr)_11rem_13rem_auto]">
         <Input
           type="search"

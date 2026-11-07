@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { downloadApiFile } from '@/lib/api-client';
 import { getApiErrorFeedback } from '@/lib/api-error-feedback';
 
-export function ImageArchiveButton({ kind }: { kind: 'photos' | 'receipts' }) {
+export function ImageArchiveButton({ kind }: { kind: 'photos' | 'receipts' | 'driver-documents' }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   return <div>
@@ -21,7 +21,7 @@ export function ImageArchiveButton({ kind }: { kind: 'photos' | 'receipts' }) {
       } catch (caught) { setError(getApiErrorFeedback(caught).message); }
       finally { setPending(false); }
     }}><Download className="size-4" aria-hidden="true" />
-      {kind === 'photos' ? 'دریافت همه عکس‌های دانش‌آموزان' : 'دریافت همه تصاویر رسیدها'}
+      {kind === 'photos' ? 'دریافت همه عکس‌های دانش‌آموزان' : kind === 'receipts' ? 'دریافت همه تصاویر رسیدها' : 'دریافت همه مدارک و عکس‌های رانندگان'}
     </Button>
     {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
   </div>;

@@ -30,7 +30,7 @@ export function StudentPrepaymentDialog({ planId, currentAmount }: { planId: str
             onChange={(event) => setAmount(normalizeDigits(event.target.value).replace(/\D/g, ''))} />
         </label>
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-        <Button type="submit" loading={pending} disabled={!Number.isInteger(value) || value <= 0 || value % 10 !== 0}>ذخیره مبلغ دانش‌آموز</Button>
+        <Button type="submit" loading={pending} disabled={!Number.isInteger(value) || value <= 0 || value > 2_147_483_640}>ذخیره مبلغ دانش‌آموز</Button>
       </form>
     </DialogContent>
   </Dialog>;

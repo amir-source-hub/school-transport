@@ -12,6 +12,8 @@ import {
   transportServiceRuns,
   transportServiceRunStudents,
   drivers,
+  vehicles,
+  transportDocuments,
   paymentSettings,
   contracts,
   studentPhotoUploads,
@@ -65,9 +67,23 @@ export class PaymentsService {
     return settings;
   }
 
-  async exportStudentImages(kind: 'photos' | 'receipts') {
+  async exportStudentImages(kind: 'photos' | 'receipts' | 'driver-documents') {
     if (!this.storage) throw new AppError('STORAGE_UNAVAILABLE', 'Object storage is not configured.', 503);
     const safe = (value: string) => value.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').trim();
+    if (kind === 'driver-documents') {
+      const rows = await this.db.db.select({
+        id: transportDocuments.id, documentType: transportDocuments.documentType,
+        pageNumber: transportDocuments.pageNumber, objectKey: transportDocuments.objectKey,
+        mimeType: transportDocuments.mimeType, driverId: drivers.id,
+        firstName: drivers.firstName, lastName: drivers.lastName,
+      }).from(transportDocuments)
+        .leftJoin(vehicles, eq(vehicles.id, transportDocuments.vehicleId))
+        .innerJoin(drivers, sql`${drivers.id} = coalesce(${transportDocuments.driverId}, ${vehicles.driverId})`);
+      return zipStream(rows.map((row) => ({
+        name: `${safe(`${row.firstName} ${row.lastName}`)}-${row.driverId}/${safe(row.documentType)}-page-${row.pageNumber}-${row.id}.${row.mimeType === 'image/jpeg' ? 'jpg' : row.mimeType === 'image/png' ? 'png' : row.mimeType === 'application/pdf' ? 'pdf' : 'bin'}`,
+        read: () => this.storage!.getObject(row.objectKey, 10 * 1024 * 1024),
+      })));
+    }
     if (kind === 'photos') {
       const rows = await this.db.db.select({
         studentId: students.id, firstName: students.firstName, lastName: students.lastName,
@@ -102,8 +118,8 @@ export class PaymentsService {
   }
 
   async configureDefaultPrepayment(adminId: string, amount: number, expectedVersion: number) {
-    if (!Number.isInteger(amount) || amount <= 0 || amount > 2_147_483_640 || amount % 10 !== 0) {
-      throw new ValidationError('Prepayment must be a positive whole toman amount.');
+    if (!Number.isInteger(amount) || amount <= 0 || amount > 2_147_483_640) {
+      throw new ValidationError('Prepayment must be a positive whole rial amount.');
     }
     return this.db.db.transaction(async (txn) => {
       const [current] = await txn.select().from(paymentSettings).where(eq(paymentSettings.id, 1)).for('update');
@@ -127,8 +143,8 @@ export class PaymentsService {
   }
 
   async configureStudentPrepayment(adminId: string, planId: string, amount: number) {
-    if (!Number.isInteger(amount) || amount <= 0 || amount > 2_147_483_640 || amount % 10 !== 0) {
-      throw new ValidationError('Prepayment must be a positive whole toman amount.');
+    if (!Number.isInteger(amount) || amount <= 0 || amount > 2_147_483_640) {
+      throw new ValidationError('Prepayment must be a positive whole rial amount.');
     }
     return this.db.db.transaction(async (txn) => {
       const [plan] = await txn.select().from(paymentPlans).where(eq(paymentPlans.id, planId)).for('update');
@@ -1326,6 +1342,8 @@ export class PaymentsService {
       page?: number;
       pageSize?: number;
       q?: string;
+      routeId?: string;
+      driverId?: string;
     } = {},
   ) {
     const page = Math.max(1, query.page ?? 1);
@@ -1333,6 +1351,13 @@ export class PaymentsService {
     const filters = [inArray(offlinePaymentSubmissions.status, ['PENDING_REVIEW', 'APPROVED', 'REJECTED'])];
     if (query.status) filters.push(eq(offlinePaymentSubmissions.status, query.status));
     if (query.itemType) filters.push(eq(paymentScheduleItems.itemType, query.itemType));
+    if (query.routeId || query.driverId) {
+      filters.push(sql`exists (select 1 from transport_service_run_students rs
+        join transport_service_runs run on run.id = rs.service_run_id
+        where rs.student_id = ${students.id} and rs.is_active and run.is_active
+        ${query.routeId ? sql`and run.id = ${query.routeId}` : sql``}
+        ${query.driverId ? sql`and run.driver_id = ${query.driverId}` : sql``})`);
+    }
     if (query.q?.trim()) {
       const pattern = `%${query.q.trim()}%`;
       filters.push(

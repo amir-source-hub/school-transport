@@ -93,7 +93,7 @@ export class ConfigureOfflineDestinationDto {
 export class ConfigureDefaultPrepaymentDto {
   @Transform(({ value }) => typeof value === 'string' ? Number(normalizeIranianDigits(value)) : value)
   @IsInt()
-  @Min(10)
+  @Min(1)
   @Max(2_147_483_640)
   amount!: number;
 
@@ -105,7 +105,7 @@ export class ConfigureDefaultPrepaymentDto {
 export class ConfigureStudentPrepaymentDto {
   @Transform(({ value }) => typeof value === 'string' ? Number(normalizeIranianDigits(value)) : value)
   @IsInt()
-  @Min(10)
+  @Min(1)
   @Max(2_147_483_640)
   amount!: number;
 }
@@ -160,6 +160,8 @@ export class AuthorizeReceiptUploadDto {
 }
 
 export class AdminOfflinePaymentListQueryDto {
+  @IsOptional() @IsUUID() routeId?: string;
+  @IsOptional() @IsUUID() driverId?: string;
   @IsOptional()
   @IsIn(['PENDING_REVIEW', 'APPROVED', 'REJECTED'])
   status?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';

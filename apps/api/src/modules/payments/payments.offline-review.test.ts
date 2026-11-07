@@ -98,6 +98,7 @@ describe('offline payment review transaction', () => {
         [scheduleItem],
         [{ id: 'plan-1' }],
         [{ ...scheduleItem, itemStatus: 'PAID' }],
+        [{ totalAmount: 2_000_000 }],
         [{ id: 'registration-1' }],
       ],
       [[approved], [], [], []],
