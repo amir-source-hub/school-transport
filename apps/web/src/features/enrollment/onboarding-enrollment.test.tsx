@@ -210,8 +210,9 @@ describe('onboarding guided enrollment funnel', () => {
       ),
     );
 
-    await user.click(screen.getByRole('button', { name: 'صفحه بعد' }));
-    await user.click(screen.getByRole('button', { name: 'صفحه بعد' }));
+    const contract = screen.getByRole('article', { name: 'متن قرارداد' });
+    Object.defineProperties(contract, { scrollHeight: { value: 1000 }, clientHeight: { value: 200 }, scrollTop: { value: 800, writable: true } });
+    fireEvent.scroll(contract);
     await user.click(screen.getByRole('button', { name: /پذیرش قرارداد و ادامه/ }));
 
     expect(enrollmentApi.acceptGuidedContract).toHaveBeenCalledWith(

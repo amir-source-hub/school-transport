@@ -31,7 +31,7 @@ export function PrepaymentSettingsForm({ current }: { current: PrepaymentSetting
     }
   }} className="flex flex-wrap items-end gap-3">
     <label className="min-w-56 flex-1 text-sm font-bold">پیش‌پرداخت پیش‌فرض برای ثبت‌نام‌های جدید (ریال)
-      <Input className="mt-2" inputMode="numeric" dir="ltr" value={amount ? numericAmount.toLocaleString('en-US') : ''}
+      <Input className="mt-2" inputMode="numeric" dir="ltr" value={amount}
         onChange={(event) => setAmount(normalizeDigits(event.target.value).replace(/\D/g, ''))} />
     </label>
     <Button type="submit" loading={pending} disabled={!Number.isInteger(numericAmount) || numericAmount <= 0 || numericAmount > 2_147_483_640}>ذخیره مبلغ</Button>

@@ -69,7 +69,8 @@ export class PaymentsService {
 
   async exportStudentImages(kind: 'photos' | 'receipts' | 'driver-documents') {
     if (!this.storage) throw new AppError('STORAGE_UNAVAILABLE', 'Object storage is not configured.', 503);
-    const safe = (value: string) => value.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').trim();
+    const safe = (value: string) => Array.from(value, (character) =>
+      character.charCodeAt(0) < 32 || '\\/:*?"<>|'.includes(character) ? '_' : character).join('').trim();
     if (kind === 'driver-documents') {
       const rows = await this.db.db.select({
         id: transportDocuments.id, documentType: transportDocuments.documentType,
@@ -134,7 +135,7 @@ export class PaymentsService {
       }).where(eq(paymentSettings.id, 1)).returning();
       await this.audit?.recordInTransaction(txn, {
         actorType: 'ADMIN', actorId: adminId, action: 'DEFAULT_PREPAYMENT_UPDATED',
-        entityType: 'PAYMENT_SETTINGS', entityId: String(current.id),
+        entityType: 'PAYMENT_SETTINGS',
         previousValues: { amount: current.defaultPrepaymentAmount },
         newValues: { amount },
       });

@@ -7,6 +7,7 @@ import {
   emergencyContacts,
   students,
   schools,
+  onboardingSessions,
 } from '../../../database/schemas';
 import { eq, and, desc, inArray, ne } from 'drizzle-orm';
 import { NotFoundError, ConflictError, ValidationError } from '../../../common/errors';
@@ -625,13 +626,29 @@ export class FamiliesService {
     if (!/^\d{10}$/.test(nationalId) || !/^09\d{9}$/.test(phoneNumber)) {
       throw new ValidationError('A valid national ID and Iranian mobile number are required.');
     }
-    if (phoneNumber !== existing.phoneNumber && (data.isPrimaryContact || existing.isPrimaryContact)) {
-      const [occupied] = await this.db.db.select({ id: users.id }).from(users)
-        .where(and(eq(users.accountType, 'PARENT'), eq(users.phoneNumber, phoneNumber), ne(users.id, userId))).limit(1);
-      if (occupied) throw new ConflictError('PARENT_PHONE_IN_USE', 'This phone number belongs to another account.');
-    }
     await withParentNationalIdConflict(() =>
       this.db.db.transaction(async (txn) => {
+        if (phoneNumber !== existing.phoneNumber && (data.isPrimaryContact || existing.isPrimaryContact)) {
+          const [occupied] = await txn.select().from(users)
+            .where(and(eq(users.accountType, 'PARENT'), eq(users.phoneNumber, phoneNumber), ne(users.id, userId)))
+            .for('update').limit(1);
+          if (occupied) {
+            const [[linkedParent], [linkedStudent], onboarding] = await Promise.all([
+              txn.select({ id: parents.id }).from(parents).where(eq(parents.userId, occupied.id)).limit(1),
+              txn.select({ id: students.id }).from(students).where(eq(students.userId, occupied.id)).limit(1),
+              txn.select({ status: onboardingSessions.status, expiresAt: onboardingSessions.expiresAt })
+                .from(onboardingSessions).where(eq(onboardingSessions.userId, occupied.id)),
+            ]);
+            const sameAbandonedDraft = occupied.accountStatus === 'PENDING'
+              && occupied.username === `${phoneNumber}:${nationalId}`
+              && !linkedParent && !linkedStudent
+              && onboarding.every((session) => session.status !== 'PENDING' || session.expiresAt < new Date());
+            if (!sameAbandonedDraft) throw new ConflictError('PARENT_PHONE_IN_USE', 'This phone number belongs to another account.');
+            await txn.update(onboardingSessions).set({ status: 'EXPIRED', updatedAt: new Date() })
+              .where(and(eq(onboardingSessions.userId, occupied.id), eq(onboardingSessions.status, 'PENDING')));
+            await txn.update(users).set({ phoneNumber: null, updatedAt: new Date() }).where(eq(users.id, occupied.id));
+          }
+        }
         if (data.isPrimaryContact) {
           await txn
             .update(parents)

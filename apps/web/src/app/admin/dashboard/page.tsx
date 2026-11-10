@@ -1,10 +1,7 @@
 import {
   AlertTriangle,
   ArrowLeft,
-  ArrowUp,
-  ArrowDown,
   ClipboardCheck,
-  Clock,
   ReceiptText,
   TrendingUp,
   WalletCards,
@@ -26,8 +23,6 @@ export default async function AdminDashboardPage() {
       value: summary.pendingEnrollments,
       icon: ClipboardCheck,
       href: '/admin/registrations',
-      trend: '+۲',
-      trendUp: true,
       danger: false,
       color: 'from-primary/10 to-primary/5 border-primary/20',
       iconColor: 'text-primary',
@@ -37,8 +32,6 @@ export default async function AdminDashboardPage() {
       value: summary.offlinePaymentsAwaitingReview,
       icon: ReceiptText,
       href: '/admin/payments',
-      trend: '-۲',
-      trendUp: false,
       danger: false,
       color: 'from-primary/10 to-primary/5 border-primary/20',
       iconColor: 'text-primary',
@@ -48,8 +41,6 @@ export default async function AdminDashboardPage() {
       value: summary.upcomingPayments,
       icon: WalletCards,
       href: '/admin/payments',
-      trend: '+۵',
-      trendUp: true,
       danger: false,
       color: 'from-sun/10 to-sun/5 border-sun/20',
       iconColor: 'text-sun',
@@ -59,8 +50,6 @@ export default async function AdminDashboardPage() {
       value: summary.overduePayments,
       icon: AlertTriangle,
       href: '/admin/payments',
-      trend: '+۱',
-      trendUp: false,
       danger: true,
       color: 'from-danger/10 to-danger/5 border-danger/20',
       iconColor: 'text-danger',
@@ -77,17 +66,13 @@ export default async function AdminDashboardPage() {
           </div>
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">داشبورد مدیریت</h1>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted">
-          <Clock aria-hidden="true" className="size-3.5" />
-          <span>آخرین بروزرسانی: لحظاتی پیش</span>
-        </div>
       </div>
 
       <section
         className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="شاخص‌های کلیدی عملیات"
       >
-        {kpis.map(({ label, value, icon: Icon, href, trend, trendUp, color, iconColor }) => (
+        {kpis.map(({ label, value, icon: Icon, href, color, iconColor }) => (
           <a
             key={label}
             href={href}
@@ -98,19 +83,6 @@ export default async function AdminDashboardPage() {
           >
             <div className="flex items-start justify-between">
               <Icon aria-hidden="true" className={cn('size-5', iconColor)} />
-              <span
-                className={cn(
-                  'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                  trendUp ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger',
-                )}
-              >
-                {trendUp ? (
-                  <ArrowUp aria-hidden="true" className="size-3" />
-                ) : (
-                  <ArrowDown aria-hidden="true" className="size-3" />
-                )}
-                {trend}
-              </span>
             </div>
             <p className="mt-3 text-3xl font-black">{formatPersianNumber(value)}</p>
             <p className="mt-1 text-xs text-muted">{label}</p>

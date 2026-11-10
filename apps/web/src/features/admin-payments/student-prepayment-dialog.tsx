@@ -26,7 +26,7 @@ export function StudentPrepaymentDialog({ planId, currentAmount }: { planId: str
         finally { setPending(false); }
       }}>
         <label className="block text-sm font-bold">مبلغ جدید (ریال)
-          <Input className="mt-2" inputMode="numeric" dir="ltr" value={amount ? value.toLocaleString('en-US') : ''}
+          <Input className="mt-2" inputMode="numeric" dir="ltr" value={amount}
             onChange={(event) => setAmount(normalizeDigits(event.target.value).replace(/\D/g, ''))} />
         </label>
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}

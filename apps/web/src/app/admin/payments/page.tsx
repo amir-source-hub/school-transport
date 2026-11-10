@@ -67,14 +67,6 @@ export default async function AdminPaymentsPage({
     && (!params.routeId || payment.routes.some((route) => route.routeId === params.routeId))
     && (!params.driverId || payment.routes.some((route) => route.driverId === params.driverId))
   );
-  const allItems = visiblePayments.flatMap((payment) => [
-    payment.prepayment,
-    ...payment.installments,
-  ]);
-  const awaitingReview = allItems.filter(
-    (item) => item.transaction?.status === 'در انتظار بررسی',
-  ).length;
-  const approved = allItems.filter((item) => item.paid).length;
 
   return (
     <div className="space-y-6">
@@ -85,26 +77,6 @@ export default async function AdminPaymentsPage({
         <p className="text-sm font-bold text-primary">پایش مالی مدیریت</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">پرداخت‌ها</h1>
       </div>
-      <section className="grid gap-4 sm:grid-cols-3" aria-label="خلاصه پرداخت‌ها">
-        <Card>
-          <p className="text-sm text-muted">دانش‌آموزان دارای برنامه پرداخت</p>
-          <p className="mt-2 text-2xl font-black">
-            {visiblePayments.length.toLocaleString('fa-IR')}
-          </p>
-        </Card>
-        <Card>
-          <p className="text-sm text-muted">در انتظار بررسی</p>
-          <p className="mt-2 text-2xl font-black text-warning">
-            {awaitingReview.toLocaleString('fa-IR')}
-          </p>
-        </Card>
-        <Card>
-          <p className="text-sm text-muted">تأییدشده</p>
-          <p className="mt-2 text-2xl font-black text-success">
-            {approved.toLocaleString('fa-IR')}
-          </p>
-        </Card>
-      </section>
       <Card>
         <h2 className="mb-2 text-lg font-black">مقصد پرداخت آفلاین</h2>
         <p className="mb-5 text-sm text-muted">

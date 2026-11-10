@@ -310,10 +310,7 @@ export default async function ContractPage({
         </Card>
       ) : (
         <Card>
-          <h2 className="text-lg font-black">متن قرارداد قدیمی</h2>
-          <div className="mt-4 whitespace-pre-line rounded-xl border border-border bg-surface-muted/40 p-5 text-sm leading-8">
-            {contractText}
-          </div>
+          <ContractReview contractId={contract.id} version={contract.versionNumber} templateHash="legacy-view" pages={[[contractText]]} canAct={false} />
         </Card>
       )}
       {payment && (

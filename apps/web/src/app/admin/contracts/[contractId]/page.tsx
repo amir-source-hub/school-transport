@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
-import { Card } from '@/components/ui/card';
 import { apiRequest } from '@/lib/api-client';
 import { contractSchema } from '@/features/finance/contracts-api';
+import { ContractReview } from '@/features/finance/contract-review';
 
 export const metadata = { title: 'قرارداد دانش‌آموز' };
 export const dynamic = 'force-dynamic';
@@ -21,7 +21,7 @@ export default async function AdminContractPage({ params }: { params: Promise<{ 
   return <div className="space-y-6">
     <Breadcrumbs items={[{ label: 'پنل مدیریت', href: '/admin/dashboard' }, { label: 'دانش‌آموزان', href: '/admin/students' }, { label: contract.contractNumber }]} />
     <header><h1 className="text-2xl font-black">قرارداد {contract.contractNumber}</h1><p>{contract.studentName} {contract.studentLastName} · نسخه {contract.versionNumber} · {contract.contractStatus === 'ACCEPTED' ? 'امضاشده' : contract.contractStatus}</p></header>
-    {pages.length ? pages.map((page, index) => <Card key={index}><h2 className="mb-4 font-bold">صفحه {index + 1}</h2><div className="space-y-3 leading-8">{page.map((part, partIndex) => <p key={partIndex}>{part}</p>)}</div></Card>) : <Card><pre className="whitespace-pre-wrap font-sans leading-8">{contractText || 'متن قرارداد موجود نیست.'}</pre></Card>}
+    {pages.length ? <ContractReview contractId={contractId} version={contract.versionNumber} templateHash="admin-view" pages={pages} canAct={false} /> : <ContractReview contractId={contractId} version={contract.versionNumber} templateHash="admin-view" pages={[[contractText || 'متن قرارداد موجود نیست.']]} canAct={false} />}
     <Link href="/admin/students" className="text-primary underline">بازگشت به دانش‌آموزان</Link>
   </div>;
 }

@@ -7,7 +7,7 @@
 		timeouts {
 			read_body 15s
 			read_header 10s
-			write 30s
+			write 30m
 			idle 2m
 		}
 		keepalive_interval 30s

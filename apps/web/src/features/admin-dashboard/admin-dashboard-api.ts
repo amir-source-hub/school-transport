@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getAdminContracts } from '@/features/admin-finance/admin-contracts-api';
-import { getAdminPayments } from '@/features/admin-payments/admin-payments-api';
+import { getAdminOfflineSubmissions, getAdminPayments } from '@/features/admin-payments/admin-payments-api';
 import { getAdminRegistrations } from '@/features/admin-registrations/admin-registrations-api';
 
 export const dashboardSummarySchema = z.object({
@@ -21,14 +21,15 @@ export type DashboardSummary = z.infer<typeof dashboardSummarySchema>;
 export type RecentEnrollment = z.infer<typeof recentEnrollmentSchema>;
 
 export async function getAdminDashboard() {
-  const results = await Promise.allSettled([
+  const [registrationResult, contractResult, paymentResult, pendingReceipts] = await Promise.all([
     getAdminRegistrations({ pageSize: 500 }),
     getAdminContracts(),
     getAdminPayments(),
+    getAdminOfflineSubmissions({ status: 'PENDING_REVIEW', pageSize: 1 }),
   ]);
-  const registrations = results[0].status === 'fulfilled' ? results[0].value.registrations : [];
-  const contracts = results[1].status === 'fulfilled' ? results[1].value.contracts : [];
-  const payments = results[2].status === 'fulfilled' ? results[2].value.payments : [];
+  const registrations = registrationResult.registrations;
+  const contracts = contractResult.contracts;
+  const payments = paymentResult.payments;
   const scheduleItems = payments.flatMap(({ prepayment, installments }) => [
     prepayment,
     ...installments,
@@ -40,11 +41,9 @@ export async function getAdminDashboard() {
         ['ارسال‌شده', 'در حال بررسی'].includes(status),
       ).length,
       contractsAwaitingAcceptance: contracts.filter(({ status }) => status === 'GENERATED').length,
-      offlinePaymentsAwaitingReview: scheduleItems.filter(
-        ({ transaction }) => transaction?.status === 'در انتظار بررسی',
-      ).length,
+      offlinePaymentsAwaitingReview: pendingReceipts.total,
       upcomingPayments: scheduleItems.filter(
-        ({ paid, dueDate }) => !paid && (!dueDate || Date.parse(dueDate) >= now),
+        ({ paid, dueDate }) => !paid && Boolean(dueDate) && Date.parse(dueDate!) >= now,
       ).length,
       overduePayments: scheduleItems.filter(
         ({ paid, dueDate }) => !paid && Boolean(dueDate) && Date.parse(dueDate!) < now,

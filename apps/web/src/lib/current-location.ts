@@ -8,7 +8,7 @@ export function requestCurrentLocation(): Promise<GeolocationCoordinates> {
   return new Promise((resolve, reject) => {
     const failed = (error: GeolocationPositionError) => {
       if (error.code === error.PERMISSION_DENIED) {
-        reject(new Error('دسترسی موقعیت این سایت را در تنظیمات مرورگر مجاز کنید و دوباره تلاش کنید.'));
+        reject(new Error('دسترسی موقعیت مکانی قبلاً مسدود شده است. روی نماد قفل یا تنظیمات کنار نشانی سایت بزنید، «موقعیت مکانی» را مجاز کنید و صفحه را دوباره بارگذاری کنید. همچنین می‌توانید نشانگر را روی نقشه جابه‌جا کنید.'));
       } else {
         navigator.geolocation.getCurrentPosition(
           ({ coords }) => resolve(coords),

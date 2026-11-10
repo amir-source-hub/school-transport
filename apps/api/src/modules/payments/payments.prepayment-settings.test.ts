@@ -66,8 +66,12 @@ describe('global prepayment setting', () => {
       update: () => ({ set: () => ({ where: () => ({ returning }) }) }),
     };
     const transaction = async (work: (value: typeof txn) => Promise<unknown>) => work(txn);
-    const service = new PaymentsService({ db: { transaction } } as never, {} as never, {} as never);
+    const recordInTransaction = vi.fn().mockImplementation(async (_txn, entry) => {
+      if (entry.entityId && !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(entry.entityId)) throw new Error('invalid UUID');
+    });
+    const service = new PaymentsService({ db: { transaction } } as never, {} as never, {} as never, { recordInTransaction } as never);
     await expect(service.configureDefaultPrepayment('admin-1', 1_230_001, 1)).resolves.toMatchObject({ defaultPrepaymentAmount: 1_230_001, version: 2 });
     expect(returning).toHaveBeenCalledOnce();
+    expect(recordInTransaction).toHaveBeenCalledWith(txn, expect.objectContaining({ action: 'DEFAULT_PREPAYMENT_UPDATED', newValues: { amount: 1_230_001 } }));
   });
 });
