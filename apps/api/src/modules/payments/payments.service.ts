@@ -395,6 +395,16 @@ export class PaymentsService {
     if (item.itemStatus !== 'PENDING') {
       throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This payment item is not payable.');
     }
+    const [pendingReceipt] = await this.db.db.select({ id: offlinePaymentSubmissions.id })
+      .from(offlinePaymentSubmissions)
+      .where(and(
+        eq(offlinePaymentSubmissions.paymentScheduleItemId, scheduleItemId),
+        eq(offlinePaymentSubmissions.status, 'PENDING_REVIEW'),
+      ))
+      .limit(1);
+    if (pendingReceipt) {
+      throw new ConflictError('PAYMENT_UNDER_REVIEW', 'A previous receipt is awaiting review.');
+    }
 
     const fingerprint = createHash('sha256')
       .update(`${userId}\0ONLINE_GATEWAY\0${scheduleItemId}\0${item.amount}`)
@@ -476,7 +486,7 @@ export class PaymentsService {
       .where(and(eq(paymentTransactions.id, created.id), eq(paymentTransactions.transactionStatus, 'CREATED')))
       .returning({ id: paymentTransactions.id });
     if (!claimed) throw new ConflictError('PAYMENT_START_IN_PROGRESS', 'Payment checkout is being prepared. Please retry shortly.');
-    const callbackUrl = new URL('/payment-return', this.config.zibalCallbackBaseUrl);
+    const callbackUrl = new URL('/api/v1/payments/online/callback', this.config.zibalCallbackBaseUrl);
     callbackUrl.searchParams.set('txId', created.id);
     callbackUrl.searchParams.set('mode', mode);
     try {
@@ -493,7 +503,7 @@ export class PaymentsService {
     }
   }
 
-  async verifyOnlinePayment(txId: string, userId: string, gatewayAuthority: string) {
+  async verifyOnlinePayment(txId: string, userId: string | undefined, gatewayAuthority: string) {
     if (this.gateway.enabled === false) {
       throw new AppError(
         'PAYMENT_GATEWAY_UNAVAILABLE',
@@ -504,15 +514,18 @@ export class PaymentsService {
     const tx = await this.db.db
       .select()
       .from(paymentTransactions)
-      .where(and(eq(paymentTransactions.id, txId), eq(paymentTransactions.userId, userId)))
+      .where(userId ? and(eq(paymentTransactions.id, txId), eq(paymentTransactions.userId, userId)) : eq(paymentTransactions.id, txId))
       .limit(1);
     if (tx.length === 0) throw new NotFoundError('Transaction');
+    const payerUserId = tx[0].userId;
+    if (!payerUserId || tx[0].paymentMethod !== 'ONLINE_GATEWAY' || !tx[0].gatewayAuthority || tx[0].gatewayAuthority !== gatewayAuthority) {
+      throw new ValidationError('Gateway tracking ID does not match this payment.');
+    }
 
     if (tx[0].transactionStatus === 'SUCCEEDED') {
       return tx[0];
     }
 
-    if (tx[0].paymentMethod !== 'ONLINE_GATEWAY' || !tx[0].gatewayAuthority || tx[0].gatewayAuthority !== gatewayAuthority) throw new ValidationError('Gateway tracking ID does not match this payment.');
     const gatewayResult = await this.gateway.verify({
       authority: tx[0].gatewayAuthority,
       amount: tx[0].amount,
@@ -598,8 +611,8 @@ export class PaymentsService {
       }
 
       await this.notifications.enqueueInTransaction(txn, {
-        eventId: `PAYMENT_SUCCEEDED:${txId}:${userId}`,
-        userId,
+        eventId: `PAYMENT_SUCCEEDED:${txId}:${payerUserId}`,
+        userId: payerUserId,
         notificationType: 'PAYMENT_SUCCEEDED',
         title: 'پرداخت با موفقیت انجام شد',
         message: `پرداخت ${tx[0].amount.toLocaleString('fa-IR')} ریال با موفقیت ثبت شد.`,
@@ -629,6 +642,9 @@ export class PaymentsService {
       idempotencyKey: string;
     },
   ) {
+    if (this.config?.onlinePaymentEnabled) {
+      throw new AppError('OFFLINE_PAYMENT_DISABLED', 'Offline payments are currently disabled.', 503);
+    }
     const item = await this.getOwnedScheduleItem(scheduleItemId, userId);
     if (item.itemStatus !== 'PENDING') {
       throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This payment item is not payable.');
@@ -1600,6 +1616,9 @@ export class PaymentsService {
                       : 'در انتظار بررسی',
               }
             : null;
+          const successfulOnlineTransaction = itemTransactions.find(
+            (transaction) => transaction.paymentMethod === 'ONLINE_GATEWAY' && transaction.transactionStatus === 'SUCCEEDED',
+          );
           return {
             id: item.id,
             type: item.itemType,
@@ -1610,7 +1629,16 @@ export class PaymentsService {
             paidAt: item.paidAt?.toISOString() ?? null,
             paid: item.itemStatus === 'PAID',
             transaction:
-              review ??
+              (successfulOnlineTransaction
+                ? {
+                    id: successfulOnlineTransaction.id,
+                    version: 1,
+                    submittedAmount: successfulOnlineTransaction.amount,
+                    reference: successfulOnlineTransaction.gatewayTransactionId ?? '—',
+                    submittedAt: (successfulOnlineTransaction.verifiedAt ?? successfulOnlineTransaction.requestedAt).toISOString(),
+                    status: 'پرداخت آنلاین تأییدشده',
+                  }
+                : null) ?? review ??
               (latestTransaction
                 ? {
                     id: latestTransaction.id,

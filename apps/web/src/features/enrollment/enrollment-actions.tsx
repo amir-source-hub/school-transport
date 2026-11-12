@@ -54,14 +54,12 @@ import {
 } from './enrollment-form-model';
 import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-schema';
 import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
-import { OfflinePaymentDestinationCard } from '@/features/finance/offline-payment-destination-card';
 import { ContractReview } from '@/features/finance/contract-review';
 import { clearEnrollmentDraft } from './enrollment-draft';
 import {
   acceptAdminFamilyContract,
   createAdminFamilyEnrollment,
 } from '@/features/admin-families/admin-families-api';
-import { RecordPaymentOnBehalfDialog } from '@/features/admin-payments/payment-actions';
 const stages = ['مشخصات', 'نشانی', 'مدرسه', 'سرویس و قرارداد'];
 
 const vehicleOptions = [
@@ -1743,28 +1741,20 @@ export function CreateEnrollmentForm({
             {adminFamilyId ? (
               <div className="mt-6 space-y-4 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
-                  قرارداد با ثبت حسابرسی مدیریت پذیرفته شد. می‌توانید پیش‌پرداخت را اکنون همراه با
-                  تصویر رسید ثبت کنید یا پرداخت را برای خانواده باقی بگذارید.
+                  قرارداد پذیرفته شد. خانواده می‌تواند پیش‌پرداخت را از بخش پرداخت‌ها در پنل خود انجام دهد.
                 </div>
-                <OfflinePaymentDestinationCard />
-                <RecordPaymentOnBehalfDialog
-                  scheduleItemId={result.scheduleItemId!}
-                  label="پیش‌پرداخت"
-                  onCompleted={() => setPaid(true)}
-                />
               </div>
             ) : mode === 'onboarding' ? (
               <div className="mt-6 space-y-5 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
-                  قرارداد پذیرفته شد. حساب خانواده را ایجاد کنید و جزئیات پرداخت و ارسال رسید را از
+                  قرارداد پذیرفته شد. حساب خانواده را ایجاد کنید و جزئیات پرداخت آنلاین را از
                   بخش «پرداخت‌ها» در پنل خود انجام دهید.
                 </div>
               </div>
             ) : (
               <div className="mt-6 space-y-5 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
-                  قرارداد پذیرفته شد. برای جلوگیری از ثبت تکراری یا گم‌شدن وضعیت پرداخت، پرداخت و
-                  ارسال رسید فقط از بخش «پرداخت‌ها» انجام می‌شود.
+                  قرارداد پذیرفته شد. پرداخت آنلاین از بخش «پرداخت‌ها» انجام می‌شود.
                 </div>
                 <Button className="w-full" onClick={() => router.push('/student/payments')}>
                   رفتن به بخش پرداخت‌ها

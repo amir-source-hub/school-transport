@@ -146,6 +146,9 @@ const envSchema = z
     if (env.NODE_ENV !== 'production') return;
     const issue = (path: string, message: string) =>
       context.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+    if (env.ONLINE_PAYMENT_ENABLED && env.PAYMENT_GATEWAY_PROVIDER !== 'zibal') {
+      issue('PAYMENT_GATEWAY_PROVIDER', 'Online payments require the Zibal gateway provider.');
+    }
     if (env.ONLINE_PAYMENT_ENABLED && env.PAYMENT_GATEWAY_PROVIDER === 'zibal') {
       if (!env.ZIBAL_MERCHANT || env.ZIBAL_MERCHANT === 'zibal') {
         issue('ZIBAL_MERCHANT', 'A live Zibal merchant ID is required in production.');

@@ -1,7 +1,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import NotificationsPage, { NotificationsSkeleton } from './page';
+import NotificationsPage from './page';
+import { NotificationsSkeleton } from './notifications-skeleton';
 import {
   getNotifications,
   getNotificationSettings,

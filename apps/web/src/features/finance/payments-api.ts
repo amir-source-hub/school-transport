@@ -161,3 +161,10 @@ export async function verifyOnlinePayment(transactionId: string, gatewayTransact
     body: { gatewayTransactionId },
   });
 }
+
+export async function confirmReturnedOnlinePayment(transactionId: string, gatewayTransactionId: string) {
+  await apiRequest(`/payments/online/confirm/${transactionId}`, {
+    method: 'POST',
+    body: { gatewayTransactionId },
+  });
+}

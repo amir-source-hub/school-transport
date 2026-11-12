@@ -218,9 +218,11 @@ pnpm --filter web test:e2e
 
 ## Payment development behavior
 
-All runtime environments require `PAYMENT_GATEWAY_PROVIDER=none`; mock gateway behavior exists only
-inside isolated unit tests. The online choice remains disabled and every online API path fails
-closed. Offline payments use versioned administrator-managed destination details and a private,
+The Zibal gateway is enabled with `PAYMENT_GATEWAY_PROVIDER=zibal`,
+`ONLINE_PAYMENT_ENABLED=true`, `ZIBAL_MERCHANT`, and a public HTTPS
+`ZIBAL_CALLBACK_BASE_URL`. Mock gateway behavior exists only inside isolated unit tests.
+Offline payment creation is disabled while online payments are enabled. Historical offline
+payments use versioned administrator-managed destination details and a private,
 normalized receipt image. A submitted receipt does not count as payment until an administrator
 approves it; one draft/review claim is allowed per schedule item and rejected claims retain history.
 

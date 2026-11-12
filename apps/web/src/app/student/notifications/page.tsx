@@ -3,6 +3,7 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { NotificationsSkeleton } from './notifications-skeleton';
 import { MarkAllReadButton, MarkReadButton } from '@/features/notifications/notification-actions';
 import { getNotifications } from '@/features/notifications/notifications-api';
 import { formatJalaliDateTime } from '@/lib/formatters';
@@ -23,22 +24,6 @@ const activityStatus: Record<string, string> = {
 
 export const metadata = { title: 'اعلان‌ها' };
 export const dynamic = 'force-dynamic';
-
-export function NotificationsSkeleton() {
-  return (
-    <div className="space-y-3" aria-busy="true" aria-label="در حال بارگذاری اعلان‌ها">
-      {[1, 2, 3].map((item) => (
-        <Card key={item} padding="md">
-          <div className="space-y-2">
-            <div className="h-4 w-1/3 animate-pulse rounded bg-surface-muted" />
-            <div className="h-3 w-2/3 animate-pulse rounded bg-surface-muted" />
-            <div className="h-3 w-1/4 animate-pulse rounded bg-surface-muted" />
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-}
 
 export default async function NotificationsPage({
   searchParams,

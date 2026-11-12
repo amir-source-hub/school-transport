@@ -2072,6 +2072,58 @@
         "tags": ["OnboardingPayments"]
       }
     },
+    "/api/v1/payments/online/confirm/{txId}": {
+      "post": {
+        "operationId": "GatewayReturnController_confirm",
+        "parameters": [
+          {
+            "name": "txId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOnlinePaymentDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["GatewayReturn"]
+      }
+    },
+    "/api/v1/payments/online/callback": {
+      "get": {
+        "operationId": "GatewayReturnController_callback",
+        "parameters": [
+          {
+            "name": "txId",
+            "required": true,
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "trackId",
+            "required": true,
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "mode",
+            "required": true,
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["GatewayReturn"]
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "operationId": "NotificationsController_getAll",

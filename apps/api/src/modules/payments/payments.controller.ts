@@ -31,7 +31,46 @@ import {
   VerifyOnlinePaymentDto,
 } from './payment-request.dto';
 import { PaymentsService } from './payments.service';
+import { ConfigService } from '../../config/config.service';
 import type { FastifyReply } from 'fastify';
+
+@Controller('payments/online')
+export class GatewayReturnController {
+  constructor(private readonly paymentsService: PaymentsService, private readonly config: ConfigService) {}
+
+  @Post('confirm/:txId')
+  async confirm(
+    @Param('txId', new ParseUUIDPipe()) txId: string,
+    @Body() dto: VerifyOnlinePaymentDto,
+  ) {
+    await this.paymentsService.verifyOnlinePayment(txId, undefined, dto.gatewayTransactionId);
+    return successResponse({ status: 'SUCCEEDED' });
+  }
+
+  @Get('callback')
+  async callback(
+    @Query('txId', new ParseUUIDPipe()) txId: string,
+    @Query('trackId') trackId: string,
+    @Query('mode') mode: string,
+    @Res() reply: FastifyReply,
+  ) {
+    if (typeof trackId !== 'string' || !/^\d{1,20}$/.test(trackId)) {
+      throw new BadRequestException('Invalid gateway tracking ID.');
+    }
+    const baseUrl = this.config.zibalCallbackBaseUrl;
+    if (!baseUrl) throw new BadRequestException('Gateway callback URL is not configured.');
+    const resultUrl = new URL('/payment-return', baseUrl);
+    resultUrl.searchParams.set('txId', txId);
+    resultUrl.searchParams.set('trackId', trackId);
+    resultUrl.searchParams.set('mode', mode === 'onboarding' ? 'onboarding' : 'panel');
+    try {
+      await this.paymentsService.verifyOnlinePayment(txId, undefined, trackId);
+    } catch {
+      // The result page can retry verification if the gateway or database is temporarily unavailable.
+    }
+    reply.redirect(resultUrl.toString(), 303);
+  }
+}
 
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('PARENT')

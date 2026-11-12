@@ -1,7 +1,7 @@
 import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
+import { OnlinePaymentButton } from '@/features/finance/online-payment-button';
 import { getOfflineSubmissions, getPayments } from '@/features/finance/payments-api';
 import { formatIrr } from '@/lib/formatters';
 import { formatJalaliDate } from '@/lib/formatters';
@@ -46,15 +46,6 @@ export default async function PaymentsPage() {
           ] as const,
       ),
     ),
-  );
-  const unpaid = overviews.flatMap(({ plan, items, studentFirstName, studentLastName }) =>
-    items
-      .filter(({ id, itemStatus }) => itemStatus === 'PENDING' && !pendingOfflineItemIds.has(id))
-      .map((item) => ({
-        id: item.id,
-        amount: item.amount,
-        label: `${studentFirstName} ${studentLastName} — ${item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : plan.planType === 'FULL' ? 'پرداخت یکجای باقی‌مانده' : `قسط ${item.sequenceNumber}`} — ${formatIrr(item.amount)}`,
-      })),
   );
   return (
     <div className="space-y-6">
@@ -117,7 +108,11 @@ export default async function PaymentsPage() {
                     <span className="text-sm font-bold text-success">تسویه شد</span>
                   ) : item.itemStatus === 'CANCELLED' ? (
                     <span className="text-sm font-bold text-muted">نیاز به پرداخت ندارد</span>
-                  ) : null}
+                  ) : pendingOfflineItemIds.has(item.id) ? (
+                    <span className="text-sm text-muted">رسید قبلی در انتظار بررسی است</span>
+                  ) : (
+                    <OnlinePaymentButton scheduleItemId={item.id} amount={item.amount} />
+                  )}
                 </div>
               ))}
             </div>
@@ -137,10 +132,6 @@ export default async function PaymentsPage() {
           </Card>
         );
       })}
-      <Card>
-        <h2 className="mb-4 text-lg font-black">ثبت پرداخت آفلاین</h2>
-        <OfflinePaymentForm items={unpaid} />
-      </Card>
       {offlineSubmissions.length > 0 && (
         <Card>
           <h2 className="mb-4 text-lg font-black">وضعیت رسیدهای آفلاین</h2>

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { PaymentsService } from './payments.service';
-import { paymentTransactions } from '../../database/schemas';
+import { offlinePaymentSubmissions, paymentTransactions } from '../../database/schemas';
 
 const item = {
   id: 'schedule-1',
@@ -11,6 +11,7 @@ const item = {
 
 function databaseHarness() {
   const transactions: any[] = [];
+  const pendingReceipts: any[] = [];
   let tail = Promise.resolve();
   const ownedQuery = {
     innerJoin() {
@@ -26,6 +27,8 @@ function databaseHarness() {
   const db = {
     select: () => ({ from: (table: unknown) => table === paymentTransactions ? {
       where: () => ({ limit: async () => transactions.slice(-1) }),
+    } : table === offlinePaymentSubmissions ? {
+      where: () => ({ limit: async () => pendingReceipts }),
     } : ownedQuery }),
     update: () => ({ set: (changes: any) => ({ where: () => ({ returning: async () => {
       const row = transactions.find((entry) => entry.transactionStatus === (changes.transactionStatus === 'REQUESTING' ? 'CREATED' : 'REQUESTING'));
@@ -86,7 +89,7 @@ function databaseHarness() {
       }
     },
   };
-  return { db: { db }, transactions };
+  return { db: { db }, transactions, pendingReceipts };
 }
 
 function safe(row: any) {
@@ -151,13 +154,34 @@ describe('online payment idempotency', () => {
   );
 
   it('returns the same owned safe result for an identical replay', async () => {
-    const { payments } = service();
+    const { payments, gateway } = service();
     const first = await payments.startOnlinePayment('schedule-1', 'user-1', 'request-123');
     const replay = await payments.startOnlinePayment('schedule-1', 'user-1', 'request-123');
     expect(replay).toEqual(first);
     expect(replay).not.toHaveProperty('userId');
     expect(replay).not.toHaveProperty('idempotencyKey');
     expect(replay).not.toHaveProperty('idempotencyFingerprint');
+    expect(gateway.request).toHaveBeenCalledWith(expect.objectContaining({
+      callbackUrl: expect.stringMatching(/^https:\/\/example\.test\/api\/v1\/payments\/online\/callback\?txId=/),
+    }));
+  });
+
+  it('checks the tracking ID before replaying a successful verification', async () => {
+    const transaction = { id: 'transaction-1', userId: 'user-1', paymentMethod: 'ONLINE_GATEWAY', gatewayAuthority: '123456', transactionStatus: 'SUCCEEDED' };
+    const gateway = { enabled: true, verify: vi.fn() };
+    const db = { db: { select: () => ({ from: () => ({ where: () => ({ limit: async () => [transaction] }) }) }) } };
+    const payments = new PaymentsService(db as never, gateway as never, {} as never);
+    await expect(payments.verifyOnlinePayment('transaction-1', undefined, 'wrong')).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    await expect(payments.verifyOnlinePayment('transaction-1', undefined, '123456')).resolves.toEqual(transaction);
+    expect(gateway.verify).not.toHaveBeenCalled();
+  });
+
+  it('blocks checkout while an offline receipt awaits review', async () => {
+    const { payments, harness } = service();
+    harness.pendingReceipts.push({ id: 'receipt-1' });
+    await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'request-123'))
+      .rejects.toMatchObject({ code: 'PAYMENT_UNDER_REVIEW' });
+    expect(harness.transactions).toHaveLength(0);
   });
 
   it('reuses one active checkout and rejects key reuse for another schedule item', async () => {

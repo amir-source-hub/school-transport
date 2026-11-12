@@ -4,19 +4,16 @@ import { ButtonLink } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import {
-  getAdminOfflineDestination,
   getAdminOfflineSubmissions,
   getAdminPayments,
   getPrepaymentSettings,
   getPaymentTone,
 } from '@/features/admin-payments/admin-payments-api';
-import { OfflineDestinationForm } from '@/features/admin-payments/offline-destination-form';
 import { PrepaymentSettingsForm } from '@/features/admin-payments/prepayment-settings-form';
 import { StudentPrepaymentDialog } from '@/features/admin-payments/student-prepayment-dialog';
 import { ImageArchiveButton } from '@/features/admin-payments/image-archive-button';
 import {
   ConfigureInstallmentsDialog,
-  RecordPaymentOnBehalfDialog,
 } from '@/features/admin-payments/payment-actions';
 import { OfflineSubmissionList } from '@/features/admin-payments/offline-submission-list';
 import { formatIrr, formatJalaliDate, formatJalaliDateTime } from '@/lib/formatters';
@@ -51,9 +48,8 @@ export default async function AdminPaymentsPage({
     status: receiptStatus,
     itemType,
   };
-  const [{ payments }, destination, submissions, prepaymentSettings, approvedReceipts, rejectedReceipts, pendingReceipts] = await Promise.all([
+  const [{ payments }, submissions, prepaymentSettings, approvedReceipts, rejectedReceipts, pendingReceipts] = await Promise.all([
     getAdminPayments(),
-    getAdminOfflineDestination(),
     getAdminOfflineSubmissions({ ...receiptFilters, q, routeId: params.routeId, driverId: params.driverId, page: receiptPage, pageSize: 20 }),
     getPrepaymentSettings(),
     getAdminOfflineSubmissions({ ...receiptFilters, status: 'APPROVED', q, routeId: params.routeId, driverId: params.driverId, pageSize: 1 }),
@@ -77,16 +73,7 @@ export default async function AdminPaymentsPage({
         <p className="text-sm font-bold text-primary">پایش مالی مدیریت</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">پرداخت‌ها</h1>
       </div>
-      <Card>
-        <h2 className="mb-2 text-lg font-black">مقصد پرداخت آفلاین</h2>
-        <p className="mb-5 text-sm text-muted">
-          هر تغییر یک نسخه جدید ایجاد می‌کند و رسیدهای قبلی به نسخه مقصد زمان ارسال وابسته می‌مانند.
-        </p>
-        <OfflineDestinationForm current={destination} />
-        <div className="mt-6 border-t border-border pt-5">
-          <PrepaymentSettingsForm current={prepaymentSettings} />
-        </div>
-      </Card>
+      <Card><PrepaymentSettingsForm current={prepaymentSettings} /></Card>
       <ImageArchiveButton kind="receipts" />
       <p className="text-sm text-muted">رسیدها: {approvedReceipts.total.toLocaleString('fa-IR')} تأییدشده، {rejectedReceipts.total.toLocaleString('fa-IR')} ردشده، {pendingReceipts.total.toLocaleString('fa-IR')} در انتظار بررسی. یک دانش‌آموز ممکن است چند قسط و چند بار ارسال رسید داشته باشد.</p>
       <section className="space-y-4" aria-labelledby="receipt-review-heading">
@@ -298,15 +285,6 @@ export default async function AdminPaymentsPage({
                       )}
                     </div>
                   )}
-                  {!payment.prepayment.paid &&
-                    payment.prepayment.transaction?.status !== 'در انتظار بررسی' && (
-                      <div className="mt-4 border-t border-border pt-4">
-                        <RecordPaymentOnBehalfDialog
-                          scheduleItemId={payment.prepayment.id}
-                          label="پیش‌پرداخت"
-                        />
-                      </div>
-                    )}
                   {payment.canEditPrepayment && (
                     <div className="mt-4 border-t border-border pt-4">
                       <StudentPrepaymentDialog planId={payment.planId} currentAmount={payment.prepayment.amount} />
@@ -388,15 +366,6 @@ export default async function AdminPaymentsPage({
                                 )}
                               </div>
                             )}
-                            {!installment.paid &&
-                              installment.transaction?.status !== 'در انتظار بررسی' && (
-                                <div className="mt-4 border-t border-border pt-4">
-                                  <RecordPaymentOnBehalfDialog
-                                    scheduleItemId={installment.id}
-                                    label={`قسط ${installment.sequenceNumber.toLocaleString('fa-IR')}`}
-                                  />
-                                </div>
-                              )}
                           </div>
                         );
                       })}

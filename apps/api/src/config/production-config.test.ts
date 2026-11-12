@@ -15,6 +15,11 @@ const production = {
 };
 
 describe('production configuration', () => {
+  it('rejects an enabled online payment switch without a gateway provider', () => {
+    const result = validateEnvironment({ ...production, SERVICE_ROLE: 'worker', ONLINE_PAYMENT_ENABLED: 'true' });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.flatten().fieldErrors.PAYMENT_GATEWAY_PROVIDER).toBeDefined();
+  });
   it('fails production API startup while the required OTP provider is absent', () => {
     const result = validateEnvironment(production);
     expect(result.success).toBe(false);
