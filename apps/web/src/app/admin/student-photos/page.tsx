@@ -6,6 +6,7 @@ import { getAdminPhotos } from '@/features/student-photos/admin-student-photos-a
 import { FilteredCount } from '@/components/data/filtered-count';
 import { getAdminSchools } from '@/features/admin-schools/admin-schools-api';
 import { ImageArchiveButton } from '@/features/admin-payments/image-archive-button';
+import { PersistentQueryForm } from '@/components/navigation/persistent-query-form';
 
 export const metadata = { title: 'بررسی عکس کارت سرویس' };
 export const dynamic = 'force-dynamic';
@@ -44,7 +45,7 @@ export default async function AdminStudentPhotosPage({
         <FilteredCount count={list.total} label="تصویر مطابق فیلتر" />
       </div>
       <ImageArchiveButton kind="photos" />
-      <form className="flex flex-wrap items-end gap-3">
+      <PersistentQueryForm path="/admin/student-photos" className="flex flex-wrap items-end gap-3">
         <label className="min-w-64 flex-1 text-sm font-bold">
           جست‌وجوی دانش‌آموز
           <input
@@ -94,12 +95,12 @@ export default async function AdminStudentPhotosPage({
         >
           پاک‌کردن
         </Link>
-      </form>
+      </PersistentQueryForm>
       <AdminPhotoReviewQueue key={`${status}:${schoolId}:${q}:${list.page}`} items={list.items} />
       {totalPages > 1 && (
         <nav aria-label="صفحه‌بندی عکس‌ها" className="flex justify-between">
           {list.page > 1 ? (
-            <ButtonLink native variant="secondary" href={pageHref(list.page - 1)}>
+            <ButtonLink variant="secondary" href={pageHref(list.page - 1)}>
               قبلی
             </ButtonLink>
           ) : (
@@ -109,7 +110,7 @@ export default async function AdminStudentPhotosPage({
             صفحه {list.page} از {totalPages}
           </span>
           {list.page < totalPages ? (
-            <ButtonLink native variant="secondary" href={pageHref(list.page + 1)}>
+            <ButtonLink variant="secondary" href={pageHref(list.page + 1)}>
               بعدی
             </ButtonLink>
           ) : (

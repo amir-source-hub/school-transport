@@ -1716,6 +1716,24 @@
         "tags": ["AdminPayments"]
       }
     },
+    "/api/v1/admin/payments/payment-mode": {
+      "post": {
+        "operationId": "AdminPaymentsController_configurePaymentMode",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigurePaymentModeDto"
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["AdminPayments"]
+      }
+    },
     "/api/v1/admin/payments/plans/{planId}/prepayment": {
       "post": {
         "operationId": "AdminPaymentsController_configureStudentPrepayment",
@@ -1776,6 +1794,14 @@
     "/api/v1/admin/payments/offline-submissions": {
       "get": {
         "operationId": "AdminPaymentsController_offlineSubmissions",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["AdminPayments"]
+      }
+    },
+    "/api/v1/admin/payments/online-transactions": {
+      "get": {
+        "operationId": "AdminPaymentsController_onlineTransactions",
         "parameters": [],
         "responses": { "200": { "description": "" } },
         "tags": ["AdminPayments"]
@@ -2122,6 +2148,14 @@
         ],
         "responses": { "200": { "description": "" } },
         "tags": ["GatewayReturn"]
+      }
+    },
+    "/api/v1/public/payment-settings": {
+      "get": {
+        "operationId": "PublicPaymentSettingsController_getSettings",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["PublicPaymentSettings"]
       }
     },
     "/api/v1/notifications": {
@@ -3375,6 +3409,7 @@
       "OfflinePaymentDto": { "type": "object", "properties": {} },
       "AuthorizeReceiptUploadDto": { "type": "object", "properties": {} },
       "ConfigureDefaultPrepaymentDto": { "type": "object", "properties": {} },
+      "ConfigurePaymentModeDto": { "type": "object", "properties": {} },
       "ConfigureStudentPrepaymentDto": { "type": "object", "properties": {} },
       "ConfigureOfflineDestinationDto": { "type": "object", "properties": {} },
       "ConfigureInstallmentsDto": { "type": "object", "properties": {} },

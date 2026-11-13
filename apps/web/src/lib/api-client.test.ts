@@ -185,4 +185,20 @@ describe('API client', () => {
       requestId: 'report-request',
     } satisfies Partial<ApiClientError>);
   });
+
+  it('reports streamed download progress', async () => {
+    setAuthSession('access', 'ADMIN');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array([1, 2]));
+        controller.enqueue(new Uint8Array([3, 4]));
+        controller.close();
+      },
+    }), { status: 200, headers: { 'Content-Length': '4', 'Content-Disposition': 'attachment; filename="photos.zip"' } }));
+    const onProgress = vi.fn();
+    const result = await downloadApiFile('/admin/payments/images/photos.zip', { onProgress });
+    expect(result.filename).toBe('photos.zip');
+    expect(result.blob.size).toBe(4);
+    expect(onProgress).toHaveBeenLastCalledWith(4, 4);
+  });
 });

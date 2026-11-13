@@ -1540,6 +1540,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/admin/payments/payment-mode': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AdminPaymentsController_configurePaymentMode'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/admin/payments/plans/{planId}/prepayment': {
     parameters: {
       query?: never;
@@ -1596,6 +1612,22 @@ export interface paths {
       cookie?: never;
     };
     get: operations['AdminPaymentsController_offlineSubmissions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/payments/online-transactions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['AdminPaymentsController_onlineTransactions'];
     put?: never;
     post?: never;
     delete?: never;
@@ -1868,6 +1900,22 @@ export interface paths {
       cookie?: never;
     };
     get: operations['GatewayReturnController_callback'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/public/payment-settings': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PublicPaymentSettingsController_getSettings'];
     put?: never;
     post?: never;
     delete?: never;
@@ -3106,6 +3154,7 @@ export interface components {
     OfflinePaymentDto: Record<string, never>;
     AuthorizeReceiptUploadDto: Record<string, never>;
     ConfigureDefaultPrepaymentDto: Record<string, never>;
+    ConfigurePaymentModeDto: Record<string, never>;
     ConfigureStudentPrepaymentDto: Record<string, never>;
     ConfigureOfflineDestinationDto: Record<string, never>;
     ConfigureInstallmentsDto: Record<string, never>;
@@ -5337,6 +5386,27 @@ export interface operations {
       };
     };
   };
+  AdminPaymentsController_configurePaymentMode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConfigurePaymentModeDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   AdminPaymentsController_configureStudentPrepayment: {
     parameters: {
       query?: never;
@@ -5416,6 +5486,23 @@ export interface operations {
     };
   };
   AdminPaymentsController_offlineSubmissions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminPaymentsController_onlineTransactions: {
     parameters: {
       query?: never;
       header?: never;
@@ -5779,6 +5866,23 @@ export interface operations {
         trackId: string;
         mode: string;
       };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PublicPaymentSettingsController_getSettings: {
+    parameters: {
+      query?: never;
       header?: never;
       path?: never;
       cookie?: never;

@@ -16,6 +16,7 @@ const notificationsApi = vi.hoisted(() => ({ updateNotificationConsent: vi.fn() 
 const paymentsApi = vi.hoisted(() => ({
   getOfflineDestination: vi.fn(),
   submitOfflinePayment: vi.fn(),
+  getPublicPaymentSettings: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -138,6 +139,7 @@ describe('onboarding guided enrollment funnel', () => {
       accountNumber: null,
       instructions: 'پس از واریز، رسید را ثبت کنید.',
     });
+    paymentsApi.getPublicPaymentSettings.mockResolvedValue({ prepaymentAmount: 65_000_000, paymentMode: 'ONLINE' });
   });
 
   it('shows and preserves the locked registration identity when relationship changes', async () => {
@@ -199,6 +201,7 @@ describe('onboarding guided enrollment funnel', () => {
     await user.click(await screen.findByRole('option', { name: 'هفتم' }));
     await user.click(screen.getByRole('button', { name: /مرحله بعد/ }));
 
+    expect(await screen.findByText(/۶٬۵۰۰٬۰۰۰ تومان/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /مشاهده قرارداد/ }));
 
     await waitFor(() =>
@@ -221,7 +224,7 @@ describe('onboarding guided enrollment funnel', () => {
       [1, 2, 3],
       'onboarding',
     );
-    expect(screen.getByText('۴٬۹۹۷٬۸۰۰')).toBeInTheDocument();
+    expect(screen.getByText('۴۰۰٬۰۰۰ تومان')).toBeInTheDocument();
     expect(screen.queryByText('6037991234567890')).toBeNull();
     expect(screen.queryByRole('button', { name: 'ارسال رسید برای بررسی مدیر' })).toBeNull();
     const enterPanel = screen.getByRole('button', {

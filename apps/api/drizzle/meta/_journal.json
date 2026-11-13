@@ -484,6 +484,13 @@
       "when": 1794081600000,
       "tag": "0068_offline_payment_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1794081660000,
+      "tag": "0069_payment_mode",
+      "breakpoints": true
     }
   ]
 }

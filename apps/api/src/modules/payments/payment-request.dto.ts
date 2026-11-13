@@ -102,6 +102,15 @@ export class ConfigureDefaultPrepaymentDto {
   expectedVersion!: number;
 }
 
+export class ConfigurePaymentModeDto {
+  @IsIn(['ONLINE', 'OFFLINE'])
+  mode!: 'ONLINE' | 'OFFLINE';
+
+  @IsInt()
+  @Min(1)
+  expectedVersion!: number;
+}
+
 export class ConfigureStudentPrepaymentDto {
   @Transform(({ value }) => typeof value === 'string' ? Number(normalizeIranianDigits(value)) : value)
   @IsInt()
@@ -183,6 +192,16 @@ export class AdminOfflinePaymentListQueryDto {
   @IsString()
   @Length(1, 120)
   q?: string;
+}
+
+export class AdminOnlinePaymentListQueryDto {
+  @IsOptional() @IsUUID() routeId?: string;
+  @IsOptional() @IsUUID() driverId?: string;
+  @IsOptional() @IsIn(['PREPAYMENT', 'INSTALLMENT']) itemType?: 'PREPAYMENT' | 'INSTALLMENT';
+  @IsOptional() @IsIn(['SUCCEEDED', 'PENDING', 'FAILED']) status?: 'SUCCEEDED' | 'PENDING' | 'FAILED';
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(50) pageSize = 20;
+  @IsOptional() @IsString() @Length(1, 120) q?: string;
 }
 
 @Injectable()

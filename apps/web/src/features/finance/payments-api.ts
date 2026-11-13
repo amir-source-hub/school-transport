@@ -2,6 +2,11 @@ import { z } from 'zod';
 import { apiRequest } from '@/lib/api-client';
 import { createClientId } from '@/lib/client-id';
 
+export async function getPublicPaymentSettings() {
+  const response = await apiRequest<unknown>('/public/payment-settings', { cache: 'no-store' });
+  return z.object({ prepaymentAmount: z.number().int().positive(), paymentMode: z.enum(['ONLINE', 'OFFLINE']) }).parse(response.data);
+}
+
 const overviewSchema = z.array(
   z.object({
     plan: z.object({
@@ -147,7 +152,7 @@ export async function completeReceiptUpload(
 
 export async function startOnlinePayment(scheduleItemId: string, mode: 'panel' | 'onboarding' = 'panel') {
   const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
-  const response = await apiRequest<{ id: string; checkoutUrl: string }>(`${prefix}/${scheduleItemId}/online/start`, {
+  const response = await apiRequest<{ id: string; checkoutUrl: string | null; transactionStatus: string }>(`${prefix}/${scheduleItemId}/online/start`, {
     method: 'POST',
     headers: { 'Idempotency-Key': createClientId() },
   });

@@ -25,6 +25,7 @@ function createHarness(
   createdRows: unknown[] = [{ id: 'submission-1' }],
   replayRows: unknown[] = [],
   recoveryRows: unknown[] = [],
+  activeOnlineRows: unknown[] = [],
 ) {
   const insertedValues: unknown[] = [];
   const insert = vi.fn(() => ({
@@ -37,6 +38,7 @@ function createHarness(
   }));
   const select = vi
     .fn()
+    .mockImplementationOnce(() => selectQuery(activeOnlineRows))
     .mockImplementationOnce(() => selectQuery(replayRows))
     .mockImplementation(() => selectQuery(recoveryRows));
   const service = new PaymentsService(
@@ -44,6 +46,7 @@ function createHarness(
     {} as never,
     {} as never,
   );
+  vi.spyOn(service, 'getPaymentMode').mockResolvedValue('OFFLINE');
   vi.spyOn(service as unknown as PaymentServiceInternals, 'getOwnedScheduleItem').mockResolvedValue(
     {
       id: 'item-1',
@@ -72,6 +75,19 @@ const valid = {
 };
 
 describe('offline payment payer submission', () => {
+  it('blocks an offline receipt while a gateway checkout is unresolved', async () => {
+    const { service, insertedValues } = createHarness(undefined, [], [], [{ id: 'online-1' }]);
+    await expect(service.createOfflineSubmission('item-1', 'user-1', valid))
+      .rejects.toMatchObject({ code: 'PAYMENT_IN_PROGRESS' });
+    expect(insertedValues).toHaveLength(0);
+  });
+  it('blocks new offline submission when admin selects online payments', async () => {
+    const { service, insertedValues } = createHarness();
+    vi.spyOn(service, 'getPaymentMode').mockResolvedValue('ONLINE');
+    await expect(service.createOfflineSubmission('item-1', 'user-1', valid))
+      .rejects.toMatchObject({ code: 'OFFLINE_PAYMENT_DISABLED' });
+    expect(insertedValues).toHaveLength(0);
+  });
   it.each(['PREPAYMENT', 'INSTALLMENT'])(
     'binds an owned %s item to server-derived exact amount and destination snapshot',
     async (_itemType) => {

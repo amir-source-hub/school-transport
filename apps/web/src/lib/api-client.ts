@@ -40,26 +40,31 @@ export async function apiRequest<T>(
   return performApiRequest<T>(path, options, true);
 }
 
-export async function downloadApiFile(path: string): Promise<{ blob: Blob; filename: string }> {
-  return performFileDownload(path, true);
+export async function downloadApiFile(path: string, options: {
+  signal?: AbortSignal;
+  onProgress?: (loaded: number, total: number | null) => void;
+} = {}): Promise<{ blob: Blob; filename: string }> {
+  return performFileDownload(path, true, options);
 }
 
 async function performFileDownload(
   path: string,
   allowRefresh: boolean,
+  options: { signal?: AbortSignal; onProgress?: (loaded: number, total: number | null) => void },
 ): Promise<{ blob: Blob; filename: string }> {
   const headers = new Headers({
-    Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    Accept: path.endsWith('.zip') ? 'application/zip' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
   const { accessToken } = getAuthSession();
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
   const response = await fetch(buildApiUrl(path), {
     credentials: 'include',
     headers,
+    signal: options.signal,
   });
   if (response.status === 401 && allowRefresh) {
     const refreshed = await refreshBrowserSession();
-    if (refreshed) return performFileDownload(path, false);
+    if (refreshed) return performFileDownload(path, false, options);
     redirectToLogin();
   }
   if (!response.ok) {
@@ -88,7 +93,24 @@ async function performFileDownload(
   }
   const disposition = response.headers.get('Content-Disposition') ?? '';
   const filename = disposition.match(/filename="([^"]+)"/i)?.[1] ?? `school-transport-report.xlsx`;
-  return { blob: await response.blob(), filename };
+  const totalHeader = Number(response.headers.get('Content-Length'));
+  const total = Number.isFinite(totalHeader) && totalHeader > 0 ? totalHeader : null;
+  if (!response.body || !options.onProgress) return { blob: await response.blob(), filename };
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let loaded = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.byteLength;
+      options.onProgress(loaded, total);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return { blob: new Blob(chunks as BlobPart[], { type: response.headers.get('Content-Type') ?? 'application/octet-stream' }), filename };
 }
 
 async function performApiRequest<T>(

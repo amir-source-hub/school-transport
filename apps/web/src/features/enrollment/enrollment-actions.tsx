@@ -56,6 +56,7 @@ import type { GuardianInput, ServiceInput, StudentInput } from './enrollment-sch
 import { PhotoUploadCard } from '@/features/student-photos/photo-upload-card';
 import { ContractReview } from '@/features/finance/contract-review';
 import { clearEnrollmentDraft } from './enrollment-draft';
+import { getPublicPaymentSettings } from '@/features/finance/payments-api';
 import {
   acceptAdminFamilyContract,
   createAdminFamilyEnrollment,
@@ -130,6 +131,8 @@ export function CreateEnrollmentForm({
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(initialForm);
   const [result, setResult] = useState<GuidedEnrollmentResult>();
+  const [defaultPrepaymentAmount, setDefaultPrepaymentAmount] = useState<number>();
+  const [paymentMode, setPaymentMode] = useState<'ONLINE' | 'OFFLINE'>('ONLINE');
   const [reviewedContractPages, setReviewedContractPages] = useState<number[]>([]);
   const [accepted, setAccepted] = useState(false);
   const [paid, setPaid] = useState(false);
@@ -145,6 +148,20 @@ export function CreateEnrollmentForm({
   useEffect(() => {
     clearEnrollmentDraft(window.sessionStorage, mode);
   }, [mode]);
+
+  useEffect(() => {
+    let active = true;
+    getPublicPaymentSettings().then((settings) => {
+      if (active) {
+        setDefaultPrepaymentAmount(settings.prepaymentAmount);
+        setPaymentMode(settings.paymentMode);
+      }
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
+  const displayPrepayment = (amount: number | undefined) =>
+    amount == null ? 'در حال دریافت مبلغ' : `${new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 1 }).format(amount / 10)} تومان`;
 
   useEffect(() => {
     if (mode !== 'onboarding') return;
@@ -1605,7 +1622,7 @@ export function CreateEnrollmentForm({
                   ))}
                 </div>
                 <p className="mt-3 text-sm text-muted">
-                  پیش‌پرداخت ثابت ۴٬۹۹۷٬۸۰۰ تومان در هر دو روش همین حالا پرداخت می‌شود.
+                  پیش‌پرداخت {displayPrepayment(defaultPrepaymentAmount)} در هر دو روش پس از تکمیل ثبت‌نام پرداخت می‌شود.
                 </p>
               </Section>
             )}
@@ -1729,9 +1746,9 @@ export function CreateEnrollmentForm({
               <WalletCards className="size-7" />
             </span>
             <h3 className="mt-5 text-2xl font-black">پرداخت پیش‌پرداخت ثبت‌نام</h3>
-            <p className="mt-3 text-muted">مبلغ ثابت برای تمام دانش‌آموزان</p>
+            <p className="mt-3 text-muted">مبلغ پیش‌پرداخت این ثبت‌نام</p>
             <p className="mt-4 text-4xl font-black text-primary">
-              ۴٬۹۹۷٬۸۰۰ <span className="text-base">تومان</span>
+              {displayPrepayment(result.prepaymentAmount)}
             </p>
             <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-right text-sm leading-7 text-muted">
               {form.paymentPlanType === 'FULL'
@@ -1747,14 +1764,14 @@ export function CreateEnrollmentForm({
             ) : mode === 'onboarding' ? (
               <div className="mt-6 space-y-5 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
-                  قرارداد پذیرفته شد. حساب خانواده را ایجاد کنید و جزئیات پرداخت آنلاین را از
+                  قرارداد پذیرفته شد. حساب خانواده را ایجاد کنید و جزئیات {paymentMode === 'ONLINE' ? 'پرداخت آنلاین' : 'ثبت رسید پرداخت'} را از
                   بخش «پرداخت‌ها» در پنل خود انجام دهید.
                 </div>
               </div>
             ) : (
               <div className="mt-6 space-y-5 text-right">
                 <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4 text-sm leading-7">
-                  قرارداد پذیرفته شد. پرداخت آنلاین از بخش «پرداخت‌ها» انجام می‌شود.
+                  قرارداد پذیرفته شد. {paymentMode === 'ONLINE' ? 'پرداخت آنلاین' : 'ثبت رسید پرداخت'} از بخش «پرداخت‌ها» انجام می‌شود.
                 </div>
                 <Button className="w-full" onClick={() => router.push('/student/payments')}>
                   رفتن به بخش پرداخت‌ها

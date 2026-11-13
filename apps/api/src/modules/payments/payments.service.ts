@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import {
   paymentTransactions,
@@ -20,7 +20,7 @@ import {
   offlinePaymentDestinations,
   offlinePaymentSubmissions,
 } from '../../database/schemas';
-import { eq, and, count, ilike, inArray, desc, max, ne, or, sql, isNotNull } from 'drizzle-orm';
+import { eq, and, count, ilike, inArray, desc, max, ne, or, sql, isNotNull, lt, gt } from 'drizzle-orm';
 import { AppError, NotFoundError, ConflictError, ValidationError } from '../../common/errors';
 import { generateId } from '../../common/utils';
 import { assertGatewayVerification, PAYMENT_GATEWAY, PaymentGateway } from './payment-gateway';
@@ -48,7 +48,10 @@ export const FAMILY_PAYMENT_PLAN_LIST_LIMIT = 100;
 export const PAYMENT_TRANSACTION_HISTORY_LIMIT = 500;
 
 @Injectable()
-export class PaymentsService {
+export class PaymentsService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(PaymentsService.name);
+  private reconciliationTimer?: ReturnType<typeof setInterval>;
+  private reconciliationRunning = false;
   constructor(
     @Inject(forwardRef(() => DatabaseService)) private readonly db: DatabaseService,
     @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
@@ -61,10 +64,86 @@ export class PaymentsService {
     @Optional() @Inject(S3_CLIENT) private readonly storage?: S3Storage,
   ) {}
 
+  onModuleInit() {
+    if (this.config?.serviceRole !== 'worker' || this.gateway.enabled === false) return;
+    this.reconciliationTimer = setInterval(() => void this.reconcilePendingOnlinePayments(), 5 * 60_000);
+    this.reconciliationTimer.unref();
+    setTimeout(() => void this.reconcilePendingOnlinePayments(), 30_000).unref();
+  }
+
+  onModuleDestroy() {
+    if (this.reconciliationTimer) clearInterval(this.reconciliationTimer);
+  }
+
+  async reconcilePendingOnlinePayments() {
+    if (this.reconciliationRunning || this.gateway.enabled === false) return;
+    this.reconciliationRunning = true;
+    try {
+      const now = Date.now();
+      await this.db.db.update(paymentTransactions).set({
+        transactionStatus: 'FAILED', failureCode: 'CHECKOUT_SETUP_EXPIRED', updatedAt: new Date(),
+      }).where(and(eq(paymentTransactions.paymentMethod, 'ONLINE_GATEWAY'),
+        inArray(paymentTransactions.transactionStatus, ['CREATED', 'REQUESTING']),
+        lt(paymentTransactions.updatedAt, new Date(now - 10 * 60_000))));
+      const pending = await this.db.db.select({ id: paymentTransactions.id, authority: paymentTransactions.gatewayAuthority })
+        .from(paymentTransactions)
+        .where(and(eq(paymentTransactions.paymentMethod, 'ONLINE_GATEWAY'),
+          eq(paymentTransactions.transactionStatus, 'PENDING'),
+          isNotNull(paymentTransactions.gatewayAuthority),
+          lt(paymentTransactions.updatedAt, new Date(now - 5 * 60_000)),
+          gt(paymentTransactions.requestedAt, new Date(now - 7 * 24 * 60 * 60_000))))
+        .orderBy(paymentTransactions.updatedAt).limit(25);
+      for (const transaction of pending) {
+        try {
+          await this.verifyOnlinePayment(transaction.id, undefined, transaction.authority!);
+        } catch (error) {
+          if (!(error instanceof ValidationError)) this.logger.warn(`Online payment reconciliation deferred for ${transaction.id}.`);
+        } finally {
+          await this.db.db.update(paymentTransactions).set({ updatedAt: new Date() })
+            .where(and(eq(paymentTransactions.id, transaction.id), eq(paymentTransactions.transactionStatus, 'PENDING')));
+        }
+      }
+    } catch {
+      this.logger.warn('Online payment reconciliation cycle failed.');
+    } finally {
+      this.reconciliationRunning = false;
+    }
+  }
+
   async getPrepaymentSettings() {
     const [settings] = await this.db.db.select().from(paymentSettings).where(eq(paymentSettings.id, 1)).limit(1);
     if (!settings) throw new AppError('PAYMENT_SETTINGS_UNAVAILABLE', 'Payment settings are not initialized.', 503);
     return settings;
+  }
+
+  async getPaymentMode(): Promise<'ONLINE' | 'OFFLINE'> {
+    const settings = await this.getPrepaymentSettings();
+    return settings.paymentMode as 'ONLINE' | 'OFFLINE';
+  }
+
+  async configurePaymentMode(adminId: string, mode: 'ONLINE' | 'OFFLINE', expectedVersion: number) {
+    if (mode === 'ONLINE' && this.gateway.enabled === false) {
+      throw new AppError('PAYMENT_GATEWAY_UNAVAILABLE', 'Online gateway is not configured.', 503);
+    }
+    return this.db.db.transaction(async (txn) => {
+      const [current] = await txn.select().from(paymentSettings).where(eq(paymentSettings.id, 1)).for('update');
+      if (!current || current.version !== expectedVersion) {
+        throw new ConflictError('STALE_PAYMENT_SETTINGS', 'Payment settings changed. Refresh the page.');
+      }
+      if (current.paymentMode === mode) return current;
+      const [updated] = await txn.update(paymentSettings).set({
+        paymentMode: mode,
+        version: current.version + 1,
+        updatedByAdminId: adminId,
+        updatedAt: new Date(),
+      }).where(eq(paymentSettings.id, 1)).returning();
+      await this.audit?.recordInTransaction(txn, {
+        actorType: 'ADMIN', actorId: adminId, action: 'PAYMENT_MODE_CHANGED',
+        entityType: 'PAYMENT_SETTINGS',
+        previousValues: { mode: current.paymentMode }, newValues: { mode },
+      });
+      return updated;
+    });
   }
 
   async exportStudentImages(kind: 'photos' | 'receipts' | 'driver-documents') {
@@ -385,6 +464,9 @@ export class PaymentsService {
         503,
       );
     }
+    if (await this.getPaymentMode() !== 'ONLINE') {
+      throw new AppError('ONLINE_PAYMENT_DISABLED', 'Online payments are currently disabled.', 503);
+    }
     const key = idempotencyKey.trim();
     if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(key)) {
       throw new ValidationError(
@@ -473,7 +555,14 @@ export class PaymentsService {
     });
     if (!this.gateway.request || !this.config?.zibalCallbackBaseUrl) throw new AppError('PAYMENT_GATEWAY_UNAVAILABLE', 'Gateway callback is not configured.', 503);
     const [current] = await this.db.db.select().from(paymentTransactions).where(eq(paymentTransactions.id, created.id)).limit(1);
-    if (current.gatewayAuthority && current.transactionStatus === 'PENDING') return { ...created, checkoutUrl: `https://gateway.zibal.ir/start/${current.gatewayAuthority}` };
+    if (current.gatewayAuthority && current.transactionStatus === 'PENDING') {
+      const verification = await this.gateway.verify({ authority: current.gatewayAuthority, amount: current.amount });
+      if (verification.verified) {
+        await this.verifyOnlinePayment(current.id, userId, current.gatewayAuthority);
+        return { ...created, transactionStatus: 'SUCCEEDED' as const, checkoutUrl: null };
+      }
+      return { ...created, checkoutUrl: `https://gateway.zibal.ir/start/${current.gatewayAuthority}` };
+    }
     if (current.transactionStatus === 'REQUESTING') {
       if (Date.now() - current.updatedAt.getTime() > 120_000) {
         await this.db.db.update(paymentTransactions).set({ transactionStatus: 'FAILED', failureCode: 'GATEWAY_REQUEST_TIMEOUT', updatedAt: new Date() })
@@ -642,13 +731,21 @@ export class PaymentsService {
       idempotencyKey: string;
     },
   ) {
-    if (this.config?.onlinePaymentEnabled) {
+    if (await this.getPaymentMode() !== 'OFFLINE') {
       throw new AppError('OFFLINE_PAYMENT_DISABLED', 'Offline payments are currently disabled.', 503);
     }
     const item = await this.getOwnedScheduleItem(scheduleItemId, userId);
     if (item.itemStatus !== 'PENDING') {
       throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This payment item is not payable.');
     }
+    const [activeOnline] = await this.db.db.select({ id: paymentTransactions.id })
+      .from(paymentTransactions)
+      .where(and(
+        eq(paymentTransactions.paymentScheduleItemId, scheduleItemId),
+        eq(paymentTransactions.paymentMethod, 'ONLINE_GATEWAY'),
+        inArray(paymentTransactions.transactionStatus, ['CREATED', 'REQUESTING', 'PENDING']),
+      )).limit(1);
+    if (activeOnline) throw new ConflictError('PAYMENT_IN_PROGRESS', 'An online checkout is still in progress.');
     const destination = await this.getActiveOfflineDestination();
     // The receipt image is the evidence. Legacy metadata is optional and must
     // not prevent a family from submitting an otherwise valid receipt.
@@ -1507,6 +1604,104 @@ export class PaymentsService {
         return { plan, ...student, items, transactions };
       }),
     );
+  }
+
+  async listOnlinePaymentsForAdmin(query: {
+    page?: number; pageSize?: number; q?: string;
+    status?: 'SUCCEEDED' | 'PENDING' | 'FAILED';
+    itemType?: 'PREPAYMENT' | 'INSTALLMENT'; routeId?: string; driverId?: string;
+  } = {}) {
+    const page = Math.max(1, query.page ?? 1);
+    const pageSize = Math.min(50, Math.max(1, query.pageSize ?? 20));
+    const filters = [eq(paymentTransactions.paymentMethod, 'ONLINE_GATEWAY')];
+    if (query.status === 'PENDING') filters.push(inArray(paymentTransactions.transactionStatus, ['CREATED', 'REQUESTING', 'PENDING']));
+    else if (query.status) filters.push(eq(paymentTransactions.transactionStatus, query.status));
+    if (query.itemType) filters.push(eq(paymentScheduleItems.itemType, query.itemType));
+    if (query.routeId || query.driverId) {
+      filters.push(sql`exists (select 1 from transport_service_run_students rs
+        join transport_service_runs run on run.id = rs.service_run_id
+        where rs.student_id = ${students.id} and rs.is_active and run.is_active
+        ${query.routeId ? sql`and run.id = ${query.routeId}` : sql``}
+        ${query.driverId ? sql`and run.driver_id = ${query.driverId}` : sql``})`);
+    }
+    if (query.q?.trim()) {
+      const pattern = `%${query.q.trim()}%`;
+      filters.push(or(
+        ilike(students.firstName, pattern), ilike(students.lastName, pattern),
+        ilike(students.nationalId, pattern),
+        ilike(sql<string>`${students.firstName} || ' ' || ${students.lastName}`, pattern),
+        ilike(paymentTransactions.gatewayTransactionId, pattern),
+        sql`exists (select 1 from parents p where p.user_id = ${students.userId}
+          and (p.first_name ilike ${pattern} or p.last_name ilike ${pattern}
+            or (p.first_name || ' ' || p.last_name) ilike ${pattern}))`,
+      )!);
+    }
+    const where = and(...filters);
+    const rows = await this.db.db.select({
+      transaction: paymentTransactions,
+      itemType: paymentScheduleItems.itemType,
+      sequenceNumber: paymentScheduleItems.sequenceNumber,
+      dueDate: paymentScheduleItems.dueDate,
+      studentId: students.id,
+      studentFirstName: students.firstName,
+      studentLastName: students.lastName,
+      userId: students.userId,
+      planTotal: paymentPlans.totalAmount,
+      planStatus: paymentPlans.planStatus,
+    }).from(paymentTransactions)
+      .innerJoin(paymentScheduleItems, eq(paymentScheduleItems.id, paymentTransactions.paymentScheduleItemId))
+      .innerJoin(paymentPlans, eq(paymentPlans.id, paymentTransactions.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, registrationPrices.registrationId))
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .innerJoin(users, eq(users.id, students.userId))
+      .where(where)
+      .orderBy(desc(paymentTransactions.requestedAt), desc(paymentTransactions.id))
+      .limit(pageSize).offset((page - 1) * pageSize);
+    const [{ value }] = await this.db.db.select({ value: count() }).from(paymentTransactions)
+      .innerJoin(paymentScheduleItems, eq(paymentScheduleItems.id, paymentTransactions.paymentScheduleItemId))
+      .innerJoin(paymentPlans, eq(paymentPlans.id, paymentTransactions.paymentPlanId))
+      .innerJoin(registrationPrices, eq(registrationPrices.id, paymentPlans.registrationPriceId))
+      .innerJoin(serviceRegistrations, eq(serviceRegistrations.id, registrationPrices.registrationId))
+      .innerJoin(students, eq(students.id, serviceRegistrations.studentId))
+      .innerJoin(users, eq(users.id, students.userId)).where(where);
+    const planIds = [...new Set(rows.map((row) => row.transaction.paymentPlanId))];
+    const userIds = [...new Set(rows.map((row) => row.userId))];
+    const [planItems, familyRows] = await Promise.all([
+      planIds.length ? this.db.db.select().from(paymentScheduleItems).where(inArray(paymentScheduleItems.paymentPlanId, planIds)) : Promise.resolve([]),
+      userIds.length ? this.db.db.select().from(parents).where(inArray(parents.userId, userIds)) : Promise.resolve([]),
+    ]);
+    return {
+      items: rows.map((row) => {
+        const related = planItems.filter((item) => item.paymentPlanId === row.transaction.paymentPlanId);
+        const paidAmount = related.reduce((sum, item) => sum + item.paidAmount, 0);
+        const remaining = related.filter((item) => item.itemStatus === 'PENDING')
+          .sort((a, b) => (a.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER));
+        const family = familyRows.find((entry) => entry.userId === row.userId && entry.isPrimaryContact)
+          ?? familyRows.find((entry) => entry.userId === row.userId);
+        return {
+          id: row.transaction.id,
+          studentName: `${row.studentFirstName} ${row.studentLastName}`,
+          familyName: family ? `${family.firstName} ${family.lastName}` : '—',
+          itemType: row.itemType,
+          sequenceNumber: row.sequenceNumber,
+          amount: row.transaction.amount,
+          status: row.transaction.transactionStatus,
+          requestedAt: row.transaction.requestedAt.toISOString(),
+          verifiedAt: row.transaction.verifiedAt?.toISOString() ?? null,
+          reference: row.transaction.gatewayTransactionId,
+          planTotal: row.planTotal,
+          planStatus: row.planStatus,
+          paidAmount,
+          remainingAmount: remaining.reduce((sum, item) => sum + item.amount, 0),
+          prepaymentPaid: related.some((item) => item.itemType === 'PREPAYMENT' && item.itemStatus === 'PAID'),
+          paidCount: related.filter((item) => item.itemType === 'INSTALLMENT' && item.itemStatus === 'PAID').length,
+          remainingCount: remaining.filter((item) => item.itemType === 'INSTALLMENT').length,
+          nextDueDate: remaining[0]?.dueDate?.toISOString() ?? null,
+        };
+      }),
+      total: Number(value), page, pageSize,
+    };
   }
 
   async getAllForAdmin() {

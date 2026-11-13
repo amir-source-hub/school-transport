@@ -5,18 +5,25 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import {
   getAdminOfflineSubmissions,
+  getAdminOfflineDestination,
+  getAdminOnlineTransactions,
   getAdminPayments,
   getPrepaymentSettings,
   getPaymentTone,
 } from '@/features/admin-payments/admin-payments-api';
 import { PrepaymentSettingsForm } from '@/features/admin-payments/prepayment-settings-form';
+import { PaymentModeForm } from '@/features/admin-payments/payment-mode-form';
+import { OfflineDestinationForm } from '@/features/admin-payments/offline-destination-form';
+import { OnlineTransactionList } from '@/features/admin-payments/online-transaction-list';
 import { StudentPrepaymentDialog } from '@/features/admin-payments/student-prepayment-dialog';
 import { ImageArchiveButton } from '@/features/admin-payments/image-archive-button';
 import {
   ConfigureInstallmentsDialog,
+  RecordPaymentOnBehalfDialog,
 } from '@/features/admin-payments/payment-actions';
 import { OfflineSubmissionList } from '@/features/admin-payments/offline-submission-list';
 import { formatIrr, formatJalaliDate, formatJalaliDateTime } from '@/lib/formatters';
+import { PersistentQueryForm } from '@/components/navigation/persistent-query-form';
 
 export const metadata = { title: 'پرداخت‌ها' };
 export const dynamic = 'force-dynamic';
@@ -31,9 +38,14 @@ export default async function AdminPaymentsPage({
     q?: string;
     routeId?: string;
     driverId?: string;
+    view?: string;
+    onlineStatus?: string;
+    onlinePage?: string;
   }>;
 }) {
   const params = await searchParams;
+  const prepaymentSettings = await getPrepaymentSettings();
+  const view = params.view === 'online' || params.view === 'offline' ? params.view : prepaymentSettings.paymentMode.toLowerCase();
   const q = params.q?.trim() || undefined;
   const receiptPage = Math.max(1, Number.parseInt(params.receiptPage ?? '1', 10) || 1);
   const receiptStatus = ['PENDING_REVIEW', 'APPROVED', 'REJECTED'].includes(
@@ -48,13 +60,18 @@ export default async function AdminPaymentsPage({
     status: receiptStatus,
     itemType,
   };
-  const [{ payments }, submissions, prepaymentSettings, approvedReceipts, rejectedReceipts, pendingReceipts] = await Promise.all([
+  const [{ payments }, submissions, approvedReceipts, rejectedReceipts, pendingReceipts, onlineTransactions, destination] = await Promise.all([
     getAdminPayments(),
     getAdminOfflineSubmissions({ ...receiptFilters, q, routeId: params.routeId, driverId: params.driverId, page: receiptPage, pageSize: 20 }),
-    getPrepaymentSettings(),
     getAdminOfflineSubmissions({ ...receiptFilters, status: 'APPROVED', q, routeId: params.routeId, driverId: params.driverId, pageSize: 1 }),
     getAdminOfflineSubmissions({ ...receiptFilters, status: 'REJECTED', q, routeId: params.routeId, driverId: params.driverId, pageSize: 1 }),
     getAdminOfflineSubmissions({ ...receiptFilters, status: 'PENDING_REVIEW', q, routeId: params.routeId, driverId: params.driverId, pageSize: 1 }),
+    view === 'online' ? getAdminOnlineTransactions({
+      q, itemType, routeId: params.routeId, driverId: params.driverId,
+      status: ['SUCCEEDED', 'PENDING', 'FAILED'].includes(params.onlineStatus ?? '') ? params.onlineStatus : undefined,
+      page: Math.max(1, Number.parseInt(params.onlinePage ?? '1', 10) || 1), pageSize: 20,
+    }) : Promise.resolve(null),
+    prepaymentSettings.paymentMode === 'OFFLINE' ? getAdminOfflineDestination() : Promise.resolve(null),
   ]);
   const routes = [...new Map(payments.flatMap((payment) => payment.routes).map((route) => [route.routeId, route])).values()];
   const drivers = [...new Map(payments.flatMap((payment) => payment.routes).map((route) => [route.driverId, route])).values()];
@@ -73,7 +90,17 @@ export default async function AdminPaymentsPage({
         <p className="text-sm font-bold text-primary">پایش مالی مدیریت</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">پرداخت‌ها</h1>
       </div>
+      <Card><PaymentModeForm current={prepaymentSettings} /></Card>
       <Card><PrepaymentSettingsForm current={prepaymentSettings} /></Card>
+      {prepaymentSettings.paymentMode === 'OFFLINE' && <Card>
+        <h2 className="mb-4 text-lg font-black">مقصد پرداخت آفلاین</h2>
+        <OfflineDestinationForm current={destination} />
+      </Card>}
+      <nav aria-label="نمایش تراکنش‌ها" className="flex flex-wrap gap-2">
+        <ButtonLink variant={view === 'online' ? 'primary' : 'secondary'} href="/admin/payments?view=online">پرداخت‌های آنلاین</ButtonLink>
+        <ButtonLink variant={view === 'offline' ? 'primary' : 'secondary'} href="/admin/payments?view=offline">پرداخت‌های آفلاین</ButtonLink>
+      </nav>
+      {view === 'offline' && <>
       <ImageArchiveButton kind="receipts" />
       <p className="text-sm text-muted">رسیدها: {approvedReceipts.total.toLocaleString('fa-IR')} تأییدشده، {rejectedReceipts.total.toLocaleString('fa-IR')} ردشده، {pendingReceipts.total.toLocaleString('fa-IR')} در انتظار بررسی. یک دانش‌آموز ممکن است چند قسط و چند بار ارسال رسید داشته باشد.</p>
       <section className="space-y-4" aria-labelledby="receipt-review-heading">
@@ -86,10 +113,11 @@ export default async function AdminPaymentsPage({
           </p>
         </div>
         <Card>
-          <form
+          <PersistentQueryForm path="/admin/payments"
             className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-            aria-label="پالایش رسیدهای پرداخت"
+            ariaLabel="پالایش رسیدهای پرداخت"
           >
+            <input type="hidden" name="view" value="offline" />
             {params.routeId && <input type="hidden" name="routeId" value={params.routeId} />}
             {params.driverId && <input type="hidden" name="driverId" value={params.driverId} />}
             <label className="text-sm font-bold">
@@ -140,7 +168,7 @@ export default async function AdminPaymentsPage({
                 پاک‌کردن
               </Link>
             </div>
-          </form>
+          </PersistentQueryForm>
         </Card>
         {submissions.items.length === 0 ? (
           <Card>
@@ -155,9 +183,8 @@ export default async function AdminPaymentsPage({
         >
           {receiptPage > 1 ? (
             <ButtonLink
-              native
               variant="secondary"
-              href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), ...(params.routeId ? { routeId: params.routeId } : {}), ...(params.driverId ? { driverId: params.driverId } : {}), receiptPage: String(receiptPage - 1) })}`}
+              href={`/admin/payments?${new URLSearchParams({ view: 'offline', ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), ...(params.routeId ? { routeId: params.routeId } : {}), ...(params.driverId ? { driverId: params.driverId } : {}), receiptPage: String(receiptPage - 1) })}`}
             >
               قبلی
             </ButtonLink>
@@ -167,9 +194,8 @@ export default async function AdminPaymentsPage({
           <span className="text-xs text-muted">صفحه {receiptPage.toLocaleString('fa-IR')}</span>
           {receiptPage * submissions.pageSize < submissions.total ? (
             <ButtonLink
-              native
               variant="secondary"
-              href={`/admin/payments?${new URLSearchParams({ ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), ...(params.routeId ? { routeId: params.routeId } : {}), ...(params.driverId ? { driverId: params.driverId } : {}), receiptPage: String(receiptPage + 1) })}`}
+              href={`/admin/payments?${new URLSearchParams({ view: 'offline', ...(q ? { q } : {}), ...(receiptFilters.status ? { receiptStatus: receiptFilters.status } : {}), ...(receiptFilters.itemType ? { itemType: receiptFilters.itemType } : {}), ...(params.routeId ? { routeId: params.routeId } : {}), ...(params.driverId ? { driverId: params.driverId } : {}), receiptPage: String(receiptPage + 1) })}`}
             >
               بعدی
             </ButtonLink>
@@ -178,6 +204,8 @@ export default async function AdminPaymentsPage({
           )}
         </nav>
       </section>
+      </>}
+      {view === 'online' && onlineTransactions && <OnlineTransactionList data={onlineTransactions} filters={{ q, itemType, routeId: params.routeId, driverId: params.driverId, status: params.onlineStatus }} />}
       <section className="space-y-3" aria-labelledby="payment-plan-summary-heading">
         <div>
           <h2 id="payment-plan-summary-heading" className="text-xl font-black">
@@ -189,7 +217,8 @@ export default async function AdminPaymentsPage({
           </p>
         </div>
         <Card>
-          <form className="grid gap-3 sm:grid-cols-3" aria-label="پالایش برنامه‌های پرداخت">
+          <PersistentQueryForm path="/admin/payments" className="grid gap-3 sm:grid-cols-3" ariaLabel="پالایش برنامه‌های پرداخت">
+            <input type="hidden" name="view" value={view} />
             {q && <input type="hidden" name="q" value={q} />}
             {receiptFilters.status && <input type="hidden" name="receiptStatus" value={receiptFilters.status} />}
             {receiptFilters.itemType && <input type="hidden" name="itemType" value={receiptFilters.itemType} />}
@@ -206,7 +235,7 @@ export default async function AdminPaymentsPage({
               </select>
             </label>
             <button type="submit" className="min-h-11 self-end rounded-xl bg-primary px-4 text-sm font-bold text-white">اعمال فیلتر</button>
-          </form>
+          </PersistentQueryForm>
         </Card>
         <div className="grid gap-4">
           {visiblePayments.map((payment) => {
@@ -285,6 +314,9 @@ export default async function AdminPaymentsPage({
                       )}
                     </div>
                   )}
+                  {prepaymentSettings.paymentMode === 'OFFLINE' && !payment.prepayment.paid && payment.prepayment.transaction?.status !== 'در انتظار بررسی' && <div className="mt-4 border-t border-border pt-4">
+                    <RecordPaymentOnBehalfDialog scheduleItemId={payment.prepayment.id} label="پیش‌پرداخت" />
+                  </div>}
                   {payment.canEditPrepayment && (
                     <div className="mt-4 border-t border-border pt-4">
                       <StudentPrepaymentDialog planId={payment.planId} currentAmount={payment.prepayment.amount} />
@@ -366,6 +398,9 @@ export default async function AdminPaymentsPage({
                                 )}
                               </div>
                             )}
+                            {prepaymentSettings.paymentMode === 'OFFLINE' && !installment.paid && installment.transaction?.status !== 'در انتظار بررسی' && <div className="mt-4 border-t border-border pt-4">
+                              <RecordPaymentOnBehalfDialog scheduleItemId={installment.id} label={`قسط ${installment.sequenceNumber.toLocaleString('fa-IR')}`} />
+                            </div>}
                           </div>
                         );
                       })}

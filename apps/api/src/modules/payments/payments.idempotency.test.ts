@@ -114,11 +114,20 @@ function safe(row: any) {
 }
 
 function service(harness = databaseHarness()) {
-  const gateway = { enabled: true, request: vi.fn(async ({ orderId }: { orderId: string }) => ({ authority: '123456', checkoutUrl: 'https://gateway.zibal.ir/start/123456', orderId })) };
-  return { harness, gateway, payments: new PaymentsService(harness.db as never, gateway as never, {} as never, undefined, { zibalCallbackBaseUrl: 'https://example.test' } as never) };
+  const gateway = { enabled: true, request: vi.fn(async ({ orderId }: { orderId: string }) => ({ authority: '123456', checkoutUrl: 'https://gateway.zibal.ir/start/123456', orderId })), verify: vi.fn(async () => ({ verified: false, amount: 5000, transactionId: undefined as string | undefined })) };
+  const payments = new PaymentsService(harness.db as never, gateway as never, {} as never, undefined, { zibalCallbackBaseUrl: 'https://example.test' } as never);
+  vi.spyOn(payments, 'getPaymentMode').mockResolvedValue('ONLINE');
+  return { harness, gateway, payments };
 }
 
 describe('online payment idempotency', () => {
+  it('blocks new online checkout when admin selects offline payments', async () => {
+    const { payments, harness } = service();
+    vi.spyOn(payments, 'getPaymentMode').mockResolvedValue('OFFLINE');
+    await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'request-123'))
+      .rejects.toMatchObject({ code: 'ONLINE_PAYMENT_DISABLED' });
+    expect(harness.transactions).toHaveLength(0);
+  });
   it('rejects before any database access when the gateway feature is disabled', async () => {
     let touchedDatabase = false;
     const db = {
@@ -164,6 +173,16 @@ describe('online payment idempotency', () => {
     expect(gateway.request).toHaveBeenCalledWith(expect.objectContaining({
       callbackUrl: expect.stringMatching(/^https:\/\/example\.test\/api\/v1\/payments\/online\/callback\?txId=/),
     }));
+  });
+
+  it('reconciles a paid checkout before offering the gateway again', async () => {
+    const { payments, gateway } = service();
+    await payments.startOnlinePayment('schedule-1', 'user-1', 'request-123');
+    gateway.verify.mockResolvedValueOnce({ verified: true, amount: 5000, transactionId: 'bank-ref' });
+    const verify = vi.spyOn(payments, 'verifyOnlinePayment').mockResolvedValue({ transactionStatus: 'SUCCEEDED' } as never);
+    const result = await payments.startOnlinePayment('schedule-1', 'user-1', 'another-123');
+    expect(result).toMatchObject({ transactionStatus: 'SUCCEEDED', checkoutUrl: null });
+    expect(verify).toHaveBeenCalledWith(expect.any(String), 'user-1', '123456');
   });
 
   it('checks the tracking ID before replaying a successful verification', async () => {

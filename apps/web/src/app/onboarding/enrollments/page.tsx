@@ -14,8 +14,8 @@ export default async function OnboardingEnrollmentsPage() {
         <p className="text-sm font-bold text-primary">مرحله نخست ورود شما</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">تکمیل ثبت‌نام سرویس مدرسه</h1>
         <p className="mt-3 text-sm leading-7 text-muted">
-          برای فعال شدن حساب دانش‌آموزی، مشخصات، نشانی، مدرسه، قرارداد و پیش‌پرداخت را تکمیل کنید.
-          پس از تأیید پرداخت، پنل خانواده فعال می‌شود.
+          مشخصات، نشانی، مدرسه و قرارداد را تکمیل کنید. سپس از پنل خانواده پیش‌پرداخت را با روش فعال
+          پرداخت کنید و وضعیت آن را همان‌جا پیگیری کنید.
         </p>
       </div>
       <CreateEnrollmentForm

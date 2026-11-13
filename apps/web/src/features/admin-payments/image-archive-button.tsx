@@ -1,28 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { downloadApiFile } from '@/lib/api-client';
-import { getApiErrorFeedback } from '@/lib/api-error-feedback';
+import { imageDownloadManager, type ArchiveKind } from './image-download-manager';
 
-export function ImageArchiveButton({ kind }: { kind: 'photos' | 'receipts' | 'driver-documents' }) {
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string>();
-  return <div>
-    <Button type="button" variant="secondary" loading={pending} onClick={async () => {
-      setPending(true); setError(undefined);
-      try {
-        const { blob, filename } = await downloadApiFile(`/admin/payments/images/${kind}.zip`);
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url; link.download = filename; document.body.appendChild(link); link.click(); link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      } catch (caught) { setError(getApiErrorFeedback(caught).message); }
-      finally { setPending(false); }
-    }}><Download className="size-4" aria-hidden="true" />
+export function ImageArchiveButton({ kind }: { kind: ArchiveKind }) {
+  const state = useSyncExternalStore(imageDownloadManager.subscribe, imageDownloadManager.getSnapshot, imageDownloadManager.getSnapshot);
+  const pending = state.status === 'downloading';
+  return <Button type="button" variant="secondary" disabled={pending} onClick={() => void imageDownloadManager.start(kind)}><Download className="size-4" aria-hidden="true" />
       {kind === 'photos' ? 'دریافت همه عکس‌های دانش‌آموزان' : kind === 'receipts' ? 'دریافت همه تصاویر رسیدها' : 'دریافت همه مدارک و عکس‌های رانندگان'}
-    </Button>
-    {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
-  </div>;
+    </Button>;
 }

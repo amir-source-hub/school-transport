@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
 
 import { AdminRouteGuard } from '@/features/auth/admin-route-guard';
+import { ImageDownloadStatus } from '@/features/admin-payments/image-download-status';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -12,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  return <AdminRouteGuard>{children}</AdminRouteGuard>;
+  return <AdminRouteGuard>{children}<ImageDownloadStatus /></AdminRouteGuard>;
 }

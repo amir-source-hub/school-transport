@@ -2,7 +2,8 @@ import { Breadcrumbs } from '@/components/navigation/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { OnlinePaymentButton } from '@/features/finance/online-payment-button';
-import { getOfflineSubmissions, getPayments } from '@/features/finance/payments-api';
+import { OfflinePaymentForm } from '@/features/finance/offline-payment-form';
+import { getOfflineSubmissions, getPayments, getPublicPaymentSettings } from '@/features/finance/payments-api';
 import { formatIrr } from '@/lib/formatters';
 import { formatJalaliDate } from '@/lib/formatters';
 
@@ -17,9 +18,10 @@ const planStatusLabels: Record<string, string> = {
 };
 
 export default async function PaymentsPage() {
-  const [overviews, offlineSubmissions] = await Promise.all([
+  const [overviews, offlineSubmissions, settings] = await Promise.all([
     getPayments(),
     getOfflineSubmissions(),
+    getPublicPaymentSettings(),
   ]);
   const pendingOfflineItemIds = new Set(
     offlineSubmissions
@@ -46,6 +48,14 @@ export default async function PaymentsPage() {
           ] as const,
       ),
     ),
+  );
+  const unpaid = overviews.flatMap(({ plan, items, studentFirstName, studentLastName }) =>
+    items.filter(({ id, itemStatus }) => itemStatus === 'PENDING' && !pendingOfflineItemIds.has(id))
+      .map((item) => ({
+        id: item.id,
+        amount: item.amount,
+        label: `${studentFirstName} ${studentLastName} — ${item.itemType === 'PREPAYMENT' ? 'پیش‌پرداخت' : plan.planType === 'FULL' ? 'پرداخت یکجای باقی‌مانده' : `قسط ${item.sequenceNumber}`} — ${formatIrr(item.amount)}`,
+      })),
   );
   return (
     <div className="space-y-6">
@@ -110,9 +120,10 @@ export default async function PaymentsPage() {
                     <span className="text-sm font-bold text-muted">نیاز به پرداخت ندارد</span>
                   ) : pendingOfflineItemIds.has(item.id) ? (
                     <span className="text-sm text-muted">رسید قبلی در انتظار بررسی است</span>
-                  ) : (
-                    <OnlinePaymentButton scheduleItemId={item.id} amount={item.amount} />
-                  )}
+                  ) : settings.paymentMode === 'ONLINE' ? (
+                    <OnlinePaymentButton scheduleItemId={item.id} amount={item.amount}
+                      existingPending={overview.transactions.some((transaction) => transaction.paymentScheduleItemId === item.id && transaction.paymentMethod === 'ONLINE_GATEWAY' && ['CREATED', 'REQUESTING', 'PENDING'].includes(transaction.transactionStatus))} />
+                  ) : <span className="text-sm text-muted">ثبت رسید از فرم پایین</span>}
                 </div>
               ))}
             </div>
@@ -122,9 +133,10 @@ export default async function PaymentsPage() {
                 {overview.transactions.map((transaction) => (
                   <p key={transaction.id} className="mt-2 text-sm text-muted">
                     {transaction.gatewayTransactionId ?? transaction.id} —{' '}
-                    {transaction.transactionStatus === 'REVERSED'
-                      ? 'بازنشانی‌شده برای ارسال دوباره رسید'
-                      : transaction.transactionStatus}
+                    {transaction.transactionStatus === 'REVERSED' ? 'بازنشانی‌شده برای ارسال دوباره رسید'
+                      : transaction.transactionStatus === 'SUCCEEDED' ? 'تأییدشده'
+                        : transaction.transactionStatus === 'FAILED' ? 'ناموفق'
+                          : 'در انتظار بررسی وضعیت درگاه'}
                   </p>
                 ))}
               </div>
@@ -132,6 +144,10 @@ export default async function PaymentsPage() {
           </Card>
         );
       })}
+      {settings.paymentMode === 'OFFLINE' && <Card>
+        <h2 className="mb-4 text-lg font-black">ثبت پرداخت آفلاین</h2>
+        <OfflinePaymentForm items={unpaid} />
+      </Card>}
       {offlineSubmissions.length > 0 && (
         <Card>
           <h2 className="mb-4 text-lg font-black">وضعیت رسیدهای آفلاین</h2>

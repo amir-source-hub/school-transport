@@ -21,6 +21,7 @@ import {
   ConfigureInstallmentsDto,
   ConfigureOfflineDestinationDto,
   ConfigureDefaultPrepaymentDto,
+  ConfigurePaymentModeDto,
   ConfigureStudentPrepaymentDto,
   AuthorizeReceiptUploadDto,
   IdempotencyKey,
@@ -28,11 +29,23 @@ import {
   RejectPaymentDto,
   ReviewPaymentDto,
   AdminOfflinePaymentListQueryDto,
+  AdminOnlinePaymentListQueryDto,
   VerifyOnlinePaymentDto,
 } from './payment-request.dto';
 import { PaymentsService } from './payments.service';
 import { ConfigService } from '../../config/config.service';
 import type { FastifyReply } from 'fastify';
+
+@Controller('public/payment-settings')
+export class PublicPaymentSettingsController {
+  constructor(private readonly paymentsService: PaymentsService) {}
+
+  @Get()
+  async getSettings() {
+    const settings = await this.paymentsService.getPrepaymentSettings();
+    return successResponse({ prepaymentAmount: settings.defaultPrepaymentAmount, paymentMode: settings.paymentMode });
+  }
+}
 
 @Controller('payments/online')
 export class GatewayReturnController {
@@ -264,6 +277,14 @@ export class AdminPaymentsController {
     return successResponse(await this.paymentsService.configureDefaultPrepayment(req.user.id, dto.amount, dto.expectedVersion));
   }
 
+  @Post('payment-mode')
+  async configurePaymentMode(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ConfigurePaymentModeDto,
+  ) {
+    return successResponse(await this.paymentsService.configurePaymentMode(req.user.id, dto.mode, dto.expectedVersion));
+  }
+
   @Post('plans/:planId/prepayment')
   async configureStudentPrepayment(
     @Req() req: AuthenticatedRequest,
@@ -296,6 +317,11 @@ export class AdminPaymentsController {
   @Get('offline-submissions')
   async offlineSubmissions(@Query() query: AdminOfflinePaymentListQueryDto) {
     return successResponse(await this.paymentsService.listOfflineSubmissionsForAdmin(query));
+  }
+
+  @Get('online-transactions')
+  async onlineTransactions(@Query() query: AdminOnlinePaymentListQueryDto) {
+    return successResponse(await this.paymentsService.listOnlinePaymentsForAdmin(query));
   }
 
   @Post(':scheduleItemId/offline-submissions')

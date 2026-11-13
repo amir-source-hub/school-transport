@@ -73,6 +73,7 @@ export type AdminOfflineDestination = z.infer<typeof offlineDestinationSchema>;
 
 const prepaymentSettingsSchema = z.object({
   defaultPrepaymentAmount: z.number(),
+  paymentMode: z.enum(['ONLINE', 'OFFLINE']),
   version: z.number(),
   updatedAt: z.string().or(z.date()),
 });
@@ -86,6 +87,13 @@ export async function getPrepaymentSettings() {
 export async function updateDefaultPrepayment(amount: number, expectedVersion: number) {
   const response = await apiRequest<unknown>('/admin/payments/prepayment-settings', {
     method: 'POST', body: { amount, expectedVersion },
+  });
+  return prepaymentSettingsSchema.parse(response.data);
+}
+
+export async function updatePaymentMode(mode: 'ONLINE' | 'OFFLINE', expectedVersion: number) {
+  const response = await apiRequest<unknown>('/admin/payments/payment-mode', {
+    method: 'POST', body: { mode, expectedVersion },
   });
   return prepaymentSettingsSchema.parse(response.data);
 }
@@ -151,6 +159,31 @@ export async function getAdminOfflineSubmissions(params: {
     cache: 'no-store',
   });
   return offlineSubmissionListSchema.parse(response.data);
+}
+
+const onlineTransactionSchema = z.object({
+  id: z.string(), studentName: z.string(), familyName: z.string(),
+  itemType: z.enum(['PREPAYMENT', 'INSTALLMENT']), sequenceNumber: z.number(),
+  amount: z.number(), status: z.string(), requestedAt: z.string(),
+  verifiedAt: z.string().nullable(), reference: z.string().nullable(),
+  planTotal: z.number(), planStatus: z.string(), paidAmount: z.number(),
+  remainingAmount: z.number(), paidCount: z.number(), remainingCount: z.number(),
+  prepaymentPaid: z.boolean(),
+  nextDueDate: z.string().nullable(),
+});
+const onlineTransactionListSchema = z.object({
+  items: z.array(onlineTransactionSchema), total: z.number(), page: z.number(), pageSize: z.number(),
+});
+export type AdminOnlineTransactionList = z.infer<typeof onlineTransactionListSchema>;
+
+export async function getAdminOnlineTransactions(params: {
+  status?: string; itemType?: string; q?: string; routeId?: string; driverId?: string;
+  page?: number; pageSize?: number;
+}) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== '') query.set(key, String(value));
+  const response = await apiRequest<unknown>(`/admin/payments/online-transactions?${query}`, { cache: 'no-store' });
+  return onlineTransactionListSchema.parse(response.data);
 }
 
 export async function getAdminOfflineDestination() {
@@ -271,7 +304,7 @@ export async function recordPaymentOnBehalf(
 }
 
 export function getPaymentTone(status: string) {
-  if (status === 'تأییدشده') return 'success' as const;
+  if (status === 'تأییدشده' || status === 'پرداخت آنلاین تأییدشده') return 'success' as const;
   if (status === 'ردشده') return 'danger' as const;
   return 'warning' as const;
 }

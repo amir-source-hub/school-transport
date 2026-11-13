@@ -221,8 +221,9 @@ pnpm --filter web test:e2e
 The Zibal gateway is enabled with `PAYMENT_GATEWAY_PROVIDER=zibal`,
 `ONLINE_PAYMENT_ENABLED=true`, `ZIBAL_MERCHANT`, and a public HTTPS
 `ZIBAL_CALLBACK_BASE_URL`. Mock gateway behavior exists only inside isolated unit tests.
-Offline payment creation is disabled while online payments are enabled. Historical offline
-payments use versioned administrator-managed destination details and a private,
+The administrator selects the active payment mode on `/admin/payments`; the API enforces this
+database setting for new checkouts and new offline submissions. Existing online checkouts can
+still be verified after a mode change. Offline payments use versioned administrator-managed destination details and a private,
 normalized receipt image. A submitted receipt does not count as payment until an administrator
 approves it; one draft/review claim is allowed per schedule item and rejected claims retain history.
 

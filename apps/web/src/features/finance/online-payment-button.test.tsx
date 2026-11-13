@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { OnlinePaymentButton } from './online-payment-button';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 vi.mock('./payments-api', () => ({ startOnlinePayment: vi.fn() }));
 

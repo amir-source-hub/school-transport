@@ -5,6 +5,7 @@ import {
   PaymentsController,
   AdminPaymentsController,
   GatewayReturnController,
+  PublicPaymentSettingsController,
 } from './payments.controller';
 import { PAYMENT_GATEWAY, UnconfiguredPaymentGateway, ZibalPaymentGateway } from './payment-gateway';
 import { ConfigService } from '../../config/config.service';
@@ -13,7 +14,7 @@ import { S3Module } from '../../infrastructure/s3/s3.module';
 
 @Module({
   imports: [S3Module],
-  controllers: [PaymentsController, AdminPaymentsController, OnboardingPaymentsController, GatewayReturnController],
+  controllers: [PaymentsController, AdminPaymentsController, OnboardingPaymentsController, GatewayReturnController, PublicPaymentSettingsController],
   providers: [
     PaymentsService,
     OnboardingGuard,
