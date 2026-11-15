@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { PaymentsService } from './payments.service';
+import type { GatewayVerification } from './payment-gateway';
 import { offlinePaymentSubmissions, paymentTransactions } from '../../database/schemas';
 
 const item = {
@@ -33,7 +34,7 @@ function databaseHarness() {
     update: () => ({ set: (changes: any) => ({ where: () => {
       const apply = () => {
         const previousStatus = changes.transactionStatus === 'REQUESTING' ? 'CREATED'
-          : changes.failureCode === 'CHECKOUT_EXPIRED' ? 'PENDING' : 'REQUESTING';
+          : ['CHECKOUT_EXPIRED', 'CHECKOUT_CANCELLED'].includes(changes.failureCode) ? 'PENDING' : 'REQUESTING';
         const row = transactions.find((entry) => entry.transactionStatus === previousStatus);
         if (!row) return [];
         Object.assign(row, changes);
@@ -121,7 +122,7 @@ function safe(row: any) {
 }
 
 function service(harness = databaseHarness()) {
-  const gateway = { enabled: true, request: vi.fn(async ({ orderId }: { orderId: string }) => ({ authority: '123456', checkoutUrl: 'https://gateway.zibal.ir/start/123456', orderId })), verify: vi.fn(async () => ({ verified: false, amount: 5000, transactionId: undefined as string | undefined, resultCode: undefined as number | undefined })) };
+  const gateway = { enabled: true, request: vi.fn(async ({ orderId }: { orderId: string }) => ({ authority: '123456', checkoutUrl: 'https://gateway.zibal.ir/start/123456', orderId })), verify: vi.fn(async (): Promise<GatewayVerification> => ({ verified: false, amount: 5000 })) };
   const payments = new PaymentsService(harness.db as never, gateway as never, {} as never, undefined, { zibalCallbackBaseUrl: 'https://example.test' } as never);
   vi.spyOn(payments, 'getPaymentMode').mockResolvedValue('ONLINE');
   return { harness, gateway, payments };
@@ -199,11 +200,31 @@ describe('online payment idempotency', () => {
     harness.transactions[0].requestedAt = new Date(Date.now() - 11 * 60_000);
     gateway.verify.mockResolvedValueOnce({ verified: false, resultCode: 202, amount: -1, transactionId: undefined });
     await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'another-123'))
-      .rejects.toMatchObject({ code: 'CHECKOUT_EXPIRED' });
+      .resolves.toMatchObject({ transactionStatus: 'PENDING' });
     expect(harness.transactions[0].transactionStatus).toBe('FAILED');
-    await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'third-request-123'))
+    await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'another-123'))
       .resolves.toMatchObject({ transactionStatus: 'PENDING' });
     expect(gateway.request).toHaveBeenCalledTimes(2);
+  });
+
+  it('replaces a checkout cancelled at Zibal on the first retry', async () => {
+    const { payments, gateway, harness } = service();
+    await payments.startOnlinePayment('schedule-1', 'user-1', 'request-123');
+    gateway.verify.mockResolvedValueOnce({ verified: false, resultCode: 202, paymentStatus: 3, amount: -1, transactionId: undefined });
+    await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'another-123'))
+      .resolves.toMatchObject({ transactionStatus: 'PENDING' });
+    expect(harness.transactions[0]).toMatchObject({ transactionStatus: 'FAILED', failureCode: 'CHECKOUT_CANCELLED' });
+    expect(gateway.request).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps an unpaid checkout pending while Zibal says it is still waiting', async () => {
+    const { payments, gateway, harness } = service();
+    await payments.startOnlinePayment('schedule-1', 'user-1', 'request-123');
+    harness.transactions[0].requestedAt = new Date(Date.now() - 5 * 60_000);
+    gateway.verify.mockResolvedValueOnce({ verified: false, resultCode: 202, paymentStatus: -1, amount: -1, transactionId: undefined });
+    await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'another-123'))
+      .resolves.toMatchObject({ transactionStatus: 'PENDING' });
+    expect(harness.transactions).toHaveLength(1);
   });
 
   it('checks the tracking ID before replaying a successful verification', async () => {

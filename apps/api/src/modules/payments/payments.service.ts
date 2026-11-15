@@ -101,8 +101,9 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
             .from(paymentTransactions).where(eq(paymentTransactions.id, transaction.id)).limit(1);
           const verification = await this.gateway.verify({ authority: transaction.authority!, amount: current.amount });
           if (verification.verified) await this.verifyOnlinePayment(transaction.id, undefined, transaction.authority!);
-          else if (verification.resultCode === 202 && Date.now() - current.requestedAt.getTime() > 10 * 60_000) {
-            await this.db.db.update(paymentTransactions).set({ transactionStatus: 'FAILED', failureCode: 'CHECKOUT_EXPIRED', updatedAt: new Date() })
+          else if (verification.resultCode === 202 &&
+            (verification.paymentStatus === 3 || Date.now() - current.requestedAt.getTime() > 10 * 60_000)) {
+            await this.db.db.update(paymentTransactions).set({ transactionStatus: 'FAILED', failureCode: verification.paymentStatus === 3 ? 'CHECKOUT_CANCELLED' : 'CHECKOUT_EXPIRED', updatedAt: new Date() })
               .where(and(eq(paymentTransactions.id, transaction.id), eq(paymentTransactions.transactionStatus, 'PENDING')));
           }
         } catch (error) {
@@ -465,7 +466,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  async startOnlinePayment(scheduleItemId: string, userId: string, idempotencyKey: string, mode: 'panel' | 'onboarding' = 'panel', expectedAmount?: number) {
+  async startOnlinePayment(scheduleItemId: string, userId: string, idempotencyKey: string, mode: 'panel' | 'onboarding' = 'panel', expectedAmount?: number): Promise<Pick<typeof paymentTransactions.$inferSelect, 'id' | 'paymentPlanId' | 'paymentScheduleItemId' | 'amount' | 'gatewayFeeAmount' | 'paymentMethod' | 'transactionStatus' | 'requestedAt'> & { checkoutUrl: string | null }> {
     if (this.gateway.enabled === false) {
       throw new AppError(
         'PAYMENT_GATEWAY_UNAVAILABLE',
@@ -576,10 +577,11 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         await this.verifyOnlinePayment(current.id, userId, current.gatewayAuthority);
         return { ...created, transactionStatus: 'SUCCEEDED' as const, checkoutUrl: null };
       }
-      if (verification.resultCode === 202 && Date.now() - current.requestedAt.getTime() > 10 * 60_000) {
-        await this.db.db.update(paymentTransactions).set({ transactionStatus: 'FAILED', failureCode: 'CHECKOUT_EXPIRED', updatedAt: new Date() })
+      if (verification.resultCode === 202 &&
+        (verification.paymentStatus === 3 || Date.now() - current.requestedAt.getTime() > 10 * 60_000)) {
+        await this.db.db.update(paymentTransactions).set({ transactionStatus: 'FAILED', failureCode: verification.paymentStatus === 3 ? 'CHECKOUT_CANCELLED' : 'CHECKOUT_EXPIRED', updatedAt: new Date() })
           .where(and(eq(paymentTransactions.id, current.id), eq(paymentTransactions.transactionStatus, 'PENDING')));
-        throw new ConflictError('CHECKOUT_EXPIRED', 'This checkout expired. Please start a new payment.');
+        return this.startOnlinePayment(scheduleItemId, userId, idempotencyKey, mode, expectedAmount);
       }
       if (current.amount !== pricing.total) {
         throw new ConflictError('PAYMENT_AMOUNT_CHANGED', 'An earlier checkout has a different amount. Wait for its status to resolve.');
