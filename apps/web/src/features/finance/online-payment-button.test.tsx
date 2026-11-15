@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { OnlinePaymentButton } from './online-payment-button';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -11,5 +11,8 @@ describe('OnlinePaymentButton', () => {
 
     const button = screen.getByRole('button', { name: 'پرداخت آنلاین' });
     expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(screen.getByRole('dialog', { name: 'تأیید مبلغ پرداخت' })).toBeInTheDocument();
+    expect(screen.getByText('جمع قابل پرداخت')).toBeInTheDocument();
   });
 });

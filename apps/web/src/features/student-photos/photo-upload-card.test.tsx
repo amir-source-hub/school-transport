@@ -207,7 +207,7 @@ describe('PhotoUploadCard', () => {
     await user.upload(screen.getByLabelText(/انتخاب عکس/), pngFile());
     await user.click(screen.getByRole('button', { name: 'بارگذاری و ارسال برای بررسی' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent(/تنظیمات CORS ذخیره‌گاه/);
+    expect(await screen.findByRole('status')).toHaveTextContent(/با پشتیبانی تماس بگیرید/);
     expect(completePhotoUpload).not.toHaveBeenCalled();
   });
 

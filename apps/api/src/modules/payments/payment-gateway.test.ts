@@ -62,6 +62,6 @@ describe('Zibal gateway', () => {
   it.each([100, 201, 202])('parses verification result %s and preserves the reported amount', async (result) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ result, amount: 50_000, refNumber: 'ref-1' }) }));
     await expect(gateway.verify({ authority: '123456', amount: 50_000 }))
-      .resolves.toEqual({ verified: result !== 202, amount: 50_000, transactionId: 'ref-1' });
+      .resolves.toEqual({ verified: result !== 202, amount: 50_000, transactionId: 'ref-1', resultCode: result });
   });
 });

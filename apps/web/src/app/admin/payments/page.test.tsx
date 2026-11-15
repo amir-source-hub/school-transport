@@ -113,7 +113,7 @@ describe('admin offline receipt review queue', () => {
     vi.mocked(getAdminOnlineTransactions).mockResolvedValue({
       total: 1, page: 1, pageSize: 20,
       items: [{ id: 'tx-1', studentName: 'مریم رضایی', familyName: 'رضا رضایی', itemType: 'INSTALLMENT', sequenceNumber: 2,
-        amount: 2_000_000, status: 'SUCCEEDED', requestedAt: '2026-11-10T09:00:00Z', verifiedAt: '2026-11-10T09:05:00Z', reference: '123456',
+        amount: 2_000_000, gatewayFeeAmount: 0, status: 'SUCCEEDED', requestedAt: '2026-11-10T09:00:00Z', verifiedAt: '2026-11-10T09:05:00Z', reference: '123456',
         planTotal: 10_000_000, planStatus: 'ACTIVE', paidAmount: 6_000_000, remainingAmount: 4_000_000,
         prepaymentPaid: true, paidCount: 2, remainingCount: 2, nextDueDate: '2026-12-01T00:00:00Z' }],
     });

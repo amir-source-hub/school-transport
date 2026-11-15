@@ -25,7 +25,7 @@ const channels = [
   {
     icon: Mail,
     label: 'ایمیل',
-    value: 'support@schooltransport.ir',
+    value: 'info@samingasht.ir',
     desc: 'پاسخگویی ظرف ۲۴ ساعت کاری',
     dir: 'ltr' as const,
   },

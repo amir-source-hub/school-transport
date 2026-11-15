@@ -43,6 +43,7 @@ const createContentSecurityPolicy = ({
     'https://tile.openstreetmap.org',
     'https://*.tile.openstreetmap.org',
     'https://trustseal.enamad.ir',
+    'https://zibal.ir',
     privateStorageOrigin,
     publicAssetOrigin,
   ];

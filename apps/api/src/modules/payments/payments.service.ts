@@ -32,12 +32,14 @@ import { getObjectAfterWrite, S3_CLIENT, S3Storage } from '../../infrastructure/
 import { processReceiptImage } from './receipt-image-processor';
 import { buildOfflineContractSnapshot, type OfflineContractEnrollmentData } from '../../common/offline-contract-snapshot';
 import { zipStream } from '../../common/zip-stream';
+import { calculateOnlineFee } from './online-fee';
 
 const onlinePaymentResult = {
   id: paymentTransactions.id,
   paymentPlanId: paymentTransactions.paymentPlanId,
   paymentScheduleItemId: paymentTransactions.paymentScheduleItemId,
   amount: paymentTransactions.amount,
+  gatewayFeeAmount: paymentTransactions.gatewayFeeAmount,
   paymentMethod: paymentTransactions.paymentMethod,
   transactionStatus: paymentTransactions.transactionStatus,
   requestedAt: paymentTransactions.requestedAt,
@@ -95,7 +97,14 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         .orderBy(paymentTransactions.updatedAt).limit(25);
       for (const transaction of pending) {
         try {
-          await this.verifyOnlinePayment(transaction.id, undefined, transaction.authority!);
+          const [current] = await this.db.db.select({ amount: paymentTransactions.amount, requestedAt: paymentTransactions.requestedAt })
+            .from(paymentTransactions).where(eq(paymentTransactions.id, transaction.id)).limit(1);
+          const verification = await this.gateway.verify({ authority: transaction.authority!, amount: current.amount });
+          if (verification.verified) await this.verifyOnlinePayment(transaction.id, undefined, transaction.authority!);
+          else if (verification.resultCode === 202 && Date.now() - current.requestedAt.getTime() > 10 * 60_000) {
+            await this.db.db.update(paymentTransactions).set({ transactionStatus: 'FAILED', failureCode: 'CHECKOUT_EXPIRED', updatedAt: new Date() })
+              .where(and(eq(paymentTransactions.id, transaction.id), eq(paymentTransactions.transactionStatus, 'PENDING')));
+          }
         } catch (error) {
           if (!(error instanceof ValidationError)) this.logger.warn(`Online payment reconciliation deferred for ${transaction.id}.`);
         } finally {
@@ -456,7 +465,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  async startOnlinePayment(scheduleItemId: string, userId: string, idempotencyKey: string, mode: 'panel' | 'onboarding' = 'panel') {
+  async startOnlinePayment(scheduleItemId: string, userId: string, idempotencyKey: string, mode: 'panel' | 'onboarding' = 'panel', expectedAmount?: number) {
     if (this.gateway.enabled === false) {
       throw new AppError(
         'PAYMENT_GATEWAY_UNAVAILABLE',
@@ -474,9 +483,13 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
       );
     }
     const item = await this.getOwnedScheduleItem(scheduleItemId, userId);
+    if (expectedAmount !== undefined && expectedAmount !== item.amount) {
+      throw new ConflictError('PAYMENT_AMOUNT_CHANGED', 'Payment amount changed. Refresh before confirming.');
+    }
     if (item.itemStatus !== 'PENDING') {
       throw new ConflictError('PAYMENT_NOT_AVAILABLE', 'This payment item is not payable.');
     }
+    const pricing = calculateOnlineFee(item.amount);
     const [pendingReceipt] = await this.db.db.select({ id: offlinePaymentSubmissions.id })
       .from(offlinePaymentSubmissions)
       .where(and(
@@ -499,7 +512,8 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
           paymentPlanId: item.paymentPlanId,
           paymentScheduleItemId: scheduleItemId,
           userId,
-          amount: item.amount,
+          amount: pricing.total,
+          gatewayFeeAmount: pricing.fee,
           paymentMethod: 'ONLINE_GATEWAY',
           idempotencyKey: key,
           idempotencyFingerprint: fingerprint,
@@ -548,6 +562,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         paymentPlanId: existing.paymentPlanId,
         paymentScheduleItemId: existing.paymentScheduleItemId,
         amount: existing.amount,
+        gatewayFeeAmount: existing.gatewayFeeAmount,
         paymentMethod: existing.paymentMethod,
         transactionStatus: existing.transactionStatus,
         requestedAt: existing.requestedAt,
@@ -561,7 +576,18 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         await this.verifyOnlinePayment(current.id, userId, current.gatewayAuthority);
         return { ...created, transactionStatus: 'SUCCEEDED' as const, checkoutUrl: null };
       }
+      if (verification.resultCode === 202 && Date.now() - current.requestedAt.getTime() > 10 * 60_000) {
+        await this.db.db.update(paymentTransactions).set({ transactionStatus: 'FAILED', failureCode: 'CHECKOUT_EXPIRED', updatedAt: new Date() })
+          .where(and(eq(paymentTransactions.id, current.id), eq(paymentTransactions.transactionStatus, 'PENDING')));
+        throw new ConflictError('CHECKOUT_EXPIRED', 'This checkout expired. Please start a new payment.');
+      }
+      if (current.amount !== pricing.total) {
+        throw new ConflictError('PAYMENT_AMOUNT_CHANGED', 'An earlier checkout has a different amount. Wait for its status to resolve.');
+      }
       return { ...created, checkoutUrl: `https://gateway.zibal.ir/start/${current.gatewayAuthority}` };
+    }
+    if (current.amount !== pricing.total) {
+      throw new ConflictError('PAYMENT_AMOUNT_CHANGED', 'An earlier checkout has a different amount. Wait for its status to resolve.');
     }
     if (current.transactionStatus === 'REQUESTING') {
       if (Date.now() - current.updatedAt.getTime() > 120_000) {
@@ -649,7 +675,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         .update(paymentScheduleItems)
         .set({
           itemStatus: 'PAID',
-          paidAmount: tx[0].amount,
+          paidAmount: item[0].amount,
           paidAt: new Date(),
         })
         .where(eq(paymentScheduleItems.id, tx[0].paymentScheduleItemId));
@@ -704,7 +730,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         userId: payerUserId,
         notificationType: 'PAYMENT_SUCCEEDED',
         title: 'پرداخت با موفقیت انجام شد',
-        message: `پرداخت ${tx[0].amount.toLocaleString('fa-IR')} ریال با موفقیت ثبت شد.`,
+        message: `پرداخت ${item[0].amount.toLocaleString('fa-IR')} ریال با موفقیت ثبت شد.`,
         relatedEntityType: 'PAYMENT',
         relatedEntityId: txId,
       });
@@ -1686,6 +1712,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
           itemType: row.itemType,
           sequenceNumber: row.sequenceNumber,
           amount: row.transaction.amount,
+          gatewayFeeAmount: row.transaction.gatewayFeeAmount,
           status: row.transaction.transactionStatus,
           requestedAt: row.transaction.requestedAt.toISOString(),
           verifiedAt: row.transaction.verifiedAt?.toISOString() ?? null,

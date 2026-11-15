@@ -51,6 +51,7 @@ export function OnlineTransactionList({ data, filters }: {
         </div>
         <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div><dt className="text-muted">مبلغ این تراکنش</dt><dd className="font-bold">{formatIrr(item.amount)}</dd></div>
+          <div><dt className="text-muted">کارمزد و مالیات درگاه</dt><dd className="font-bold">{formatIrr(item.gatewayFeeAmount)}</dd></div>
           <div><dt className="text-muted">زمان پرداخت</dt><dd className="font-bold">{item.verifiedAt ? formatJalaliDateTime(item.verifiedAt) : 'هنوز تأیید نشده'}</dd></div>
           <div><dt className="text-muted">شماره مرجع</dt><dd className="font-bold" dir="ltr">{item.reference ?? '—'}</dd></div>
           <div><dt className="text-muted">زمان درخواست</dt><dd className="font-bold">{formatJalaliDateTime(item.requestedAt)}</dd></div>

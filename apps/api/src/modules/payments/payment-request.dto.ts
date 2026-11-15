@@ -33,6 +33,13 @@ export class VerifyOnlinePaymentDto {
   gatewayTransactionId!: string;
 }
 
+export class StartOnlinePaymentDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  expectedAmount?: number;
+}
+
 export class OfflinePaymentDto {
   @IsOptional()
   @Transform(digits)

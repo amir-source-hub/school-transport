@@ -31,6 +31,7 @@ import {
   AdminOfflinePaymentListQueryDto,
   AdminOnlinePaymentListQueryDto,
   VerifyOnlinePaymentDto,
+  StartOnlinePaymentDto,
 } from './payment-request.dto';
 import { PaymentsService } from './payments.service';
 import { ConfigService } from '../../config/config.service';
@@ -110,10 +111,11 @@ export class PaymentsController {
   async startOnline(
     @Req() req: AuthenticatedRequest,
     @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string,
+    @Body() dto: StartOnlinePaymentDto,
     @IdempotencyKey() idempotencyKey: string,
   ) {
     return successResponse(
-      await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey),
+      await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey, 'panel', dto?.expectedAmount),
     );
   }
 
@@ -193,10 +195,11 @@ export class OnboardingPaymentsController {
   async startOnline(
     @Req() req: AuthenticatedRequest,
     @Param('scheduleItemId', new ParseUUIDPipe()) scheduleItemId: string,
+    @Body() dto: StartOnlinePaymentDto,
     @IdempotencyKey() idempotencyKey: string,
   ) {
     return successResponse(
-      await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey, 'onboarding'),
+      await this.paymentsService.startOnlinePayment(scheduleItemId, req.user.id, idempotencyKey, 'onboarding', dto?.expectedAmount),
     );
   }
 

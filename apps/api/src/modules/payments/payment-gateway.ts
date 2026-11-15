@@ -8,6 +8,7 @@ export type GatewayVerification = {
   verified: boolean;
   amount: number;
   transactionId?: string;
+  resultCode?: number;
 };
 
 export interface PaymentGateway {
@@ -44,7 +45,7 @@ export class ZibalPaymentGateway implements PaymentGateway {
     });
     if (!response.ok) throw new AppError('PAYMENT_GATEWAY_ERROR', 'Zibal verification failed.', 502);
     const data = await response.json() as { result?: number; amount?: number; refNumber?: number | string };
-    return { verified: data.result === 100 || data.result === 201, amount: data.amount ?? -1, transactionId: data.refNumber ? String(data.refNumber) : input.authority };
+    return { verified: data.result === 100 || data.result === 201, amount: data.amount ?? -1, transactionId: data.refNumber ? String(data.refNumber) : input.authority, resultCode: data.result };
   }
 }
 

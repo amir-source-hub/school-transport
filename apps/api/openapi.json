@@ -1570,6 +1570,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StartOnlinePaymentDto" }
+            }
+          }
+        },
         "responses": { "201": { "description": "" } },
         "tags": ["Payments"]
       }
@@ -2006,6 +2014,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StartOnlinePaymentDto" }
+            }
+          }
+        },
         "responses": { "201": { "description": "" } },
         "tags": ["OnboardingPayments"]
       }
@@ -3405,6 +3421,7 @@
       "CorrectionDto": { "type": "object", "properties": {} },
       "CreatePriceDto": { "type": "object", "properties": {} },
       "AcceptPriceDto": { "type": "object", "properties": {} },
+      "StartOnlinePaymentDto": { "type": "object", "properties": {} },
       "VerifyOnlinePaymentDto": { "type": "object", "properties": {} },
       "OfflinePaymentDto": { "type": "object", "properties": {} },
       "AuthorizeReceiptUploadDto": { "type": "object", "properties": {} },

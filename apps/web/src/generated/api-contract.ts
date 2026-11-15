@@ -3150,6 +3150,7 @@ export interface components {
     CorrectionDto: Record<string, never>;
     CreatePriceDto: Record<string, never>;
     AcceptPriceDto: Record<string, never>;
+    StartOnlinePaymentDto: Record<string, never>;
     VerifyOnlinePaymentDto: Record<string, never>;
     OfflinePaymentDto: Record<string, never>;
     AuthorizeReceiptUploadDto: Record<string, never>;
@@ -5212,7 +5213,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StartOnlinePaymentDto'];
+      };
+    };
     responses: {
       201: {
         headers: {
@@ -5738,7 +5743,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StartOnlinePaymentDto'];
+      };
+    };
     responses: {
       201: {
         headers: {

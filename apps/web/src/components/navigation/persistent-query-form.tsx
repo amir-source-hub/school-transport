@@ -13,7 +13,9 @@ export function PersistentQueryForm({ path, className, ariaLabel, children }: {
     for (const [key, value] of new FormData(event.currentTarget)) {
       if (typeof value === 'string' && value.trim()) query.set(key, value.trim());
     }
-    router.push(`${path}${query.size ? `?${query}` : ''}`);
+    const destination = `${path}${query.size ? `?${query}` : ''}`;
+    window.history.pushState(null, '', destination);
+    router.refresh();
   }
   return <form className={className} aria-label={ariaLabel} onSubmit={submit}>{children}</form>;
 }

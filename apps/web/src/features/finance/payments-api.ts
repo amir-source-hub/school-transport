@@ -150,10 +150,11 @@ export async function completeReceiptUpload(
   });
 }
 
-export async function startOnlinePayment(scheduleItemId: string, mode: 'panel' | 'onboarding' = 'panel') {
+export async function startOnlinePayment(scheduleItemId: string, mode: 'panel' | 'onboarding' = 'panel', expectedAmount?: number) {
   const prefix = mode === 'onboarding' ? '/onboarding/payments' : '/payments';
   const response = await apiRequest<{ id: string; checkoutUrl: string | null; transactionStatus: string }>(`${prefix}/${scheduleItemId}/online/start`, {
     method: 'POST',
+    body: expectedAmount === undefined ? undefined : { expectedAmount },
     headers: { 'Idempotency-Key': createClientId() },
   });
   return response.data;

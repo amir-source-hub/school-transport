@@ -164,7 +164,7 @@ export async function getAdminOfflineSubmissions(params: {
 const onlineTransactionSchema = z.object({
   id: z.string(), studentName: z.string(), familyName: z.string(),
   itemType: z.enum(['PREPAYMENT', 'INSTALLMENT']), sequenceNumber: z.number(),
-  amount: z.number(), status: z.string(), requestedAt: z.string(),
+  amount: z.number(), gatewayFeeAmount: z.number(), status: z.string(), requestedAt: z.string(),
   verifiedAt: z.string().nullable(), reference: z.string().nullable(),
   planTotal: z.number(), planStatus: z.string(), paidAmount: z.number(),
   remainingAmount: z.number(), paidCount: z.number(), remainingCount: z.number(),

@@ -25,6 +25,11 @@ export function PaymentReturnResult() {
     const timer = window.setTimeout(() => router.replace(mode === 'onboarding' ? '/onboarding/enrollments' : '/student/payments'), 3000);
     return () => window.clearTimeout(timer);
   }, [invalidReturn, state, mode, router]);
+  useEffect(() => {
+    if (!invalidReturn && state !== 'failed') return;
+    const timer = window.setTimeout(() => router.replace(mode === 'onboarding' ? '/onboarding/enrollments' : '/student/payments'), 5000);
+    return () => window.clearTimeout(timer);
+  }, [invalidReturn, state, mode, router]);
   return <main className="mx-auto w-full max-w-xl p-6"><Card>
     <h1 className="text-xl font-black">نتیجه پرداخت</h1>
     <p role="status" className="mt-4 text-sm">

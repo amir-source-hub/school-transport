@@ -30,12 +30,17 @@ function databaseHarness() {
     } : table === offlinePaymentSubmissions ? {
       where: () => ({ limit: async () => pendingReceipts }),
     } : ownedQuery }),
-    update: () => ({ set: (changes: any) => ({ where: () => ({ returning: async () => {
-      const row = transactions.find((entry) => entry.transactionStatus === (changes.transactionStatus === 'REQUESTING' ? 'CREATED' : 'REQUESTING'));
-      if (!row) return [];
-      Object.assign(row, changes);
-      return [{ id: row.id }];
-    } }) }) }),
+    update: () => ({ set: (changes: any) => ({ where: () => {
+      const apply = () => {
+        const previousStatus = changes.transactionStatus === 'REQUESTING' ? 'CREATED'
+          : changes.failureCode === 'CHECKOUT_EXPIRED' ? 'PENDING' : 'REQUESTING';
+        const row = transactions.find((entry) => entry.transactionStatus === previousStatus);
+        if (!row) return [];
+        Object.assign(row, changes);
+        return [{ id: row.id }];
+      };
+      return { returning: async () => apply(), then: (resolve: (value: unknown) => void) => resolve(apply()) };
+    } }) }),
     transaction: async (work: (txn: any) => Promise<unknown>) => {
       const previous = tail;
       let release!: () => void;
@@ -98,6 +103,7 @@ function safe(row: any) {
     paymentPlanId,
     paymentScheduleItemId,
     amount,
+    gatewayFeeAmount,
     paymentMethod,
     transactionStatus,
     requestedAt,
@@ -107,6 +113,7 @@ function safe(row: any) {
     paymentPlanId,
     paymentScheduleItemId,
     amount,
+    gatewayFeeAmount,
     paymentMethod,
     transactionStatus,
     requestedAt,
@@ -114,7 +121,7 @@ function safe(row: any) {
 }
 
 function service(harness = databaseHarness()) {
-  const gateway = { enabled: true, request: vi.fn(async ({ orderId }: { orderId: string }) => ({ authority: '123456', checkoutUrl: 'https://gateway.zibal.ir/start/123456', orderId })), verify: vi.fn(async () => ({ verified: false, amount: 5000, transactionId: undefined as string | undefined })) };
+  const gateway = { enabled: true, request: vi.fn(async ({ orderId }: { orderId: string }) => ({ authority: '123456', checkoutUrl: 'https://gateway.zibal.ir/start/123456', orderId })), verify: vi.fn(async () => ({ verified: false, amount: 5000, transactionId: undefined as string | undefined, resultCode: undefined as number | undefined })) };
   const payments = new PaymentsService(harness.db as never, gateway as never, {} as never, undefined, { zibalCallbackBaseUrl: 'https://example.test' } as never);
   vi.spyOn(payments, 'getPaymentMode').mockResolvedValue('ONLINE');
   return { harness, gateway, payments };
@@ -171,6 +178,7 @@ describe('online payment idempotency', () => {
     expect(replay).not.toHaveProperty('idempotencyKey');
     expect(replay).not.toHaveProperty('idempotencyFingerprint');
     expect(gateway.request).toHaveBeenCalledWith(expect.objectContaining({
+      amount: 27_000,
       callbackUrl: expect.stringMatching(/^https:\/\/example\.test\/api\/v1\/payments\/online\/callback\?txId=/),
     }));
   });
@@ -178,11 +186,24 @@ describe('online payment idempotency', () => {
   it('reconciles a paid checkout before offering the gateway again', async () => {
     const { payments, gateway } = service();
     await payments.startOnlinePayment('schedule-1', 'user-1', 'request-123');
-    gateway.verify.mockResolvedValueOnce({ verified: true, amount: 5000, transactionId: 'bank-ref' });
+    gateway.verify.mockResolvedValueOnce({ verified: true, amount: 5000, transactionId: 'bank-ref', resultCode: 100 });
     const verify = vi.spyOn(payments, 'verifyOnlinePayment').mockResolvedValue({ transactionStatus: 'SUCCEEDED' } as never);
     const result = await payments.startOnlinePayment('schedule-1', 'user-1', 'another-123');
     expect(result).toMatchObject({ transactionStatus: 'SUCCEEDED', checkoutUrl: null });
     expect(verify).toHaveBeenCalledWith(expect.any(String), 'user-1', '123456');
+  });
+
+  it('releases a ten-minute expired unpaid checkout for a new attempt', async () => {
+    const { payments, gateway, harness } = service();
+    await payments.startOnlinePayment('schedule-1', 'user-1', 'request-123');
+    harness.transactions[0].requestedAt = new Date(Date.now() - 11 * 60_000);
+    gateway.verify.mockResolvedValueOnce({ verified: false, resultCode: 202, amount: -1, transactionId: undefined });
+    await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'another-123'))
+      .rejects.toMatchObject({ code: 'CHECKOUT_EXPIRED' });
+    expect(harness.transactions[0].transactionStatus).toBe('FAILED');
+    await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'third-request-123'))
+      .resolves.toMatchObject({ transactionStatus: 'PENDING' });
+    expect(gateway.request).toHaveBeenCalledTimes(2);
   });
 
   it('checks the tracking ID before replaying a successful verification', async () => {

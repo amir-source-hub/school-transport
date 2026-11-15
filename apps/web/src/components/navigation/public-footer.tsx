@@ -119,8 +119,12 @@ export function PublicFooter() {
           ))}
         </div>
 
-        <div className="flex justify-center pb-8">
+        <div className="flex items-center justify-center gap-4 pb-8">
           <span dangerouslySetInnerHTML={{ __html: "<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=8409048&Code=1YOxBbSIU93fIgFXLsGGC1V8Q7ztkvqg'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=8409048&Code=1YOxBbSIU93fIgFXLsGGC1V8Q7ztkvqg' alt='' style='cursor:pointer' code='1YOxBbSIU93fIgFXLsGGC1V8Q7ztkvqg'></a>" }} />
+          <a href="https://gateway.zibal.ir/trustMe/samingasht.ir" target="_blank" rel="noopener">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img style={{ height: '85px' }} src="https://zibal.ir/trust/assets/1.png" alt="پرداخت آنلاین زیبال" />
+          </a>
         </div>
 
         {!prefersReduced && (

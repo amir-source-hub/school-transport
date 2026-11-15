@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OfflinePaymentForm } from './offline-payment-form';
 
 const api = vi.hoisted(() => ({
@@ -26,7 +26,8 @@ class UploadRequest {
   send() {
     this.status = UploadRequest.statuses.shift() ?? 200;
     this.upload.onprogress?.({ lengthComputable: true, loaded: 10, total: 10 });
-    this.onload?.();
+    if (this.status === -1) this.onerror?.();
+    else this.onload?.();
   }
   abort() {
     this.onabort?.();
@@ -34,6 +35,7 @@ class UploadRequest {
 }
 
 describe('OfflinePaymentForm', () => {
+  afterEach(() => vi.unstubAllGlobals());
   beforeEach(() => {
     vi.clearAllMocks();
     api.getOfflineDestination.mockResolvedValue({
@@ -102,6 +104,20 @@ describe('OfflinePaymentForm', () => {
 
     await waitFor(() => expect(api.completeReceiptUpload).toHaveBeenCalled());
     expect(api.authorizeReceiptUpload).toHaveBeenCalledTimes(1);
+  });
+
+  it('uploads through the site when direct storage access fails', async () => {
+    UploadRequest.statuses = [-1];
+    const fallback = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fallback);
+    const user = userEvent.setup();
+    render(<OfflinePaymentForm items={[{ id: 'item-1', label: 'پیش‌پرداخت', amount: 4_997_800 }]} />);
+    await screen.findByText('6037991234567890');
+    await user.upload(screen.getByLabelText('تصویر رسید (JPEG یا PNG)'),
+      new File([new Uint8Array([0xff, 0xd8, 0xff])], 'receipt.jpg', { type: 'image/jpeg' }));
+    await user.click(screen.getByRole('button', { name: 'ارسال رسید برای بررسی مدیر' }));
+    await waitFor(() => expect(api.completeReceiptUpload).toHaveBeenCalledWith('submission-1', 'panel'));
+    expect(fallback).toHaveBeenCalledWith('/api/private-object-upload', expect.objectContaining({ method: 'PUT' }));
   });
 
   it('keeps receipt selection available when payment destination loading fails', async () => {

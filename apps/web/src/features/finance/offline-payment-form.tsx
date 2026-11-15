@@ -142,6 +142,7 @@ export function OfflinePaymentForm({
           await putFileDirectly(authorization.uploadUrl, receipt, {
             signal: controller.signal,
             onProgress: (percent) => setProgress(percent ?? 0),
+            fallbackPath: '/api/private-object-upload',
           });
           await completeReceiptUpload(submissionId, mode);
           window.sessionStorage.removeItem(storageKey);

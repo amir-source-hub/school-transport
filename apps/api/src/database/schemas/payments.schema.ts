@@ -108,6 +108,7 @@ export const paymentTransactions = pgTable(
       .references(() => paymentScheduleItems.id),
     userId: uuid('user_id').references(() => users.id),
     amount: integer('amount').notNull(),
+    gatewayFeeAmount: integer('gateway_fee_amount').notNull().default(0),
     paymentMethod: varchar('payment_method', { length: 30 }).notNull(),
     gatewayName: varchar('gateway_name', { length: 50 }),
     gatewayAuthority: varchar('gateway_authority', { length: 255 }),
