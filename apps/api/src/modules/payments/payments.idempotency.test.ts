@@ -194,10 +194,9 @@ describe('online payment idempotency', () => {
     expect(verify).toHaveBeenCalledWith(expect.any(String), 'user-1', '123456');
   });
 
-  it('releases a ten-minute expired unpaid checkout for a new attempt', async () => {
+  it('releases a failed unpaid checkout on the first retry even without a Zibal status field', async () => {
     const { payments, gateway, harness } = service();
     await payments.startOnlinePayment('schedule-1', 'user-1', 'request-123');
-    harness.transactions[0].requestedAt = new Date(Date.now() - 11 * 60_000);
     gateway.verify.mockResolvedValueOnce({ verified: false, resultCode: 202, amount: -1, transactionId: undefined });
     await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'another-123'))
       .resolves.toMatchObject({ transactionStatus: 'PENDING' });
@@ -205,6 +204,19 @@ describe('online payment idempotency', () => {
     await expect(payments.startOnlinePayment('schedule-1', 'user-1', 'another-123'))
       .resolves.toMatchObject({ transactionStatus: 'PENDING' });
     expect(gateway.request).toHaveBeenCalledTimes(2);
+  });
+
+  it('marks a failed Zibal checkout before returning the user to the site', async () => {
+    const transaction = { id: 'transaction-1', userId: 'user-1', paymentMethod: 'ONLINE_GATEWAY', gatewayAuthority: '123456', transactionStatus: 'PENDING' };
+    const gateway = { enabled: true, verify: vi.fn().mockResolvedValue({ verified: false, resultCode: 202, amount: -1 }) };
+    const db = { db: {
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [transaction] }) }) }),
+      update: () => ({ set: (changes: Record<string, unknown>) => ({ where: async () => { Object.assign(transaction, changes); } }) }),
+    } };
+    const payments = new PaymentsService(db as never, gateway as never, {} as never);
+    await expect(payments.verifyOnlinePayment('transaction-1', undefined, '123456'))
+      .rejects.toMatchObject({ code: 'PAYMENT_FAILED' });
+    expect(transaction.transactionStatus).toBe('FAILED');
   });
 
   it('replaces a checkout cancelled at Zibal on the first retry', async () => {

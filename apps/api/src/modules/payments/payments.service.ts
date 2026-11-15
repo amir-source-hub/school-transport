@@ -101,8 +101,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
             .from(paymentTransactions).where(eq(paymentTransactions.id, transaction.id)).limit(1);
           const verification = await this.gateway.verify({ authority: transaction.authority!, amount: current.amount });
           if (verification.verified) await this.verifyOnlinePayment(transaction.id, undefined, transaction.authority!);
-          else if (verification.resultCode === 202 &&
-            (verification.paymentStatus === 3 || Date.now() - current.requestedAt.getTime() > 10 * 60_000)) {
+          else if (verification.resultCode === 202 && verification.paymentStatus !== -1) {
             await this.db.db.update(paymentTransactions).set({ transactionStatus: 'FAILED', failureCode: verification.paymentStatus === 3 ? 'CHECKOUT_CANCELLED' : 'CHECKOUT_EXPIRED', updatedAt: new Date() })
               .where(and(eq(paymentTransactions.id, transaction.id), eq(paymentTransactions.transactionStatus, 'PENDING')));
           }
@@ -577,8 +576,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         await this.verifyOnlinePayment(current.id, userId, current.gatewayAuthority);
         return { ...created, transactionStatus: 'SUCCEEDED' as const, checkoutUrl: null };
       }
-      if (verification.resultCode === 202 &&
-        (verification.paymentStatus === 3 || Date.now() - current.requestedAt.getTime() > 10 * 60_000)) {
+      if (verification.resultCode === 202 && verification.paymentStatus !== -1) {
         await this.db.db.update(paymentTransactions).set({ transactionStatus: 'FAILED', failureCode: verification.paymentStatus === 3 ? 'CHECKOUT_CANCELLED' : 'CHECKOUT_EXPIRED', updatedAt: new Date() })
           .where(and(eq(paymentTransactions.id, current.id), eq(paymentTransactions.transactionStatus, 'PENDING')));
         return this.startOnlinePayment(scheduleItemId, userId, idempotencyKey, mode, expectedAmount);
@@ -647,6 +645,12 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
       authority: tx[0].gatewayAuthority,
       amount: tx[0].amount,
     });
+    if (gatewayResult.resultCode === 202 && gatewayResult.paymentStatus !== -1) {
+      await this.db.db.update(paymentTransactions)
+        .set({ transactionStatus: 'FAILED', failureCode: gatewayResult.paymentStatus === 3 ? 'CHECKOUT_CANCELLED' : 'GATEWAY_PAYMENT_FAILED', updatedAt: new Date() })
+        .where(and(eq(paymentTransactions.id, txId), eq(paymentTransactions.transactionStatus, 'PENDING')));
+      throw new ConflictError('PAYMENT_FAILED', 'The gateway reports this payment as unsuccessful. Please start a new checkout.');
+    }
     const gatewayTransactionId = assertGatewayVerification(tx[0].amount, gatewayResult);
 
     const result = await this.db.db.transaction(async (txn) => {
