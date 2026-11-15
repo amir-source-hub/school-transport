@@ -158,7 +158,10 @@ services:
     cpus: 0.75
     stop_grace_period: 45s
     networks:
+      # The payment reconciliation worker must verify expired checkouts with Zibal.
+      # Redis and database traffic still use the internal backend network.
       - backend
+      - egress
 
   bootstrap:
     image: school-transport-api:server
@@ -265,7 +268,7 @@ networks:
   frontend:
   application:
     internal: true
-  # Deliberately attached only to the API, which validates private S3 uploads.
+  # API and payment worker need outbound HTTPS for storage and gateway verification.
   egress:
   # Dedicated Caddy-to-API path. The /29 is deterministic and internal; only Caddy gets
   # the single address trusted by Fastify, so web/worker containers cannot spoof XFF.
